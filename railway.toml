@@ -1,0 +1,14 @@
+# railway.toml — frontend
+#
+# Comando de start explícito, versionado — Railway detecta este projeto
+# como Node (tem package.json), mas um app Vite não tem servidor por
+# padrão; sem isso, o Railway pode não saber como servir o resultado do
+# build. `vite preview` é aceitável para o estágio atual (poucos
+# usuários); para tráfego real, trocar por um host estático dedicado
+# (Vercel/Netlify) ou Nginx é o passo seguinte — não escondido, só não
+# prioritário ainda.
+[build]
+buildCommand = "npm run build"
+
+[deploy]
+startCommand = "npm run start"
