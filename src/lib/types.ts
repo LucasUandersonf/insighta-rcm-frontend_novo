@@ -22,6 +22,30 @@ export interface TokenResponse {
   tenant_options: TenantOption[];
 }
 
+// --- Cadastro público (self-signup) / recuperação de senha
+// (app/schemas/token.py::RegisterRequest/PasswordResetRequestRequest/
+// PasswordResetConfirmRequest) ---
+export type PlanTier = "starter" | "professional" | "enterprise";
+
+export interface RegisterRequest {
+  trade_name: string;
+  legal_name?: string | null;
+  cnpj: string;
+  plan_tier: PlanTier;
+  owner_name: string;
+  email: string;
+  password: string;
+}
+
+// Espelha TokenResponse — POST /auth/register nunca tem ambiguidade de
+// tenant (a clínica acabou de nascer), então o formato de resposta é
+// sempre o "simples" (access_token + token_type), sem os campos de
+// seleção de tenant que só existem em LoginResponse.
+export interface RegisterResponse {
+  access_token: string;
+  token_type: string;
+}
+
 // Envelope de paginação usado por todo endpoint de listagem robusta
 // (ver app/schemas/pagination.py — PaginatedResponse genérico no backend).
 export interface PaginatedResponse<T> {

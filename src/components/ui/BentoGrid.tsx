@@ -83,7 +83,14 @@ export function BentoCard({
       whileHover={{ y: -2 }}
       transition={{ duration: 0.35, ease: "easeOut" }}
       className={cn(
-        "group relative col-span-1 flex flex-col overflow-hidden rounded-lg border border-border-hairline bg-canvas-surface shadow-card transition-colors",
+        // "Vidro fosco" (Aura Glass, ver DECISÃO v3 em index.css):
+        // bg-glass já é translúcido no escuro (--glass-alpha) — o
+        // backdrop-blur é o que faz as auras de fundo (.bg-premium-canvas)
+        // atravessarem o card com um desfoque suave, em vez de um recorte
+        // nítido. No claro, --glass-alpha fica perto de opaco (vidro sobre
+        // branco não tem o que atravessar), então o efeito é imperceptível
+        // ali de propósito — só uma superfície levemente mais "leve".
+        "group relative col-span-1 flex flex-col overflow-hidden rounded-lg border border-border-hairline bg-glass shadow-card backdrop-blur-xl transition-colors",
         COL_SPAN_CLASSES[colSpan],
         ROW_SPAN_CLASSES[rowSpan],
         GLOW_HOVER_CLASSES[glow],

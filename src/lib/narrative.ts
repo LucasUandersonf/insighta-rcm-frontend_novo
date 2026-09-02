@@ -86,3 +86,21 @@ function capitalize(text: string): string {
   if (!text) return text;
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
+
+/** Formato mínimo de um PeriodKPI (ver app/schemas/analytics.py) — só o
+ * necessário para calcular a badge de tendência do KpiCard, sem acoplar
+ * este módulo compartilhado ao tipo completo de src/lib/types.ts. */
+export interface TrendableKpi {
+  delta_pct: number | null;
+}
+
+/** Converte um PeriodKPI em badge de tendência do KpiCard (ver
+ * KpiCard.tsx) — usado tanto na Sala de Comando quanto no Painel, os
+ * dois consumindo os mesmos KPIs de /analytics/executive-summary.
+ * `invert: true` para métricas onde CAIR é a boa notícia (ex: buraco
+ * financeiro, glosa) — mesmo raciocínio de `invertGood` em describeTrend. */
+export function trendFrom(kpi: TrendableKpi, opts?: { invert?: boolean }): { value: string; positive: boolean } | undefined {
+  if (kpi.delta_pct === null) return undefined;
+  const positive = opts?.invert ? kpi.delta_pct < 0 : kpi.delta_pct >= 0;
+  return { value: `${Math.abs(kpi.delta_pct).toFixed(1)}% vs. período anterior`, positive };
+}
