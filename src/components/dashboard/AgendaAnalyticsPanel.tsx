@@ -12,6 +12,10 @@ function formatCurrency(value: number): string {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
 }
 
+function formatPct(rate: number): string {
+  return `${(rate * 100).toFixed(0)}%`;
+}
+
 // Tooltip custom — substitui o `contentStyle` inline (que só estiliza a
 // caixa) por um componente real, com o mesmo tratamento visual de
 // card do resto da UI (borda fio-de-cabelo, sombra, tipografia

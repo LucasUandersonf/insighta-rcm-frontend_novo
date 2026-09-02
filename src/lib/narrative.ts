@@ -36,7 +36,7 @@ function formatDelta(deltaPct: number, unit: string): string {
  */
 export function describeTrend(
   label: string,
-  currentValue: number,
+  _currentValue: number,
   deltaPct: number | null,
   opts: DescribeTrendOptions = {},
 ): string {
