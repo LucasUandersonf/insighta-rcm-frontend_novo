@@ -1,23 +1,28 @@
-import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { ChevronDown } from "lucide-react";
 import { KpiCard } from "@/components/ui/KpiCard";
 import { ErrorState, LoadingState } from "@/components/ui/Panel";
+import { PeriodWindowSelect } from "@/components/ui/PeriodWindowSelect";
 import { AgendaAnalyticsPanel } from "@/components/dashboard/AgendaAnalyticsPanel";
 import { SmartInsightsFeed } from "@/components/dashboard/SmartInsightsFeed";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
-import type { ExecutiveSummary, PeriodKpi } from "@/lib/types";
+import { useDateWindow } from "@/lib/useDateWindow";
+import { trendFrom } from "@/lib/narrative";
+import { firstNameFrom, useCurrentUserProfile } from "@/lib/useCurrentUserProfile";
+import type { ExecutiveSummary } from "@/lib/types";
 
-const WINDOW_OPTIONS = [
-  { days: 7, label: "Últimos 7 dias" },
-  { days: 14, label: "Últimos 14 dias" },
-  { days: 30, label: "Últimos 30 dias" },
-];
-
-function toIsoDate(d: Date): string {
-  return d.toISOString().slice(0, 10);
+/** Saudação por horário do dia — mesmo raciocínio de qualquer painel
+ * executivo (o de referência do briefing inclusive): "bom dia" às 9h e
+ * "boa noite" às 21h não é o mesmo texto, e usar sempre "olá" perderia
+ * esse toque pessoal pedido no redesenho. Baseado no relógio do
+ * NAVEGADOR do gestor (não do servidor) — é o fuso que importa para
+ * quem está lendo a tela. */
+function timeOfDayGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Bom dia";
+  if (hour < 18) return "Boa tarde";
+  return "Boa noite";
 }
 
 function formatCurrency(value: number): string {
@@ -28,25 +33,9 @@ function formatPct(value: number): string {
   return `${(value * 100).toFixed(1)}%`;
 }
 
-/** Converte um PeriodKPI em trend do KpiCard — o mesmo cartão "estilo
- * terminal financeiro" já usado no resto do app (ver KpiCard.tsx), só
- * alimentado com a variação % semanal REAL vinda do backend, em vez de
- * dado de exemplo. */
-function trendFrom(kpi: PeriodKpi, opts?: { invert?: boolean }): { value: string; positive: boolean } | undefined {
-  if (kpi.delta_pct === null) return undefined;
-  const positive = opts?.invert ? kpi.delta_pct < 0 : kpi.delta_pct >= 0;
-  return { value: `${Math.abs(kpi.delta_pct).toFixed(1)}% vs. período anterior`, positive };
-}
-
 export function ExecutiveOverviewPage() {
-  const [windowDays, setWindowDays] = useState(7);
-
-  const { dateFrom, dateTo } = useMemo(() => {
-    const end = new Date();
-    const start = new Date();
-    start.setDate(end.getDate() - (windowDays - 1));
-    return { dateFrom: toIsoDate(start), dateTo: toIsoDate(end) };
-  }, [windowDays]);
+  const { windowDays, setWindowDays, dateFrom, dateTo } = useDateWindow(7);
+  const { data: profile } = useCurrentUserProfile();
 
   const { data: summary, isLoading, error } = useQuery({
     queryKey: ["analytics", "executive-summary", dateFrom, dateTo],
@@ -62,24 +51,15 @@ export function ExecutiveOverviewPage() {
         className="flex flex-wrap items-end justify-between gap-4"
       >
         <div>
+          {profile && (
+            <p className="mb-1 text-sm text-ink-muted">
+              {timeOfDayGreeting()}, {firstNameFrom(profile.full_name)}.
+            </p>
+          )}
           <h1 className="font-serif text-2xl font-medium tracking-tightest text-ink">Sala de Comando</h1>
           <p className="mt-1 text-sm text-ink-faint">Onde estamos perdendo dinheiro hoje?</p>
         </div>
-        <div className="relative w-52">
-          <select
-            aria-label="Janela de período"
-            value={windowDays}
-            onChange={(e) => setWindowDays(Number(e.target.value))}
-            className="w-full appearance-none rounded-md border border-border-subtle bg-canvas-surface py-2 pl-3.5 pr-9 text-sm text-ink shadow-card transition-colors hover:border-border focus:border-revenue"
-          >
-            {WINDOW_OPTIONS.map((opt) => (
-              <option key={opt.days} value={opt.days}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-          <ChevronDown aria-hidden size={15} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-ink-faint" />
-        </div>
+        <PeriodWindowSelect windowDays={windowDays} onChange={setWindowDays} />
       </motion.div>
 
       {/* Redesenho "menos BI, mais consultor": o diagnóstico em texto vem
