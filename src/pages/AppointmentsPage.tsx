@@ -1,10 +1,12 @@
 import { useState, type FormEvent } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { CalendarCheck, Plus, UserRound } from "lucide-react";
 import { Panel, EmptyState, LoadingState, ErrorState } from "@/components/ui/Panel";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { TextField, SelectField } from "@/components/ui/FormField";
 import { NoShowBadge } from "@/components/ui/NoShowBadge";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useToast } from "@/context/ToastContext";
@@ -171,15 +173,20 @@ export function AppointmentsPage() {
   });
 
   return (
-    <div>
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-ink">Consultas</h1>
-        <Button onClick={() => setIsModalOpen(true)} disabled={patientsLoading || (patients ?? []).length === 0}>
-          + Nova consulta
-        </Button>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        icon={CalendarCheck}
+        title="Consultas"
+        subtitle="Agenda de consultas por paciente e risco preditivo de falta."
+        action={
+          <Button onClick={() => setIsModalOpen(true)} disabled={patientsLoading || (patients ?? []).length === 0} className="flex items-center gap-1.5">
+            <Plus size={14} />
+            Nova consulta
+          </Button>
+        }
+      />
 
-      <div className="mb-4 max-w-xs">
+      <div className="max-w-xs">
         <SelectField
           label="Ver consultas do paciente"
           value={selectedPatientId}
@@ -196,21 +203,21 @@ export function AppointmentsPage() {
       </div>
 
       <Panel>
-        {!selectedPatientId && <EmptyState message="Selecione um paciente acima para ver as consultas dele." />}
+        {!selectedPatientId && <EmptyState icon={<UserRound size={17} strokeWidth={1.5} />} message="Selecione um paciente acima para ver as consultas dele." />}
         {selectedPatientId && appointmentsLoading && <LoadingState />}
         {selectedPatientId && appointmentsError && <ErrorState message={getApiErrorMessage(appointmentsError)} />}
         {selectedPatientId && !appointmentsLoading && (appointments ?? []).length === 0 && (
-          <EmptyState message="Este paciente ainda não tem consultas registradas." />
+          <EmptyState icon={<CalendarCheck size={17} strokeWidth={1.5} />} message="Este paciente ainda não tem consultas registradas." />
         )}
         {selectedPatientId && !appointmentsLoading && (appointments ?? []).length > 0 && (
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-border-subtle text-2xs uppercase tracking-wide text-ink-faint">
-                <th className="px-4 py-2 font-medium">Data</th>
-                <th className="px-4 py-2 font-medium">Status</th>
-                <th className="px-4 py-2 font-medium">Procedimento</th>
-                <th className="px-4 py-2 font-medium">CID</th>
-                <th className="px-4 py-2 font-medium">Risco de falta</th>
+              <tr className="border-b border-border-hairline text-2xs uppercase tracking-wide text-ink-faint">
+                <th className="px-4 py-2.5 font-medium">Data</th>
+                <th className="px-4 py-2.5 font-medium">Status</th>
+                <th className="px-4 py-2.5 font-medium">Procedimento</th>
+                <th className="px-4 py-2.5 font-medium">CID</th>
+                <th className="px-4 py-2.5 font-medium">Risco de falta</th>
               </tr>
             </thead>
             <tbody>
@@ -218,7 +225,7 @@ export function AppointmentsPage() {
                 .slice()
                 .sort((a, b) => new Date(b.scheduled_at).getTime() - new Date(a.scheduled_at).getTime())
                 .map((a) => (
-                  <tr key={a.id} className="border-b border-border-subtle last:border-0 hover:bg-canvas-raised">
+                  <tr key={a.id} className="border-b border-border-hairline last:border-0 transition-colors hover:bg-canvas-raised/60">
                     <td className="tabular px-4 py-2.5 font-mono text-ink">{formatDateTime(a.scheduled_at)}</td>
                     <td className="px-4 py-2.5 text-ink-muted">{STATUS_LABELS[a.status] ?? a.status}</td>
                     <td className="px-4 py-2.5 text-ink-muted">{a.procedure_code ?? "—"}</td>

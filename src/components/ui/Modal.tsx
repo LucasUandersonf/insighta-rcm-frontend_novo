@@ -1,4 +1,7 @@
 import { useEffect, useRef, type ReactNode } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { X } from "lucide-react";
+import { cn } from "@/lib/cn";
 
 interface ModalProps {
   title: string;
@@ -89,23 +92,44 @@ export function Modal({ title, isOpen, onClose, children, size = "lg" }: ModalPr
     return () => window.removeEventListener("keydown", handleKey);
   }, [isOpen, onClose]);
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 px-4" role="dialog" aria-modal="true">
-      <div
-        ref={containerRef}
-        tabIndex={-1}
-        className={`w-full ${sizeClasses[size]} rounded border border-border-subtle bg-canvas-surface shadow-xl`}
-      >
-        <div className="flex items-center justify-between border-b border-border-subtle px-4 py-3">
-          <h2 className="text-sm font-medium text-ink">{title}</h2>
-          <button onClick={onClose} aria-label="Fechar" className="text-ink-faint hover:text-ink">
-            ✕
-          </button>
-        </div>
-        <div className="max-h-[70vh] overflow-y-auto p-4">{children}</div>
-      </div>
-    </div>
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.15 }}
+          className="fixed inset-0 z-40 flex items-center justify-center bg-canvas-deep/70 px-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) onClose();
+          }}
+        >
+          <motion.div
+            ref={containerRef}
+            tabIndex={-1}
+            initial={{ opacity: 0, y: 12, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 8, scale: 0.98 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className={cn("w-full rounded-lg border border-border-hairline bg-canvas-surface shadow-elevated-lg", sizeClasses[size])}
+          >
+            <div className="flex items-center justify-between border-b border-border-hairline px-5 py-3.5">
+              <h2 className="font-serif text-sm font-medium tracking-premium text-ink">{title}</h2>
+              <button
+                onClick={onClose}
+                aria-label="Fechar"
+                className="flex h-7 w-7 items-center justify-center rounded-full text-ink-faint transition-colors hover:bg-canvas-raised hover:text-ink"
+              >
+                <X size={15} />
+              </button>
+            </div>
+            <div className="max-h-[70vh] overflow-y-auto p-5">{children}</div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }

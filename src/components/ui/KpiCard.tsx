@@ -1,4 +1,8 @@
+import { ArrowDown, ArrowUp } from "lucide-react";
 import { NarrativeInsight } from "@/components/ui/NarrativeInsight";
+import { BentoCard } from "@/components/ui/BentoGrid";
+import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
+import { cn } from "@/lib/cn";
 
 interface KpiCardProps {
   label: string;
@@ -19,6 +23,15 @@ interface KpiCardProps {
    * tela (ex: Painel operacional).
    */
   size?: "default" | "compact";
+  /** Quantas das 12 colunas do bento grid o card ocupa (padrão: 4 no
+   * tamanho default, 2 no compact — dá pra caber 6 lado a lado). */
+  colSpan?: number;
+  /** Quando informado junto de `format`, o número sobe animado de 0 (ou
+   * do valor anterior) até este valor em vez de só trocar de texto —
+   * `value` continua sendo a versão final em texto, usada por leitores
+   * de tela e como fallback. Omitir mantém o comportamento estático. */
+  numericValue?: number;
+  format?: (n: number) => string;
 }
 
 const toneClasses: Record<NonNullable<KpiCardProps["tone"]>, string> = {
@@ -28,15 +41,44 @@ const toneClasses: Record<NonNullable<KpiCardProps["tone"]>, string> = {
   neutral: "text-ink",
 };
 
-export function KpiCard({ label, value, trend, tone = "neutral", isPlaceholder, narrative, size = "default" }: KpiCardProps) {
+const toneGlow: Record<NonNullable<KpiCardProps["tone"]>, "revenue" | "pending" | "denied" | "accent"> = {
+  revenue: "revenue",
+  pending: "pending",
+  denied: "denied",
+  neutral: "accent",
+};
+
+const toneBarClasses: Record<NonNullable<KpiCardProps["tone"]>, string> = {
+  revenue: "bg-revenue",
+  pending: "bg-pending",
+  denied: "bg-denied",
+  neutral: "bg-border-default",
+};
+
+export function KpiCard({
+  label,
+  value,
+  trend,
+  tone = "neutral",
+  isPlaceholder,
+  narrative,
+  size = "default",
+  colSpan,
+  numericValue,
+  format,
+}: KpiCardProps) {
   const compact = size === "compact";
   return (
-    <div
-      className={`rounded-lg border border-border-hairline bg-canvas-surface/80 shadow-card backdrop-blur-sm transition-shadow hover:shadow-elevated ${
-        compact ? "p-3.5" : "p-5"
-      }`}
+    <BentoCard
+      colSpan={colSpan ?? (compact ? 2 : 4)}
+      glow={toneGlow[tone]}
+      className={cn(compact ? "p-3.5" : "p-5")}
     >
-      <div className={`flex items-center justify-between ${compact ? "mb-1.5" : "mb-3"}`}>
+      {/* Trilho de cor no topo — identidade visual imediata do tom
+          (receita/pendente/glosado) legível mesmo antes de ler o número. */}
+      <span aria-hidden className={cn("absolute inset-x-0 top-0 h-[3px]", toneBarClasses[tone])} />
+
+      <div className={cn("flex items-center justify-between", compact ? "mb-1.5" : "mb-3")}>
         <span className="text-2xs font-medium uppercase tracking-wide text-ink-muted">{label}</span>
         {isPlaceholder && (
           <span
@@ -47,22 +89,37 @@ export function KpiCard({ label, value, trend, tone = "neutral", isPlaceholder, 
           </span>
         )}
       </div>
-      <div className={`tabular font-mono font-semibold ${toneClasses[tone]} ${compact ? "text-xl" : "text-3xl"}`}>{value}</div>
+
+      <div className={cn("tabular font-sans font-semibold tracking-tightest", toneClasses[tone], compact ? "text-2xl" : "text-display")}>
+        {numericValue !== undefined && format ? (
+          <>
+            <span aria-hidden="true">
+              <AnimatedNumber value={numericValue} format={format} />
+            </span>
+            <span className="sr-only">{value}</span>
+          </>
+        ) : (
+          value
+        )}
+      </div>
+
       {trend && (
         <div
-          className={`mt-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-2xs font-medium ${
+          className={cn(
+            "mt-2.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-2xs font-medium",
             trend.positive ? "bg-revenue-bg text-revenue" : "bg-denied-bg text-denied"
-          }`}
+          )}
         >
-          <span aria-hidden>{trend.positive ? "↑" : "↓"}</span>
+          {trend.positive ? <ArrowUp aria-hidden size={10} /> : <ArrowDown aria-hidden size={10} />}
           {trend.value}
         </div>
       )}
+
       {!compact && narrative && (
-        <div className="mt-3 border-t border-border-hairline pt-2">
+        <div className="mt-3 border-t border-border-hairline pt-2.5">
           <NarrativeInsight text={narrative} />
         </div>
       )}
-    </div>
+    </BentoCard>
   );
 }

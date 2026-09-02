@@ -1,10 +1,116 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* ------------------------------------------------------------------
+ * Tokens de tema — claro (:root, padrão) e escuro (.dark).
+ * Valores em "H S% L%" (sem hsl(...) — o wrapper fica no tailwind.config.ts
+ * via hsl(var(--x) / <alpha-value>), permitindo opacidade por classe,
+ * ex: bg-canvas-surface/80).
+ *
+ * Modo claro: identidade "editorial tech" — branco/gelo puro como base
+ * (--canvas), cartões em branco absoluto destacados por borda fio de
+ * cabelo (não sombra pesada), cinza levíssimo para elementos "afundados".
+ * Modo escuro: petrol/navy profundo original do produto, preservado.
+ * Os 3 tokens semânticos (revenue/pending/denied) e o acento dourado
+ * mudam de tonalidade entre os temas apenas o necessário para manter
+ * WCAG AA em texto normal sobre a superfície de cada tema — a família
+ * de matiz (hue) é a mesma nos dois, então a leitura "verde = receita,
+ * âmbar = pendente, vermelho = glosado" nunca muda entre temas.
+ * ------------------------------------------------------------------ */
+:root {
+  --radius: 10px;
+
+  --canvas: 210 33% 99%;
+  --canvas-surface: 0 0% 100%;
+  --canvas-raised: 216 22% 95%;
+  --canvas-overlay: 0 0% 100%;
+  --canvas-inset: 210 21% 95%;
+  --canvas-deep: 216 22% 93%;
+
+  --border-subtle: 216 23% 91%;
+  --border-default: 218 25% 87%;
+  --border-hairline-base: 214 40% 20%;
+  --border-hairline-alpha: 0.08;
+
+  --ink: 214 49% 8%;
+  --ink-muted: 223 14% 40%;
+  --ink-faint: 227 14% 48%;
+
+  --revenue: 161 85% 29%;
+  --revenue-dim: 155 53% 83%;
+  --pending: 26 90% 37%;
+  --pending-dim: 37 90% 88%;
+  --denied: 0 72% 51%;
+  --denied-dim: 0 83% 91%;
+  --accent: 39 53% 38%;
+  --accent-dim: 40 51% 82%;
+  --accent-muted: 39 54% 28%;
+
+  --tint-alpha: 0.1;
+  --glow-alpha: 0.06;
+  --glow-alpha-soft: 0.05;
+  --shadow-tint: 220 40% 30%;
+}
+
+.dark {
+  --canvas: 216 60% 5%;
+  --canvas-surface: 214 49% 8%;
+  --canvas-raised: 211 48% 14%;
+  --canvas-overlay: 212 52% 6%;
+  --canvas-inset: 218 58% 4%;
+  --canvas-deep: 220 65% 2%;
+
+  --border-subtle: 213 38% 15%;
+  --border-default: 211 38% 21%;
+  --border-hairline-base: 180 45% 90%;
+  --border-hairline-alpha: 0.07;
+
+  --ink: 216 33% 97%;
+  --ink-muted: 223 14% 60%;
+  --ink-faint: 220 13% 54%;
+
+  --revenue: 160 80% 44%;
+  --revenue-dim: 162 80% 20%;
+  --pending: 37 91% 55%;
+  --pending-dim: 36 77% 31%;
+  --denied: 0 84% 60%;
+  --denied-dim: 0 70% 35%;
+  --accent: 39 55% 62%;
+  --accent-dim: 38 39% 39%;
+  --accent-muted: 39 54% 76%;
+
+  --tint-alpha: 0.1;
+  --glow-alpha: 0.1;
+  --glow-alpha-soft: 0.05;
+  --shadow-tint: 220 60% 1%;
+}
+
 @layer base {
   * {
     @apply border-border-subtle;
+  }
+
+  html {
+    color-scheme: light;
+  }
+  html.dark {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-canvas text-ink;
+  }
+
+  /* Troca de tema suave — só nas propriedades de cor, nunca em layout,
+     pra evitar "flash" brusco ao alternar claro/escuro. */
+  body,
+  body * {
+    transition-property: background-color, border-color, color, box-shadow;
+    transition-duration: 0.18s;
+    transition-timing-function: ease-out;
   }
 
   /* Foco visível sempre — acessibilidade não é opcional */
@@ -19,6 +125,7 @@
       animation-duration: 0.01ms !important;
       animation-iteration-count: 1 !important;
       transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
     }
   }
 }
@@ -28,4 +135,26 @@
     font-variant-numeric: tabular-nums;
     font-feature-settings: "tnum";
   }
+}
+
+/* Scrollbar customizada — fina, na cor do tema, sem o cinza padrão do
+   SO que denuncia "produto genérico" à primeira rolada de página. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--border-default)) transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--border-default));
+  border-radius: 999px;
+  border: 2px solid hsl(var(--canvas));
+}
+*::-webkit-scrollbar-thumb:hover {
+  background-color: hsl(var(--ink-faint));
 }

@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { CheckCircle2, Gauge } from "lucide-react";
 import { KpiCard } from "@/components/ui/KpiCard";
 import { RiskBadge } from "@/components/ui/RiskBadge";
 import { Panel, EmptyState, LoadingState, ErrorState } from "@/components/ui/Panel";
 import { Pagination } from "@/components/ui/Pagination";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import type { BillingResponse, PaginatedResponse } from "@/lib/types";
@@ -47,18 +49,20 @@ export function DashboardPage() {
   const totalAtRisk = highRiskBillings.reduce((sum, b) => sum + b.charged_value, 0);
 
   return (
-    <div>
-      <div className="mb-4">
-        <h1 className="text-lg font-semibold text-ink">Painel</h1>
-        <p className="text-xs text-ink-faint">
-          O que precisa da sua atenção agora — para a visão estratégica de período, veja a Sala de Comando.
-        </p>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        icon={Gauge}
+        title="Painel"
+        subtitle="O que precisa da sua atenção agora — para a visão estratégica de período, veja a Sala de Comando."
+      />
 
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
         <KpiCard
+          colSpan={6}
           label="Faturamentos de alto risco em aberto"
           value={isLoading ? "..." : String(highRiskPage?.total ?? 0)}
+          numericValue={isLoading ? undefined : (highRiskPage?.total ?? 0)}
+          format={(n) => String(Math.round(n))}
           tone={(highRiskPage?.total ?? 0) > 0 ? "pending" : "revenue"}
           narrative={
             !isLoading && highRiskPage
@@ -69,8 +73,11 @@ export function DashboardPage() {
           }
         />
         <KpiCard
+          colSpan={6}
           label="Valor salvo por correção automática (nesta página)"
           value={isLoading ? "..." : formatCurrency(totalValueSaved)}
+          numericValue={isLoading ? undefined : totalValueSaved}
+          format={formatCurrency}
           tone="revenue"
           narrative={
             !isLoading && totalValueSaved > 0
@@ -84,18 +91,18 @@ export function DashboardPage() {
         {isLoading && <LoadingState variant="table" rows={5} />}
         {error && <ErrorState message={getApiErrorMessage(error)} onRetry={() => refetch()} />}
         {!isLoading && !error && highRiskBillings.length === 0 && (
-          <EmptyState message="Nenhum faturamento de alto risco no momento — a agenda está limpa." />
+          <EmptyState icon={<CheckCircle2 size={17} strokeWidth={1.5} />} message="Nenhum faturamento de alto risco no momento — a agenda está limpa." />
         )}
         {!isLoading && highRiskBillings.length > 0 && (
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-border-subtle text-2xs uppercase tracking-wide text-ink-faint">
-                <th className="px-4 py-2 font-medium">Criado em</th>
-                <th className="px-4 py-2 font-medium">Valor cobrado</th>
-                <th className="px-4 py-2 font-medium">Risco</th>
-                <th className="px-4 py-2 font-medium">Motivos</th>
-                <th className="px-4 py-2 font-medium">Status</th>
-                <th className="px-4 py-2 text-right font-medium">Valor salvo</th>
+              <tr className="border-b border-border-hairline text-2xs uppercase tracking-wide text-ink-faint">
+                <th className="px-4 py-2.5 font-medium">Criado em</th>
+                <th className="px-4 py-2.5 font-medium">Valor cobrado</th>
+                <th className="px-4 py-2.5 font-medium">Risco</th>
+                <th className="px-4 py-2.5 font-medium">Motivos</th>
+                <th className="px-4 py-2.5 font-medium">Status</th>
+                <th className="px-4 py-2.5 text-right font-medium">Valor salvo</th>
               </tr>
             </thead>
             <tbody>
@@ -103,7 +110,7 @@ export function DashboardPage() {
                 .slice()
                 .sort((a, b) => b.charged_value - a.charged_value)
                 .map((billing) => (
-                  <tr key={billing.id} className="border-b border-border-subtle last:border-0 hover:bg-canvas-raised">
+                  <tr key={billing.id} className="border-b border-border-hairline last:border-0 transition-colors hover:bg-canvas-raised/60">
                     <td className="px-4 py-2.5 text-ink-muted">{formatDate(billing.created_at)}</td>
                     <td className="tabular px-4 py-2.5 font-mono text-ink">{formatCurrency(billing.charged_value)}</td>
                     <td className="px-4 py-2.5">

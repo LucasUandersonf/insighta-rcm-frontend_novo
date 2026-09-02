@@ -4,6 +4,27 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Insighta RCM</title>
+    <!-- Aplica o tema salvo ANTES do primeiro paint — evita o "flash"
+         de tema errado (ex: usuário escolheu claro, mas a página pisca
+         escura por uma fração de segundo antes do React montar). -->
+    <script>
+      (function () {
+        try {
+          var stored = localStorage.getItem("insighta-rcm:theme");
+          var theme =
+            stored === "light" || stored === "dark"
+              ? stored
+              : stored === "system" || !stored
+                ? window.matchMedia("(prefers-color-scheme: dark)").matches
+                  ? "dark"
+                  : "light"
+                : "dark";
+          document.documentElement.classList.toggle("dark", theme === "dark");
+        } catch (e) {
+          document.documentElement.classList.add("dark");
+        }
+      })();
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link

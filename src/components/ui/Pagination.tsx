@@ -1,3 +1,6 @@
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { cn } from "@/lib/cn";
+
 interface PaginationProps {
   /** Total de itens (não de páginas). */
   total: number;
@@ -38,11 +41,11 @@ export function Pagination({ total, limit, offset, onOffsetChange }: PaginationP
   return (
     <nav
       aria-label="Paginação"
-      className="flex flex-wrap items-center justify-between gap-3 border-t border-border-hairline px-5 py-3"
+      className="flex flex-wrap items-center justify-between gap-3 border-t border-border-hairline px-5 py-3.5"
     >
       <p className="text-2xs text-ink-faint">
-        Mostrando <span className="text-ink-muted">{rangeStart}</span>–<span className="text-ink-muted">{rangeEnd}</span> de{" "}
-        <span className="text-ink-muted">{total}</span>
+        Mostrando <span className="font-medium text-ink-muted">{rangeStart}</span>–<span className="font-medium text-ink-muted">{rangeEnd}</span> de{" "}
+        <span className="font-medium text-ink-muted">{total}</span>
       </p>
       <div className="flex items-center gap-1">
         <button
@@ -50,8 +53,9 @@ export function Pagination({ total, limit, offset, onOffsetChange }: PaginationP
           onClick={() => goToPage(currentPage - 1)}
           disabled={!canPrev}
           aria-label="Página anterior"
-          className="rounded-sm border border-border-subtle px-2 py-1 text-2xs text-ink-muted transition-colors hover:border-border hover:text-ink disabled:cursor-not-allowed disabled:opacity-40"
+          className="flex items-center gap-1 rounded-md border border-border-subtle px-2 py-1 text-2xs text-ink-muted transition-colors hover:border-accent/40 hover:text-ink disabled:cursor-not-allowed disabled:opacity-40"
         >
+          <ChevronLeft size={12} />
           Anterior
         </button>
         {start > 1 && <span className="px-1 text-2xs text-ink-faint">…</span>}
@@ -61,11 +65,12 @@ export function Pagination({ total, limit, offset, onOffsetChange }: PaginationP
             type="button"
             onClick={() => goToPage(page)}
             aria-current={page === currentPage ? "page" : undefined}
-            className={`min-w-[1.75rem] rounded-sm border px-2 py-1 text-2xs transition-colors ${
+            className={cn(
+              "min-w-[1.75rem] rounded-md border px-2 py-1 text-2xs transition-colors",
               page === currentPage
                 ? "border-accent/40 bg-accent-bg text-accent"
-                : "border-border-subtle text-ink-muted hover:border-border hover:text-ink"
-            }`}
+                : "border-border-subtle text-ink-muted hover:border-accent/40 hover:text-ink"
+            )}
           >
             {page}
           </button>
@@ -76,9 +81,10 @@ export function Pagination({ total, limit, offset, onOffsetChange }: PaginationP
           onClick={() => goToPage(currentPage + 1)}
           disabled={!canNext}
           aria-label="Próxima página"
-          className="rounded-sm border border-border-subtle px-2 py-1 text-2xs text-ink-muted transition-colors hover:border-border hover:text-ink disabled:cursor-not-allowed disabled:opacity-40"
+          className="flex items-center gap-1 rounded-md border border-border-subtle px-2 py-1 text-2xs text-ink-muted transition-colors hover:border-accent/40 hover:text-ink disabled:cursor-not-allowed disabled:opacity-40"
         >
           Próxima
+          <ChevronRight size={12} />
         </button>
       </div>
     </nav>

@@ -1,10 +1,13 @@
 import { useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Paperclip, Plus, ShieldAlert } from "lucide-react";
 import { Panel, EmptyState, LoadingState, ErrorState } from "@/components/ui/Panel";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { TextField, SelectField } from "@/components/ui/FormField";
 import { Pagination } from "@/components/ui/Pagination";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { cn } from "@/lib/cn";
 import { apiClient, ApiError } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useToast } from "@/context/ToastContext";
@@ -263,7 +266,7 @@ function AttachmentsModal({ appeal, onClose }: { appeal: DenialAppeal | null; on
   return (
     <Modal title="Anexos do recurso" isOpen={Boolean(appeal)} onClose={onClose}>
       {appeal.attachments.length === 0 ? (
-        <EmptyState message="Nenhum anexo enviado ainda." />
+        <EmptyState icon={<Paperclip size={17} strokeWidth={1.5} />} message="Nenhum anexo enviado ainda." />
       ) : (
         <ul className="mb-4 divide-y divide-border-subtle">
           {appeal.attachments.map((a) => (
@@ -328,19 +331,20 @@ export function DenialAppealsPage() {
   });
 
   return (
-    <div>
-      <div className="mb-4 flex items-center justify-between">
-        <div>
-          <h1 className="text-lg font-semibold text-ink">Recurso de Glosa</h1>
-          <p className="text-xs text-ink-faint">
-            Negativas formais da operadora (administrativa ou médica) — diferente do Painel Anti-Glosa, que previne
-            erro de preenchimento antes do envio. Aqui é o processo de contestação, com prazo.
-          </p>
-        </div>
-        <Button onClick={() => setIsCreateModalOpen(true)}>+ Abrir recurso</Button>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        icon={ShieldAlert}
+        title="Recurso de Glosa"
+        subtitle="Negativas formais da operadora (administrativa ou médica) — diferente do Painel Anti-Glosa, que previne erro de preenchimento antes do envio. Aqui é o processo de contestação, com prazo."
+        action={
+          <Button onClick={() => setIsCreateModalOpen(true)} className="flex items-center gap-1.5">
+            <Plus size={14} />
+            Abrir recurso
+          </Button>
+        }
+      />
 
-      <div className="mb-3 flex gap-2">
+      <div className="flex flex-wrap gap-2">
         {(["", "aberto", "protocolado", "deferido", "indeferido", "nip_aberta"] as const).map((s) => (
           <button
             key={s}
@@ -348,9 +352,12 @@ export function DenialAppealsPage() {
               setStatusFilter(s);
               setAppealsOffset(0);
             }}
-            className={`rounded-full px-3 py-1 text-2xs font-medium transition-colors ${
-              statusFilter === s ? "bg-canvas-raised text-ink" : "text-ink-faint hover:text-ink"
-            }`}
+            className={cn(
+              "rounded-full border px-3 py-1 text-2xs font-medium transition-colors",
+              statusFilter === s
+                ? "border-accent/30 bg-accent-bg text-accent"
+                : "border-border-subtle text-ink-faint hover:border-border hover:text-ink"
+            )}
           >
             {s === "" ? "Todos" : STATUS_LABELS[s]}
           </button>
@@ -361,29 +368,29 @@ export function DenialAppealsPage() {
         {isLoading && <LoadingState variant="table" rows={4} />}
         {error && <ErrorState message={getApiErrorMessage(error)} onRetry={() => refetchAppeals()} />}
         {!isLoading && !error && (appeals ?? []).length === 0 && (
-          <EmptyState message="Nenhum recurso de glosa nesta visão." />
+          <EmptyState icon={<ShieldAlert size={17} strokeWidth={1.5} />} message="Nenhum recurso de glosa nesta visão." />
         )}
         {!isLoading && (appeals ?? []).length > 0 && (
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-border-subtle text-2xs uppercase tracking-wide text-ink-faint">
-                <th className="px-4 py-2 font-medium">Tipo</th>
-                <th className="px-4 py-2 font-medium">Negativa em</th>
-                <th className="px-4 py-2 font-medium">Prazo</th>
-                <th className="px-4 py-2 font-medium">Status</th>
-                <th className="px-4 py-2 font-medium"></th>
+              <tr className="border-b border-border-hairline text-2xs uppercase tracking-wide text-ink-faint">
+                <th className="px-4 py-2.5 font-medium">Tipo</th>
+                <th className="px-4 py-2.5 font-medium">Negativa em</th>
+                <th className="px-4 py-2.5 font-medium">Prazo</th>
+                <th className="px-4 py-2.5 font-medium">Status</th>
+                <th className="px-4 py-2.5 font-medium"></th>
               </tr>
             </thead>
             <tbody>
               {(appeals ?? []).map((a) => (
-                <tr key={a.id} className="border-b border-border-subtle last:border-0 hover:bg-canvas-raised">
+                <tr key={a.id} className="border-b border-border-hairline last:border-0 transition-colors hover:bg-canvas-raised/60">
                   <td className="px-4 py-2.5 text-ink">{APPEAL_TYPE_LABELS[a.appeal_type]}</td>
                   <td className="px-4 py-2.5 text-ink-muted">{formatDate(a.denied_at)}</td>
                   <td className={`tabular px-4 py-2.5 ${deadlineClass(a.deadline_at, a.status)}`}>
                     {formatDate(a.deadline_at)}
                   </td>
                   <td className="px-4 py-2.5">
-                    <span className={`rounded-full px-2 py-0.5 text-2xs font-medium ${STATUS_CLASSES[a.status]}`}>
+                    <span className={`rounded-full border border-transparent px-2 py-0.5 text-2xs font-medium ${STATUS_CLASSES[a.status]}`}>
                       {STATUS_LABELS[a.status]}
                     </span>
                   </td>

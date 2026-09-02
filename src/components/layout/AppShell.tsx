@@ -1,4 +1,5 @@
 import { Outlet, useLocation } from "react-router-dom";
+import { AnimatePresence, motion } from "framer-motion";
 import { TopBar } from "./TopBar";
 import { Sidebar } from "./Sidebar";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -27,7 +28,17 @@ export function AppShell() {
         <Sidebar />
         <main id="main-content" className="mx-auto w-full max-w-[1400px] px-6 py-6">
           <ErrorBoundary scope="route" key={location.pathname}>
-            <Outlet />
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={location.pathname}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.18, ease: "easeOut" }}
+              >
+                <Outlet />
+              </motion.div>
+            </AnimatePresence>
           </ErrorBoundary>
         </main>
       </div>

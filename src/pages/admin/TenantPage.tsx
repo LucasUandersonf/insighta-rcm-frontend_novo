@@ -1,8 +1,10 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Building2 } from "lucide-react";
 import { Panel, LoadingState, ErrorState } from "@/components/ui/Panel";
 import { Button } from "@/components/ui/Button";
 import { TextField } from "@/components/ui/FormField";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useToast } from "@/context/ToastContext";
@@ -136,15 +138,16 @@ export function TenantPage() {
   }
 
   return (
-    <div>
-      <h1 className="mb-4 text-lg font-semibold text-ink">Minha Clínica</h1>
+    <div className="space-y-6">
+      <PageHeader icon={Building2} title="Minha Clínica" subtitle="Dados cadastrais, plano de assinatura e meta de faturamento anual." />
 
       {isLoading && <LoadingState />}
       {error && <ErrorState message={getApiErrorMessage(error)} />}
 
       {tenant && (
-        <div className="grid gap-4 md:grid-cols-2">
-          <Panel title="Dados cadastrais" subtitle="CNPJ não pode ser alterado por aqui — fale com o suporte.">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+          <div className="lg:col-span-6">
+            <Panel title="Dados cadastrais" subtitle="CNPJ não pode ser alterado por aqui — fale com o suporte.">
             <form onSubmit={handleSubmit} className="p-4">
               <TextField label="Razão social" required value={legalName} onChange={(e) => setLegalName(e.target.value)} disabled={!isOwner} />
               <TextField label="Nome fantasia" required value={tradeName} onChange={(e) => setTradeName(e.target.value)} disabled={!isOwner} />
@@ -159,7 +162,9 @@ export function TenantPage() {
               {!isOwner && <p className="text-2xs text-ink-faint">Só o papel “owner” pode editar os dados cadastrais.</p>}
             </form>
           </Panel>
+          </div>
 
+          <div className="lg:col-span-6">
           <Panel title="Plano e Assinatura">
             <div className="p-4">
               <p className="text-2xs uppercase tracking-wide text-ink-faint">Plano atual</p>
@@ -178,8 +183,11 @@ export function TenantPage() {
               </p>
             </div>
           </Panel>
+          </div>
 
-          <AnnualGoalPanel tenant={tenant} isOwner={isOwner} />
+          <div className="lg:col-span-12">
+            <AnnualGoalPanel tenant={tenant} isOwner={isOwner} />
+          </div>
         </div>
       )}
     </div>

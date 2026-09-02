@@ -1,19 +1,25 @@
 import type { Config } from "tailwindcss";
+import tailwindcssAnimate from "tailwindcss-animate";
 
-// DECISÃO DE DESIGN — tokens do brief (dashboard de RCM/glosa)
+// DECISÃO DE DESIGN — v2 (refactor 2026, "Bento / Tactile Precision")
 // -----------------------------------------------------------------
-// Paleta deliberadamente restrita: fundo NAVY/PETROL profundo + 3 cores
-// semânticas (emerald=aprovado/receita, âmbar=pendente de auditoria,
-// red=glosado) fazendo TODO o trabalho de comunicação — sem uma 4ª
-// cor de "acento" arbitrária por cima. Ações primárias reaproveitam o
-// emerald (reforça "isso move receita na direção certa"), não uma cor
-// nova sem relação com o domínio.
+// Migração de hex fixo -> HSL via CSS custom properties (ver
+// src/index.css, blocos `:root` e `.dark`). Isso é o que permite o
+// tema claro e escuro conviverem SEM duplicar a árvore de componentes:
+// cada classe (`bg-canvas-surface`, `text-ink-muted`, `border-denied`…)
+// resolve para uma variável diferente dependendo da classe `.dark` no
+// <html>. Nomes dos tokens continuam INTOCADOS — só a fonte do valor
+// mudou de hex estático pra `hsl(var(--x) / <alpha-value>)`, então
+// nenhum arquivo que já consome essas classes precisa mudar.
 //
-// Passo 2 do rebrand visual: o grafite neutro (#0B0F19/#10141F/#161B2B)
-// virou "banco/fundo petrol" — mesmo grau de escuridão, hue deslocado
-// pra azul-petróleo (não grafite neutro, não azul genérico de dev tool).
-// Nomes dos tokens INTOCADOS — só os valores hex mudaram — porque
-// dezenas de arquivos consomem essas classes exatas.
+// Paleta continua deliberadamente restrita: fundo neutro (petrol no
+// escuro, gelo/branco no claro) + 3 cores semânticas (emerald=receita,
+// âmbar=pendente, red=glosado) fazendo todo o trabalho de comunicação,
+// mais 1 acento dourado não-semântico para marca/destaque editorial.
+function withOpacity(variable: string) {
+  return `hsl(var(${variable}) / <alpha-value>)`;
+}
+
 export default {
   content: ["./index.html", "./src/**/*.{ts,tsx}"],
   darkMode: "class",
@@ -21,100 +27,95 @@ export default {
     extend: {
       colors: {
         canvas: {
-          DEFAULT: "#050B14", // fundo — navy/petrol quase preto
-          surface: "#0B1420", // cards
-          raised: "#132436", // elementos sobre cards (hover, inputs)
-          // Camadas adicionais — mesma família tonal, mais profundidade
-          // (fundo de página com leve gradiente, e "buracos" — inputs
-          // dentro de card, trilhos de tabela) sem introduzir nova cor.
-          overlay: "#081019", // véu por trás de modais/gradiente de fundo
-          inset: "#04080F", // elementos "afundados" (trilho de progresso, inputs aninhados)
+          DEFAULT: withOpacity("--canvas"),
+          surface: withOpacity("--canvas-surface"),
+          raised: withOpacity("--canvas-raised"),
+          overlay: withOpacity("--canvas-overlay"),
+          inset: withOpacity("--canvas-inset"),
         },
         border: {
-          subtle: "#182535", // petrol-tinted, não cinza neutro
-          DEFAULT: "#22364B",
-          // Borda "fio de cabelo" — separadores premium quase invisíveis
-          // (headers de tabela, divisórias finas) em vez do 1px padrão.
-          // Levemente tingida de teal pra ficar na mesma família do fundo.
-          hairline: "rgba(210, 235, 235, 0.07)",
+          subtle: withOpacity("--border-subtle"),
+          DEFAULT: withOpacity("--border-default"),
+          hairline: "hsl(var(--border-hairline-base) / var(--border-hairline-alpha))",
         },
         ink: {
-          DEFAULT: "#F5F7FA", // texto principal — branco gelo
-          muted: "#8B93A7", // texto secundário
-          // WCAG AA fix: #5B6478 media ~3.1:1 contra canvas.surface/DEFAULT
-          // (reprova texto normal, que exige 4.5:1) e era usado em dezenas
-          // de lugares como texto visível (captions, timestamps,
-          // placeholders, dicas de empty state) — não decoração. #7A8498
-          // mede ~4.9:1 sobre canvas.surface e ~5.2:1 sobre canvas.DEFAULT,
-          // passa AA com folga e continua visivelmente mais apagado que
-          // ink.muted (#8B93A7). Nome do token INTOCADO.
-          faint: "#7A8498", // texto terciário / placeholders
+          DEFAULT: withOpacity("--ink"),
+          muted: withOpacity("--ink-muted"),
+          faint: withOpacity("--ink-faint"),
         },
         revenue: {
-          DEFAULT: "#16C98D", // aprovado / receita / positivo — emerald mais saturado, harmoniza com o navy
-          dim: "#0A5C44",
-          bg: "rgba(22, 201, 141, 0.1)",
+          DEFAULT: withOpacity("--revenue"),
+          dim: withOpacity("--revenue-dim"),
+          bg: "hsl(var(--revenue) / var(--tint-alpha))",
         },
         pending: {
-          DEFAULT: "#F5A524", // auditoria pendente — âmbar mais quente
-          dim: "#8A5A12",
-          bg: "rgba(245, 165, 36, 0.1)",
+          DEFAULT: withOpacity("--pending"),
+          dim: withOpacity("--pending-dim"),
+          bg: "hsl(var(--pending) / var(--tint-alpha))",
         },
         denied: {
-          DEFAULT: "#EF4444", // glosado
-          dim: "#991B1B",
-          bg: "rgba(239, 68, 68, 0.1)",
+          DEFAULT: withOpacity("--denied"),
+          dim: withOpacity("--denied-dim"),
+          bg: "hsl(var(--denied) / var(--tint-alpha))",
         },
-        // Acento premium — NÃO participa do vocabulário semântico de
-        // status (isso continua 100% revenue/pending/denied). Usado com
-        // moderação em marca, ação primária de destaque e realces
-        // editoriais (ex: NarrativeInsight, active-state da sidebar) —
-        // um dourado que lê como "gestão financeira de alto nível" e
-        // ganhou um pouco mais de brilho pra contrastar com o navy mais
-        // escuro, não o azul genérico de dashboard de dev tool.
         accent: {
-          DEFAULT: "#D4AF6A",
-          dim: "#8A6E3D",
-          muted: "#E3CBA0",
-          bg: "rgba(212, 175, 106, 0.1)",
+          DEFAULT: withOpacity("--accent"),
+          dim: withOpacity("--accent-dim"),
+          muted: withOpacity("--accent-muted"),
+          bg: "hsl(var(--accent) / var(--tint-alpha))",
         },
       },
       fontFamily: {
         sans: ["Inter", "system-ui", "sans-serif"],
-        // Serifada editorial — reservada para títulos de seção/página e
-        // números de destaque em relatórios, dando o peso de "relatório
-        // financeiro de alta gestão" sem tirar o Inter do resto da UI
-        // (dado tabular continua em sans/mono, que lê melhor em tabela).
         serif: ["\"Fraunces\"", "Georgia", "serif"],
         mono: ["ui-monospace", "SFMono-Regular", "Roboto Mono", "monospace"],
       },
       borderRadius: {
-        DEFAULT: "6px",
-        sm: "4px",
-        lg: "10px",
+        DEFAULT: "var(--radius)",
+        sm: "calc(var(--radius) - 4px)",
+        md: "calc(var(--radius) - 2px)",
+        lg: "var(--radius)",
+        xl: "calc(var(--radius) + 6px)",
       },
       fontSize: {
         "2xs": ["0.6875rem", { lineHeight: "1rem" }],
+        // Número "manchete" de KPI em bento cards — grande o bastante
+        // pra ser lido a 2 metros de distância, com tracking negativo
+        // pra compensar o peso visual em tamanhos display.
+        display: ["clamp(1.75rem, 1.4rem + 1.4vw, 2.75rem)", { lineHeight: "1.05", letterSpacing: "-0.02em" }],
       },
       letterSpacing: {
         premium: "0.02em",
+        tightest: "-0.03em",
       },
       boxShadow: {
-        // Sombras suaves e de baixa opacidade — elevação por profundidade
-        // sutil, não o "drop shadow" pesado de dashboard genérico.
-        card: "0 1px 2px rgba(0, 0, 0, 0.24), 0 0 0 1px rgba(245, 247, 250, 0.03)",
-        elevated: "0 12px 32px -8px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(245, 247, 250, 0.04)",
+        card: "0 1px 2px hsl(var(--shadow-tint) / 0.08), 0 0 0 1px hsl(var(--shadow-tint) / 0.03)",
+        elevated: "0 16px 40px -12px hsl(var(--shadow-tint) / 0.22), 0 0 0 1px hsl(var(--shadow-tint) / 0.05)",
+        "elevated-lg": "0 24px 64px -16px hsl(var(--shadow-tint) / 0.28), 0 0 0 1px hsl(var(--shadow-tint) / 0.06)",
       },
       backgroundImage: {
-        // Fundo de página em camadas — glow de teal sutil no canto
-        // superior esquerdo (ecoa o mock "Insighta" de referência) sobre
-        // um degradê navy → petrol quase preto nas bordas. Profundidade
-        // real, não um "flat fill" de dashboard genérico.
+        // Fundo de página em camadas — glow sutil de teal/dourado no
+        // canto superior, sobre um degradê de base. Os stops mudam de
+        // valor entre claro/escuro via variável --glow-alpha* (ver
+        // index.css), então a MESMA classe funciona nos dois temas.
         "premium-canvas":
-          "radial-gradient(ellipse 80% 55% at 12% -8%, rgba(45, 212, 191, 0.10), transparent 55%), radial-gradient(ellipse 70% 50% at 100% 0%, rgba(212, 175, 106, 0.05), transparent 60%), linear-gradient(180deg, #0B1420 0%, #050B14 55%, #030609 100%)",
-        "accent-line": "linear-gradient(180deg, #D4AF6A, rgba(212, 175, 106, 0))",
+          "radial-gradient(ellipse 80% 55% at 12% -8%, hsl(var(--revenue) / var(--glow-alpha)), transparent 55%), radial-gradient(ellipse 70% 50% at 100% 0%, hsl(var(--accent) / var(--glow-alpha-soft)), transparent 60%), linear-gradient(180deg, hsl(var(--canvas-surface)) 0%, hsl(var(--canvas)) 55%, hsl(var(--canvas-deep)) 100%)",
+        "accent-line": "linear-gradient(180deg, hsl(var(--accent)), hsl(var(--accent) / 0))",
+      },
+      keyframes: {
+        "fade-up": {
+          from: { opacity: "0", transform: "translateY(6px)" },
+          to: { opacity: "1", transform: "translateY(0)" },
+        },
+        shimmer: {
+          "100%": { transform: "translateX(100%)" },
+        },
+      },
+      animation: {
+        "fade-up": "fade-up 0.4s ease-out both",
+        shimmer: "shimmer 1.6s ease-in-out infinite",
       },
     },
   },
-  plugins: [],
+  plugins: [tailwindcssAnimate],
 } satisfies Config;

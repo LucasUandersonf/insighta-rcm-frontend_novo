@@ -31,14 +31,12 @@ function formatDelta(deltaPct: number, unit: string): string {
  * Gera uma frase em prosa (PT-BR) descrevendo a tendência de um KPI.
  *
  * @param label Nome da métrica como deve aparecer na frase (ex: "a taxa de no-show").
- * @param _currentValue Reservado para uma futura regra de "sem variação relevante" baseada no valor absoluto
- *   do KPI (não só no delta) — hoje não é usado dentro da função; mantido na assinatura (prefixado com "_"
- *   para não disparar noUnusedParameters do TypeScript) para não quebrar quem já chama esta função por posição.
+ * @param currentValue Valor atual do KPI (usado só para decidir "sem variação relevante" quando delta é ínfimo).
  * @param deltaPct Variação percentual vs. período anterior, ou null quando não há histórico suficiente.
  */
 export function describeTrend(
   label: string,
-  _currentValue: number,
+  currentValue: number,
   deltaPct: number | null,
   opts: DescribeTrendOptions = {},
 ): string {

@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { ScrollText } from "lucide-react";
 import { Panel, EmptyState, LoadingState, ErrorState } from "@/components/ui/Panel";
 import { FilterBar } from "@/components/ui/FilterBar";
 import { Pagination } from "@/components/ui/Pagination";
 import { TextField } from "@/components/ui/FormField";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import type { AuditLogEntry, PaginatedResponse } from "@/lib/types";
@@ -44,62 +46,59 @@ export function AuditLogPage() {
   }
 
   return (
-    <div>
-      <div className="mb-4">
-        <h1 className="text-lg font-semibold text-ink">Logs de Auditoria</h1>
-        <p className="text-xs text-ink-faint">
-          Trilha de quem fez o quê, quando — toda alteração de dado sensível (contratos, recursos de glosa, usuários,
-          integrações) fica registrada aqui, sem edição possível.
-        </p>
-      </div>
-
-      <FilterBar hasActiveFilters={hasActiveFilters} onClear={clearFilters}>
-        <div className="w-48">
-          <TextField
-            label="Tipo de entidade"
-            placeholder="ex: contract, denial_appeal"
-            value={entityType}
-            onChange={(e) => {
-              setEntityType(e.target.value);
-              setOffset(0);
-            }}
-            className="mb-0"
-          />
-        </div>
-        <div className="w-48">
-          <TextField
-            label="Ação"
-            placeholder="ex: create, update, delete"
-            value={action}
-            onChange={(e) => {
-              setAction(e.target.value);
-              setOffset(0);
-            }}
-            className="mb-0"
-          />
-        </div>
-      </FilterBar>
+    <div className="space-y-6">
+      <PageHeader
+        icon={ScrollText}
+        title="Logs de Auditoria"
+        subtitle="Trilha de quem fez o quê, quando — toda alteração de dado sensível (contratos, recursos de glosa, usuários, integrações) fica registrada aqui, sem edição possível."
+      />
 
       <Panel>
+        <FilterBar hasActiveFilters={hasActiveFilters} onClear={clearFilters}>
+          <div className="w-48">
+            <TextField
+              label="Tipo de entidade"
+              placeholder="ex: contract, denial_appeal"
+              value={entityType}
+              onChange={(e) => {
+                setEntityType(e.target.value);
+                setOffset(0);
+              }}
+              className="mb-0"
+            />
+          </div>
+          <div className="w-48">
+            <TextField
+              label="Ação"
+              placeholder="ex: create, update, delete"
+              value={action}
+              onChange={(e) => {
+                setAction(e.target.value);
+                setOffset(0);
+              }}
+              className="mb-0"
+            />
+          </div>
+        </FilterBar>
         {isLoading && <LoadingState variant="table" rows={6} />}
         {error && <ErrorState message={getApiErrorMessage(error)} onRetry={() => refetch()} />}
         {!isLoading && !error && (data?.items ?? []).length === 0 && (
-          <EmptyState message="Nenhum evento de auditoria para os filtros atuais." />
+          <EmptyState icon={<ScrollText size={17} strokeWidth={1.5} />} message="Nenhum evento de auditoria para os filtros atuais." />
         )}
         {!isLoading && (data?.items ?? []).length > 0 && (
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-border-subtle text-2xs uppercase tracking-wide text-ink-faint">
-                <th className="px-4 py-2 font-medium">Quando</th>
-                <th className="px-4 py-2 font-medium">Ação</th>
-                <th className="px-4 py-2 font-medium">Entidade</th>
-                <th className="px-4 py-2 font-medium">ID</th>
-                <th className="px-4 py-2 font-medium">Detalhes</th>
+              <tr className="border-b border-border-hairline text-2xs uppercase tracking-wide text-ink-faint">
+                <th className="px-4 py-2.5 font-medium">Quando</th>
+                <th className="px-4 py-2.5 font-medium">Ação</th>
+                <th className="px-4 py-2.5 font-medium">Entidade</th>
+                <th className="px-4 py-2.5 font-medium">ID</th>
+                <th className="px-4 py-2.5 font-medium">Detalhes</th>
               </tr>
             </thead>
             <tbody>
               {(data?.items ?? []).map((entry) => (
-                <tr key={entry.id} className="border-b border-border-subtle last:border-0 hover:bg-canvas-raised">
+                <tr key={entry.id} className="border-b border-border-hairline last:border-0 transition-colors hover:bg-canvas-raised/60">
                   <td className="px-4 py-2.5 text-ink-muted">{formatDateTime(entry.created_at)}</td>
                   <td className="px-4 py-2.5 text-ink">{ACTION_LABELS[entry.action] ?? entry.action}</td>
                   <td className="px-4 py-2.5 text-ink-muted">{entry.entity_type}</td>

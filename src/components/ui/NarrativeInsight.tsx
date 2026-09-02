@@ -1,3 +1,6 @@
+import { ArrowDownRight, ArrowUpRight, Circle, Diamond } from "lucide-react";
+import { cn } from "@/lib/cn";
+
 export { describeTrend } from "@/lib/narrative";
 export type { DescribeTrendOptions, MetricShape } from "@/lib/narrative";
 
@@ -8,11 +11,11 @@ interface NarrativeInsightProps {
   tone?: NarrativeTone;
 }
 
-const toneConfig: Record<NarrativeTone, { icon: string; className: string }> = {
-  positive: { icon: "▲", className: "text-revenue" },
-  warning: { icon: "●", className: "text-pending" },
-  critical: { icon: "▼", className: "text-denied" },
-  neutral: { icon: "◆", className: "text-accent" },
+const toneConfig: Record<NarrativeTone, { icon: typeof Circle; className: string }> = {
+  positive: { icon: ArrowUpRight, className: "text-revenue" },
+  warning: { icon: Circle, className: "text-pending" },
+  critical: { icon: ArrowDownRight, className: "text-denied" },
+  neutral: { icon: Diamond, className: "text-accent" },
 };
 
 /** Callout compacto de texto explicativo automático ao lado/abaixo de um
@@ -22,11 +25,10 @@ const toneConfig: Record<NarrativeTone, { icon: string; className: string }> = {
  * componente de apresentação. */
 export function NarrativeInsight({ text, tone = "neutral" }: NarrativeInsightProps) {
   const cfg = toneConfig[tone];
+  const Icon = cfg.icon;
   return (
     <p className="flex items-start gap-1.5 text-2xs leading-relaxed text-ink-muted">
-      <span aria-hidden className={`mt-0.5 shrink-0 ${cfg.className}`}>
-        {cfg.icon}
-      </span>
+      <Icon aria-hidden size={11} className={cn("mt-0.5 shrink-0", cfg.className)} />
       <span>{text}</span>
     </p>
   );

@@ -1,10 +1,12 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Building2, ClipboardList, FileText, Plus, Sparkles } from "lucide-react";
 import { Panel, EmptyState, LoadingState, ErrorState } from "@/components/ui/Panel";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { TextField, SelectField } from "@/components/ui/FormField";
 import { Pagination } from "@/components/ui/Pagination";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { apiClient, ApiError } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useToast } from "@/context/ToastContext";
@@ -718,56 +720,58 @@ export function ContractsPage() {
   }, [plans]);
 
   return (
-    <div>
-      <div className="mb-4 flex items-center justify-between">
-        <div>
-          <h1 className="text-lg font-semibold text-ink">Convênios & Contratos</h1>
-          <p className="text-xs text-ink-faint">
-            Cadastre operadoras, planos e a tabela de preços contratada — a base de comparação do motor anti-glosa e
-            do buraco financeiro.
-          </p>
+    <div className="space-y-6">
+      <PageHeader
+        icon={FileText}
+        title="Convênios & Contratos"
+        subtitle="Cadastre operadoras, planos e a tabela de preços contratada — a base de comparação do motor anti-glosa e do buraco financeiro."
+      />
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+        <div className="lg:col-span-6">
+          <Panel title="Operadoras" action={<Button variant="secondary" className="flex items-center gap-1 !px-2.5 !py-1 text-xs" onClick={() => setIsCompanyModalOpen(true)}><Plus size={12} />Nova operadora</Button>}>
+            {(companies ?? []).length === 0 ? (
+              <EmptyState icon={<Building2 size={17} strokeWidth={1.5} />} message="Nenhuma operadora cadastrada." />
+            ) : (
+              <ul className="divide-y divide-border-hairline">
+                {(companies ?? []).map((c) => (
+                  <li key={c.id} className="px-5 py-2.5 text-sm text-ink transition-colors hover:bg-canvas-raised/40">
+                    {c.name}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Panel>
         </div>
-      </div>
 
-      <div className="mb-4 grid grid-cols-2 gap-4">
-        <Panel title="Operadoras" action={<Button variant="secondary" className="!px-2 !py-1 text-xs" onClick={() => setIsCompanyModalOpen(true)}>+ Nova operadora</Button>}>
-          {(companies ?? []).length === 0 ? (
-            <EmptyState message="Nenhuma operadora cadastrada." />
-          ) : (
-            <ul className="divide-y divide-border-subtle">
-              {(companies ?? []).map((c) => (
-                <li key={c.id} className="px-4 py-2 text-sm text-ink">
-                  {c.name}
-                </li>
-              ))}
-            </ul>
-          )}
-        </Panel>
-
-        <Panel title="Planos" action={<Button variant="secondary" className="!px-2 !py-1 text-xs" onClick={() => setIsPlanModalOpen(true)}>+ Novo plano</Button>}>
-          {(plans ?? []).length === 0 ? (
-            <EmptyState message="Nenhum plano cadastrado." />
-          ) : (
-            <ul className="divide-y divide-border-subtle">
-              {(plans ?? []).map((p) => (
-                <li key={p.id} className="px-4 py-2 text-sm text-ink">
-                  {p.display_name}
-                </li>
-              ))}
-            </ul>
-          )}
-        </Panel>
+        <div className="lg:col-span-6">
+          <Panel title="Planos" action={<Button variant="secondary" className="flex items-center gap-1 !px-2.5 !py-1 text-xs" onClick={() => setIsPlanModalOpen(true)}><Plus size={12} />Novo plano</Button>}>
+            {(plans ?? []).length === 0 ? (
+              <EmptyState icon={<ClipboardList size={17} strokeWidth={1.5} />} message="Nenhum plano cadastrado." />
+            ) : (
+              <ul className="divide-y divide-border-hairline">
+                {(plans ?? []).map((p) => (
+                  <li key={p.id} className="px-5 py-2.5 text-sm text-ink transition-colors hover:bg-canvas-raised/40">
+                    {p.display_name}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Panel>
+        </div>
       </div>
 
       <Panel
         title="Contratos"
         action={
           <div className="flex gap-2">
-            <Button variant="secondary" className="!px-2 !py-1 text-xs" onClick={() => setIsManualModalOpen(true)}>
-              + Cadastro manual
+            <Button variant="secondary" className="flex items-center gap-1 !px-2.5 !py-1 text-xs" onClick={() => setIsManualModalOpen(true)}>
+              <Plus size={12} />
+              Cadastro manual
             </Button>
-            <Button className="!px-2 !py-1 text-xs" onClick={() => setIsUploadModalOpen(true)}>
-              + Enviar PDF (IA)
+            <Button className="flex items-center gap-1 !px-2.5 !py-1 text-xs" onClick={() => setIsUploadModalOpen(true)}>
+              <Sparkles size={12} />
+              Enviar PDF (IA)
             </Button>
           </div>
         }
@@ -777,28 +781,28 @@ export function ContractsPage() {
           <ErrorState message={getApiErrorMessage(contractsError)} onRetry={() => refetchContracts()} />
         )}
         {!contractsLoading && !contractsError && (contracts ?? []).length === 0 && (
-          <EmptyState message="Nenhum contrato cadastrado ainda." />
+          <EmptyState icon={<FileText size={17} strokeWidth={1.5} />} message="Nenhum contrato cadastrado ainda." />
         )}
         {!contractsLoading && (contracts ?? []).length > 0 && (
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-border-subtle text-2xs uppercase tracking-wide text-ink-faint">
-                <th className="px-4 py-2 font-medium">Plano</th>
-                <th className="px-4 py-2 font-medium">Vigência</th>
-                <th className="px-4 py-2 font-medium">Status</th>
-                <th className="px-4 py-2 font-medium">Itens</th>
-                <th className="px-4 py-2 font-medium"></th>
+              <tr className="border-b border-border-hairline text-2xs uppercase tracking-wide text-ink-faint">
+                <th className="px-4 py-2.5 font-medium">Plano</th>
+                <th className="px-4 py-2.5 font-medium">Vigência</th>
+                <th className="px-4 py-2.5 font-medium">Status</th>
+                <th className="px-4 py-2.5 font-medium">Itens</th>
+                <th className="px-4 py-2.5 font-medium"></th>
               </tr>
             </thead>
             <tbody>
               {(contracts ?? []).map((c) => (
-                <tr key={c.id} className="border-b border-border-subtle last:border-0 hover:bg-canvas-raised">
+                <tr key={c.id} className="border-b border-border-hairline last:border-0 transition-colors hover:bg-canvas-raised/60">
                   <td className="px-4 py-2.5 text-ink">{planNameById.get(c.insurance_plan_id) ?? c.insurance_plan_id}</td>
                   <td className="px-4 py-2.5 text-ink-muted">
                     {formatDate(c.valid_from)} {c.valid_until ? `– ${formatDate(c.valid_until)}` : "(sem fim)"}
                   </td>
                   <td className="px-4 py-2.5">
-                    <span className={`rounded-full px-2 py-0.5 text-2xs font-medium ${STATUS_CLASSES[c.status]}`}>
+                    <span className={`rounded-full border border-transparent px-2 py-0.5 text-2xs font-medium ${STATUS_CLASSES[c.status]}`}>
                       {STATUS_LABELS[c.status]}
                     </span>
                   </td>

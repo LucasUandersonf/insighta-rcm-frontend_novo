@@ -5,6 +5,7 @@ import "./index.css";
 import App from "./App";
 import { queryClient } from "@/lib/query-client";
 import { initMonitoring } from "@/lib/monitoring";
+import { ThemeProvider } from "@/context/ThemeContext";
 
 // Fully optional (VITE_SENTRY_DSN) — no-op quando não configurado, ver
 // src/lib/monitoring.ts. Disparado uma vez no bootstrap, antes do
@@ -13,8 +14,10 @@ void initMonitoring();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <App />
-    </QueryClientProvider>
+    <ThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        <App />
+      </QueryClientProvider>
+    </ThemeProvider>
   </StrictMode>
 );

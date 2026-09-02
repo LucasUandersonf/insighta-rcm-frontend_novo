@@ -1,10 +1,13 @@
 import { useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { UploadCloud } from "lucide-react";
 import { Panel, EmptyState, LoadingState, ErrorState } from "@/components/ui/Panel";
 import { Button } from "@/components/ui/Button";
 import { Dropzone } from "@/components/ui/Dropzone";
 import { SelectField, TextField } from "@/components/ui/FormField";
 import { Pagination } from "@/components/ui/Pagination";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { cn } from "@/lib/cn";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useToast } from "@/context/ToastContext";
@@ -49,11 +52,13 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-sm px-3.5 py-2 text-sm font-medium transition-colors ${
+      className={cn(
+        "relative rounded-md px-3.5 py-2 text-sm font-medium transition-colors",
         active ? "bg-canvas-raised text-ink" : "text-ink-faint hover:text-ink"
-      }`}
+      )}
     >
       {children}
+      {active && <span aria-hidden className="absolute inset-x-3 -bottom-px h-0.5 rounded-full bg-accent" />}
     </button>
   );
 }
@@ -95,7 +100,7 @@ function BatchUploadTab() {
   });
 
   return (
-    <div>
+    <div className="space-y-4">
       <Panel
         title="Upload de lotes operacionais"
         subtitle="CSV, XML ou JSON — faturamento, agenda ou repasses do seu ERP. Processado na hora: você vê o resultado nesta mesma tela."
@@ -116,32 +121,31 @@ function BatchUploadTab() {
         </div>
       </Panel>
 
-      <div className="mt-4">
-        <Panel title="Histórico de importações" subtitle="Últimos arquivos enviados por este tenant, mais recente primeiro">
-          {isLoading && <LoadingState variant="table" rows={4} />}
-          {error && <ErrorState message={getApiErrorMessage(error)} onRetry={() => refetch()} />}
-          {!isLoading && !error && (history?.items ?? []).length === 0 && (
-            <EmptyState message="Nenhum arquivo enviado ainda — o primeiro upload aparece aqui assim que for processado." />
-          )}
+      <Panel title="Histórico de importações" subtitle="Últimos arquivos enviados por este tenant, mais recente primeiro">
+        {isLoading && <LoadingState variant="table" rows={4} />}
+        {error && <ErrorState message={getApiErrorMessage(error)} onRetry={() => refetch()} />}
+        {!isLoading && !error && (history?.items ?? []).length === 0 && (
+          <EmptyState icon={<UploadCloud size={17} strokeWidth={1.5} />} message="Nenhum arquivo enviado ainda — o primeiro upload aparece aqui assim que for processado." />
+        )}
           {!isLoading && (history?.items ?? []).length > 0 && (
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="border-b border-border-subtle text-2xs uppercase tracking-wide text-ink-faint">
-                  <th className="px-4 py-2 font-medium">Arquivo</th>
-                  <th className="px-4 py-2 font-medium">Formato</th>
-                  <th className="px-4 py-2 font-medium">Status</th>
-                  <th className="px-4 py-2 font-medium">Linhas importadas</th>
-                  <th className="px-4 py-2 font-medium">Linhas rejeitadas</th>
-                  <th className="px-4 py-2 font-medium">Recebido em</th>
+                <tr className="border-b border-border-hairline text-2xs uppercase tracking-wide text-ink-faint">
+                  <th className="px-4 py-2.5 font-medium">Arquivo</th>
+                  <th className="px-4 py-2.5 font-medium">Formato</th>
+                  <th className="px-4 py-2.5 font-medium">Status</th>
+                  <th className="px-4 py-2.5 font-medium">Linhas importadas</th>
+                  <th className="px-4 py-2.5 font-medium">Linhas rejeitadas</th>
+                  <th className="px-4 py-2.5 font-medium">Recebido em</th>
                 </tr>
               </thead>
               <tbody>
                 {(history?.items ?? []).map((f) => (
-                  <tr key={f.id} className="border-b border-border-subtle last:border-0 hover:bg-canvas-raised">
+                  <tr key={f.id} className="border-b border-border-hairline last:border-0 transition-colors hover:bg-canvas-raised/60">
                     <td className="px-4 py-2.5 text-ink">{f.original_filename ?? "—"}</td>
                     <td className="px-4 py-2.5 text-ink-muted uppercase">{f.file_format}</td>
                     <td className="px-4 py-2.5">
-                      <span className={`rounded-full px-2 py-0.5 text-2xs font-medium ${STATUS_CLASSES[f.status] ?? ""}`}>
+                      <span className={`rounded-full border border-transparent px-2 py-0.5 text-2xs font-medium ${STATUS_CLASSES[f.status] ?? ""}`}>
                         {STATUS_LABELS[f.status] ?? f.status}
                       </span>
                     </td>
@@ -155,11 +159,10 @@ function BatchUploadTab() {
               </tbody>
             </table>
           )}
-          {history && history.total > 0 && (
-            <Pagination total={history.total} limit={HISTORY_PAGE_SIZE} offset={offset} onOffsetChange={setOffset} />
-          )}
-        </Panel>
-      </div>
+        {history && history.total > 0 && (
+          <Pagination total={history.total} limit={HISTORY_PAGE_SIZE} offset={offset} onOffsetChange={setOffset} />
+        )}
+      </Panel>
     </div>
   );
 }
@@ -260,15 +263,14 @@ export function UploadCenterPage() {
   const [tab, setTab] = useState<Tab>("lotes");
 
   return (
-    <div>
-      <div className="mb-4">
-        <h1 className="text-lg font-semibold text-ink">Central de Upload</h1>
-        <p className="text-xs text-ink-faint">
-          Onde o dado real entra no sistema — lotes operacionais do seu ERP e contratos de convênio, direto pela UI.
-        </p>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        icon={UploadCloud}
+        title="Central de Upload"
+        subtitle="Onde o dado real entra no sistema — lotes operacionais do seu ERP e contratos de convênio, direto pela UI."
+      />
 
-      <div className="mb-4 flex gap-1 border-b border-border-subtle">
+      <div className="flex gap-1 border-b border-border-hairline">
         <TabButton active={tab === "lotes"} onClick={() => setTab("lotes")}>
           Lotes Operacionais
         </TabButton>
