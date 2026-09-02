@@ -46,7 +46,7 @@ export function TopBar() {
   };
 
   return (
-    <header className="flex h-14 items-center justify-between border-b border-border-hairline bg-canvas-surface/70 px-6 backdrop-blur-sm">
+    <header className="flex h-14 items-center justify-between border-b border-border-hairline bg-glass px-6 backdrop-blur-xl">
       <div className="flex items-center gap-3">
         <span className="font-serif text-sm font-semibold tracking-premium text-ink">Insighta RCM</span>
         <span className="text-border-default">/</span>

@@ -64,6 +64,20 @@ export default {
           muted: withOpacity("--accent-muted"),
           bg: "hsl(var(--accent) / var(--tint-alpha))",
         },
+        // Gradiente de marca (céu/índigo/violeta) — ver DECISÃO v3 em
+        // index.css. Usado no logo, avatares e nas auras de fundo; nunca
+        // para comunicar estado de dado (isso continua sendo trabalho
+        // exclusivo de revenue/pending/denied).
+        aura: {
+          1: withOpacity("--aura-1"),
+          2: withOpacity("--aura-2"),
+          3: withOpacity("--aura-3"),
+        },
+        // Superfície "vidro fosco" dos cards — mesma cor de canvas-surface,
+        // com a opacidade controlada por --glass-alpha (quase opaca no
+        // claro, translúcida no escuro). Combinar sempre com
+        // backdrop-blur-xl (ver BentoCard.tsx) para o efeito de vidro.
+        glass: "hsl(var(--canvas-surface) / var(--glass-alpha))",
       },
       fontFamily: {
         sans: ["Inter", "system-ui", "sans-serif"],
@@ -94,13 +108,18 @@ export default {
         "elevated-lg": "0 24px 64px -16px hsl(var(--shadow-tint) / 0.28), 0 0 0 1px hsl(var(--shadow-tint) / 0.06)",
       },
       backgroundImage: {
-        // Fundo de página em camadas — glow sutil de teal/dourado no
-        // canto superior, sobre um degradê de base. Os stops mudam de
-        // valor entre claro/escuro via variável --glow-alpha* (ver
-        // index.css), então a MESMA classe funciona nos dois temas.
+        // Fundo de página em camadas — três auras de gradiente coloridas
+        // (céu/índigo/violeta, ver --aura-1/2/3 em index.css) flutuando
+        // sobre um degradê de base neutro. Os stops de opacidade mudam de
+        // valor entre claro/escuro via --glow-alpha* (index.css), então a
+        // MESMA classe funciona nos dois temas — sutil no claro, vívida
+        // no escuro (identidade "Aura Glass", ver DECISÃO v3 em index.css).
         "premium-canvas":
-          "radial-gradient(ellipse 80% 55% at 12% -8%, hsl(var(--revenue) / var(--glow-alpha)), transparent 55%), radial-gradient(ellipse 70% 50% at 100% 0%, hsl(var(--accent) / var(--glow-alpha-soft)), transparent 60%), linear-gradient(180deg, hsl(var(--canvas-surface)) 0%, hsl(var(--canvas)) 55%, hsl(var(--canvas-deep)) 100%)",
+          "radial-gradient(ellipse 65% 50% at 8% -10%, hsl(var(--aura-1) / var(--glow-alpha)), transparent 60%), radial-gradient(ellipse 60% 45% at 100% 0%, hsl(var(--aura-2) / var(--glow-alpha)), transparent 60%), radial-gradient(ellipse 55% 45% at 50% 105%, hsl(var(--aura-3) / var(--glow-alpha-soft)), transparent 65%), linear-gradient(180deg, hsl(var(--canvas-surface)) 0%, hsl(var(--canvas)) 55%, hsl(var(--canvas-deep)) 100%)",
         "accent-line": "linear-gradient(180deg, hsl(var(--accent)), hsl(var(--accent) / 0))",
+        // Gradiente de marca sólido — logo, avatares, botão primário em
+        // destaque (ex: CTA de cadastro).
+        "aura-line": "linear-gradient(135deg, hsl(var(--aura-1)), hsl(var(--aura-2)), hsl(var(--aura-3)))",
       },
       keyframes: {
         "fade-up": {

@@ -1,4 +1,4 @@
-import type { ApiErrorBody, TokenResponse } from "./types";
+import type { ApiErrorBody, RegisterRequest, RegisterResponse, TokenResponse } from "./types";
 import { reportError } from "./monitoring";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL as string | undefined;
@@ -176,6 +176,26 @@ export async function login(email: string, password: string, tenantId?: string):
   return apiClient.post<TokenResponse>(
     "/api/v1/auth/login",
     { email, password, tenant_id: tenantId ?? null },
+    { skipAuth: true }
+  );
+}
+
+/** Cadastro público (self-signup) — ver POST /auth/register no backend. */
+export async function register(data: RegisterRequest): Promise<RegisterResponse> {
+  return apiClient.post<RegisterResponse>("/api/v1/auth/register", data, { skipAuth: true });
+}
+
+/** Sempre resolve (nunca lança) para uma chamada bem-sucedida — o
+ * backend devolve 202 sem corpo, exista ou não o e-mail (anti-
+ * enumeração, ver DECISÃO em AuthService.request_password_reset). */
+export async function requestPasswordReset(email: string): Promise<void> {
+  return apiClient.post<void>("/api/v1/auth/password-reset/request", { email }, { skipAuth: true });
+}
+
+export async function confirmPasswordReset(token: string, newPassword: string): Promise<void> {
+  return apiClient.post<void>(
+    "/api/v1/auth/password-reset/confirm",
+    { token, new_password: newPassword },
     { skipAuth: true }
   );
 }

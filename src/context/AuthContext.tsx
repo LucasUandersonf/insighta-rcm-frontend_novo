@@ -1,12 +1,19 @@
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
-import { login as loginRequest, storeToken, clearStoredToken, getStoredToken, ApiError } from "@/lib/api-client";
+import { login as loginRequest, register as registerRequest, storeToken, clearStoredToken, getStoredToken, ApiError } from "@/lib/api-client";
 import { decodeJwtPayload, isTokenExpired } from "@/lib/jwt";
-import type { CurrentUser, TenantOption } from "@/lib/types";
+import type { CurrentUser, RegisterRequest, TenantOption } from "@/lib/types";
 
 interface AuthContextValue {
   user: CurrentUser | null;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
+  /** Cadastro público (self-signup) — autentica direto ao concluir
+   * (ver DECISÃO em POST /auth/register no backend: sem etapa de
+   * verificação de e-mail nesta primeira versão). */
+  register: (data: RegisterRequest) => Promise<void>;
+  /** Erro amigável da última tentativa de cadastro (null quando não há erro). */
+  registerError: string | null;
+  isRegistering: boolean;
   logout: () => void;
   /** Erro amigável da última tentativa de login (null quando não há erro). */
   loginError: string | null;
@@ -35,6 +42,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<CurrentUser | null>(loadInitialUser);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [registerError, setRegisterError] = useState<string | null>(null);
+  const [isRegistering, setIsRegistering] = useState(false);
   const [tenantSelection, setTenantSelection] = useState<TenantOption[] | null>(null);
   // Guardados em memória só entre "seleciona clínica" e a segunda
   // chamada de login — nunca persistidos (mesmo tratamento que o campo
@@ -62,6 +71,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw err;
     } finally {
       setIsLoggingIn(false);
+    }
+  }, []);
+
+  const register = useCallback(async (data: RegisterRequest) => {
+    setIsRegistering(true);
+    setRegisterError(null);
+    try {
+      const response = await registerRequest(data);
+      storeToken(response.access_token);
+      setUser(decodeJwtPayload(response.access_token));
+    } catch (err) {
+      setRegisterError(err instanceof ApiError ? err.message : "Não foi possível concluir o cadastro. Tente novamente.");
+      throw err;
+    } finally {
+      setIsRegistering(false);
     }
   }, []);
 
@@ -112,6 +136,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         isAuthenticated: !!user,
         login,
+        register,
+        registerError,
+        isRegistering,
         logout,
         loginError,
         isLoggingIn,

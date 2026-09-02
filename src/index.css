@@ -10,18 +10,24 @@
  * via hsl(var(--x) / <alpha-value>), permitindo opacidade por classe,
  * ex: bg-canvas-surface/80).
  *
- * Modo claro: identidade "editorial tech" — branco/gelo puro como base
- * (--canvas), cartões em branco absoluto destacados por borda fio de
- * cabelo (não sombra pesada), cinza levíssimo para elementos "afundados".
- * Modo escuro: petrol/navy profundo original do produto, preservado.
- * Os 3 tokens semânticos (revenue/pending/denied) e o acento dourado
- * mudam de tonalidade entre os temas apenas o necessário para manter
- * WCAG AA em texto normal sobre a superfície de cada tema — a família
- * de matiz (hue) é a mesma nos dois, então a leitura "verde = receita,
- * âmbar = pendente, vermelho = glosado" nunca muda entre temas.
+ * DECISÃO — v3 (redesenho 2026, "Aura Glass"): identidade cromática nova
+ * (céu/índigo/violeta — --aura-1/2/3), cartões com vidro fosco
+ * (backdrop-blur + translucidez, ver BentoCard.tsx) sobre um fundo com
+ * auras de gradiente coloridas (ver .bg-premium-canvas). Migração
+ * cirúrgica, não uma reescrita: os 3 tokens SEMÂNTICOS de dado
+ * (revenue/pending/denied) continuam INTOCADOS — KpiCard, RiskBadge e a
+ * severidade dos insights (crítico/atenção/positivo) dependem
+ * diretamente deles, e nada nesse redesenho pede para mudar o
+ * significado de "verde = receita, âmbar = pendente, vermelho =
+ * glosado". Só o --accent não-semântico (antes dourado editorial) migrou
+ * para a família índigo/violeta, coerente com a nova identidade.
+ * Modo escuro é onde o efeito vidro/aura aparece por completo (mesmo
+ * espírito do produto de referência); modo claro permanece "editorial
+ * limpo" na mesma família de matiz — vidro sobre fundo claro tende a
+ * ficar ilegível sem uma base escura por trás.
  * ------------------------------------------------------------------ */
 :root {
-  --radius: 10px;
+  --radius: 14px;
 
   --canvas: 210 33% 99%;
   --canvas-surface: 0 0% 100%;
@@ -45,32 +51,42 @@
   --pending-dim: 37 90% 88%;
   --denied: 0 72% 51%;
   --denied-dim: 0 83% 91%;
-  --accent: 39 53% 38%;
-  --accent-dim: 40 51% 82%;
-  --accent-muted: 39 54% 28%;
+  --accent: 243 75% 59%;
+  --accent-dim: 234 89% 92%;
+  --accent-muted: 243 60% 40%;
+
+  /* Gradiente de marca (céu -> índigo -> violeta) — alimenta o logo, os
+     avatares e as auras decorativas de fundo (.bg-premium-canvas). */
+  --aura-1: 199 89% 64%;
+  --aura-2: 243 75% 63%;
+  --aura-3: 271 76% 65%;
 
   --tint-alpha: 0.1;
-  --glow-alpha: 0.06;
-  --glow-alpha-soft: 0.05;
+  --glow-alpha: 0.08;
+  --glow-alpha-soft: 0.06;
   --shadow-tint: 220 40% 30%;
+  /* Translucidez do "vidro" dos cards (ver BentoCard.tsx) — bem sutil no
+     claro (quase opaco: vidro sobre branco não tem contraste de fundo
+     para valer a pena), plena no escuro. */
+  --glass-alpha: 0.94;
 }
 
 .dark {
-  --canvas: 216 60% 5%;
-  --canvas-surface: 214 49% 8%;
-  --canvas-raised: 211 48% 14%;
-  --canvas-overlay: 212 52% 6%;
-  --canvas-inset: 218 58% 4%;
-  --canvas-deep: 220 65% 2%;
+  --canvas: 224 71% 4%;
+  --canvas-surface: 222 55% 8%;
+  --canvas-raised: 220 45% 14%;
+  --canvas-overlay: 222 55% 6%;
+  --canvas-inset: 224 60% 3%;
+  --canvas-deep: 226 65% 2%;
 
-  --border-subtle: 213 38% 15%;
-  --border-default: 211 38% 21%;
-  --border-hairline-base: 180 45% 90%;
-  --border-hairline-alpha: 0.07;
+  --border-subtle: 220 35% 17%;
+  --border-default: 220 35% 24%;
+  --border-hairline-base: 210 90% 92%;
+  --border-hairline-alpha: 0.09;
 
   --ink: 216 33% 97%;
-  --ink-muted: 223 14% 60%;
-  --ink-faint: 220 13% 54%;
+  --ink-muted: 223 14% 66%;
+  --ink-faint: 220 13% 56%;
 
   --revenue: 160 80% 44%;
   --revenue-dim: 162 80% 20%;
@@ -78,14 +94,22 @@
   --pending-dim: 36 77% 31%;
   --denied: 0 84% 60%;
   --denied-dim: 0 70% 35%;
-  --accent: 39 55% 62%;
-  --accent-dim: 38 39% 39%;
-  --accent-muted: 39 54% 76%;
+  --accent: 243 90% 74%;
+  --accent-dim: 243 45% 26%;
+  --accent-muted: 243 85% 84%;
 
-  --tint-alpha: 0.1;
-  --glow-alpha: 0.1;
-  --glow-alpha-soft: 0.05;
-  --shadow-tint: 220 60% 1%;
+  --aura-1: 199 92% 60%;
+  --aura-2: 243 85% 67%;
+  --aura-3: 271 82% 68%;
+
+  --tint-alpha: 0.14;
+  --glow-alpha: 0.22;
+  --glow-alpha-soft: 0.14;
+  --shadow-tint: 226 70% 1%;
+  /* Vidro fosco de verdade no escuro — translúcido o bastante para as
+     auras de fundo atravessarem o card (com backdrop-blur, ver
+     BentoCard.tsx), sem comprometer a leitura do texto por cima. */
+  --glass-alpha: 0.66;
 }
 
 @layer base {

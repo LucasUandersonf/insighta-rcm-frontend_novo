@@ -16,7 +16,10 @@ export function UserAvatar({ fullName, size = "md" }: { fullName: string; size?:
     <span
       aria-hidden
       className={cn(
-        "flex shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-accent to-revenue font-semibold tracking-tight text-canvas-surface",
+        // Degradê de marca (céu -> índigo -> violeta, ver DECISÃO v3 em
+        // index.css) — nunca as cores semânticas de dado (revenue/pending/
+        // denied), que ficam reservadas para comunicar estado de negócio.
+        "flex shrink-0 items-center justify-center rounded-full bg-aura-line font-semibold tracking-tight text-white",
         dimensions
       )}
     >

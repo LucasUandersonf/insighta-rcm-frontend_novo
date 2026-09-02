@@ -101,7 +101,7 @@ export function Sidebar() {
   }
 
   return (
-    <nav className="w-60 shrink-0 border-r border-border-hairline bg-canvas-surface/70 px-3 py-5 backdrop-blur-sm">
+    <nav className="w-60 shrink-0 border-r border-border-hairline bg-glass px-3 py-5 backdrop-blur-xl">
       <ul className="space-y-0.5">{visibleItems.map((item) => renderItem(item, "main"))}</ul>
 
       {visibleAdminItems.length > 0 && (
