@@ -10,15 +10,16 @@ interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   children: ReactNode;
-  /** "lg" (padrão, max-w-lg) para formulários simples; "xl" para telas
-   * mais densas (ex: Conferência de itens extraídos por IA, que precisa
-   * de espaço pra uma tabela). */
-  size?: "lg" | "xl";
+  /** "lg" (padrão, max-w-lg ≈ 520px do canvas) para formulários simples;
+   * "2xl" (820px, exato do canvas — ver ModalConferenciaIA.dc.html) para
+   * a Conferência de itens extraídos por IA, que precisa de espaço pra
+   * uma tabela. */
+  size?: "lg" | "2xl";
 }
 
 const sizeClasses: Record<NonNullable<ModalProps["size"]>, string> = {
   lg: "max-w-lg",
-  xl: "max-w-3xl",
+  "2xl": "max-w-[820px]",
 };
 
 const FOCUSABLE_SELECTOR = '[href],button,input,select,textarea,[tabindex]:not([tabindex="-1"])';

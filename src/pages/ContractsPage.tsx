@@ -1,6 +1,6 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Building2, ClipboardList, FileText, Plus, Sparkles } from "lucide-react";
+import { Building2, ClipboardList, FileText, Plus, Sparkles, X } from "lucide-react";
 import { Panel, EmptyState, LoadingState, ErrorState } from "@/components/ui/Panel";
 import { Button } from "@/components/ui/Button";
 import { Badge, type BadgeTone } from "@/components/ui/Badge";
@@ -8,6 +8,7 @@ import { Modal } from "@/components/ui/Modal";
 import { TextField, SelectField } from "@/components/ui/FormField";
 import { Pagination } from "@/components/ui/Pagination";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { cn } from "@/lib/cn";
 import { apiClient, ApiError } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useToast } from "@/context/ToastContext";
@@ -304,7 +305,7 @@ function ManualContractModal({
   }
 
   return (
-    <Modal title="Cadastro manual de contrato" isOpen={isOpen} onClose={resetAndClose} size="xl">
+    <Modal title="Cadastro manual de contrato" isOpen={isOpen} onClose={resetAndClose} size="2xl">
       <form onSubmit={handleSubmit}>
         <p className="mb-4 text-xs text-ink-faint">
           Para 1-2 procedimentos que você já sabe de cor. Se o contrato tem uma tabela de preços extensa em PDF,
@@ -533,9 +534,11 @@ function UploadContractModal({
 
 function ReviewContractModal({
   contract,
+  planName,
   onClose,
 }: {
   contract: Contract | null;
+  planName: string | undefined;
   onClose: () => void;
 }) {
   const queryClient = useQueryClient();
@@ -585,7 +588,12 @@ function ReviewContractModal({
   const warningByCode = new Map((preview?.items ?? []).map((i) => [i.tuss_code, i.warning]));
 
   return (
-    <Modal title="Conferência da extração por IA" isOpen={Boolean(contract)} onClose={handleClose} size="xl">
+    <Modal
+      title={planName ? `Conferência da extração por IA — ${planName}` : "Conferência da extração por IA"}
+      isOpen={Boolean(contract)}
+      onClose={handleClose}
+      size="2xl"
+    >
       {!preview && (
         <div className="py-6 text-center">
           <p className="mb-4 text-sm text-ink-muted">
@@ -613,56 +621,61 @@ function ReviewContractModal({
             Confira e corrija os itens abaixo antes de homologar — só depois de “Salvar e homologar” a tabela passa a
             valer para o motor anti-glosa.
           </p>
-          <div className="max-h-80 space-y-2 overflow-y-auto">
+          <div className="max-h-80 space-y-3 overflow-y-auto">
             {reviewItems.map((item, index) => {
               const warning = warningByCode.get(item.tuss_code);
               return (
-                <div key={index}>
-                  <div className="grid grid-cols-[1fr_2fr_1fr_auto] gap-2">
+                <div
+                  key={index}
+                  className={cn(
+                    "rounded-md border px-3 py-2.5",
+                    warning ? "border-pending/35 bg-pending/[6%]" : "border-border-subtle"
+                  )}
+                >
+                  <div className="grid grid-cols-[110px_1fr_120px_32px] items-center gap-2.5">
                     <input
-                      className="rounded-sm border border-border bg-canvas-raised px-2 py-1.5 text-sm text-ink"
+                      className="rounded-sm border border-transparent bg-transparent px-1 py-1 font-mono text-xs text-ink transition-colors focus:border-border-default focus:bg-canvas-raised focus:outline-none"
                       value={item.tuss_code}
                       onChange={(e) => updateItem(index, { tuss_code: e.target.value })}
                     />
                     <input
-                      className="rounded-sm border border-border bg-canvas-raised px-2 py-1.5 text-sm text-ink"
+                      className="rounded-sm border border-transparent bg-transparent px-1 py-1 text-sm text-ink transition-colors focus:border-border-default focus:bg-canvas-raised focus:outline-none"
                       value={item.procedure_name ?? ""}
                       onChange={(e) => updateItem(index, { procedure_name: e.target.value })}
                     />
                     <input
-                      className="rounded-sm border border-border bg-canvas-raised px-2 py-1.5 text-sm text-ink"
+                      className="tabular rounded-sm border border-transparent bg-transparent px-1 py-1 text-right font-mono text-sm text-ink transition-colors focus:border-border-default focus:bg-canvas-raised focus:outline-none"
                       type="number"
                       step="0.01"
                       value={item.agreed_price}
                       onChange={(e) => updateItem(index, { agreed_price: parseFloat(e.target.value) || 0 })}
                     />
-                    <Button
+                    <button
                       type="button"
-                      variant="ghost"
-                      size="xs"
-                      className="text-denied"
+                      className="flex h-8 w-8 items-center justify-center text-denied transition-colors hover:text-denied/70"
                       onClick={() => setReviewItems((prev) => prev.filter((_, i) => i !== index))}
                       aria-label="Remover item"
                     >
-                      ✕
-                    </Button>
+                      <X size={13} strokeWidth={2} />
+                    </button>
                   </div>
                   {warning && <p className="mt-1 text-2xs text-pending">⚠ {warning}</p>}
                 </div>
               );
             })}
           </div>
-          <Button
-            type="button"
-            variant="ghost"
-            size="xs"
-            className="mt-2"
-            onClick={() => setReviewItems((prev) => [...prev, { tuss_code: "", procedure_name: "", agreed_price: 0 }])}
-          >
-            + Adicionar item
-          </Button>
+          <div className="mt-3">
+            <Button
+              type="button"
+              variant="ghost"
+              size="xs"
+              onClick={() => setReviewItems((prev) => [...prev, { tuss_code: "", procedure_name: "", agreed_price: 0 }])}
+            >
+              + Adicionar item
+            </Button>
+          </div>
 
-          <div className="mt-5 flex justify-end gap-2">
+          <div className="mt-5 flex justify-end gap-2 border-t border-border-hairline pt-4">
             <Button type="button" variant="secondary" onClick={handleClose}>
               Cancelar
             </Button>
@@ -839,7 +852,11 @@ export function ContractsPage() {
       <CreatePlanModal isOpen={isPlanModalOpen} onClose={() => setIsPlanModalOpen(false)} companies={companies ?? []} />
       <ManualContractModal isOpen={isManualModalOpen} onClose={() => setIsManualModalOpen(false)} plans={plans ?? []} />
       <UploadContractModal isOpen={isUploadModalOpen} onClose={() => setIsUploadModalOpen(false)} plans={plans ?? []} />
-      <ReviewContractModal contract={reviewingContract} onClose={() => setReviewingContract(null)} />
+      <ReviewContractModal
+        contract={reviewingContract}
+        planName={reviewingContract ? planNameById.get(reviewingContract.insurance_plan_id) : undefined}
+        onClose={() => setReviewingContract(null)}
+      />
     </div>
   );
 }

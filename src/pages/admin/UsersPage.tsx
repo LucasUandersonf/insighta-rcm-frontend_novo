@@ -21,6 +21,14 @@ const ROLE_LABELS: Record<UserRole, string> = {
   auditor: "Auditor (somente leitura)",
 };
 
+// Papéis atribuíveis a um NOVO colaborador — "owner" fica de fora de
+// propósito (não está no select do canvas, ModalNovoUsuario.dc.html):
+// só existe um owner por tenant, criado no cadastro da clínica
+// (SignUpPage), nunca por este formulário. ROLE_LABELS continua
+// completo (com "owner") porque a tabela de usuários existentes
+// precisa exibir o papel de quem já é owner.
+const CREATABLE_ROLES: UserRole[] = ["financeiro", "admin", "atendimento", "auditor"];
+
 function formatDateTime(iso: string | null): string {
   if (!iso) return "—";
   return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(iso));
@@ -48,7 +56,7 @@ function CreateUserModal({ isOpen, onClose, onCreated }: { isOpen: boolean; onCl
   const { showError } = useToast();
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
-  const [role, setRole] = useState<UserRole>("atendimento");
+  const [role, setRole] = useState<UserRole>("financeiro");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const mutation = useMutation({
@@ -76,7 +84,7 @@ function CreateUserModal({ isOpen, onClose, onCreated }: { isOpen: boolean; onCl
   function resetAndClose() {
     setEmail("");
     setFullName("");
-    setRole("atendimento");
+    setRole("financeiro");
     setFieldErrors({});
     onClose();
   }
@@ -90,17 +98,32 @@ function CreateUserModal({ isOpen, onClose, onCreated }: { isOpen: boolean; onCl
   return (
     <Modal title="Novo usuário" isOpen={isOpen} onClose={resetAndClose}>
       <form onSubmit={handleSubmit}>
-        <TextField label="Nome completo" required value={fullName} onChange={(e) => setFullName(e.target.value)} error={fieldErrors["full_name"]} />
-        <TextField label="E-mail" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} error={fieldErrors["email"]} />
-        <SelectField label="Papel de acesso" value={role} onChange={(e) => setRole(e.target.value as UserRole)}>
-          {Object.entries(ROLE_LABELS).map(([value, label]) => (
+        <TextField
+          label="Nome completo"
+          required
+          value={fullName}
+          onChange={(e) => setFullName(e.target.value)}
+          error={fieldErrors["full_name"]}
+          placeholder="Ex: Camila Rezende"
+        />
+        <TextField
+          label="E-mail"
+          type="email"
+          required
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          error={fieldErrors["email"]}
+          placeholder="camila.rezende@vitalis.com.br"
+        />
+        <SelectField label="Papel" value={role} onChange={(e) => setRole(e.target.value as UserRole)}>
+          {CREATABLE_ROLES.map((value) => (
             <option key={value} value={value}>
-              {label}
+              {ROLE_LABELS[value]}
             </option>
           ))}
         </SelectField>
         <p className="-mt-2 mb-4 text-2xs text-ink-faint">
-          Uma senha temporária será gerada automaticamente — o colaborador é obrigado a trocá-la no primeiro acesso.
+          Uma senha temporária será gerada e mostrada uma única vez, para você repassar ao colaborador por um canal seguro.
         </p>
         <div className="mt-5 flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={resetAndClose}>
