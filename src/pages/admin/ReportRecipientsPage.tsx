@@ -199,7 +199,7 @@ export function ReportRecipientsPage() {
     <div className="space-y-6">
       <PageHeader
         icon={Send}
-        title="Destinatários de Relatórios"
+        title="Destinatários de relatórios"
         subtitle="Quem recebe os disparos automatizados (WhatsApp/e-mail) — cadastre todos os responsáveis para garantir que o resumo semanal e os alertas cheguem às pessoas certas, não só a um número fixo."
         action={
           <Button onClick={() => setIsModalOpen(true)} className="flex items-center gap-1.5">

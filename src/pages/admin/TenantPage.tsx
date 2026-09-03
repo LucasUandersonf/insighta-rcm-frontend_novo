@@ -139,7 +139,7 @@ export function TenantPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader icon={Building2} title="Minha Clínica" subtitle="Dados cadastrais, plano de assinatura e meta de faturamento anual." />
+      <PageHeader icon={Building2} title="Minha clínica" subtitle="Dados cadastrais, plano de assinatura e meta de faturamento anual." />
 
       {isLoading && <LoadingState />}
       {error && <ErrorState message={getApiErrorMessage(error)} />}

@@ -723,7 +723,7 @@ export function ContractsPage() {
     <div className="space-y-6">
       <PageHeader
         icon={FileText}
-        title="Convênios & Contratos"
+        title="Convênios e contratos"
         subtitle="Cadastre operadoras, planos e a tabela de preços contratada — a base de comparação do motor anti-glosa e do buraco financeiro."
       />
 

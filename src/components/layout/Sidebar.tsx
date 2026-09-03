@@ -39,13 +39,13 @@ const NAV_ITEMS: NavItem[] = [
   { to: "/appointments", label: "Consultas", icon: CalendarCheck },
   // Ação de escrita — mesmo RBAC do backend em ingestion.py/_CAN_MANAGE
   // e contracts.py/_CAN_WRITE (owner/admin/financeiro); sem auditor.
-  { to: "/upload", label: "Central de Upload", icon: UploadCloud, roles: ["owner", "admin", "financeiro"] },
+  { to: "/upload", label: "Central de upload", icon: UploadCloud, roles: ["owner", "admin", "financeiro"] },
   // Convênios/Contratos: dado financeiro sensível (tabela de repasse) —
   // mesmo RBAC do backend em contracts.py, fora do alcance de "atendimento".
-  { to: "/contracts", label: "Convênios & Contratos", icon: FileText, roles: ["owner", "admin", "financeiro", "auditor"] },
+  { to: "/contracts", label: "Convênios e contratos", icon: FileText, roles: ["owner", "admin", "financeiro", "auditor"] },
   // Mesmo RBAC dos outros itens financeiros — recurso de glosa é dado
   // financeiro/jurídico sensível, fora do alcance de "atendimento".
-  { to: "/denial-appeals", label: "Recurso de Glosa", icon: ShieldAlert, roles: ["owner", "admin", "financeiro", "auditor"] },
+  { to: "/denial-appeals", label: "Recurso de glosa", icon: ShieldAlert, roles: ["owner", "admin", "financeiro", "auditor"] },
 ];
 
 // Administração da plataforma — só owner/admin (mesmo RBAC do backend
@@ -54,12 +54,12 @@ const NAV_ITEMS: NavItem[] = [
 // "administração da conta SaaS".
 const ADMIN_NAV_ITEMS: NavItem[] = [
   { to: "/admin/users", label: "Usuários", icon: Users, roles: ["owner", "admin"] },
-  { to: "/admin/integrations", label: "Integrações & Webhooks", icon: Plug, roles: ["owner", "admin"] },
-  { to: "/admin/tenant", label: "Minha Clínica", icon: Building2, roles: ["owner", "admin"] },
-  { to: "/admin/report-recipients", label: "Destinatários de Relatórios", icon: Send, roles: ["owner", "admin"] },
+  { to: "/admin/integrations", label: "Integrações e webhooks", icon: Plug, roles: ["owner", "admin"] },
+  { to: "/admin/tenant", label: "Minha clínica", icon: Building2, roles: ["owner", "admin"] },
+  { to: "/admin/report-recipients", label: "Destinatários de relatórios", icon: Send, roles: ["owner", "admin"] },
   // Auditor também precisa ver a trilha de auditoria — é o papel de
   // leitura/compliance do RBAC (mesmo critério de analytics.py).
-  { to: "/admin/audit-log", label: "Logs de Auditoria", icon: ScrollText, roles: ["owner", "admin", "auditor"] },
+  { to: "/admin/audit-log", label: "Logs de auditoria", icon: ScrollText, roles: ["owner", "admin", "auditor"] },
 ];
 
 export function Sidebar() {

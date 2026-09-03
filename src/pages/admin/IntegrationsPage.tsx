@@ -101,7 +101,7 @@ export function IntegrationsPage() {
     <div className="space-y-6">
       <PageHeader
         icon={Plug}
-        title="Integrações & Webhooks"
+        title="Integrações e webhooks"
         subtitle="Chaves de API para o ERP/sistema de gestão do cliente enviar dados automaticamente para esta plataforma."
         action={
           <Button onClick={() => setIsModalOpen(true)} className="flex items-center gap-1.5">

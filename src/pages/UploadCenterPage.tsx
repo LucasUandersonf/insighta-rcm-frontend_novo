@@ -266,7 +266,7 @@ export function UploadCenterPage() {
     <div className="space-y-6">
       <PageHeader
         icon={UploadCloud}
-        title="Central de Upload"
+        title="Central de upload"
         subtitle="Onde o dado real entra no sistema — lotes operacionais do seu ERP e contratos de convênio, direto pela UI."
       />
 
