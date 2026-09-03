@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { CheckCircle2, Gauge } from "lucide-react";
+import { CalendarCheck2, CheckCircle2, Gauge, Receipt } from "lucide-react";
 import { KpiCard } from "@/components/ui/KpiCard";
 import { RiskBadge } from "@/components/ui/RiskBadge";
 import { Panel, EmptyState, LoadingState, ErrorState } from "@/components/ui/Panel";
 import { Pagination } from "@/components/ui/Pagination";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PeriodWindowSelect } from "@/components/ui/PeriodWindowSelect";
+import { Tabs, TabPanel } from "@/components/ui/Tabs";
 import { AgendaAnalyticsPanel } from "@/components/dashboard/AgendaAnalyticsPanel";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
@@ -25,6 +26,21 @@ import type { BillingResponse, ExecutiveSummary, PaginatedResponse, UserRole } f
 // Zero Mocks: todo KPI/gráfico abaixo vem de um endpoint real. Nenhum
 // placeholder rotulado "exemplo" — o que o backend ainda não agrega,
 // simplesmente não aparece aqui.
+//
+// DECISÃO — sub-abas por domínio (Faturamento/Agenda) em vez de uma
+// página só
+// -------------------------------------------------------------------
+// O Painel cresceu de 3 seções empilhadas para o ponto em que rolar a
+// página inteira para comparar dois números do mesmo domínio já era
+// desconfortável, e a lista de métricas planejada (ranking de convênio
+// por perda, utilização de contrato, lista de risco de falta) só ia
+// piorar isso. Dividir por domínio, ao lado de janela de período
+// compartilhada, é a mesma tela — mesmos endpoints, mesmo RBAC —, só
+// com um seletor de vista em vez de rolagem infinita. "Pacientes" fica
+// de fora por ora: não tem massa própria ainda para virar uma terceira
+// aba (a lista de risco de falta faz mais sentido dentro de Agenda,
+// onde a ação de agendar de fato acontece).
+const TABS_GROUP = "painel";
 
 const PAGE_SIZE = 20;
 
@@ -53,6 +69,7 @@ export function DashboardPage() {
 
   const [offset, setOffset] = useState(0);
   const { windowDays, setWindowDays, dateFrom, dateTo } = useDateWindow(7);
+  const [activeTab, setActiveTab] = useState<"faturamento" | "agenda">("faturamento");
 
   const {
     data: highRiskPage,
@@ -106,12 +123,27 @@ export function DashboardPage() {
         </Panel>
       )}
 
-      {canViewAnalytics && isSummaryLoading && <LoadingState variant="cards" rows={6} />}
-      {canViewAnalytics && summaryError && <ErrorState message={getApiErrorMessage(summaryError)} />}
+      {canViewAnalytics && (
+        <Tabs
+          groupId={TABS_GROUP}
+          active={activeTab}
+          onChange={(id) => setActiveTab(id as "faturamento" | "agenda")}
+          items={[
+            { id: "faturamento", label: "Faturamento", icon: Receipt },
+            { id: "agenda", label: "Agenda", icon: CalendarCheck2 },
+          ]}
+        />
+      )}
 
-      {canViewAnalytics && summary && (
+      {canViewAnalytics && activeTab === "faturamento" && (
+      <TabPanel id="faturamento" groupId={TABS_GROUP}>
+      <div className="space-y-6">
+      {isSummaryLoading && <LoadingState variant="cards" rows={6} />}
+      {summaryError && <ErrorState message={getApiErrorMessage(summaryError)} />}
+
+      {summary && (
         <section>
-          <h2 className="mb-3 text-2xs font-medium uppercase tracking-wide text-ink-faint">Faturamento — período selecionado</h2>
+          <h2 className="mb-3 text-2xs font-medium uppercase tracking-wide text-ink-faint">Indicadores do período selecionado</h2>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-12">
             <KpiCard
               colSpan={3}
@@ -202,13 +234,6 @@ export function DashboardPage() {
         </section>
       )}
 
-      {canViewAnalytics && (
-        <section>
-          <h2 className="mb-3 text-sm font-medium text-ink">Agenda, capacidade & volume operado</h2>
-          <AgendaAnalyticsPanel dateFrom={dateFrom} dateTo={dateTo} />
-        </section>
-      )}
-
       {canViewBillingQueue && (
       <section>
         <h2 className="mb-3 text-sm font-medium text-ink">Fila de correção agora — faturamentos de alto risco</h2>
@@ -287,6 +312,15 @@ export function DashboardPage() {
           )}
         </Panel>
       </section>
+      )}
+      </div>
+      </TabPanel>
+      )}
+
+      {canViewAnalytics && activeTab === "agenda" && (
+      <TabPanel id="agenda" groupId={TABS_GROUP}>
+        <AgendaAnalyticsPanel dateFrom={dateFrom} dateTo={dateTo} />
+      </TabPanel>
       )}
     </div>
   );
