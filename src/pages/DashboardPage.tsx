@@ -11,6 +11,7 @@ import { Tabs, TabPanel } from "@/components/ui/Tabs";
 import { AgendaAnalyticsPanel } from "@/components/dashboard/AgendaAnalyticsPanel";
 import { PlanLossRankingPanel } from "@/components/dashboard/PlanLossRankingPanel";
 import { ContractUtilizationPanel } from "@/components/dashboard/ContractUtilizationPanel";
+import { DenialRiskDistributionPanel } from "@/components/dashboard/DenialRiskDistributionPanel";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useDateWindow } from "@/lib/useDateWindow";
@@ -154,6 +155,7 @@ export function DashboardPage() {
               numericValue={summary.total_billed.value}
               format={formatCurrency}
               tone="revenue"
+              gradient
               trend={trendFrom(summary.total_billed)}
             />
             <KpiCard
@@ -205,6 +207,7 @@ export function DashboardPage() {
               numericValue={summary.total_value_saved.value}
               format={formatCurrency}
               tone="revenue"
+              gradient
               trend={trendFrom(summary.total_value_saved)}
             />
             <KpiCard
@@ -237,9 +240,10 @@ export function DashboardPage() {
       )}
 
       {summary && (
-        <section className="space-y-4">
+        <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           <PlanLossRankingPanel dateFrom={dateFrom} dateTo={dateTo} />
           <ContractUtilizationPanel dateFrom={dateFrom} dateTo={dateTo} />
+          <DenialRiskDistributionPanel dateFrom={dateFrom} dateTo={dateTo} />
         </section>
       )}
 

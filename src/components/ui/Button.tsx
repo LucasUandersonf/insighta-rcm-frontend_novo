@@ -1,7 +1,18 @@
 import type { ButtonHTMLAttributes } from "react";
+import { cn } from "@/lib/cn";
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: "primary" | "secondary" | "ghost";
+  /**
+   * "md" (padrão) é o botão de ação de página inteira; "sm"/"xs" são
+   * para ações dentro de um card/linha de tabela (ex: "Nova operadora"
+   * no header de um Panel — ver canvas de design, `.btn-sm`/`.btn-xs`
+   * em Contratos.dc.html). Existir como prop evita cada página repetir
+   * `className="!px-2.5 !py-1 text-xs"` com `!important` brigando com
+   * as classes do próprio componente — o que já estava acontecendo em
+   * várias páginas antes desta prop existir.
+   */
+  size?: "md" | "sm" | "xs";
 }
 
 // DECISÃO — "primary" usa a mesma marca (bg-aura-line) das telas
@@ -24,11 +35,23 @@ const variantClasses: Record<NonNullable<ButtonProps["variant"]>, string> = {
   ghost: "text-ink-muted hover:text-ink bg-transparent",
 };
 
-export function Button({ variant = "primary", className, disabled, ...props }: ButtonProps) {
+// Paddings/tamanhos de fonte exatos do canvas de design (.btn/.btn-sm/.btn-xs).
+const sizeClasses: Record<NonNullable<ButtonProps["size"]>, string> = {
+  md: "rounded-md px-3 py-2 text-sm",
+  sm: "rounded-md px-2.5 py-[5px] text-xs",
+  xs: "rounded-sm px-2 py-1 text-2xs",
+};
+
+export function Button({ variant = "primary", size = "md", className, disabled, ...props }: ButtonProps) {
   return (
     <button
       disabled={disabled}
-      className={`rounded-md px-3 py-2 text-sm font-medium transition-all duration-150 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100 ${variantClasses[variant]} ${className ?? ""}`}
+      className={cn(
+        "font-medium transition-all duration-150 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100",
+        sizeClasses[size],
+        variantClasses[variant],
+        className
+      )}
       {...props}
     />
   );

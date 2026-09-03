@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Building2, ClipboardList, FileText, Plus, Sparkles } from "lucide-react";
 import { Panel, EmptyState, LoadingState, ErrorState } from "@/components/ui/Panel";
 import { Button } from "@/components/ui/Button";
+import { Badge, type BadgeTone } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
 import { TextField, SelectField } from "@/components/ui/FormField";
 import { Pagination } from "@/components/ui/Pagination";
@@ -40,10 +41,10 @@ const STATUS_LABELS: Record<Contract["status"], string> = {
   homologado: "Homologado",
 };
 
-const STATUS_CLASSES: Record<Contract["status"], string> = {
-  rascunho: "bg-canvas-raised text-ink-faint",
-  em_revisao: "bg-pending-bg text-pending",
-  homologado: "bg-revenue-bg text-revenue",
+const STATUS_TONE: Record<Contract["status"], BadgeTone> = {
+  rascunho: "neutral",
+  em_revisao: "pending",
+  homologado: "revenue",
 };
 
 // ---------------------------------------------------------------------
@@ -346,7 +347,7 @@ function ManualContractModal({
           <Button
             type="button"
             variant="ghost"
-            className="!px-2 !py-1 text-xs"
+            size="xs"
             onClick={() => setItems((prev) => [...prev, { tuss_code: "", procedure_name: "", agreed_price: 0 }])}
           >
             + Adicionar item
@@ -381,7 +382,8 @@ function ManualContractModal({
               <Button
                 type="button"
                 variant="ghost"
-                className="!px-2 text-denied"
+                size="xs"
+                className="text-denied"
                 disabled={items.length === 1}
                 onClick={() => setItems((prev) => prev.filter((_, i) => i !== index))}
                 aria-label="Remover item"
@@ -637,7 +639,8 @@ function ReviewContractModal({
                     <Button
                       type="button"
                       variant="ghost"
-                      className="!px-2 text-denied"
+                      size="xs"
+                      className="text-denied"
                       onClick={() => setReviewItems((prev) => prev.filter((_, i) => i !== index))}
                       aria-label="Remover item"
                     >
@@ -652,7 +655,8 @@ function ReviewContractModal({
           <Button
             type="button"
             variant="ghost"
-            className="mt-2 !px-2 !py-1 text-xs"
+            size="xs"
+            className="mt-2"
             onClick={() => setReviewItems((prev) => [...prev, { tuss_code: "", procedure_name: "", agreed_price: 0 }])}
           >
             + Adicionar item
@@ -729,7 +733,7 @@ export function ContractsPage() {
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
         <div className="lg:col-span-6">
-          <Panel title="Operadoras" action={<Button variant="secondary" className="flex items-center gap-1 !px-2.5 !py-1 text-xs" onClick={() => setIsCompanyModalOpen(true)}><Plus size={12} />Nova operadora</Button>}>
+          <Panel title="Operadoras" action={<Button variant="secondary" size="xs" className="flex items-center gap-1" onClick={() => setIsCompanyModalOpen(true)}><Plus size={12} />Nova operadora</Button>}>
             {(companies ?? []).length === 0 ? (
               <EmptyState icon={<Building2 size={17} strokeWidth={1.5} />} message="Nenhuma operadora cadastrada." />
             ) : (
@@ -745,7 +749,7 @@ export function ContractsPage() {
         </div>
 
         <div className="lg:col-span-6">
-          <Panel title="Planos" action={<Button variant="secondary" className="flex items-center gap-1 !px-2.5 !py-1 text-xs" onClick={() => setIsPlanModalOpen(true)}><Plus size={12} />Novo plano</Button>}>
+          <Panel title="Planos" action={<Button variant="secondary" size="xs" className="flex items-center gap-1" onClick={() => setIsPlanModalOpen(true)}><Plus size={12} />Novo plano</Button>}>
             {(plans ?? []).length === 0 ? (
               <EmptyState icon={<ClipboardList size={17} strokeWidth={1.5} />} message="Nenhum plano cadastrado." />
             ) : (
@@ -765,11 +769,11 @@ export function ContractsPage() {
         title="Contratos"
         action={
           <div className="flex gap-2">
-            <Button variant="secondary" className="flex items-center gap-1 !px-2.5 !py-1 text-xs" onClick={() => setIsManualModalOpen(true)}>
+            <Button variant="secondary" size="xs" className="flex items-center gap-1" onClick={() => setIsManualModalOpen(true)}>
               <Plus size={12} />
               Cadastro manual
             </Button>
-            <Button className="flex items-center gap-1 !px-2.5 !py-1 text-xs" onClick={() => setIsUploadModalOpen(true)}>
+            <Button size="xs" className="flex items-center gap-1" onClick={() => setIsUploadModalOpen(true)}>
               <Sparkles size={12} />
               Enviar PDF (IA)
             </Button>
@@ -802,9 +806,7 @@ export function ContractsPage() {
                     {formatDate(c.valid_from)} {c.valid_until ? `– ${formatDate(c.valid_until)}` : "(sem fim)"}
                   </td>
                   <td className="px-4 py-2.5">
-                    <span className={`rounded-full border border-transparent px-2 py-0.5 text-2xs font-medium ${STATUS_CLASSES[c.status]}`}>
-                      {STATUS_LABELS[c.status]}
-                    </span>
+                    <Badge tone={STATUS_TONE[c.status]}>{STATUS_LABELS[c.status]}</Badge>
                   </td>
                   <td className="tabular px-4 py-2.5 text-ink-muted">
                     {c.items.length > 0
@@ -813,7 +815,7 @@ export function ContractsPage() {
                   </td>
                   <td className="px-4 py-2.5 text-right">
                     {c.status !== "homologado" && c.pdf_s3_key && (
-                      <Button variant="secondary" className="!px-2 !py-1 text-xs" onClick={() => setReviewingContract(c)}>
+                      <Button variant="secondary" size="xs" onClick={() => setReviewingContract(c)}>
                         Extrair / Conferir
                       </Button>
                     )}

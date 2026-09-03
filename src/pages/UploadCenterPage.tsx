@@ -3,11 +3,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { UploadCloud } from "lucide-react";
 import { Panel, EmptyState, LoadingState, ErrorState } from "@/components/ui/Panel";
 import { Button } from "@/components/ui/Button";
+import { Badge, type BadgeTone } from "@/components/ui/Badge";
 import { Dropzone } from "@/components/ui/Dropzone";
 import { SelectField, TextField } from "@/components/ui/FormField";
 import { Pagination } from "@/components/ui/Pagination";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { cn } from "@/lib/cn";
+import { Tabs } from "@/components/ui/Tabs";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useToast } from "@/context/ToastContext";
@@ -37,30 +38,14 @@ const STATUS_LABELS: Record<string, string> = {
   failed: "Falhou",
 };
 
-const STATUS_CLASSES: Record<string, string> = {
-  processing: "bg-pending-bg text-pending",
-  processed: "bg-revenue-bg text-revenue",
-  failed: "bg-denied-bg text-denied",
+const STATUS_TONE: Record<string, BadgeTone> = {
+  processing: "pending",
+  processed: "revenue",
+  failed: "denied",
 };
 
 function formatDateTime(iso: string): string {
   return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "medium" }).format(new Date(iso));
-}
-
-function TabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: string }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "relative rounded-md px-3.5 py-2 text-sm font-medium transition-colors",
-        active ? "bg-canvas-raised text-ink" : "text-ink-faint hover:text-ink"
-      )}
-    >
-      {children}
-      {active && <span aria-hidden className="absolute inset-x-3 -bottom-px h-0.5 rounded-full bg-accent" />}
-    </button>
-  );
 }
 
 function BatchUploadTab() {
@@ -145,9 +130,7 @@ function BatchUploadTab() {
                     <td className="px-4 py-2.5 text-ink">{f.original_filename ?? "—"}</td>
                     <td className="px-4 py-2.5 text-ink-muted uppercase">{f.file_format}</td>
                     <td className="px-4 py-2.5">
-                      <span className={`rounded-full border border-transparent px-2 py-0.5 text-2xs font-medium ${STATUS_CLASSES[f.status] ?? ""}`}>
-                        {STATUS_LABELS[f.status] ?? f.status}
-                      </span>
+                      <Badge tone={STATUS_TONE[f.status] ?? "neutral"}>{STATUS_LABELS[f.status] ?? f.status}</Badge>
                     </td>
                     <td className="tabular px-4 py-2.5 text-ink-muted">{f.row_count}</td>
                     <td className={`tabular px-4 py-2.5 ${f.error_row_count > 0 ? "text-denied" : "text-ink-muted"}`}>
@@ -259,6 +242,8 @@ function ContractUploadTab() {
   );
 }
 
+const TABS_GROUP = "central-upload";
+
 export function UploadCenterPage() {
   const [tab, setTab] = useState<Tab>("lotes");
 
@@ -270,14 +255,15 @@ export function UploadCenterPage() {
         subtitle="Onde o dado real entra no sistema — lotes operacionais do seu ERP e contratos de convênio, direto pela UI."
       />
 
-      <div className="flex gap-1 border-b border-border-hairline">
-        <TabButton active={tab === "lotes"} onClick={() => setTab("lotes")}>
-          Lotes Operacionais
-        </TabButton>
-        <TabButton active={tab === "contratos"} onClick={() => setTab("contratos")}>
-          Contratos de Convênio
-        </TabButton>
-      </div>
+      <Tabs
+        groupId={TABS_GROUP}
+        active={tab}
+        onChange={(id) => setTab(id as Tab)}
+        items={[
+          { id: "lotes", label: "Lotes Operacionais" },
+          { id: "contratos", label: "Contratos de Convênio" },
+        ]}
+      />
 
       {tab === "lotes" ? <BatchUploadTab /> : <ContractUploadTab />}
     </div>
