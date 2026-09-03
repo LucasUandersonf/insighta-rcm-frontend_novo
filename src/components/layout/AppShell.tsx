@@ -3,6 +3,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import { TopBar } from "./TopBar";
 import { Sidebar } from "./Sidebar";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { useIsAnyModalOpen } from "@/context/ModalStackContext";
+import { cn } from "@/lib/cn";
 
 /** Casca comum de toda tela autenticada: TopBar + Sidebar + conteúdo da rota. */
 export function AppShell() {
@@ -11,6 +13,13 @@ export function AppShell() {
   // "preso" mesmo depois do usuário navegar para /appointments, porque
   // o state hasError=true do boundary sobreviveria à troca de children.
   const location = useLocation();
+
+  // Ver DECISÃO em ModalStackContext.tsx: com algum <Modal isOpen> aberto
+  // em algum lugar da árvore (renderizado via portal em document.body,
+  // fora daqui), desfoca e dessatura o conteúdo real por trás — mesmo
+  // tratamento do canvas de design (`.shell{filter:blur(1.5px) saturate(.85)}`
+  // em qualquer artboard de modal), não só o escurecimento do scrim.
+  const isModalOpen = useIsAnyModalOpen();
 
   return (
     <div className="min-h-screen bg-canvas bg-premium-canvas bg-no-repeat">
@@ -23,24 +32,26 @@ export function AppShell() {
       >
         Pular para o conteúdo
       </a>
-      <TopBar />
-      <div className="flex">
-        <Sidebar />
-        <main id="main-content" className="mx-auto w-full max-w-[1400px] px-6 py-6">
-          <ErrorBoundary scope="route" key={location.pathname}>
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={location.pathname}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -4 }}
-                transition={{ duration: 0.18, ease: "easeOut" }}
-              >
-                <Outlet />
-              </motion.div>
-            </AnimatePresence>
-          </ErrorBoundary>
-        </main>
+      <div className={cn("transition-[filter] duration-200", isModalOpen && "blur-[1.5px] saturate-[0.85]")}>
+        <TopBar />
+        <div className="flex">
+          <Sidebar />
+          <main id="main-content" className="mx-auto w-full max-w-[1400px] px-6 py-6">
+            <ErrorBoundary scope="route" key={location.pathname}>
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={location.pathname}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  transition={{ duration: 0.18, ease: "easeOut" }}
+                >
+                  <Outlet />
+                </motion.div>
+              </AnimatePresence>
+            </ErrorBoundary>
+          </main>
+        </div>
       </div>
     </div>
   );

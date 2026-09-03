@@ -95,17 +95,24 @@ export default {
         "2xs": ["0.6875rem", { lineHeight: "1rem" }],
         // Número "manchete" de KPI em bento cards — grande o bastante
         // pra ser lido a 2 metros de distância, com tracking negativo
-        // pra compensar o peso visual em tamanhos display.
-        display: ["clamp(1.75rem, 1.4rem + 1.4vw, 2.75rem)", { lineHeight: "1.05", letterSpacing: "-0.02em" }],
+        // pra compensar o peso visual em tamanhos display. Clamp exato
+        // do canvas de design (22px a 34px, ver Main.dc.html/.kpi-value).
+        display: ["clamp(22px, 1.4rem + 1.1vw, 34px)", { lineHeight: "1.05", letterSpacing: "-0.02em" }],
       },
       letterSpacing: {
         premium: "0.02em",
         tightest: "-0.03em",
       },
+      // Sombras com realce sutil de borda (inset highlight de 1px branco
+      // translúcido) — o "efeito vidro" pedido explicitamente: sem ele, o
+      // card lê como uma superfície opaca comum; com ele, a borda
+      // superior pega uma luz de canto que vende a ideia de painel de
+      // vidro sobre um fundo iluminado. Valores exatos do canvas de
+      // design (ver Main.dc.html: .card / .card-lg-shadow / .btn-primary).
       boxShadow: {
-        card: "0 1px 2px hsl(var(--shadow-tint) / 0.08), 0 0 0 1px hsl(var(--shadow-tint) / 0.03)",
-        elevated: "0 16px 40px -12px hsl(var(--shadow-tint) / 0.22), 0 0 0 1px hsl(var(--shadow-tint) / 0.05)",
-        "elevated-lg": "0 24px 64px -16px hsl(var(--shadow-tint) / 0.28), 0 0 0 1px hsl(var(--shadow-tint) / 0.06)",
+        card: "0 1px 2px hsl(var(--shadow-tint) / 0.08), 0 0 0 1px hsl(var(--shadow-tint) / 0.03), inset 0 1px 0 hsl(0 0% 100% / 0.05)",
+        elevated: "0 16px 40px -12px hsl(var(--shadow-tint) / 0.28), 0 0 0 1px hsl(var(--shadow-tint) / 0.05)",
+        "elevated-lg": "0 24px 64px -16px hsl(var(--shadow-tint) / 0.4), 0 0 0 1px hsl(var(--shadow-tint) / 0.06), inset 0 1px 0 hsl(0 0% 100% / 0.06)",
       },
       backgroundImage: {
         // Fundo de página em camadas — três auras de gradiente coloridas
@@ -120,6 +127,15 @@ export default {
         // Gradiente de marca sólido — logo, avatares, botão primário em
         // destaque (ex: CTA de cadastro).
         "aura-line": "linear-gradient(135deg, hsl(var(--aura-1)), hsl(var(--aura-2)), hsl(var(--aura-3)))",
+        // Texto em gradiente (combinar com bg-clip-text text-transparent)
+        // para os números de destaque do KpiCard (prop `gradient`) — nunca
+        // cor sólida nesses casos, ver DECISÃO no canvas de design
+        // (Main.dc.html: .grad-revenue/.grad-pending/.grad-denied). Usado
+        // com parcimônia (só a métrica principal de cada dashboard), não
+        // em todo KPI colorido — mesmo critério do canvas.
+        "grad-revenue": "linear-gradient(135deg, hsl(150 85% 58%), hsl(var(--revenue)))",
+        "grad-pending": "linear-gradient(135deg, hsl(45 95% 62%), hsl(var(--pending)))",
+        "grad-denied": "linear-gradient(135deg, hsl(8 92% 68%), hsl(var(--denied)))",
       },
       keyframes: {
         "fade-up": {

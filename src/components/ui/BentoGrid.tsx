@@ -52,6 +52,12 @@ interface BentoCardProps extends HTMLAttributes<HTMLDivElement> {
   /** Remove o padding interno padrão, para cards que controlam o
    * próprio espaçamento (ex: com header + corpo com fundo diferente). */
   noPadding?: boolean;
+  /** Profundidade da sombra — "card" (padrão) é a elevação rasa comum
+   * a qualquer BentoCard; "elevated-lg" é a sombra mais profunda que o
+   * canvas de design reserva para KPIs (ver KpiCard.tsx), o "cartão
+   * mais lido a distância" da tela — nunca use em cards de conteúdo
+   * comum, ou todo o bento vira uma pilha de sombras profundas. */
+  shadow?: "card" | "elevated-lg";
   children?: ReactNode;
 }
 
@@ -63,6 +69,11 @@ const GLOW_HOVER_CLASSES: Record<NonNullable<BentoCardProps["glow"]>, string> = 
   accent: "hover:border-accent/40",
 };
 
+const SHADOW_CLASSES: Record<NonNullable<BentoCardProps["shadow"]>, string> = {
+  card: "shadow-card",
+  "elevated-lg": "shadow-elevated-lg",
+};
+
 /** Célula base do bento grid — borda fio-de-cabelo, superfície sólida,
  * elevação sutil por sombra rasa (não drop-shadow pesado), leve
  * levitação no hover (Framer Motion) para dar resposta tátil imediata. */
@@ -71,6 +82,7 @@ export function BentoCard({
   rowSpan = 1,
   glow = "none",
   noPadding = false,
+  shadow = "card",
   className,
   children,
   ...props
@@ -90,7 +102,8 @@ export function BentoCard({
         // nítido. No claro, --glass-alpha fica perto de opaco (vidro sobre
         // branco não tem o que atravessar), então o efeito é imperceptível
         // ali de propósito — só uma superfície levemente mais "leve".
-        "group relative col-span-1 flex flex-col overflow-hidden rounded-lg border border-border-hairline bg-glass shadow-card backdrop-blur-xl transition-colors",
+        "group relative col-span-1 flex flex-col overflow-hidden rounded-lg border border-border-hairline bg-glass backdrop-blur-xl transition-colors",
+        SHADOW_CLASSES[shadow],
         COL_SPAN_CLASSES[colSpan],
         ROW_SPAN_CLASSES[rowSpan],
         GLOW_HOVER_CLASSES[glow],

@@ -22,10 +22,18 @@ interface TabItem {
  * renderizar o conteúdo (`tabpanel`) da aba ativa, não por esconder com
  * CSS (evita montar 2x as queries/gráficos da aba escondida).
  *
- * O indicador da aba ativa é o mesmo `bg-aura-line` do CTA de marca —
- * usa `layoutId` do Framer Motion para deslizar entre as abas em vez de
- * só trocar de cor, o toque de Motion que faz a troca parecer uma
- * transição física, não um replace instantâneo de estado.
+ * DECISÃO — aba sublinhada (`.underline-tabs`/`.utab`), não mais pílula
+ * deslizante
+ * -------------------------------------------------------------------
+ * A primeira versão deste componente usava um indicador em pílula com
+ * o gradiente de marca deslizando por trás da aba ativa. O canvas de
+ * design (fonte da verdade visual, ver Painel.dc.html/CentralDeUpload.dc.html)
+ * usa um tratamento mais discreto e "de aplicativo denso": abas sem
+ * moldura, fundo raised só na ativa, e uma barrinha fina na cor de
+ * acento embaixo dela — mais parecido com abas de navegador do que com
+ * um seletor de segmento. O toque de Motion se mantém (a barrinha
+ * desliza via `layoutId` em vez de só trocar de lugar), só a "pele"
+ * mudou.
  *
  * `groupId` é explícito (não gerado internamente via useId) para que o
  * `<TabPanel>` correspondente, renderizado por quem chama, consiga
@@ -46,14 +54,7 @@ export function Tabs({
   className?: string;
 }) {
   return (
-    <div
-      role="tablist"
-      aria-orientation="horizontal"
-      className={cn(
-        "inline-flex items-center gap-1 rounded-lg border border-border-hairline bg-glass p-1 shadow-card backdrop-blur-xl",
-        className
-      )}
-    >
+    <div role="tablist" aria-orientation="horizontal" className={cn("flex gap-1 border-b border-border-hairline", className)}>
       {items.map((item) => {
         const isActive = item.id === active;
         return (
@@ -66,19 +67,19 @@ export function Tabs({
             aria-controls={`tabpanel-${groupId}-${item.id}`}
             onClick={() => onChange(item.id)}
             className={cn(
-              "relative flex items-center gap-1.5 rounded-md px-3.5 py-1.5 text-sm font-medium transition-colors",
-              isActive ? "text-white" : "text-ink-muted hover:text-ink"
+              "relative flex items-center gap-1.5 rounded-t-[10px] px-3.5 py-2.5 text-sm font-medium transition-colors",
+              isActive ? "bg-canvas-raised text-ink" : "text-ink-faint hover:text-ink-muted"
             )}
           >
+            {item.icon && <item.icon aria-hidden size={13} />}
+            <span>{item.label}</span>
             {isActive && (
               <motion.span
-                layoutId={`tabs-active-pill-${groupId}`}
-                className="absolute inset-0 rounded-md bg-aura-line"
+                layoutId={`tabs-active-underline-${groupId}`}
+                className="absolute inset-x-3 -bottom-px h-0.5 rounded-full bg-accent"
                 transition={{ type: "spring", stiffness: 420, damping: 34 }}
               />
             )}
-            {item.icon && <item.icon aria-hidden size={14} className="relative z-10" />}
-            <span className="relative z-10">{item.label}</span>
           </button>
         );
       })}

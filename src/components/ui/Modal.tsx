@@ -1,7 +1,9 @@
 import { useEffect, useRef, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { useRegisterModalOpen } from "@/context/ModalStackContext";
 
 interface ModalProps {
   title: string;
@@ -24,6 +26,13 @@ const FOCUSABLE_SELECTOR = '[href],button,input,select,textarea,[tabindex]:not([
 export function Modal({ title, isOpen, onClose, children, size = "lg" }: ModalProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const previouslyFocusedRef = useRef<HTMLElement | null>(null);
+
+  // Registra este modal na contagem global (ver ModalStackContext) para
+  // o AppShell saber quando desfocar/dessaturar o conteúdo por trás —
+  // só possível porque este componente sai da árvore do AppShell via
+  // portal (ver `createPortal` no final do arquivo): sem o portal, o
+  // AppShell poderia simplesmente conferir os próprios filhos.
+  useRegisterModalOpen(isOpen);
 
   // Ao abrir: guarda o elemento com foco (pra restaurar ao fechar) e move
   // o foco para dentro do modal (primeiro elemento focável, ou o próprio
@@ -92,7 +101,12 @@ export function Modal({ title, isOpen, onClose, children, size = "lg" }: ModalPr
     return () => window.removeEventListener("keydown", handleKey);
   }, [isOpen, onClose]);
 
-  return (
+  // Portal para document.body — precisa ficar FORA da árvore do
+  // AppShell (que renderiza <Outlet/>, ancestral de qualquer página que
+  // use este Modal) para o filtro de blur/dessaturação aplicado lá (ver
+  // AppShell.tsx) não borrar o próprio modal junto com o conteúdo atrás
+  // dele. Sem o portal, os dois seriam a mesma subárvore do DOM.
+  return createPortal(
     <AnimatePresence>
       {isOpen && (
         <motion.div
@@ -130,6 +144,7 @@ export function Modal({ title, isOpen, onClose, children, size = "lg" }: ModalPr
           </motion.div>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }
