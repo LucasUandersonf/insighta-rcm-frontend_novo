@@ -1,4 +1,4 @@
-import type { ApiErrorBody, RegisterRequest, RegisterResponse, TokenResponse } from "./types";
+import type { ApiErrorBody, GoogleAuthResponse, RegisterRequest, RegisterResponse, TokenResponse } from "./types";
 import { reportError } from "./monitoring";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL as string | undefined;
@@ -183,6 +183,18 @@ export async function login(email: string, password: string, tenantId?: string):
 /** Cadastro público (self-signup) — ver POST /auth/register no backend. */
 export async function register(data: RegisterRequest): Promise<RegisterResponse> {
   return apiClient.post<RegisterResponse>("/api/v1/auth/register", data, { skipAuth: true });
+}
+
+/** "Continuar com Google" — `credential` é o ID token entregue pelo
+ * Google Identity Services no callback do botão (ver GoogleSignInButton.tsx).
+ * `tenantId` só é reenviado depois que o usuário escolhe a clínica numa
+ * lista que o próprio backend retornou (mesmo padrão de login/tenant_id). */
+export async function googleAuth(credential: string, tenantId?: string): Promise<GoogleAuthResponse> {
+  return apiClient.post<GoogleAuthResponse>(
+    "/api/v1/auth/google",
+    { credential, tenant_id: tenantId ?? null },
+    { skipAuth: true }
+  );
 }
 
 /** Sempre resolve (nunca lança) para uma chamada bem-sucedida — o

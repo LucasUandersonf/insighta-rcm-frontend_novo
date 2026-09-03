@@ -1,14 +1,25 @@
 import { useState, type FormEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, ArrowRight, Building2, Check, IdCard, Lock, Mail, ShieldCheck, User } from "lucide-react";
+import { ArrowLeft, ArrowRight, Building2, Check, CircleUserRound, IdCard, Lock, Mail, ShieldCheck, User } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { AuthLayout, AuthFormHeader } from "@/components/layout/AuthLayout";
 import { AuthTextField } from "@/components/ui/AuthTextField";
+import { GoogleSignInButton, isGoogleAuthConfigured } from "@/components/ui/GoogleSignInButton";
 import { PasswordStrengthMeter } from "@/components/ui/PasswordStrengthMeter";
 import { Stepper } from "@/components/ui/Stepper";
 import { formatCNPJ, isCompleteCNPJ } from "@/lib/masks";
 import type { PlanTier } from "@/lib/types";
+
+/** Estado de navegação vindo do LoginPage quando "Continuar com Google"
+ * detecta que ainda não existe conta com aquele e-mail (ver
+ * AuthContext.loginWithGoogle: needsRegistration=true) — permite chegar
+ * aqui já com nome/e-mail resolvidos, sem pedir pra digitar de novo. */
+interface SignUpLocationState {
+  googleCredential?: string;
+  prefillEmail?: string;
+  prefillOwnerName?: string;
+}
 
 const STEPS = [
   { id: 1, label: "Sua clínica" },
@@ -51,8 +62,10 @@ interface FieldErrors {
 }
 
 export function SignUpPage() {
-  const { register, registerError, isRegistering } = useAuth();
+  const { register, registerError, isRegistering, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const googleState = location.state as SignUpLocationState | null;
 
   const [step, setStep] = useState(1);
   const [tradeName, setTradeName] = useState("");
@@ -63,15 +76,29 @@ export function SignUpPage() {
   const [passwordConfirm, setPasswordConfirm] = useState("");
   const [planTier, setPlanTier] = useState<PlanTier>("professional");
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [googleError, setGoogleError] = useState<string | null>(null);
+
+  // "Continuar com Google" já resolvido (via LoginPage ou pelo próprio
+  // botão logo abaixo) — nome/e-mail vêm do Google, senha nem existe
+  // mais neste cadastro (ver DECISÃO em RegisterRequest.validate_auth_method
+  // no backend: os dois grupos são mutuamente exclusivos).
+  const [googleCredential, setGoogleCredential] = useState<string | null>(googleState?.googleCredential ?? null);
+  const [googlePrefill, setGooglePrefill] = useState<{ email: string; ownerName: string } | null>(
+    googleState?.googleCredential && googleState.prefillEmail
+      ? { email: googleState.prefillEmail, ownerName: googleState.prefillOwnerName ?? googleState.prefillEmail }
+      : null
+  );
 
   function validateStep1(): boolean {
     const errors: FieldErrors = {};
     if (!tradeName.trim()) errors.trade_name = "Informe o nome da clínica.";
     if (!isCompleteCNPJ(cnpj)) errors.cnpj = "Informe os 14 dígitos do CNPJ.";
-    if (!ownerName.trim()) errors.owner_name = "Informe seu nome completo.";
-    if (!email.trim()) errors.email = "Informe seu e-mail.";
-    if (password.length < 8) errors.password = "A senha precisa ter pelo menos 8 caracteres.";
-    if (password !== passwordConfirm) errors.passwordConfirm = "As senhas não coincidem.";
+    if (!googleCredential) {
+      if (!ownerName.trim()) errors.owner_name = "Informe seu nome completo.";
+      if (!email.trim()) errors.email = "Informe seu e-mail.";
+      if (password.length < 8) errors.password = "A senha precisa ter pelo menos 8 caracteres.";
+      if (password !== passwordConfirm) errors.passwordConfirm = "As senhas não coincidem.";
+    }
     setFieldErrors(errors);
     return Object.keys(errors).length === 0;
   }
@@ -80,17 +107,42 @@ export function SignUpPage() {
     if (validateStep1()) setStep(2);
   }
 
+  async function handleGoogleCredential(credential: string) {
+    setGoogleError(null);
+    try {
+      const result = await loginWithGoogle(credential);
+      if (result.needsRegistration) {
+        // Confirma o que já era esperado (é por isso que a pessoa está
+        // aqui) — só guarda localmente pra trocar a etapa 1 pela
+        // confirmação em vez dos campos de nome/e-mail/senha.
+        setGoogleCredential(credential);
+        setGooglePrefill({ email: result.email ?? "", ownerName: result.suggestedOwnerName ?? result.email ?? "" });
+        return;
+      }
+      // Já existe conta com este e-mail — isto é LOGIN, não cadastro.
+      // tenantSelection (se preciso) e o token (se não) já foram
+      // resolvidos pelo AuthContext; /login reconhece esse estado
+      // compartilhado sozinho, sem precisar duplicar o seletor de
+      // clínica aqui.
+      navigate("/login", { replace: true });
+    } catch {
+      setGoogleError("Não foi possível continuar com esta conta Google. Tente novamente ou use e-mail e senha.");
+    }
+  }
+
+  function handleChangeGoogleAccount() {
+    setGoogleCredential(null);
+    setGooglePrefill(null);
+  }
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     try {
-      await register({
-        trade_name: tradeName,
-        cnpj,
-        owner_name: ownerName,
-        email,
-        password,
-        plan_tier: planTier,
-      });
+      await register(
+        googleCredential
+          ? { trade_name: tradeName, cnpj, plan_tier: planTier, google_credential: googleCredential }
+          : { trade_name: tradeName, cnpj, owner_name: ownerName, email, password, plan_tier: planTier }
+      );
       navigate("/", { replace: true });
     } catch {
       // registerError já foi setado pelo contexto — nada a fazer aqui.
@@ -132,53 +184,85 @@ export function SignUpPage() {
                 error={fieldErrors.cnpj}
                 placeholder="00.000.000/0000-00"
               />
-              <AuthTextField
-                label="Seu nome completo"
-                icon={User}
-                id="owner_name"
-                required
-                value={ownerName}
-                onChange={(e) => setOwnerName(e.target.value)}
-                error={fieldErrors.owner_name}
-                placeholder="Quem vai administrar a conta"
-              />
-              <AuthTextField
-                label="E-mail"
-                icon={Mail}
-                id="email"
-                type="email"
-                required
-                autoComplete="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                error={fieldErrors.email}
-                placeholder="voce@clinica.com"
-              />
-              <AuthTextField
-                label="Senha"
-                icon={Lock}
-                id="password"
-                type="password"
-                required
-                autoComplete="new-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                error={fieldErrors.password}
-                placeholder="••••••••"
-              />
-              <PasswordStrengthMeter password={password} />
-              <AuthTextField
-                label="Confirmar senha"
-                icon={Lock}
-                id="passwordConfirm"
-                type="password"
-                required
-                autoComplete="new-password"
-                value={passwordConfirm}
-                onChange={(e) => setPasswordConfirm(e.target.value)}
-                error={fieldErrors.passwordConfirm}
-                placeholder="••••••••"
-              />
+
+              {googleCredential && googlePrefill ? (
+                <div className="mb-4 flex items-center justify-between gap-3 rounded-lg border border-accent/25 bg-accent-bg px-3.5 py-3">
+                  <div className="flex items-center gap-2.5">
+                    <CircleUserRound aria-hidden size={18} className="shrink-0 text-accent" />
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-ink">{googlePrefill.ownerName}</p>
+                      <p className="truncate text-2xs text-ink-faint">{googlePrefill.email} · via Google</p>
+                    </div>
+                  </div>
+                  <button type="button" onClick={handleChangeGoogleAccount} className="shrink-0 text-2xs text-accent hover:underline">
+                    Trocar
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <AuthTextField
+                    label="Seu nome completo"
+                    icon={User}
+                    id="owner_name"
+                    required
+                    value={ownerName}
+                    onChange={(e) => setOwnerName(e.target.value)}
+                    error={fieldErrors.owner_name}
+                    placeholder="Quem vai administrar a conta"
+                  />
+                  <AuthTextField
+                    label="E-mail"
+                    icon={Mail}
+                    id="email"
+                    type="email"
+                    required
+                    autoComplete="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    error={fieldErrors.email}
+                    placeholder="voce@clinica.com"
+                  />
+                  <AuthTextField
+                    label="Senha"
+                    icon={Lock}
+                    id="password"
+                    type="password"
+                    required
+                    autoComplete="new-password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    error={fieldErrors.password}
+                    placeholder="••••••••"
+                  />
+                  <PasswordStrengthMeter password={password} />
+                  <AuthTextField
+                    label="Confirmar senha"
+                    icon={Lock}
+                    id="passwordConfirm"
+                    type="password"
+                    required
+                    autoComplete="new-password"
+                    value={passwordConfirm}
+                    onChange={(e) => setPasswordConfirm(e.target.value)}
+                    error={fieldErrors.passwordConfirm}
+                    placeholder="••••••••"
+                  />
+
+                  {isGoogleAuthConfigured && (
+                    <>
+                      <div className="my-4 flex items-center gap-3 text-2xs text-ink-faint">
+                        <div className="h-px flex-1 bg-border-subtle" />
+                        ou
+                        <div className="h-px flex-1 bg-border-subtle" />
+                      </div>
+                      <div className="mb-4">
+                        <GoogleSignInButton onCredential={handleGoogleCredential} text="signup_with" />
+                      </div>
+                      {googleError && <p className="mb-4 text-2xs text-denied">{googleError}</p>}
+                    </>
+                  )}
+                </>
+              )}
 
               <button
                 type="button"

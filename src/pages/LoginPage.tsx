@@ -5,6 +5,7 @@ import { ArrowRight, Building2, LineChart, Lock, Mail, ShieldCheck } from "lucid
 import { useAuth } from "@/context/AuthContext";
 import { AuthLayout, AuthFormHeader } from "@/components/layout/AuthLayout";
 import { AuthTextField } from "@/components/ui/AuthTextField";
+import { GoogleSignInButton, isGoogleAuthConfigured } from "@/components/ui/GoogleSignInButton";
 
 /**
  * Achado F-04 (Auditoria Go-Live): quando o mesmo e-mail bate a senha em
@@ -13,8 +14,12 @@ import { AuthTextField } from "@/components/ui/AuthTextField";
  * no lugar do formulário até o usuário escolher a clínica.
  */
 function TenantSelector() {
-  const { tenantSelection, selectTenant, cancelTenantSelection, loginError, isLoggingIn } = useAuth();
+  // Este seletor é compartilhado por login tradicional e login com
+  // Google (ver DECISÃO em AuthContext.tsx) — desabilita os botões
+  // enquanto QUALQUER um dos dois estiver em andamento.
+  const { tenantSelection, selectTenant, cancelTenantSelection, loginError, isLoggingIn, isLoggingInWithGoogle } = useAuth();
   const navigate = useNavigate();
+  const isBusy = isLoggingIn || isLoggingInWithGoogle;
 
   async function handleSelect(tenantId: string) {
     try {
@@ -37,7 +42,7 @@ function TenantSelector() {
           <button
             key={option.tenant_id}
             type="button"
-            disabled={isLoggingIn}
+            disabled={isBusy}
             onClick={() => handleSelect(option.tenant_id)}
             className="flex w-full items-center gap-3 rounded-md border border-border-subtle bg-canvas-raised/60 px-4 py-3 text-left text-sm font-medium text-ink transition-colors hover:border-accent/40 hover:bg-accent-bg disabled:cursor-not-allowed disabled:opacity-60"
           >
@@ -66,7 +71,7 @@ const BRAND_HIGHLIGHTS = [
 ];
 
 export function LoginPage() {
-  const { login, loginError, isLoggingIn, tenantSelection } = useAuth();
+  const { login, loginError, isLoggingIn, loginWithGoogle, tenantSelection } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -84,6 +89,27 @@ export function LoginPage() {
     }
   }
 
+  async function handleGoogleCredential(credential: string) {
+    try {
+      const result = await loginWithGoogle(credential);
+      if (result.needsRegistration) {
+        // Ninguém com este e-mail ainda — manda pro cadastro já
+        // pré-preenchido (ver SignUpPage.tsx), sem pedir pra digitar
+        // nome/e-mail de novo.
+        navigate("/signup", { state: { googleCredential: credential, prefillEmail: result.email, prefillOwnerName: result.suggestedOwnerName } });
+        return;
+      }
+      if (!result.requiresTenantSelection) {
+        // Login direto — token já emitido pelo contexto.
+        navigate("/", { replace: true });
+      }
+      // Se exigir seleção de clínica, o AuthContext já preencheu
+      // tenantSelection e o TenantSelector assume a tela sozinho.
+    } catch {
+      // loginError já foi setado pelo contexto — nada a fazer aqui.
+    }
+  }
+
   return (
     <AuthLayout
       headline="Onde sua clínica está perdendo dinheiro — antes que a glosa aconteça."
@@ -95,6 +121,19 @@ export function LoginPage() {
       ) : (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="w-full max-w-sm">
           <AuthFormHeader title="Bem-vindo de volta" subtitle="Entre com as credenciais da sua clínica" />
+
+          {isGoogleAuthConfigured && (
+            <>
+              <div className="mb-5">
+                <GoogleSignInButton onCredential={handleGoogleCredential} text="signin_with" />
+              </div>
+              <div className="mb-5 flex items-center gap-3 text-2xs text-ink-faint">
+                <div className="h-px flex-1 bg-border-subtle" />
+                ou
+                <div className="h-px flex-1 bg-border-subtle" />
+              </div>
+            </>
+          )}
 
           <form onSubmit={handleSubmit} className="rounded-xl border border-border-hairline bg-glass p-6 shadow-elevated backdrop-blur-xl">
             <AuthTextField
