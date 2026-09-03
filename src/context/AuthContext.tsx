@@ -1,7 +1,25 @@
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
-import { login as loginRequest, register as registerRequest, storeToken, clearStoredToken, getStoredToken, ApiError } from "@/lib/api-client";
+import {
+  login as loginRequest,
+  register as registerRequest,
+  googleAuth as googleAuthRequest,
+  storeToken,
+  clearStoredToken,
+  getStoredToken,
+  ApiError,
+} from "@/lib/api-client";
 import { decodeJwtPayload, isTokenExpired } from "@/lib/jwt";
 import type { CurrentUser, RegisterRequest, TenantOption } from "@/lib/types";
+
+/** Resultado de loginWithGoogle — quem chama decide o que fazer com cada
+ * caso (LoginPage e SignUpPage reagem de formas diferentes ao mesmo
+ * needsRegistration, por exemplo), o context só reporta o que aconteceu. */
+interface GoogleAuthResult {
+  needsRegistration: boolean;
+  requiresTenantSelection: boolean;
+  email?: string;
+  suggestedOwnerName?: string;
+}
 
 interface AuthContextValue {
   user: CurrentUser | null;
@@ -14,6 +32,11 @@ interface AuthContextValue {
   /** Erro amigável da última tentativa de cadastro (null quando não há erro). */
   registerError: string | null;
   isRegistering: boolean;
+  /** "Continuar com Google" — ver GoogleSignInButton.tsx. Não navega
+   * sozinho: devolve o resultado para quem chamou decidir (ex: mandar
+   * pro cadastro pré-preenchido quando needsRegistration=true). */
+  loginWithGoogle: (credential: string) => Promise<GoogleAuthResult>;
+  isLoggingInWithGoogle: boolean;
   logout: () => void;
   /** Erro amigável da última tentativa de login (null quando não há erro). */
   loginError: string | null;
@@ -22,6 +45,9 @@ interface AuthContextValue {
    * Achado F-04 (Auditoria Go-Live): preenchido quando o mesmo e-mail
    * bate a senha em mais de um tenant — a UI deve mostrar um seletor de
    * clínica em vez de navegar direto. null quando não há ambiguidade.
+   * Mesmo campo serve login tradicional e login com Google — o
+   * componente de seleção (TenantSelector) não precisa saber qual dos
+   * dois está em andamento, só chamar selectTenant.
    */
   tenantSelection: TenantOption[] | null;
   /** Completa o login depois que o usuário escolhe a clínica na lista acima. */
@@ -44,11 +70,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [registerError, setRegisterError] = useState<string | null>(null);
   const [isRegistering, setIsRegistering] = useState(false);
+  const [isLoggingInWithGoogle, setIsLoggingInWithGoogle] = useState(false);
   const [tenantSelection, setTenantSelection] = useState<TenantOption[] | null>(null);
   // Guardados em memória só entre "seleciona clínica" e a segunda
   // chamada de login — nunca persistidos (mesmo tratamento que o campo
-  // de senha do formulário já recebe).
+  // de senha do formulário já recebe). Só um dos dois fica preenchido
+  // por vez (login tradicional vs. login com Google).
   const [pendingCredentials, setPendingCredentials] = useState<{ email: string; password: string } | null>(null);
+  const [pendingGoogleCredential, setPendingGoogleCredential] = useState<string | null>(null);
 
   const login = useCallback(async (email: string, password: string) => {
     setIsLoggingIn(true);
@@ -89,8 +118,56 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const loginWithGoogle = useCallback(async (credential: string): Promise<GoogleAuthResult> => {
+    setIsLoggingInWithGoogle(true);
+    setLoginError(null);
+    try {
+      const response = await googleAuthRequest(credential);
+
+      if (response.needs_registration) {
+        // Nenhuma conta com este e-mail — não é erro, é sinal para quem
+        // chamou mandar a pessoa pro cadastro pré-preenchido. Nenhum
+        // estado de sessão muda aqui.
+        return { needsRegistration: true, requiresTenantSelection: false, email: response.email, suggestedOwnerName: response.suggested_owner_name };
+      }
+
+      if (response.requires_tenant_selection) {
+        setPendingGoogleCredential(credential);
+        setTenantSelection(response.tenant_options);
+        return { needsRegistration: false, requiresTenantSelection: true };
+      }
+
+      storeToken(response.access_token!);
+      setUser(decodeJwtPayload(response.access_token!));
+      return { needsRegistration: false, requiresTenantSelection: false };
+    } catch (err) {
+      setLoginError(err instanceof ApiError ? err.message : "Não foi possível entrar com o Google. Tente novamente.");
+      throw err;
+    } finally {
+      setIsLoggingInWithGoogle(false);
+    }
+  }, []);
+
   const selectTenant = useCallback(
     async (tenantId: string) => {
+      if (pendingGoogleCredential) {
+        setIsLoggingInWithGoogle(true);
+        setLoginError(null);
+        try {
+          const response = await googleAuthRequest(pendingGoogleCredential, tenantId);
+          storeToken(response.access_token!);
+          setUser(decodeJwtPayload(response.access_token!));
+          setTenantSelection(null);
+          setPendingGoogleCredential(null);
+        } catch (err) {
+          setLoginError(err instanceof ApiError ? err.message : "Não foi possível entrar com o Google. Tente novamente.");
+          throw err;
+        } finally {
+          setIsLoggingInWithGoogle(false);
+        }
+        return;
+      }
+
       if (!pendingCredentials) return;
       setIsLoggingIn(true);
       setLoginError(null);
@@ -107,12 +184,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setIsLoggingIn(false);
       }
     },
-    [pendingCredentials]
+    [pendingCredentials, pendingGoogleCredential]
   );
 
   const cancelTenantSelection = useCallback(() => {
     setTenantSelection(null);
     setPendingCredentials(null);
+    setPendingGoogleCredential(null);
     setLoginError(null);
   }, []);
 
@@ -139,6 +217,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         register,
         registerError,
         isRegistering,
+        loginWithGoogle,
+        isLoggingInWithGoogle,
         logout,
         loginError,
         isLoggingIn,

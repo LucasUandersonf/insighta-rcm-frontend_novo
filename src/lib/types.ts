@@ -27,14 +27,17 @@ export interface TokenResponse {
 // PasswordResetConfirmRequest) ---
 export type PlanTier = "starter" | "professional" | "enterprise";
 
+// owner_name/email/password OU google_credential — nunca os dois juntos
+// (ver DECISÃO em RegisterRequest.validate_auth_method no backend).
 export interface RegisterRequest {
   trade_name: string;
   legal_name?: string | null;
   cnpj: string;
   plan_tier: PlanTier;
-  owner_name: string;
-  email: string;
-  password: string;
+  owner_name?: string;
+  email?: string;
+  password?: string;
+  google_credential?: string;
 }
 
 // Espelha TokenResponse — POST /auth/register nunca tem ambiguidade de
@@ -44,6 +47,17 @@ export interface RegisterRequest {
 export interface RegisterResponse {
   access_token: string;
   token_type: string;
+}
+
+// --- Login/cadastro com Google (app/schemas/token.py::GoogleCredentialRequest/GoogleAuthResponse) ---
+export interface GoogleAuthResponse {
+  access_token?: string;
+  token_type: string;
+  requires_tenant_selection: boolean;
+  tenant_options: TenantOption[];
+  needs_registration: boolean;
+  email?: string;
+  suggested_owner_name?: string;
 }
 
 // Envelope de paginação usado por todo endpoint de listagem robusta

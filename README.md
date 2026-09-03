@@ -83,6 +83,32 @@ branco, sem nenhum rastro) se não fosse por duas camadas:
   erros de render e falhas 5xx do backend (não 4xx — validação normal
   do usuário) são reportados.
 
+## Login/cadastro com Google ("Sign in with Google")
+
+`GoogleSignInButton` (`src/components/ui/GoogleSignInButton.tsx`), usado
+em `LoginPage` e `SignUpPage`, renderiza o botão OFICIAL do Google
+(Google Identity Services, script carregado sob demanda por
+`src/lib/googleIdentity.ts`) — não é um botão nosso estilizado, é assim
+que o fluxo evita lidar com senha ou client_secret no frontend: o
+próprio Google devolve um ID token já assinado no callback, que vai
+direto para `POST /auth/google` no backend só para verificação.
+
+Controlado por `VITE_GOOGLE_OAUTH_CLIENT_ID` — sem essa variável, o
+botão (e o divisor "ou" ao redor dele) simplesmente não renderiza, e o
+formulário tradicional continua funcionando normalmente (mesma
+degradação graciosa de `VITE_SENTRY_DSN` ausente, acima). É um valor
+PÚBLICO (Client ID do OAuth client criado no Google Cloud Console — ver
+seção "Login/cadastro com Google" no README do backend para o passo a
+passo), nunca um segredo — pode ir tranquilo no `.env` do frontend.
+
+Fluxo de cadastro via Google (`SignUpPage.tsx`): quando `POST
+/auth/google` responde `needs_registration=true` (nenhuma conta com
+aquele e-mail), o nome/e-mail resolvidos pelo Google pré-preenchem a
+etapa 1 do cadastro (substituindo os campos de nome/e-mail/senha por uma
+confirmação "continuando como X · e-mail@... · via Google") — só CNPJ e
+plano continuam sendo perguntados, e o cadastro final envia
+`google_credential` no lugar de `owner_name`/`email`/`password`.
+
 ## Build para produção
 
 ```bash
