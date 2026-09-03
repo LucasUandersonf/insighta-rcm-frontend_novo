@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { TextField } from "@/components/ui/FormField";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { Badge } from "@/components/ui/Badge";
 import { cn } from "@/lib/cn";
 import { apiClient, ApiError } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
@@ -200,7 +201,7 @@ export function ReportRecipientsPage() {
       <PageHeader
         icon={Send}
         title="Destinatários de relatórios"
-        subtitle="Quem recebe os disparos automatizados (WhatsApp/e-mail) — cadastre todos os responsáveis para garantir que o resumo semanal e os alertas cheguem às pessoas certas, não só a um número fixo."
+        subtitle="Quem recebe o resumo semanal por WhatsApp e e-mail."
         action={
           <Button onClick={() => setIsModalOpen(true)} className="flex items-center gap-1.5">
             <Plus size={14} />
@@ -235,26 +236,20 @@ export function ReportRecipientsPage() {
               {(recipients ?? []).map((r) => (
                 <tr key={r.id} className="border-b border-border-hairline last:border-0 transition-colors hover:bg-canvas-raised/60">
                   <td className="px-4 py-2.5 text-ink">{r.name}</td>
-                  <td className="px-4 py-2.5 text-ink-muted">{r.phone_whatsapp ?? "—"}</td>
+                  <td className="tabular px-4 py-2.5 font-mono text-ink-muted">{r.phone_whatsapp ?? "—"}</td>
                   <td className="px-4 py-2.5 text-ink-muted">{r.email ?? "—"}</td>
                   <td className="px-4 py-2.5 text-ink-muted">{reportTypesLabel(r.report_types)}</td>
                   <td className="px-4 py-2.5">
-                    <span
-                      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-2xs font-medium ${
-                        r.active ? "border-revenue/25 bg-revenue-bg text-revenue" : "border-border-default bg-canvas-raised text-ink-faint"
-                      }`}
-                    >
-                      {r.active ? "Ativo" : "Inativo"}
-                    </span>
+                    <Badge tone={r.active ? "revenue" : "neutral"}>{r.active ? "Ativo" : "Inativo"}</Badge>
                   </td>
                   <td className="px-4 py-2.5">
                     <div className="flex gap-2">
-                      <Button variant="ghost" className="!px-2 !py-1 text-2xs" onClick={() => setEditingId(r.id)}>
+                      <Button variant="secondary" size="xs" onClick={() => setEditingId(r.id)}>
                         Editar
                       </Button>
                       <Button
                         variant="ghost"
-                        className="!px-2 !py-1 text-2xs"
+                        size="xs"
                         disabled={toggleActiveMutation.isPending}
                         onClick={() => toggleActiveMutation.mutate({ id: r.id, active: !r.active })}
                       >
@@ -262,7 +257,8 @@ export function ReportRecipientsPage() {
                       </Button>
                       <Button
                         variant="ghost"
-                        className="!px-2 !py-1 text-2xs text-denied"
+                        size="xs"
+                        className="text-denied"
                         disabled={deleteMutation.isPending}
                         onClick={() => {
                           if (confirm(`Remover ${r.name} da lista de destinatários?`)) deleteMutation.mutate(r.id);

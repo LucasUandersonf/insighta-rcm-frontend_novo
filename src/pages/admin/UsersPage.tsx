@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { TextField, SelectField } from "@/components/ui/FormField";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { Badge } from "@/components/ui/Badge";
 import { apiClient, ApiError } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useToast } from "@/context/ToastContext";
@@ -87,7 +88,7 @@ function CreateUserModal({ isOpen, onClose, onCreated }: { isOpen: boolean; onCl
   }
 
   return (
-    <Modal title="Novo colaborador" isOpen={isOpen} onClose={resetAndClose}>
+    <Modal title="Novo usuário" isOpen={isOpen} onClose={resetAndClose}>
       <form onSubmit={handleSubmit}>
         <TextField label="Nome completo" required value={fullName} onChange={(e) => setFullName(e.target.value)} error={fieldErrors["full_name"]} />
         <TextField label="E-mail" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} error={fieldErrors["email"]} />
@@ -146,12 +147,12 @@ export function UsersPage() {
     <div className="space-y-6">
       <PageHeader
         icon={Users}
-        title="Gestão de usuários"
-        subtitle="Colaboradores da clínica e seus papéis de acesso (RBAC)."
+        title="Usuários"
+        subtitle="Colaboradores com acesso à plataforma — papel controla o que cada um enxerga e pode fazer."
         action={
           <Button onClick={() => setIsModalOpen(true)} className="flex items-center gap-1.5">
             <Plus size={14} />
-            Novo colaborador
+            Novo usuário
           </Button>
         }
       />
@@ -182,32 +183,28 @@ export function UsersPage() {
                       {isSelf && <span className="ml-1.5 text-2xs text-ink-faint">(você)</span>}
                     </td>
                     <td className="px-4 py-2.5 text-ink-muted">{u.email}</td>
-                    <td className="px-4 py-2.5 text-ink-muted">{ROLE_LABELS[u.role]}</td>
                     <td className="px-4 py-2.5">
-                      <span
-                        className={`inline-flex items-center rounded-full border px-2 py-0.5 text-2xs font-medium ${
-                          u.is_active ? "border-revenue/25 bg-revenue-bg text-revenue" : "border-border-default bg-canvas-raised text-ink-faint"
-                        }`}
-                      >
-                        {u.is_active ? "Ativo" : "Inativo"}
-                      </span>
+                      <Badge tone="accent">{ROLE_LABELS[u.role]}</Badge>
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <Badge tone={u.is_active ? "revenue" : "neutral"}>{u.is_active ? "Ativo" : "Inativo"}</Badge>
                       {u.must_change_password && <span className="ml-1.5 text-2xs text-ink-faint">(troca de senha pendente)</span>}
                     </td>
-                    <td className="px-4 py-2.5 text-ink-muted">{formatDateTime(u.last_login_at)}</td>
+                    <td className="tabular px-4 py-2.5 font-mono text-ink-muted">{formatDateTime(u.last_login_at)}</td>
                     <td className="px-4 py-2.5">
                       <div className="flex gap-2">
                         <Button
-                          variant="ghost"
-                          className="!px-2 !py-1 text-2xs"
+                          variant="secondary"
+                          size="xs"
                           disabled={resetPasswordMutation.isPending}
                           onClick={() => resetPasswordMutation.mutate(u.id)}
                         >
-                          Resetar senha
+                          Redefinir senha
                         </Button>
                         {!isSelf && (
                           <Button
                             variant="ghost"
-                            className="!px-2 !py-1 text-2xs"
+                            size="xs"
                             disabled={toggleActiveMutation.isPending}
                             onClick={() => toggleActiveMutation.mutate({ id: u.id, is_active: !u.is_active })}
                           >

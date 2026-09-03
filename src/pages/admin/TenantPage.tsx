@@ -5,6 +5,7 @@ import { Panel, LoadingState, ErrorState } from "@/components/ui/Panel";
 import { Button } from "@/components/ui/Button";
 import { TextField } from "@/components/ui/FormField";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { Badge } from "@/components/ui/Badge";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useToast } from "@/context/ToastContext";
@@ -59,39 +60,41 @@ function AnnualGoalPanel({ tenant, isOwner }: { tenant: Tenant; isOwner: boolean
   }
 
   return (
-    <Panel
-      title="Meta de Faturamento Anual"
-      subtitle="Definida por vocês — o sistema nunca calcula essa meta sozinho, só compara o faturamento real com ela."
-    >
+    <Panel title="Meta de faturamento anual">
       <form onSubmit={handleSubmit} className="p-4">
-        {tenant.annual_revenue_goal !== null && (
-          <p className="mb-3 text-sm text-ink-muted">
-            Meta atual: <span className="font-mono font-medium text-ink">{formatCurrency(tenant.annual_revenue_goal)}</span>
-          </p>
-        )}
+        <p className="mb-3.5 max-w-xl text-xs leading-relaxed text-ink-faint">
+          Meta manual, definida pela clínica — alimenta o insight de desempenho anual na Sala de Comando (comparação
+          com o faturamento acumulado e recomendação de recuperação de pacientes inativos quando abaixo da meta).
+        </p>
         {tenant.annual_revenue_goal === null && (
-          <p className="mb-3 text-xs text-ink-faint">
+          <p className="-mt-1.5 mb-3.5 text-2xs text-ink-faint">
             Nenhuma meta configurada ainda — sem ela, a Sala de Comando não mostra o insight de desempenho anual.
           </p>
         )}
-        <TextField
-          label="Nova meta anual (R$)"
-          type="number"
-          min={0.01}
-          step="0.01"
-          value={goalInput}
-          onChange={(e) => setGoalInput(e.target.value)}
-          disabled={!isOwner}
-          placeholder="Ex: 1200000.00"
-        />
-        {isOwner && (
-          <div className="mt-2 flex justify-end">
+        <div className="flex max-w-md items-end gap-3">
+          <TextField
+            label="Meta de faturamento anual (R$)"
+            type="number"
+            min={0.01}
+            step="0.01"
+            value={goalInput}
+            onChange={(e) => setGoalInput(e.target.value)}
+            disabled={!isOwner}
+            placeholder="Ex: 1200000.00"
+            className="mb-0 flex-1"
+          />
+          {isOwner && (
             <Button type="submit" disabled={mutation.isPending || !goalInput}>
               {mutation.isPending ? "Salvando..." : "Salvar meta"}
             </Button>
-          </div>
+          )}
+        </div>
+        {tenant.annual_revenue_goal !== null && (
+          <p className="mt-2 text-2xs text-ink-faint">
+            Meta atual: <span className="font-mono text-ink-muted">{formatCurrency(tenant.annual_revenue_goal)}</span>
+          </p>
         )}
-        {!isOwner && <p className="text-2xs text-ink-faint">Só o papel "owner" pode editar a meta de faturamento.</p>}
+        {!isOwner && <p className="mt-2 text-2xs text-ink-faint">Só o papel "owner" pode editar a meta de faturamento.</p>}
       </form>
     </Panel>
   );
@@ -139,55 +142,45 @@ export function TenantPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader icon={Building2} title="Minha clínica" subtitle="Dados cadastrais, plano de assinatura e meta de faturamento anual." />
+      <PageHeader
+        icon={Building2}
+        title="Minha clínica"
+        subtitle="Dados cadastrais e configuração da conta — visível apenas para proprietário(a) e administrador(a)."
+      />
 
       {isLoading && <LoadingState />}
       {error && <ErrorState message={getApiErrorMessage(error)} />}
 
       {tenant && (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
-          <div className="lg:col-span-6">
-            <Panel title="Dados cadastrais" subtitle="CNPJ não pode ser alterado por aqui — fale com o suporte.">
+        <div className="space-y-4">
+          <Panel title="Dados da clínica">
             <form onSubmit={handleSubmit} className="p-4">
-              <TextField label="Razão social" required value={legalName} onChange={(e) => setLegalName(e.target.value)} disabled={!isOwner} />
-              <TextField label="Nome fantasia" required value={tradeName} onChange={(e) => setTradeName(e.target.value)} disabled={!isOwner} />
-              <TextField label="CNPJ" value={tenant.cnpj} disabled />
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <TextField label="Razão social" required value={legalName} onChange={(e) => setLegalName(e.target.value)} disabled={!isOwner} className="mb-0" />
+                <TextField label="Nome fantasia" required value={tradeName} onChange={(e) => setTradeName(e.target.value)} disabled={!isOwner} className="mb-0" />
+                <TextField label="CNPJ" value={tenant.cnpj} disabled className="mb-0" />
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-ink-muted">Plano</label>
+                  <Badge tone="accent">{PLAN_LABELS[tenant.plan_tier] ?? tenant.plan_tier}</Badge>
+                </div>
+              </div>
+              <p className="mt-4 text-2xs text-ink-faint">
+                CNPJ não pode ser alterado por aqui — fale com o suporte. Para alterar de plano
+                {(availablePlans ?? []).length > 0 && <> (disponíveis: {(availablePlans ?? []).map((t) => PLAN_LABELS[t] ?? t).join(", ")})</>},
+                fale com o time comercial — mudança de assinatura ainda não é self-service neste MVP.
+              </p>
               {isOwner && (
-                <div className="mt-2 flex justify-end">
+                <div className="mt-3 flex justify-end">
                   <Button type="submit" disabled={mutation.isPending}>
                     {mutation.isPending ? "Salvando..." : "Salvar alterações"}
                   </Button>
                 </div>
               )}
-              {!isOwner && <p className="text-2xs text-ink-faint">Só o papel “owner” pode editar os dados cadastrais.</p>}
+              {!isOwner && <p className="mt-3 text-2xs text-ink-faint">Só o papel “owner” pode editar os dados cadastrais.</p>}
             </form>
           </Panel>
-          </div>
 
-          <div className="lg:col-span-6">
-          <Panel title="Plano e Assinatura">
-            <div className="p-4">
-              <p className="text-2xs uppercase tracking-wide text-ink-faint">Plano atual</p>
-              <p className="mb-4 text-lg font-semibold text-revenue">{PLAN_LABELS[tenant.plan_tier] ?? tenant.plan_tier}</p>
-              <p className="mb-2 text-2xs uppercase tracking-wide text-ink-faint">Planos disponíveis</p>
-              <ul className="space-y-1 text-sm text-ink-muted">
-                {(availablePlans ?? []).map((tier) => (
-                  <li key={tier} className={tier === tenant.plan_tier ? "font-medium text-ink" : ""}>
-                    {PLAN_LABELS[tier] ?? tier}
-                    {tier === tenant.plan_tier && <span className="ml-1.5 text-2xs text-revenue">(atual)</span>}
-                  </li>
-                ))}
-              </ul>
-              <p className="mt-4 text-2xs text-ink-faint">
-                Para alterar de plano, fale com o time comercial — mudança de assinatura ainda não é self-service neste MVP.
-              </p>
-            </div>
-          </Panel>
-          </div>
-
-          <div className="lg:col-span-12">
-            <AnnualGoalPanel tenant={tenant} isOwner={isOwner} />
-          </div>
+          <AnnualGoalPanel tenant={tenant} isOwner={isOwner} />
         </div>
       )}
     </div>
