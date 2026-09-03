@@ -122,19 +122,6 @@ export function LoginPage() {
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="w-full max-w-sm">
           <AuthFormHeader title="Bem-vindo de volta" subtitle="Entre com as credenciais da sua clínica" />
 
-          {isGoogleAuthConfigured && (
-            <>
-              <div className="mb-5">
-                <GoogleSignInButton onCredential={handleGoogleCredential} text="signin_with" />
-              </div>
-              <div className="mb-5 flex items-center gap-3 text-2xs text-ink-faint">
-                <div className="h-px flex-1 bg-border-subtle" />
-                ou
-                <div className="h-px flex-1 bg-border-subtle" />
-              </div>
-            </>
-          )}
-
           <form onSubmit={handleSubmit} className="rounded-xl border border-border-hairline bg-glass p-6 shadow-elevated backdrop-blur-xl">
             <AuthTextField
               label="E-mail"
@@ -179,6 +166,19 @@ export function LoginPage() {
               >
                 {loginError}
               </motion.div>
+            )}
+
+            {isGoogleAuthConfigured && (
+              <>
+                <div className="mb-4 flex items-center gap-3 text-2xs text-ink-faint">
+                  <div className="h-px flex-1 bg-border-subtle" />
+                  ou
+                  <div className="h-px flex-1 bg-border-subtle" />
+                </div>
+                <div className="mb-4">
+                  <GoogleSignInButton onCredential={handleGoogleCredential} text="signin_with" />
+                </div>
+              </>
             )}
 
             <button
