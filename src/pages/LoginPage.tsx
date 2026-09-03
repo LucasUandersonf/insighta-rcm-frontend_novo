@@ -112,8 +112,8 @@ export function LoginPage() {
 
   return (
     <AuthLayout
-      headline="Onde sua clínica está perdendo dinheiro — antes que a glosa aconteça."
-      subheadline="A Sala de Comando traduz faturamento, agenda e risco de glosa em diagnóstico direto, todo dia."
+      headline="Identifique gargalos financeiros antes que virem glosas."
+      subheadline="Diagnósticos automáticos diários de faturamento e risco de glosa."
       highlights={BRAND_HIGHLIGHTS}
     >
       {tenantSelection ? (
@@ -176,7 +176,9 @@ export function LoginPage() {
                   <div className="h-px flex-1 bg-border-subtle" />
                 </div>
                 <div className="mb-4">
-                  <GoogleSignInButton onCredential={handleGoogleCredential} text="signin_with" />
+                  {/* Padrão "Continuar com o Google" nas duas telas (login e
+                      cadastro) — mesma ação, mesma frase, ver guia de estilo. */}
+                  <GoogleSignInButton onCredential={handleGoogleCredential} text="continue_with" />
                 </div>
               </>
             )}
@@ -186,7 +188,7 @@ export function LoginPage() {
               disabled={isLoggingIn}
               className="flex w-full items-center justify-center gap-1.5 rounded-md bg-aura-line px-3 py-2.5 text-sm font-medium text-white shadow-elevated transition-all duration-150 hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100"
             >
-              {isLoggingIn ? "Entrando..." : "Entrar"}
+              {isLoggingIn ? "Entrando..." : "Entrar no sistema"}
               {!isLoggingIn && <ArrowRight aria-hidden size={14} />}
             </button>
           </form>

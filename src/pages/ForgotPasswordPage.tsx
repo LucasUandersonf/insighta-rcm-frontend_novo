@@ -6,8 +6,12 @@ import { requestPasswordReset, ApiError } from "@/lib/api-client";
 import { AuthLayout, AuthFormHeader } from "@/components/layout/AuthLayout";
 import { AuthTextField } from "@/components/ui/AuthTextField";
 
+// 30 min = mesmo valor de PASSWORD_RESET_TOKEN_EXPIRE_MINUTES no backend
+// (app/core/config.py) — nunca hardcodar um número aqui sem checar lá
+// primeiro; um texto "mais transparente" que mentisse sobre o prazo real
+// seria pior do que a versão vaga de antes.
 const HIGHLIGHTS = [
-  { icon: ShieldCheck, text: "O link de redefinição expira em pouco tempo e só pode ser usado uma vez." },
+  { icon: ShieldCheck, text: "O link de redefinição expira em 30 minutos e só pode ser usado uma vez." },
 ];
 
 export function ForgotPasswordPage() {
@@ -37,8 +41,8 @@ export function ForgotPasswordPage() {
 
   return (
     <AuthLayout
-      headline="Recuperar acesso à sua conta"
-      subheadline="Enviamos um link seguro de redefinição para o e-mail cadastrado — válido por pouco tempo, uso único."
+      headline="Redefinir sua senha"
+      subheadline="Enviaremos um link de redefinição para o seu e-mail corporativo. O link expira em 30 minutos por segurança."
       highlights={HIGHLIGHTS}
     >
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="w-full max-w-sm">
@@ -57,7 +61,7 @@ export function ForgotPasswordPage() {
               className="mt-5 inline-flex items-center gap-1.5 text-sm font-medium text-accent hover:underline"
             >
               <ArrowLeft aria-hidden size={14} />
-              Voltar para o login
+              Voltar para a tela de login
             </Link>
           </div>
         ) : (
@@ -88,14 +92,14 @@ export function ForgotPasswordPage() {
                 disabled={isSubmitting}
                 className="flex w-full items-center justify-center gap-1.5 rounded-md bg-aura-line px-3 py-2.5 text-sm font-medium text-white shadow-elevated transition-all duration-150 hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {isSubmitting ? "Enviando..." : "Enviar link de redefinição"}
+                {isSubmitting ? "Enviando..." : "Enviar instruções de acesso"}
               </button>
             </form>
 
             <p className="mt-5 text-center text-sm text-ink-muted">
               <Link to="/login" className="inline-flex items-center gap-1.5 font-medium text-accent hover:underline">
                 <ArrowLeft aria-hidden size={13} />
-                Voltar para o login
+                Voltar para a tela de login
               </Link>
             </p>
           </>

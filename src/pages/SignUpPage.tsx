@@ -49,7 +49,7 @@ const PLANS: { id: PlanTier; name: string; recommended?: boolean; description: s
 ];
 
 const HIGHLIGHTS = [
-  { icon: ShieldCheck, text: "Sem cartão de crédito para começar — o plano fica registrado, o pagamento é combinado depois com nosso time." },
+  { icon: ShieldCheck, text: "Sem necessidade de cartão de crédito no cadastro. A ativação do plano é feita diretamente com a nossa equipe." },
 ];
 
 interface FieldErrors {
@@ -151,7 +151,7 @@ export function SignUpPage() {
 
   return (
     <AuthLayout
-      headline="Comece a fechar o ciclo de glosa da sua clínica"
+      headline="Assuma o controle do faturamento da sua clínica"
       subheadline="Cadastre a clínica, escolha um plano e entre direto na Sala de Comando — sem espera de aprovação."
       highlights={HIGHLIGHTS}
     >
@@ -208,7 +208,7 @@ export function SignUpPage() {
                     value={ownerName}
                     onChange={(e) => setOwnerName(e.target.value)}
                     error={fieldErrors.owner_name}
-                    placeholder="Quem vai administrar a conta"
+                    placeholder="Seu nome corporativo"
                   />
                   <AuthTextField
                     label="E-mail"
@@ -256,7 +256,10 @@ export function SignUpPage() {
                         <div className="h-px flex-1 bg-border-subtle" />
                       </div>
                       <div className="mb-4">
-                        <GoogleSignInButton onCredential={handleGoogleCredential} text="signup_with" />
+                        {/* Mesma frase do login ("Continuar com o Google") — a
+                            ação é idêntica, o backend decide sozinho se é
+                            login ou cadastro (ver needs_registration). */}
+                        <GoogleSignInButton onCredential={handleGoogleCredential} text="continue_with" />
                       </div>
                       {googleError && <p className="mb-4 text-2xs text-denied">{googleError}</p>}
                     </>
@@ -318,8 +321,7 @@ export function SignUpPage() {
               </div>
 
               <p className="mt-4 text-2xs text-ink-faint">
-                Sem cartão de crédito agora — o plano escolhido fica registrado na sua conta e nosso time entra em contato para
-                combinar a forma de pagamento.
+                Sem necessidade de cartão de crédito no cadastro. A ativação do plano é feita diretamente com a nossa equipe.
               </p>
 
               {registerError && (
