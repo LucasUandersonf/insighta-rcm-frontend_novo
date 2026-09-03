@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowRight, Building2, LineChart, Lock, Mail, ShieldCheck } from "lucide-react";
@@ -71,10 +71,15 @@ const BRAND_HIGHLIGHTS = [
 ];
 
 export function LoginPage() {
-  const { login, loginError, isLoggingIn, loginWithGoogle, tenantSelection } = useAuth();
+  const { login, loginError, isLoggingIn, loginWithGoogle, tenantSelection, sessionExpired, dismissSessionExpired } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
+  // O aviso deve aparecer só na primeira vez que este redirecionamento
+  // acontece — some sozinho ao sair desta tela (login concluído, ou
+  // navegação manual para /signup), sem precisar de um botão "fechar".
+  useEffect(() => dismissSessionExpired, [dismissSessionExpired]);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -120,6 +125,16 @@ export function LoginPage() {
         <TenantSelector />
       ) : (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="w-full max-w-sm">
+          {sessionExpired && (
+            <div className="mb-5 rounded-xl border border-denied/25 bg-denied-bg p-6 text-center shadow-elevated backdrop-blur-xl">
+              <span className="mb-2.5 inline-flex h-10 w-10 items-center justify-center rounded-full bg-canvas-surface/70 text-denied">
+                <Lock size={17} strokeWidth={2} />
+              </span>
+              <p className="text-sm text-ink">Sua sessão expirou por segurança.</p>
+              <p className="mt-1 text-2xs text-ink-faint">Entre novamente para continuar de onde parou.</p>
+            </div>
+          )}
+
           <AuthFormHeader title="Bem-vindo de volta" subtitle="Entre com as credenciais da sua clínica" />
 
           <form onSubmit={handleSubmit} className="rounded-xl border border-border-hairline bg-glass p-6 shadow-elevated backdrop-blur-xl">

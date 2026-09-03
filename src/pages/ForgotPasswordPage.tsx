@@ -49,7 +49,7 @@ export function ForgotPasswordPage() {
         {sent ? (
           <div className="rounded-xl border border-revenue/25 bg-revenue-bg p-6 text-center shadow-elevated backdrop-blur-xl">
             <span className="mb-3 inline-flex h-11 w-11 items-center justify-center rounded-full bg-canvas-surface/70 text-revenue">
-              <CheckCircle2 size={20} strokeWidth={2.2} />
+              <CheckCircle2 size={20} strokeWidth={2} />
             </span>
             <h1 className="font-serif text-lg font-medium text-ink">Verifique seu e-mail</h1>
             <p className="mt-2 text-sm leading-relaxed text-ink-muted">

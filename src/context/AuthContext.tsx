@@ -54,6 +54,18 @@ interface AuthContextValue {
   selectTenant: (tenantId: string) => Promise<void>;
   /** Cancela a seleção pendente e volta para a tela normal de login. */
   cancelTenantSelection: () => void;
+  /**
+   * true quando o logout mais recente foi causado por um 401 em
+   * pleno uso (token expirado/inválido), não por um clique manual em
+   * "Sair" — a LoginPage usa isso para mostrar o aviso "Sua sessão
+   * expirou por segurança" (ver Estados.dc.html) em vez de um login
+   * silencioso e sem explicação.
+   */
+  sessionExpired: boolean;
+  /** Chamado pela LoginPage depois de mostrar o aviso uma vez — evita
+   * o aviso reaparecer se o usuário voltar para /login mais tarde na
+   * mesma aba sem um novo 401 ter ocorrido. */
+  dismissSessionExpired: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -78,6 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // por vez (login tradicional vs. login com Google).
   const [pendingCredentials, setPendingCredentials] = useState<{ email: string; password: string } | null>(null);
   const [pendingGoogleCredential, setPendingGoogleCredential] = useState<string | null>(null);
+  const [sessionExpired, setSessionExpired] = useState(false);
 
   const login = useCallback(async (email: string, password: string) => {
     setIsLoggingIn(true);
@@ -199,11 +212,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
 
+  const dismissSessionExpired = useCallback(() => setSessionExpired(false), []);
+
   // Escuta o evento disparado por api-client.ts em qualquer 401 vindo do
   // backend (token expirado/inválido) — desloga e deixa o ProtectedRoute
   // cuidar do redirecionamento, em vez de cada tela tratar isso na mão.
+  // api-client.ts só dispara este evento numa chamada AUTENTICADA
+  // (`!skipAuth`), nunca no próprio /auth/login — então, ao contrário de
+  // um logout manual, isto sempre significa "havia uma sessão e ela
+  // caiu", daí marcar sessionExpired sem precisar checar se `user`
+  // ainda estava preenchido.
   useEffect(() => {
-    const handleUnauthorized = () => logout();
+    const handleUnauthorized = () => {
+      setSessionExpired(true);
+      logout();
+    };
     window.addEventListener("auth:unauthorized", handleUnauthorized);
     return () => window.removeEventListener("auth:unauthorized", handleUnauthorized);
   }, [logout]);
@@ -225,6 +248,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         tenantSelection,
         selectTenant,
         cancelTenantSelection,
+        sessionExpired,
+        dismissSessionExpired,
       }}
     >
       {children}
