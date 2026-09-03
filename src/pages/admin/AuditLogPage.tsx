@@ -4,8 +4,9 @@ import { ScrollText } from "lucide-react";
 import { Panel, EmptyState, LoadingState, ErrorState } from "@/components/ui/Panel";
 import { FilterBar } from "@/components/ui/FilterBar";
 import { Pagination } from "@/components/ui/Pagination";
-import { TextField } from "@/components/ui/FormField";
+import { SelectField } from "@/components/ui/FormField";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { Badge, type BadgeTone } from "@/components/ui/Badge";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import type { AuditLogEntry, PaginatedResponse } from "@/lib/types";
@@ -17,6 +18,23 @@ const ACTION_LABELS: Record<string, string> = {
   update: "Atualização",
   delete: "Remoção",
 };
+
+const ACTION_TONE: Record<string, BadgeTone> = {
+  create: "revenue",
+  update: "pending",
+  delete: "denied",
+};
+
+// Valores espelham os nomes de entidade usados no restante do produto
+// (billing/contract/user) — ver DECISÃO em
+// app/api/v1/endpoints/audit_log.py no backend: `core.audit_log` ainda
+// não é gravado por nenhum fluxo hoje, então esta lista é a melhor
+// aproximação disponível até existir instrumentação real.
+const ENTITY_TYPE_OPTIONS: { value: string; label: string }[] = [
+  { value: "billing", label: "Faturamento" },
+  { value: "contract", label: "Contrato" },
+  { value: "user", label: "Usuário" },
+];
 
 function formatDateTime(iso: string): string {
   return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "medium" }).format(new Date(iso));
@@ -56,28 +74,40 @@ export function AuditLogPage() {
       <Panel>
         <FilterBar hasActiveFilters={hasActiveFilters} onClear={clearFilters}>
           <div className="w-48">
-            <TextField
+            <SelectField
               label="Tipo de entidade"
-              placeholder="ex: contract, denial_appeal"
               value={entityType}
               onChange={(e) => {
                 setEntityType(e.target.value);
                 setOffset(0);
               }}
               className="mb-0"
-            />
+            >
+              <option value="">Todas</option>
+              {ENTITY_TYPE_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </SelectField>
           </div>
-          <div className="w-48">
-            <TextField
+          <div className="w-44">
+            <SelectField
               label="Ação"
-              placeholder="ex: create, update, delete"
               value={action}
               onChange={(e) => {
                 setAction(e.target.value);
                 setOffset(0);
               }}
               className="mb-0"
-            />
+            >
+              <option value="">Todas</option>
+              {Object.entries(ACTION_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </SelectField>
           </div>
         </FilterBar>
         {isLoading && <LoadingState variant="table" rows={6} />}
@@ -89,25 +119,27 @@ export function AuditLogPage() {
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-border-hairline text-2xs uppercase tracking-wide text-ink-faint">
-                <th className="px-4 py-2.5 font-medium">Quando</th>
+                <th className="px-4 py-2.5 font-medium">Data/hora</th>
+                <th className="px-4 py-2.5 font-medium">Usuário</th>
                 <th className="px-4 py-2.5 font-medium">Ação</th>
                 <th className="px-4 py-2.5 font-medium">Entidade</th>
-                <th className="px-4 py-2.5 font-medium">ID</th>
                 <th className="px-4 py-2.5 font-medium">Detalhes</th>
               </tr>
             </thead>
             <tbody>
               {(data?.items ?? []).map((entry) => (
                 <tr key={entry.id} className="border-b border-border-hairline last:border-0 transition-colors hover:bg-canvas-raised/60">
-                  <td className="px-4 py-2.5 text-ink-muted">{formatDateTime(entry.created_at)}</td>
-                  <td className="px-4 py-2.5 text-ink">{ACTION_LABELS[entry.action] ?? entry.action}</td>
+                  <td className="tabular px-4 py-2.5 font-mono text-ink-muted">{formatDateTime(entry.created_at)}</td>
+                  <td className="px-4 py-2.5 text-ink">{entry.actor_name ?? "Sistema"}</td>
+                  <td className="px-4 py-2.5">
+                    <Badge tone={ACTION_TONE[entry.action] ?? "neutral"}>{ACTION_LABELS[entry.action] ?? entry.action}</Badge>
+                  </td>
                   <td className="px-4 py-2.5 text-ink-muted">{entry.entity_type}</td>
-                  <td className="tabular px-4 py-2.5 font-mono text-2xs text-ink-faint">{entry.entity_id}</td>
                   <td className="px-4 py-2.5 text-ink-faint">
                     {entry.diff ? (
                       <code className="text-2xs">{JSON.stringify(entry.diff)}</code>
                     ) : (
-                      "—"
+                      <span className="font-mono text-2xs">{entry.entity_id}</span>
                     )}
                   </td>
                 </tr>

@@ -117,6 +117,9 @@ export interface UploadIngestionFileResponse {
 export interface AuditLogEntry {
   id: number;
   actor_user_id: string | null;
+  // null quando a ação não teve usuário logado (job de sistema) ou o
+  // usuário já foi removido — a UI mostra "Sistema" nesse caso.
+  actor_name: string | null;
   action: string;
   entity_type: string;
   entity_id: string;

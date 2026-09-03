@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { TextField } from "@/components/ui/FormField";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { Badge } from "@/components/ui/Badge";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useToast } from "@/context/ToastContext";
@@ -102,7 +103,7 @@ export function IntegrationsPage() {
       <PageHeader
         icon={Plug}
         title="Integrações e webhooks"
-        subtitle="Chaves de API para o ERP/sistema de gestão do cliente enviar dados automaticamente para esta plataforma."
+        subtitle="Chaves de API para o ERP do cliente enviar dado diretamente ao Insighta."
         action={
           <Button onClick={() => setIsModalOpen(true)} className="flex items-center gap-1.5">
             <Plus size={14} />
@@ -111,7 +112,7 @@ export function IntegrationsPage() {
         }
       />
 
-      <Panel>
+      <Panel title="Chaves de API" subtitle="Configure no ERP do cliente — a chave em texto puro só aparece uma vez, na criação.">
         {isLoading && <LoadingState />}
         {error && <ErrorState message={getApiErrorMessage(error)} />}
         {!isLoading && !error && (keys ?? []).length === 0 && (
@@ -133,26 +134,15 @@ export function IntegrationsPage() {
               {(keys ?? []).map((k) => (
                 <tr key={k.id} className="border-b border-border-hairline last:border-0 transition-colors hover:bg-canvas-raised/60">
                   <td className="px-4 py-2.5 text-ink">{k.name}</td>
-                  <td className="px-4 py-2.5 font-mono text-ink-muted">{k.key_prefix}…</td>
-                  <td className="px-4 py-2.5 text-ink-muted">{formatDateTime(k.created_at)}</td>
-                  <td className="px-4 py-2.5 text-ink-muted">{formatDateTime(k.last_used_at)}</td>
+                  <td className="tabular px-4 py-2.5 font-mono text-ink-muted">{k.key_prefix}…</td>
+                  <td className="tabular px-4 py-2.5 font-mono text-ink-muted">{formatDateTime(k.created_at)}</td>
+                  <td className="tabular px-4 py-2.5 font-mono text-ink-muted">{formatDateTime(k.last_used_at)}</td>
                   <td className="px-4 py-2.5">
-                    <span
-                      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-2xs font-medium ${
-                        k.revoked_at ? "border-border-default bg-canvas-raised text-ink-faint" : "border-revenue/25 bg-revenue-bg text-revenue"
-                      }`}
-                    >
-                      {k.revoked_at ? "Revogada" : "Ativa"}
-                    </span>
+                    <Badge tone={k.revoked_at ? "neutral" : "revenue"}>{k.revoked_at ? "Revogada" : "Ativa"}</Badge>
                   </td>
                   <td className="px-4 py-2.5">
                     {!k.revoked_at && (
-                      <Button
-                        variant="ghost"
-                        className="!px-2 !py-1 text-2xs"
-                        disabled={revokeMutation.isPending}
-                        onClick={() => revokeMutation.mutate(k.id)}
-                      >
+                      <Button variant="ghost" size="xs" disabled={revokeMutation.isPending} onClick={() => revokeMutation.mutate(k.id)}>
                         Revogar
                       </Button>
                     )}
