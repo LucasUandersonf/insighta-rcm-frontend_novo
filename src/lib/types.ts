@@ -265,6 +265,18 @@ export interface PatientNoShowRankingItem {
   no_show_rate: number;
 }
 
+// Card "Risco de falta — próximos dias" da Sala de Comando — lista
+// NOMINAL de agendamentos futuros em risco médio/alto, mais próximo
+// primeiro (ver AnalyticsRepository.upcoming_risk_appointments no
+// backend). Diferente de patient_no_show_ranking (histórico passado),
+// isto é sobre o que ainda vai acontecer.
+export interface UpcomingRiskAppointment {
+  appointment_id: string;
+  patient_full_name: string;
+  scheduled_at: string;
+  risk_level: "medio" | "alto";
+}
+
 export interface AgendaMetrics {
   period_start: string;
   period_end: string;
@@ -277,6 +289,7 @@ export interface AgendaMetrics {
   no_show_risk_breakdown: NoShowRiskBucket[];
   estimated_revenue_at_risk: number;
   patient_no_show_ranking: PatientNoShowRankingItem[];
+  upcoming_risk_appointments: UpcomingRiskAppointment[];
 }
 
 // Ranking de perda financeira por convênio (GET /analytics/plan-loss-ranking)
@@ -316,6 +329,19 @@ export interface ContractUtilization {
   period_start: string;
   period_end: string;
   contracts: ContractUtilizationItem[];
+}
+
+// Donut "Distribuição de risco de glosa" (GET /analytics/denial-risk-distribution)
+export interface DenialRiskDistributionItem {
+  level: "low" | "medium" | "high";
+  count: number;
+}
+
+export interface DenialRiskDistribution {
+  period_start: string;
+  period_end: string;
+  items: DenialRiskDistributionItem[];
+  total_reviewed: number;
 }
 
 export type InsightSeverity = "critical" | "warning" | "positive";

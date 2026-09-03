@@ -106,26 +106,26 @@ function CreateAppointmentModal({
           ))}
         </SelectField>
 
-        <TextField
-          label="Data e horário"
-          type="datetime-local"
-          required
-          value={scheduledAt}
-          onChange={(e) => setScheduledAt(e.target.value)}
-        />
-        <TextField
-          label="Duração (minutos)"
-          type="number"
-          min={1}
-          value={durationMinutes}
-          onChange={(e) => setDurationMinutes(e.target.value)}
-        />
-        <TextField label="Código do procedimento" value={procedureCode} onChange={(e) => setProcedureCode(e.target.value)} />
-        <TextField
-          label="CID"
-          value={cidCode}
-          onChange={(e) => setCidCode(e.target.value)}
-        />
+        <div className="grid grid-cols-2 gap-3">
+          <TextField
+            label="Data e horário"
+            type="datetime-local"
+            required
+            value={scheduledAt}
+            onChange={(e) => setScheduledAt(e.target.value)}
+          />
+          <TextField
+            label="Duração (minutos)"
+            type="number"
+            min={1}
+            value={durationMinutes}
+            onChange={(e) => setDurationMinutes(e.target.value)}
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <TextField label="Código do procedimento" value={procedureCode} onChange={(e) => setProcedureCode(e.target.value)} />
+          <TextField label="CID" value={cidCode} onChange={(e) => setCidCode(e.target.value)} />
+        </div>
 
         <div className="mt-5 flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={resetAndClose}>

@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Paperclip, Plus, ShieldAlert } from "lucide-react";
 import { Panel, EmptyState, LoadingState, ErrorState } from "@/components/ui/Panel";
 import { Button } from "@/components/ui/Button";
+import { Badge, type BadgeTone } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
 import { TextField, SelectField } from "@/components/ui/FormField";
 import { Pagination } from "@/components/ui/Pagination";
@@ -40,12 +41,12 @@ const STATUS_LABELS: Record<AppealStatus, string> = {
   nip_aberta: "NIP aberta na ANS",
 };
 
-const STATUS_CLASSES: Record<AppealStatus, string> = {
-  aberto: "bg-canvas-raised text-ink-faint",
-  protocolado: "bg-pending-bg text-pending",
-  deferido: "bg-revenue-bg text-revenue",
-  indeferido: "bg-denied-bg text-denied",
-  nip_aberta: "bg-denied-bg text-denied",
+const STATUS_TONE: Record<AppealStatus, BadgeTone> = {
+  aberto: "neutral",
+  protocolado: "pending",
+  deferido: "revenue",
+  indeferido: "denied",
+  nip_aberta: "denied",
 };
 
 const DUE_SOON_HORIZON_DAYS = 5;
@@ -390,15 +391,13 @@ export function DenialAppealsPage() {
                     {formatDate(a.deadline_at)}
                   </td>
                   <td className="px-4 py-2.5">
-                    <span className={`rounded-full border border-transparent px-2 py-0.5 text-2xs font-medium ${STATUS_CLASSES[a.status]}`}>
-                      {STATUS_LABELS[a.status]}
-                    </span>
+                    <Badge tone={STATUS_TONE[a.status]}>{STATUS_LABELS[a.status]}</Badge>
                   </td>
                   <td className="space-x-2 px-4 py-2.5 text-right">
                     {a.status === "aberto" && (
                       <Button
                         variant="secondary"
-                        className="!px-2 !py-1 text-xs"
+                        size="xs"
                         onClick={() => fileMutation.mutate(a.id)}
                         disabled={fileMutation.isPending}
                       >
@@ -406,11 +405,11 @@ export function DenialAppealsPage() {
                       </Button>
                     )}
                     {(a.status === "protocolado" || a.status === "nip_aberta") && (
-                      <Button variant="secondary" className="!px-2 !py-1 text-xs" onClick={() => setResolvingAppealId(a.id)}>
+                      <Button variant="secondary" size="xs" onClick={() => setResolvingAppealId(a.id)}>
                         Registrar decisão
                       </Button>
                     )}
-                    <Button variant="ghost" className="!px-2 !py-1 text-xs" onClick={() => setAttachmentsAppealId(a.id)}>
+                    <Button variant="ghost" size="xs" onClick={() => setAttachmentsAppealId(a.id)}>
                       Anexos ({a.attachments.length})
                     </Button>
                   </td>

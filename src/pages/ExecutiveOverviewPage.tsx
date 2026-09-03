@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
-import { motion } from "framer-motion";
 import { KpiCard } from "@/components/ui/KpiCard";
 import { ErrorState, LoadingState } from "@/components/ui/Panel";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { PeriodWindowSelect } from "@/components/ui/PeriodWindowSelect";
-import { AgendaAnalyticsPanel } from "@/components/dashboard/AgendaAnalyticsPanel";
+import { ExecutiveAgendaSummary } from "@/components/dashboard/ExecutiveAgendaSummary";
 import { SmartInsightsFeed } from "@/components/dashboard/SmartInsightsFeed";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
@@ -44,23 +44,12 @@ export function ExecutiveOverviewPage() {
 
   return (
     <div className="space-y-6">
-      <motion.div
-        initial={{ opacity: 0, y: -6 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.35 }}
-        className="flex flex-wrap items-end justify-between gap-4"
-      >
-        <div>
-          {profile && (
-            <p className="mb-1 text-sm text-ink-muted">
-              {timeOfDayGreeting()}, {firstNameFrom(profile.full_name)}.
-            </p>
-          )}
-          <h1 className="font-serif text-2xl font-medium tracking-tightest text-ink">Sala de Comando</h1>
-          <p className="mt-1 text-sm text-ink-faint">Onde estamos perdendo dinheiro hoje?</p>
-        </div>
-        <PeriodWindowSelect windowDays={windowDays} onChange={setWindowDays} />
-      </motion.div>
+      <PageHeader
+        title="Sala de Comando"
+        subtitle="Onde estamos perdendo dinheiro hoje?"
+        greeting={profile ? `${timeOfDayGreeting()}, ${firstNameFrom(profile.full_name)}.` : undefined}
+        action={<PeriodWindowSelect windowDays={windowDays} onChange={setWindowDays} />}
+      />
 
       {/* Redesenho "menos BI, mais consultor": o diagnóstico em texto vem
           PRIMEIRO — é a resposta direta à pergunta "onde estamos perdendo
@@ -75,7 +64,7 @@ export function ExecutiveOverviewPage() {
       {summary && (
         <section>
           <h2 className="mb-3 text-2xs font-medium uppercase tracking-wide text-ink-faint">Números do período — para conferência</h2>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-12">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-12">
             <KpiCard
               size="compact"
               colSpan={2}
@@ -84,6 +73,7 @@ export function ExecutiveOverviewPage() {
               numericValue={summary.financial_hole.value}
               format={formatCurrency}
               tone="denied"
+              gradient
               trend={trendFrom(summary.financial_hole, { invert: true })}
             />
             <KpiCard
@@ -94,6 +84,7 @@ export function ExecutiveOverviewPage() {
               numericValue={summary.total_value_saved.value}
               format={formatCurrency}
               tone="revenue"
+              gradient
               trend={trendFrom(summary.total_value_saved)}
             />
             <KpiCard
@@ -140,7 +131,7 @@ export function ExecutiveOverviewPage() {
 
       <section>
         <h2 className="mb-3 text-sm font-medium text-ink">Agenda & Capacidade Operacional</h2>
-        <AgendaAnalyticsPanel dateFrom={dateFrom} dateTo={dateTo} />
+        <ExecutiveAgendaSummary dateFrom={dateFrom} dateTo={dateTo} />
       </section>
     </div>
   );

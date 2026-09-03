@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { CheckCircle2, TrendingDown, TrendingUp, TriangleAlert } from "lucide-react";
 import { LoadingState, ErrorState } from "@/components/ui/Panel";
 import { BentoCard } from "@/components/ui/BentoGrid";
+import { Badge, type BadgeTone } from "@/components/ui/Badge";
 import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
@@ -21,11 +22,23 @@ import type { InsightSeverity, SmartInsight, SmartInsights } from "@/lib/types";
 
 const SEVERITY_CONFIG: Record<
   InsightSeverity,
-  { label: string; icon: typeof TrendingUp; text: string; border: string; bg: string; dot: string; glow: "revenue" | "pending" | "denied" }
+  { label: string; icon: typeof TrendingUp; text: string; border: string; bg: string; dot: string; glow: "revenue" | "pending" | "denied"; badgeTone: BadgeTone }
 > = {
-  critical: { label: "Crítico", icon: TrendingDown, text: "text-denied", border: "border-denied/25", bg: "bg-denied-bg", dot: "bg-denied", glow: "denied" },
-  warning: { label: "Atenção", icon: TriangleAlert, text: "text-pending", border: "border-pending/25", bg: "bg-pending-bg", dot: "bg-pending", glow: "pending" },
-  positive: { label: "Eficiência", icon: TrendingUp, text: "text-revenue", border: "border-revenue/25", bg: "bg-revenue-bg", dot: "bg-revenue", glow: "revenue" },
+  critical: { label: "Crítico", icon: TrendingDown, text: "text-denied", border: "border-denied/25", bg: "bg-denied-bg", dot: "bg-denied", glow: "denied", badgeTone: "denied" },
+  warning: { label: "Atenção", icon: TriangleAlert, text: "text-pending", border: "border-pending/25", bg: "bg-pending-bg", dot: "bg-pending", glow: "pending", badgeTone: "pending" },
+  positive: { label: "Eficiência", icon: TrendingUp, text: "text-revenue", border: "border-revenue/25", bg: "bg-revenue-bg", dot: "bg-revenue", glow: "revenue", badgeTone: "revenue" },
+};
+
+// Valor de destaque em texto-gradiente + leve brilho (drop-shadow na cor
+// do próprio tom) — ver canvas de design, Main.dc.html: o número de
+// impacto do card de manchete usa `grad-text-tone grad-denied` com
+// `filter:drop-shadow(0 0 24px hsl(var(--denied)/.35))`, nunca cor
+// sólida. Esse é justamente o elemento que o pedido original chamou de
+// "números de destaque... com gradiente e leve brilho, não cor sólida".
+const IMPACT_GRADIENT_CLASSES: Record<InsightSeverity, string> = {
+  critical: "bg-grad-denied bg-clip-text text-transparent drop-shadow-[0_0_24px_hsl(var(--denied)/0.35)]",
+  warning: "bg-grad-pending bg-clip-text text-transparent drop-shadow-[0_0_24px_hsl(var(--pending)/0.35)]",
+  positive: "bg-grad-revenue bg-clip-text text-transparent drop-shadow-[0_0_24px_hsl(var(--revenue)/0.35)]",
 };
 
 function formatCurrency(value: number): string {
@@ -61,14 +74,14 @@ function HeroInsight({ insight }: { insight: SmartInsight }) {
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span className={cn("rounded-full border px-2 py-0.5 text-2xs font-medium", cfg.border, cfg.text)}>{cfg.label}</span>
+            <Badge tone={cfg.badgeTone}>{cfg.label}</Badge>
             <h2 className="font-serif text-lg font-medium tracking-premium text-ink sm:text-xl">{insight.title}</h2>
           </div>
           <p className="mt-2.5 max-w-2xl text-sm leading-relaxed text-ink-muted sm:text-[0.95rem]">{insight.message}</p>
           {insight.financial_impact !== null && (
             <div className="mt-4">
               <span className="text-2xs font-medium uppercase tracking-wide text-ink-faint">Impacto estimado</span>
-              <div className={cn("tabular font-sans text-3xl font-semibold tracking-tightest sm:text-4xl", cfg.text)}>
+              <div className={cn("tabular font-sans text-3xl font-semibold tracking-tightest sm:text-4xl", IMPACT_GRADIENT_CLASSES[insight.severity])}>
                 <AnimatedNumber value={insight.financial_impact} format={formatCurrency} durationSeconds={1.2} />
               </div>
             </div>
@@ -88,7 +101,7 @@ function SecondaryInsightCard({ insight }: { insight: SmartInsight }) {
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-2">
             <p className="text-sm font-medium text-ink">{insight.title}</p>
-            <span className={cn("shrink-0 rounded-sm border px-1.5 py-0.5 text-2xs font-medium text-ink-muted", cfg.border)}>{cfg.label}</span>
+            <Badge tone={cfg.badgeTone}>{cfg.label}</Badge>
           </div>
           <p className="mt-1 text-xs leading-relaxed text-ink-muted">{insight.message}</p>
           {insight.financial_impact !== null && (
