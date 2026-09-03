@@ -20,7 +20,7 @@ export function PeriodWindowSelect({
         aria-label="Janela de período"
         value={windowDays}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full appearance-none rounded-md border border-border-subtle bg-canvas-surface py-2 pl-3.5 pr-9 text-sm text-ink shadow-card transition-colors hover:border-border focus:border-revenue"
+        className="w-full appearance-none rounded-md border border-border-subtle bg-canvas-surface py-2 pl-3.5 pr-9 text-sm text-ink shadow-card transition-colors hover:border-border focus:border-accent"
       >
         {options.map((opt) => (
           <option key={opt.days} value={opt.days}>
