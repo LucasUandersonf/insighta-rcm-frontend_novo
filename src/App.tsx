@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/context/AuthContext";
 import { ToastProvider } from "@/context/ToastContext";
+import { ModalStackProvider } from "@/context/ModalStackContext";
 import { ProtectedRoute } from "@/routes/ProtectedRoute";
 import { AppShell } from "@/components/layout/AppShell";
 import { LoginPage } from "@/pages/LoginPage";
@@ -53,6 +54,7 @@ export default function App() {
     <ErrorBoundary>
       <AuthProvider>
         <ToastProvider>
+          <ModalStackProvider>
           <BrowserRouter>
             <Routes>
               <Route path="/login" element={<LoginPage />} />
@@ -94,6 +96,7 @@ export default function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </BrowserRouter>
+          </ModalStackProvider>
         </ToastProvider>
       </AuthProvider>
     </ErrorBoundary>

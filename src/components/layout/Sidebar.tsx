@@ -77,7 +77,7 @@ export function Sidebar() {
           end={item.to === "/"}
           className={({ isActive }) =>
             cn(
-              "relative flex items-center gap-2.5 rounded-md py-2 pl-3 pr-3 text-sm transition-colors",
+              "relative flex items-center gap-2.5 rounded-sm py-2 pl-3 pr-3 text-sm transition-colors",
               isActive ? "text-ink" : "text-ink-muted hover:bg-canvas-raised/60 hover:text-ink"
             )
           }
@@ -87,7 +87,7 @@ export function Sidebar() {
               {isActive && (
                 <motion.span
                   layoutId={`sidebar-active-${layoutGroup}`}
-                  className="absolute inset-0 rounded-md border border-accent/25 bg-canvas-raised before:absolute before:inset-y-1.5 before:left-0 before:w-0.5 before:rounded-full before:bg-accent-line before:content-['']"
+                  className="absolute inset-0 rounded-sm border border-accent/25 bg-canvas-raised before:absolute before:inset-y-1.5 before:left-0 before:w-0.5 before:rounded-full before:bg-accent-line before:content-['']"
                   transition={{ type: "spring", stiffness: 420, damping: 34 }}
                 />
               )}
@@ -106,7 +106,7 @@ export function Sidebar() {
 
       {visibleAdminItems.length > 0 && (
         <>
-          <p className="mb-1.5 mt-6 px-3 text-2xs font-medium uppercase tracking-premium text-ink-faint">Administração</p>
+          <p className="mb-1.5 mt-6 px-3 text-2xs font-medium uppercase tracking-[0.06em] text-ink-faint">Administração</p>
           <ul className="space-y-0.5">{visibleAdminItems.map((item) => renderItem(item, "admin"))}</ul>
         </>
       )}

@@ -65,11 +65,11 @@ export function EmptyState({ message, icon, action }: EmptyStateProps) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
-      className="flex flex-col items-center gap-3.5 px-6 py-14 text-center"
+      className="flex flex-col items-center gap-3.5 px-6 py-[52px] text-center"
     >
       <span
         aria-hidden
-        className="flex h-12 w-12 items-center justify-center rounded-full border border-dashed border-border-default bg-canvas-raised/60 text-ink-faint"
+        className="flex h-11 w-11 items-center justify-center rounded-full border border-dashed border-border-default bg-canvas-raised/60 text-ink-faint"
       >
         {icon ?? <Circle size={18} strokeWidth={1.5} />}
       </span>
@@ -155,7 +155,7 @@ export function ErrorState({ message, onRetry }: ErrorStateProps) {
       initial={{ opacity: 0, y: -4 }}
       animate={{ opacity: 1, y: 0 }}
       role="alert"
-      className="m-4 flex items-start justify-between gap-4 rounded-md border border-denied/20 bg-denied-bg px-4 py-3"
+      className="m-4 flex items-start justify-between gap-4 rounded-md border border-denied/25 bg-denied-bg px-4 py-3"
     >
       <div className="flex items-start gap-2.5">
         <AlertTriangle aria-hidden size={15} className="mt-0.5 shrink-0 text-denied/80" />

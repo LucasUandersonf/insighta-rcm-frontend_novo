@@ -32,6 +32,17 @@ interface KpiCardProps {
    * de tela e como fallback. Omitir mantém o comportamento estático. */
   numericValue?: number;
   format?: (n: number) => string;
+  /**
+   * Valor em texto com GRADIENTE em vez de cor sólida (ver canvas de
+   * design, Main.dc.html: .grad-text-tone + .grad-{tone}) — reservado
+   * para a métrica PRINCIPAL de cada dashboard (ex: "Faturamento bruto"
+   * no Painel, "Buraco financeiro"/"Caixa protegido" na Sala de
+   * Comando), nunca para todo KPI de um tom só porque tem cor — o
+   * canvas usa isso com parcimônia de propósito, é um destaque, não um
+   * padrão. Sem efeito em tone="neutral" (gradiente precisa de uma
+   * dupla de cores do próprio tom).
+   */
+  gradient?: boolean;
 }
 
 const toneClasses: Record<NonNullable<KpiCardProps["tone"]>, string> = {
@@ -55,6 +66,17 @@ const toneBarClasses: Record<NonNullable<KpiCardProps["tone"]>, string> = {
   neutral: "bg-border-default",
 };
 
+// Gradiente de texto por tom (ver prop `gradient`) — bg-clip-text exige
+// a dupla background-image (bg-grad-*) + text-transparent; sem tom
+// próprio (neutral) o gradiente não existe, então cai no texto sólido
+// normal independente do valor de `gradient`.
+const toneGradientClasses: Record<NonNullable<KpiCardProps["tone"]>, string | null> = {
+  revenue: "bg-grad-revenue bg-clip-text text-transparent",
+  pending: "bg-grad-pending bg-clip-text text-transparent",
+  denied: "bg-grad-denied bg-clip-text text-transparent",
+  neutral: null,
+};
+
 export function KpiCard({
   label,
   value,
@@ -66,12 +88,16 @@ export function KpiCard({
   colSpan,
   numericValue,
   format,
+  gradient = false,
 }: KpiCardProps) {
   const compact = size === "compact";
+  const gradientClasses = gradient ? toneGradientClasses[tone] : null;
+
   return (
     <BentoCard
       colSpan={colSpan ?? (compact ? 2 : 4)}
       glow={toneGlow[tone]}
+      shadow="elevated-lg"
       className={cn(compact ? "p-3.5" : "p-5")}
     >
       {/* Trilho de cor no topo — identidade visual imediata do tom
@@ -90,7 +116,13 @@ export function KpiCard({
         )}
       </div>
 
-      <div className={cn("tabular font-sans font-semibold tracking-tightest", toneClasses[tone], compact ? "text-2xl" : "text-display")}>
+      <div
+        className={cn(
+          "tabular font-sans font-semibold tracking-tightest",
+          gradientClasses ?? toneClasses[tone],
+          compact ? "text-[22px]" : "text-display"
+        )}
+      >
         {numericValue !== undefined && format ? (
           <>
             <span aria-hidden="true">
