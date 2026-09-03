@@ -9,6 +9,8 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { PeriodWindowSelect } from "@/components/ui/PeriodWindowSelect";
 import { Tabs, TabPanel } from "@/components/ui/Tabs";
 import { AgendaAnalyticsPanel } from "@/components/dashboard/AgendaAnalyticsPanel";
+import { PlanLossRankingPanel } from "@/components/dashboard/PlanLossRankingPanel";
+import { ContractUtilizationPanel } from "@/components/dashboard/ContractUtilizationPanel";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useDateWindow } from "@/lib/useDateWindow";
@@ -231,6 +233,13 @@ export function DashboardPage() {
               tone={summary.appeals_due_soon_count > 0 ? "denied" : "revenue"}
             />
           </div>
+        </section>
+      )}
+
+      {summary && (
+        <section className="space-y-4">
+          <PlanLossRankingPanel dateFrom={dateFrom} dateTo={dateTo} />
+          <ContractUtilizationPanel dateFrom={dateFrom} dateTo={dateTo} />
         </section>
       )}
 

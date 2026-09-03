@@ -1,11 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { CalendarX2, Users } from "lucide-react";
+import { AlertOctagon, CalendarX2, Users } from "lucide-react";
 import { Panel, EmptyState, LoadingState, ErrorState } from "@/components/ui/Panel";
 import { NarrativeInsight } from "@/components/ui/NarrativeInsight";
+import { ChartTooltip } from "@/components/dashboard/ChartTooltip";
 import { useTheme } from "@/context/ThemeContext";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
+import { CHART_PALETTE } from "@/lib/chartTheme";
 import type { AgendaMetrics } from "@/lib/types";
 
 function formatCurrency(value: number): string {
@@ -15,51 +17,6 @@ function formatCurrency(value: number): string {
 function formatPct(rate: number): string {
   return `${(rate * 100).toFixed(0)}%`;
 }
-
-// Tooltip custom — substitui o `contentStyle` inline (que só estiliza a
-// caixa) por um componente real, com o mesmo tratamento visual de
-// card do resto da UI (borda fio-de-cabelo, sombra, tipografia
-// consistente) em vez do balão genérico padrão do Recharts.
-function ChartTooltip({ active, payload, label }: any) {
-  if (!active || !payload || payload.length === 0) return null;
-  return (
-    <div className="rounded-md border border-border-hairline bg-canvas-surface px-3 py-2 text-xs shadow-elevated">
-      {label && <p className="mb-1 font-medium text-ink">{label}</p>}
-      {payload.map((entry: { name: string; value: number; color: string }, i: number) => (
-        <div key={i} className="flex items-center gap-1.5 text-ink-muted">
-          <span aria-hidden className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: entry.color }} />
-          {entry.name}: <span className="font-mono text-ink">{entry.value}</span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// Recharts exige cor literal em `style`/`stroke` (não aceita classes
-// Tailwind) — por isso os valores ficam hardcoded aqui, um conjunto por
-// tema, espelhando os tokens atuais de tailwind.config.ts/index.css
-// (canvas.raised, border.subtle, ink.faint, revenue). Trocados em tempo
-// real via useTheme() para o Recharts nunca destoar do resto da UI.
-const CHART_PALETTE = {
-  dark: {
-    tooltipBg: "#132436",
-    tooltipBorder: "#182535",
-    axis: "#7A8498",
-    grid: "#1E2433",
-    bar: "#16C98D",
-    barMuted: "#1E2433",
-    label: "#F5F7FA",
-  },
-  light: {
-    tooltipBg: "#FFFFFF",
-    tooltipBorder: "#D7DDE7",
-    axis: "#586074",
-    grid: "#E4E8EE",
-    bar: "#0B8760",
-    barMuted: "#E4E8EE",
-    label: "#0B1420",
-  },
-};
 
 // 0=domingo .. 6=sábado — mesma convenção do backend (ver
 // capacity_service.py, WeekdayBucket em app/schemas/analytics.py).
@@ -236,6 +193,47 @@ export function AgendaAnalyticsPanel({ dateFrom, dateTo }: { dateFrom: string; d
                 <span className="tabular font-mono text-base text-denied">{formatCurrency(data.estimated_revenue_at_risk)}</span>
               </p>
             </div>
+          )}
+        </Panel>
+      </div>
+
+      <div className="lg:col-span-12">
+        <Panel
+          title="Lista vermelha de pacientes"
+          subtitle="Ranking por taxa de falta no período — mínimo de 3 atendimentos para entrar na lista"
+        >
+          {isLoading && <LoadingState variant="table" rows={4} />}
+          {!isLoading && !error && (data?.patient_no_show_ranking ?? []).length === 0 && (
+            <EmptyState
+              icon={<AlertOctagon size={17} strokeWidth={1.5} />}
+              message="Nenhum paciente com padrão de falta relevante nesta janela — a lista vermelha está limpa."
+            />
+          )}
+          {!isLoading && (data?.patient_no_show_ranking ?? []).length > 0 && (
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-border-hairline text-2xs uppercase tracking-wide text-ink-faint">
+                  <th className="px-4 py-2.5 font-medium">Paciente</th>
+                  <th className="px-4 py-2.5 font-medium">Faltas</th>
+                  <th className="px-4 py-2.5 font-medium">Atendimentos no período</th>
+                  <th className="px-4 py-2.5 text-right font-medium">Taxa de falta</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(data?.patient_no_show_ranking ?? []).map((patient) => (
+                  <tr key={patient.patient_id} className="border-b border-border-hairline last:border-0 transition-colors hover:bg-canvas-raised/60">
+                    <td className="px-4 py-2.5 text-ink">{patient.full_name}</td>
+                    <td className="px-4 py-2.5 text-ink-muted">{patient.no_show_count}</td>
+                    <td className="px-4 py-2.5 text-ink-muted">{patient.total_appointments}</td>
+                    <td className="px-4 py-2.5 text-right">
+                      <span className="inline-flex items-center rounded-full border border-denied/25 bg-denied-bg px-2 py-0.5 text-2xs font-medium text-denied">
+                        {formatPct(patient.no_show_rate)}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           )}
         </Panel>
       </div>

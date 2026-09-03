@@ -254,6 +254,17 @@ export interface WeekdayBucket {
   appointment_count: number;
 }
 
+// "Lista vermelha" — ranking de pacientes por taxa de falta no período
+// (ver AnalyticsRepository.top_no_show_patients no backend). Só entram
+// pacientes com amostra mínima e pelo menos 1 falta.
+export interface PatientNoShowRankingItem {
+  patient_id: string;
+  full_name: string;
+  no_show_count: number;
+  total_appointments: number;
+  no_show_rate: number;
+}
+
 export interface AgendaMetrics {
   period_start: string;
   period_end: string;
@@ -265,6 +276,46 @@ export interface AgendaMetrics {
   weekday_histogram: WeekdayBucket[];
   no_show_risk_breakdown: NoShowRiskBucket[];
   estimated_revenue_at_risk: number;
+  patient_no_show_ranking: PatientNoShowRankingItem[];
+}
+
+// Ranking de perda financeira por convênio (GET /analytics/plan-loss-ranking)
+// — as mesmas 3 fontes de perda do ExecutiveSummary, só que quebradas
+// por operadora em vez de somadas no tenant inteiro.
+export interface PlanLossItem {
+  plan_name: string;
+  financial_hole: number;
+  payment_gap: number;
+  denial_risk_value: number;
+  total_loss: number;
+}
+
+export interface PlanLossRanking {
+  period_start: string;
+  period_end: string;
+  plans: PlanLossItem[];
+}
+
+// Utilização de contrato (GET /analytics/contract-utilization) — dos
+// procedimentos negociados num contrato, quantos foram de fato
+// faturados no período. idle_catalog_value é o valor de TABELA dos
+// itens parados, não uma estimativa de receita perdida (ver DECISÃO em
+// AnalyticsRepository.contract_utilization no backend).
+export interface ContractUtilizationItem {
+  contract_id: string;
+  plan_name: string;
+  valid_from: string;
+  valid_until: string | null;
+  total_items: number;
+  items_billed: number;
+  utilization_pct: number;
+  idle_catalog_value: number;
+}
+
+export interface ContractUtilization {
+  period_start: string;
+  period_end: string;
+  contracts: ContractUtilizationItem[];
 }
 
 export type InsightSeverity = "critical" | "warning" | "positive";
