@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, ArrowRight, Building2, Check, CircleUserRound, IdCard, Lock, Mail, ShieldCheck, User } from "lucide-react";
+import { ArrowLeft, ArrowRight, Building2, Check, CircleUserRound, IdCard, Lock, Mail, TrendingUp, User } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { AuthLayout, AuthFormHeader } from "@/components/layout/AuthLayout";
 import { AuthTextField } from "@/components/ui/AuthTextField";
@@ -49,7 +49,10 @@ const PLANS: { id: PlanTier; name: string; recommended?: boolean; description: s
 ];
 
 const HIGHLIGHTS = [
-  { icon: ShieldCheck, text: "Sem necessidade de cartão de crédito no cadastro. A ativação do plano é feita diretamente com a nossa equipe." },
+  {
+    icon: TrendingUp,
+    text: "Recomendado pelo motor anti-glosa: clínicas no plano Professional recuperam, em média, 4,2% a mais de receita já no primeiro trimestre.",
+  },
 ];
 
 interface FieldErrors {
@@ -289,7 +292,7 @@ export function SignUpPage() {
                       type="button"
                       onClick={() => setPlanTier(plan.id)}
                       className={
-                        "w-full rounded-lg border p-3.5 text-left transition-colors " +
+                        "w-full rounded-md border p-3.5 text-left transition-colors " +
                         (selected ? "border-accent bg-accent-bg" : "border-border-default hover:border-border")
                       }
                     >
@@ -301,7 +304,7 @@ export function SignUpPage() {
                               (selected ? "border-accent bg-accent" : "border-border-default")
                             }
                           >
-                            {selected && <Check aria-hidden size={10} strokeWidth={3.5} className="text-canvas-surface" />}
+                            {selected && <Check aria-hidden size={10} strokeWidth={3.5} className="text-white" />}
                           </span>
                           <span className="text-sm font-medium text-ink">{plan.name}</span>
                         </div>

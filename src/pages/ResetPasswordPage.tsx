@@ -51,7 +51,7 @@ export function ResetPasswordPage() {
       <AuthLayout headline="Link de redefinição" subheadline="Confira se você abriu o link mais recente enviado por e-mail." highlights={HIGHLIGHTS}>
         <div className="w-full max-w-sm rounded-xl border border-denied/25 bg-denied-bg p-6 text-center shadow-elevated backdrop-blur-xl">
           <span className="mb-3 inline-flex h-11 w-11 items-center justify-center rounded-full bg-canvas-surface/70 text-denied">
-            <ShieldAlert size={20} strokeWidth={2.2} />
+            <ShieldAlert size={20} strokeWidth={2} />
           </span>
           <h1 className="font-serif text-lg font-medium text-ink">Link inválido</h1>
           <p className="mt-2 text-sm leading-relaxed text-ink-muted">
@@ -72,7 +72,7 @@ export function ResetPasswordPage() {
         {done ? (
           <div className="rounded-xl border border-revenue/25 bg-revenue-bg p-6 text-center shadow-elevated backdrop-blur-xl">
             <span className="mb-3 inline-flex h-11 w-11 items-center justify-center rounded-full bg-canvas-surface/70 text-revenue">
-              <CheckCircle2 size={20} strokeWidth={2.2} />
+              <CheckCircle2 size={20} strokeWidth={2} />
             </span>
             <h1 className="font-serif text-lg font-medium text-ink">Senha redefinida</h1>
             <p className="mt-2 text-sm leading-relaxed text-ink-muted">Sua senha foi atualizada. Já dá para entrar com ela.</p>
