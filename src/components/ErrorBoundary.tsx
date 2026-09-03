@@ -54,7 +54,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     if (this.state.hasError) {
       if (this.props.scope === "route") {
         return (
-          <div className="rounded border border-denied/30 bg-denied-bg p-6 text-center">
+          <div className="rounded-xl border border-denied/25 bg-denied-bg p-6 text-center shadow-elevated backdrop-blur-xl">
             <h2 className="mb-2 text-sm font-semibold text-denied">Esta tela encontrou um erro</h2>
             <p className="text-sm text-ink-muted">
               O restante do sistema continua funcionando normalmente — use o menu ao lado para ir para outra tela.
@@ -64,7 +64,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
             </p>
             <button
               onClick={this.handleReload}
-              className="mt-4 rounded-sm border border-border-subtle bg-canvas-raised px-3 py-2 text-sm font-medium text-ink transition-colors hover:bg-canvas-surface"
+              className="mt-4 rounded-md border border-border-subtle bg-canvas-raised/60 px-3 py-2 text-sm font-medium text-ink transition-colors hover:bg-canvas-surface"
             >
               Recarregar página
             </button>
@@ -74,7 +74,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
       return (
         <div className="flex min-h-screen items-center justify-center px-4">
-          <div className="max-w-md rounded border border-denied/30 bg-denied-bg p-6 text-center">
+          <div className="max-w-md rounded-xl border border-denied/25 bg-denied-bg p-6 text-center shadow-elevated backdrop-blur-xl">
             <h1 className="mb-2 text-sm font-semibold text-denied">Algo deu errado</h1>
             <p className="text-sm text-ink-muted">
               A aplicação encontrou um erro inesperado e não conseguiu continuar exibindo esta tela.
@@ -85,7 +85,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
             </p>
             <button
               onClick={this.handleReload}
-              className="mt-4 rounded-sm bg-revenue px-3 py-2 text-sm font-medium text-canvas transition-colors hover:bg-revenue/90"
+              className="mt-4 rounded-md bg-aura-line px-3 py-2 text-sm font-medium text-white shadow-elevated transition-all duration-150 hover:brightness-110 active:scale-[0.98]"
             >
               Recarregar página
             </button>

@@ -334,7 +334,7 @@ export function DenialAppealsPage() {
     <div className="space-y-6">
       <PageHeader
         icon={ShieldAlert}
-        title="Recurso de Glosa"
+        title="Recurso de glosa"
         subtitle="Negativas formais da operadora (administrativa ou médica) — diferente do Painel Anti-Glosa, que previne erro de preenchimento antes do envio. Aqui é o processo de contestação, com prazo."
         action={
           <Button onClick={() => setIsCreateModalOpen(true)} className="flex items-center gap-1.5">

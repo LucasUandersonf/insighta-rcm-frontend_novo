@@ -49,7 +49,7 @@ export function AuditLogPage() {
     <div className="space-y-6">
       <PageHeader
         icon={ScrollText}
-        title="Logs de Auditoria"
+        title="Logs de auditoria"
         subtitle="Trilha de quem fez o quê, quando — toda alteração de dado sensível (contratos, recursos de glosa, usuários, integrações) fica registrada aqui, sem edição possível."
       />
 

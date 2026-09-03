@@ -146,7 +146,7 @@ export function UsersPage() {
     <div className="space-y-6">
       <PageHeader
         icon={Users}
-        title="Gestão de Usuários"
+        title="Gestão de usuários"
         subtitle="Colaboradores da clínica e seus papéis de acesso (RBAC)."
         action={
           <Button onClick={() => setIsModalOpen(true)} className="flex items-center gap-1.5">

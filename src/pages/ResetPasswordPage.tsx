@@ -1,10 +1,18 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, CheckCircle2, Lock, ShieldAlert } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Lock, ShieldAlert, ShieldCheck } from "lucide-react";
 import { confirmPasswordReset, ApiError } from "@/lib/api-client";
 import { AuthLayout, AuthFormHeader } from "@/components/layout/AuthLayout";
 import { PasswordStrengthMeter } from "@/components/ui/PasswordStrengthMeter";
+
+// Mesmo padrão de HIGHLIGHTS das outras 3 telas públicas (ver
+// LoginPage/SignUpPage/ForgotPasswordPage) — sem isso, o painel de
+// marca à esquerda ficava "vazio" nesta tela, quebrando a consistência
+// visual do conjunto.
+const HIGHLIGHTS = [
+  { icon: ShieldCheck, text: "Assim que salva, a nova senha já vale — você entra com ela na sequência, sem precisar de um novo link." },
+];
 
 export function ResetPasswordPage() {
   const [searchParams] = useSearchParams();
@@ -40,7 +48,7 @@ export function ResetPasswordPage() {
 
   if (!token) {
     return (
-      <AuthLayout headline="Link de redefinição" subheadline="Confira se você abriu o link mais recente enviado por e-mail.">
+      <AuthLayout headline="Link de redefinição" subheadline="Confira se você abriu o link mais recente enviado por e-mail." highlights={HIGHLIGHTS}>
         <div className="w-full max-w-sm rounded-xl border border-denied/25 bg-denied-bg p-6 text-center shadow-elevated backdrop-blur-xl">
           <span className="mb-3 inline-flex h-11 w-11 items-center justify-center rounded-full bg-canvas-surface/70 text-denied">
             <ShieldAlert size={20} strokeWidth={2.2} />
@@ -59,7 +67,7 @@ export function ResetPasswordPage() {
   }
 
   return (
-    <AuthLayout headline="Redefinir senha" subheadline="Crie uma nova senha para acessar sua conta com segurança.">
+    <AuthLayout headline="Escolha sua nova senha" subheadline="Uma senha forte protege o faturamento de toda a clínica — capriche." highlights={HIGHLIGHTS}>
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="w-full max-w-sm">
         {done ? (
           <div className="rounded-xl border border-revenue/25 bg-revenue-bg p-6 text-center shadow-elevated backdrop-blur-xl">
@@ -78,7 +86,7 @@ export function ResetPasswordPage() {
           </div>
         ) : (
           <>
-            <AuthFormHeader title="Nova senha" subtitle="Escolha uma senha forte para a sua conta" />
+            <AuthFormHeader title="Criar nova senha" subtitle="Escolha uma senha forte para proteger a sua conta" />
 
             <form onSubmit={handleSubmit} className="rounded-xl border border-border-hairline bg-glass p-6 shadow-elevated backdrop-blur-xl">
               <div className="mb-1.5">
@@ -132,9 +140,16 @@ export function ResetPasswordPage() {
                 disabled={isSubmitting || !canSubmit}
                 className="flex w-full items-center justify-center gap-1.5 rounded-md bg-aura-line px-3 py-2.5 text-sm font-medium text-white shadow-elevated transition-all duration-150 hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {isSubmitting ? "Salvando..." : "Redefinir senha"}
+                {isSubmitting ? "Salvando..." : "Salvar nova senha"}
               </button>
             </form>
+
+            <p className="mt-5 text-center text-sm text-ink-muted">
+              <Link to="/login" className="inline-flex items-center gap-1.5 font-medium text-accent hover:underline">
+                <ArrowLeft aria-hidden size={13} />
+                Voltar para a tela de login
+              </Link>
+            </p>
           </>
         )}
       </motion.div>

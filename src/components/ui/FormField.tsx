@@ -38,7 +38,7 @@ export function TextField({ label, error, id, className, ...props }: TextFieldPr
       <input
         id={fieldId}
         className={cn(
-          "w-full rounded-md border bg-canvas-raised px-3 py-2 text-sm text-ink placeholder:text-ink-faint transition-colors focus:border-revenue focus:outline-none focus:ring-2 focus:ring-revenue/15",
+          "w-full rounded-md border bg-canvas-raised px-3 py-2 text-sm text-ink placeholder:text-ink-faint transition-colors focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/15",
           error ? "border-denied/50" : "border-border-default",
           className
         )}
@@ -62,7 +62,7 @@ export function SelectField({ label, error, id, className, children, ...props }:
         <select
           id={fieldId}
           className={cn(
-            "w-full appearance-none rounded-md border bg-canvas-raised px-3 py-2 pr-8 text-sm text-ink transition-colors focus:border-revenue focus:outline-none focus:ring-2 focus:ring-revenue/15",
+            "w-full appearance-none rounded-md border bg-canvas-raised px-3 py-2 pr-8 text-sm text-ink transition-colors focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/15",
             error ? "border-denied/50" : "border-border-default"
           )}
           {...props}
