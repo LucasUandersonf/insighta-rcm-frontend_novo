@@ -515,6 +515,11 @@ export interface InsuranceCompany {
   // contrato (ver app/sql/008_denial_appeals.sql). NULL usa o fallback
   // genérico do backend.
   default_appeal_deadline_days: number | null;
+  // Desativação, não exclusão — Contract/Appointment/Billing referenciam
+  // planos desta operadora, apagar de verdade quebraria essas FKs (ver
+  // DECISÃO em app/sql/014_insurance_is_active.sql, backend). Mesmo
+  // padrão de Professional.is_active/User.is_active.
+  is_active: boolean;
   created_at: string;
 }
 
@@ -526,6 +531,7 @@ export interface InsuranceCompanyCreateRequest {
 
 export interface InsuranceCompanyUpdateRequest {
   default_appeal_deadline_days?: number | null;
+  is_active?: boolean;
 }
 
 // --- Planos (app/schemas/insurance_plan.py) ---
@@ -535,6 +541,10 @@ export interface InsurancePlan {
   display_name: string;
   normalized_key: string;
   ans_registry: string | null;
+  // Ver DECISÃO em InsuranceCompany.is_active acima — mesmo princípio,
+  // por plano. Desativar NÃO afeta a resolução automática de convênio
+  // durante a ingestão de arquivo (ver backend InsurancePlanRepository.resolve).
+  is_active: boolean;
   created_at: string;
 }
 
@@ -542,6 +552,10 @@ export interface InsurancePlanCreateRequest {
   insurance_company_id: string;
   display_name: string;
   ans_registry?: string | null;
+}
+
+export interface InsurancePlanUpdateRequest {
+  is_active?: boolean;
 }
 
 // --- Contratos & Itens (app/schemas/contract.py) ---

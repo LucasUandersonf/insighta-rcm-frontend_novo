@@ -26,6 +26,13 @@ import type {
   PaginatedResponse,
 } from "@/lib/types";
 
+// Desativação (não exclusão) de Operadoras/Planos — achado do usuário:
+// um convênio/plano cadastrado errado ou duplicado não tinha NENHUMA
+// forma de sair do cadastro, mesmo sendo referenciado por
+// Contract/Appointment/Billing (exclusão de verdade quebraria essas
+// FKs, ver DECISÃO no backend em app/sql/014_insurance_is_active.sql).
+// Mesmo padrão de Professional/User: `is_active` + PATCH.
+
 const CONTRACTS_PAGE_SIZE = 20;
 
 function formatMoney(value: number): string {
@@ -699,6 +706,8 @@ function ReviewContractModal({
 // ---------------------------------------------------------------------
 
 export function ContractsPage() {
+  const queryClient = useQueryClient();
+  const { showError } = useToast();
   const [isCompanyModalOpen, setIsCompanyModalOpen] = useState(false);
   const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
   const [isManualModalOpen, setIsManualModalOpen] = useState(false);
@@ -706,6 +715,10 @@ export function ContractsPage() {
   const [reviewingContract, setReviewingContract] = useState<Contract | null>(null);
   const [contractsOffset, setContractsOffset] = useState(0);
 
+  // Ativos apenas — alimenta os SELECTs de "operadora"/"plano" nos
+  // formulários de cadastro novo (Novo plano, Cadastro manual, Enviar
+  // PDF). Não faz sentido criar um plano novo sob uma operadora
+  // desativada, nem homologar contrato novo contra um plano desativado.
   const { data: companies } = useQuery({
     queryKey: ["insurance-companies"],
     queryFn: () => apiClient.get<InsuranceCompany[]>("/api/v1/insurance-companies"),
@@ -714,6 +727,38 @@ export function ContractsPage() {
   const { data: plans } = useQuery({
     queryKey: ["insurance-plans"],
     queryFn: () => apiClient.get<InsurancePlan[]>("/api/v1/insurance-companies/plans"),
+  });
+
+  // Ativos + inativos — alimenta os PAINÉIS de gestão abaixo (precisa
+  // mostrar o que foi desativado, para poder reativar) e a resolução de
+  // nome de plano na tabela de Contratos (um contrato antigo não deveria
+  // "perder" o nome do plano na tela só porque o plano foi desativado
+  // depois). Mesmo par active/all de ProfessionalRepository no backend.
+  const { data: allCompanies } = useQuery({
+    queryKey: ["insurance-companies", "all"],
+    queryFn: () => apiClient.get<InsuranceCompany[]>("/api/v1/insurance-companies?include_inactive=true"),
+  });
+
+  const { data: allPlans } = useQuery({
+    queryKey: ["insurance-plans", "all"],
+    queryFn: () => apiClient.get<InsurancePlan[]>("/api/v1/insurance-companies/plans?include_inactive=true"),
+  });
+
+  const toggleCompanyActiveMutation = useMutation({
+    mutationFn: ({ id, is_active }: { id: string; is_active: boolean }) =>
+      apiClient.patch<InsuranceCompany>(`/api/v1/insurance-companies/${id}`, { is_active }),
+    // Invalida o prefixo inteiro — pega tanto ["insurance-companies"]
+    // (ativos, usado pelos SELECTs) quanto ["insurance-companies","all"]
+    // (painel de gestão) numa chamada só.
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["insurance-companies"] }),
+    onError: (err) => showError(getApiErrorMessage(err)),
+  });
+
+  const togglePlanActiveMutation = useMutation({
+    mutationFn: ({ id, is_active }: { id: string; is_active: boolean }) =>
+      apiClient.patch<InsurancePlan>(`/api/v1/insurance-companies/plans/${id}`, { is_active }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["insurance-plans"] }),
+    onError: (err) => showError(getApiErrorMessage(err)),
   });
 
   const {
@@ -732,9 +777,12 @@ export function ContractsPage() {
 
   const planNameById = useMemo(() => {
     const map = new Map<string, string>();
-    for (const p of plans ?? []) map.set(p.id, p.display_name);
+    // `allPlans` (ativos + inativos) — um contrato antigo não deveria
+    // "perder" o nome do plano na tabela só porque o plano foi
+    // desativado depois de homologado.
+    for (const p of allPlans ?? []) map.set(p.id, p.display_name);
     return map;
-  }, [plans]);
+  }, [allPlans]);
 
   return (
     <div className="space-y-6">
@@ -747,13 +795,27 @@ export function ContractsPage() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
         <div className="lg:col-span-6">
           <Panel title="Operadoras" action={<Button variant="secondary" size="xs" className="flex items-center gap-1" onClick={() => setIsCompanyModalOpen(true)}><Plus size={12} />Nova operadora</Button>}>
-            {(companies ?? []).length === 0 ? (
+            {(allCompanies ?? []).length === 0 ? (
               <EmptyState icon={<Building2 size={17} strokeWidth={1.5} />} message="Nenhuma operadora cadastrada." />
             ) : (
               <ul className="divide-y divide-border-hairline">
-                {(companies ?? []).map((c) => (
-                  <li key={c.id} className="px-5 py-2.5 text-sm text-ink transition-colors hover:bg-canvas-raised/40">
-                    {c.name}
+                {(allCompanies ?? []).map((c) => (
+                  <li
+                    key={c.id}
+                    className="flex items-center justify-between gap-2 px-5 py-2.5 text-sm text-ink transition-colors hover:bg-canvas-raised/40"
+                  >
+                    <span className={c.is_active ? undefined : "text-ink-faint"}>{c.name}</span>
+                    <div className="flex items-center gap-2">
+                      {!c.is_active && <Badge tone="neutral">Inativa</Badge>}
+                      <Button
+                        variant="ghost"
+                        size="xs"
+                        disabled={toggleCompanyActiveMutation.isPending}
+                        onClick={() => toggleCompanyActiveMutation.mutate({ id: c.id, is_active: !c.is_active })}
+                      >
+                        {c.is_active ? "Desativar" : "Reativar"}
+                      </Button>
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -763,13 +825,27 @@ export function ContractsPage() {
 
         <div className="lg:col-span-6">
           <Panel title="Planos" action={<Button variant="secondary" size="xs" className="flex items-center gap-1" onClick={() => setIsPlanModalOpen(true)}><Plus size={12} />Novo plano</Button>}>
-            {(plans ?? []).length === 0 ? (
+            {(allPlans ?? []).length === 0 ? (
               <EmptyState icon={<ClipboardList size={17} strokeWidth={1.5} />} message="Nenhum plano cadastrado." />
             ) : (
               <ul className="divide-y divide-border-hairline">
-                {(plans ?? []).map((p) => (
-                  <li key={p.id} className="px-5 py-2.5 text-sm text-ink transition-colors hover:bg-canvas-raised/40">
-                    {p.display_name}
+                {(allPlans ?? []).map((p) => (
+                  <li
+                    key={p.id}
+                    className="flex items-center justify-between gap-2 px-5 py-2.5 text-sm text-ink transition-colors hover:bg-canvas-raised/40"
+                  >
+                    <span className={p.is_active ? undefined : "text-ink-faint"}>{p.display_name}</span>
+                    <div className="flex items-center gap-2">
+                      {!p.is_active && <Badge tone="neutral">Inativo</Badge>}
+                      <Button
+                        variant="ghost"
+                        size="xs"
+                        disabled={togglePlanActiveMutation.isPending}
+                        onClick={() => togglePlanActiveMutation.mutate({ id: p.id, is_active: !p.is_active })}
+                      >
+                        {p.is_active ? "Desativar" : "Reativar"}
+                      </Button>
+                    </div>
                   </li>
                 ))}
               </ul>
