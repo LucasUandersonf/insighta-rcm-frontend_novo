@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Send } from "lucide-react";
+import { Plus, Send, Zap } from "lucide-react";
 import { Panel, EmptyState, LoadingState, ErrorState } from "@/components/ui/Panel";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
@@ -11,7 +11,7 @@ import { cn } from "@/lib/cn";
 import { apiClient, ApiError } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useToast } from "@/context/ToastContext";
-import type { ReportRecipient } from "@/lib/types";
+import type { ReportRecipient, WeeklyReportResponse } from "@/lib/types";
 
 // Espelha app/schemas/report_recipient.py — "" (todos os tipos) é o
 // valor mais comum; os demais existem para restringir um contato a um
@@ -196,6 +196,21 @@ export function ReportRecipientsPage() {
     onError: (err) => showError(getApiErrorMessage(err)),
   });
 
+  // Disparo sob demanda — achado do usuário: o relatório automático só
+  // sai uma vez por semana (cron externo), então quem quer o retrato
+  // mais fresco possível (hoje, não a última semana fechada) precisa de
+  // um jeito de pedir agora. Sem `period_start`/`period_end` no payload,
+  // o backend usa "desde segunda até hoje" por padrão (ver DECISÃO em
+  // app/api/v1/endpoints/reports.py).
+  const sendNowMutation = useMutation({
+    mutationFn: () => apiClient.post<WeeklyReportResponse>("/api/v1/reports/weekly/send", {}),
+    onSuccess: (data) => {
+      if (data.sent_via_whatsapp) showSuccess(data.detail);
+      else showError(data.detail);
+    },
+    onError: (err) => showError(getApiErrorMessage(err)),
+  });
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -203,10 +218,21 @@ export function ReportRecipientsPage() {
         title="Destinatários de relatórios"
         subtitle="Quem recebe o resumo semanal por WhatsApp e e-mail."
         action={
-          <Button onClick={() => setIsModalOpen(true)} className="flex items-center gap-1.5">
-            <Plus size={14} />
-            Novo destinatário
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              onClick={() => sendNowMutation.mutate()}
+              disabled={sendNowMutation.isPending}
+              className="flex items-center gap-1.5"
+            >
+              <Zap size={14} />
+              {sendNowMutation.isPending ? "Enviando..." : "Enviar relatório agora"}
+            </Button>
+            <Button onClick={() => setIsModalOpen(true)} className="flex items-center gap-1.5">
+              <Plus size={14} />
+              Novo destinatário
+            </Button>
+          </div>
         }
       />
 

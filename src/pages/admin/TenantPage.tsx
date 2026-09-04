@@ -100,6 +100,105 @@ function AnnualGoalPanel({ tenant, isOwner }: { tenant: Tenant; isOwner: boolean
   );
 }
 
+/**
+ * Limiares de risco de falta (no-show) — achado do usuário: os cortes
+ * 10%/30% (baixo/médio/alto) do MVP eram um valor de partida razoável,
+ * nunca uma calibração validada com dado real, e cada especialidade tem
+ * um perfil de falta bem diferente (estética costuma faltar bem menos
+ * que saúde mental, por exemplo). Mesmo padrão de AnnualGoalPanel: campo
+ * MANUAL, null usa o default do motor (ver no_show_risk_engine.py).
+ */
+function NoShowThresholdsPanel({ tenant, isOwner }: { tenant: Tenant; isOwner: boolean }) {
+  const queryClient = useQueryClient();
+  const { showSuccess, showError } = useToast();
+  const [lowInput, setLowInput] = useState("");
+  const [mediumInput, setMediumInput] = useState("");
+
+  useEffect(() => {
+    setLowInput(tenant.no_show_low_threshold !== null ? String(tenant.no_show_low_threshold * 100) : "");
+    setMediumInput(tenant.no_show_medium_threshold !== null ? String(tenant.no_show_medium_threshold * 100) : "");
+  }, [tenant.no_show_low_threshold, tenant.no_show_medium_threshold]);
+
+  const mutation = useMutation({
+    mutationFn: (payload: { no_show_low_threshold: number; no_show_medium_threshold: number }) =>
+      apiClient.patch<Tenant>("/api/v1/tenant", payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tenant"] });
+      showSuccess("Limiares de risco de falta atualizados.");
+    },
+    onError: (err) => showError(getApiErrorMessage(err)),
+  });
+
+  function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    const low = Number(lowInput.replace(",", "."));
+    const medium = Number(mediumInput.replace(",", "."));
+    if (!Number.isFinite(low) || !Number.isFinite(medium) || low <= 0 || medium <= 0 || low >= 100 || medium >= 100) {
+      showError("Informe valores entre 0 e 100.");
+      return;
+    }
+    if (low >= medium) {
+      showError("O limiar de risco baixo precisa ser menor que o de risco médio.");
+      return;
+    }
+    mutation.mutate({ no_show_low_threshold: low / 100, no_show_medium_threshold: medium / 100 });
+  }
+
+  const usingDefaults = tenant.no_show_low_threshold === null && tenant.no_show_medium_threshold === null;
+
+  return (
+    <Panel title="Limiares de risco de falta (no-show)">
+      <form onSubmit={handleSubmit} className="p-4">
+        <p className="mb-3.5 max-w-xl text-xs leading-relaxed text-ink-faint">
+          Define a partir de qual taxa de falta histórica um paciente é classificado como risco baixo/médio/alto —
+          alimenta a lista vermelha, o alerta de próximos agendamentos em risco e a contagem do relatório semanal.
+        </p>
+        {usingDefaults && (
+          <p className="-mt-1.5 mb-3.5 text-2xs text-ink-faint">
+            Nenhum limiar configurado ainda — usando o padrão do sistema (abaixo de 10% = baixo, 10% a 30% = médio,
+            acima de 30% = alto).
+          </p>
+        )}
+        <div className="grid max-w-md grid-cols-2 gap-3">
+          <TextField
+            label="Risco baixo até (%)"
+            type="number"
+            min={0.01}
+            max={99}
+            step="0.1"
+            value={lowInput}
+            onChange={(e) => setLowInput(e.target.value)}
+            disabled={!isOwner}
+            placeholder="Ex: 10"
+            className="mb-0"
+          />
+          <TextField
+            label="Risco médio até (%)"
+            type="number"
+            min={0.01}
+            max={99}
+            step="0.1"
+            value={mediumInput}
+            onChange={(e) => setMediumInput(e.target.value)}
+            disabled={!isOwner}
+            placeholder="Ex: 30"
+            className="mb-0"
+          />
+        </div>
+        <p className="mt-2 text-2xs text-ink-faint">Acima do limiar de risco médio, o paciente/agendamento vira risco alto.</p>
+        {isOwner && (
+          <div className="mt-3 flex justify-end">
+            <Button type="submit" disabled={mutation.isPending || !lowInput || !mediumInput}>
+              {mutation.isPending ? "Salvando..." : "Salvar limiares"}
+            </Button>
+          </div>
+        )}
+        {!isOwner && <p className="mt-2 text-2xs text-ink-faint">Só o papel "owner" pode editar os limiares de risco.</p>}
+      </form>
+    </Panel>
+  );
+}
+
 export function TenantPage() {
   const { user } = useAuth();
   const isOwner = user?.role === "owner";
@@ -181,6 +280,7 @@ export function TenantPage() {
           </Panel>
 
           <AnnualGoalPanel tenant={tenant} isOwner={isOwner} />
+          <NoShowThresholdsPanel tenant={tenant} isOwner={isOwner} />
         </div>
       )}
     </div>

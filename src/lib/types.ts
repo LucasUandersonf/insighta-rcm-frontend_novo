@@ -208,12 +208,38 @@ export interface Tenant {
   // (nunca calculada automaticamente, ver DECISÃO no backend). Alimenta
   // o insight de desempenho anual da Sala de Comando.
   annual_revenue_goal: number | null;
+  // Limiares de risco de falta (frações 0-1, ex: 0.10 = 10%) — null usa
+  // o default do motor (10%/30%, ver no_show_risk_engine.py). Achado do
+  // usuário: cada especialidade tem um perfil de falta diferente, os
+  // cortes do MVP eram um chute de partida, não uma calibração validada.
+  no_show_low_threshold: number | null;
+  no_show_medium_threshold: number | null;
 }
 
 export interface TenantUpdateRequest {
   legal_name?: string;
   trade_name?: string;
   annual_revenue_goal?: number;
+  no_show_low_threshold?: number;
+  no_show_medium_threshold?: number;
+}
+
+// --- Disparo sob demanda do relatório semanal (app/schemas/report.py) ---
+export interface WeeklyReportRequest {
+  period_start?: string;
+  period_end?: string;
+}
+
+export interface WeeklyReportResponse {
+  period_start: string;
+  period_end: string;
+  sent_via_whatsapp: boolean;
+  // Detalhamento por destinatário — core.report_recipients suporta N
+  // contatos por tenant (ver DECISÃO no backend, report_send_service.py).
+  recipients_checked: number;
+  sent: number;
+  failed: number;
+  detail: string;
 }
 
 // --- Central de Integrações & Webhooks (app/schemas/integration.py) ---
@@ -288,6 +314,18 @@ export interface WeekdayBucket {
   appointment_count: number;
 }
 
+// Taxa de falta por dia da semana — diferente de WeekdayBucket (volume
+// bruto), responde diretamente "quinta tem taxa de falta X%". Só conta
+// atendimentos RESOLVIDOS (completed/no_show), nunca 'scheduled'.
+// no_show_rate é null quando total_appointments é 0 ("sem amostra",
+// nunca 0%) — ver AnalyticsRepository.weekday_no_show_rate_breakdown.
+export interface WeekdayNoShowRateBucket {
+  weekday: number;
+  no_show_count: number;
+  total_appointments: number;
+  no_show_rate: number | null;
+}
+
 // "Lista vermelha" — ranking de pacientes por taxa de falta no período
 // (ver AnalyticsRepository.top_no_show_patients no backend). Só entram
 // pacientes com amostra mínima e pelo menos 1 falta.
@@ -320,6 +358,7 @@ export interface AgendaMetrics {
   // dia da semana (ver SmartInsightsFeed) — evidência, não o elemento
   // principal da tela.
   weekday_histogram: WeekdayBucket[];
+  weekday_no_show_rates: WeekdayNoShowRateBucket[];
   no_show_risk_breakdown: NoShowRiskBucket[];
   estimated_revenue_at_risk: number;
   patient_no_show_ranking: PatientNoShowRankingItem[];
@@ -331,6 +370,12 @@ export interface AgendaMetrics {
   // no backend). Mesma natureza de estimativa que estimated_revenue_at_risk.
   total_idle_minutes: number;
   estimated_revenue_lost_to_idle_capacity: number;
+  // Quantos profissionais ATIVOS ainda não têm grade semanal cadastrada
+  // — todo profissional auto-criado por upload de arquivo (Faturamento
+  // OU Agenda) nasce sem grade, o que deixa total_idle_minutes/
+  // estimated_revenue_lost_to_idle_capacity incompletos para eles (ver
+  // DECISÃO no backend, AgendaMetricsResponse).
+  professionals_without_availability_count: number;
 }
 
 // Ranking de perda financeira por convênio (GET /analytics/plan-loss-ranking)
