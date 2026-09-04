@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import {
   Building2,
   CalendarCheck,
+  CalendarClock,
   FileText,
   Gauge,
   LayoutDashboard,
@@ -37,6 +38,11 @@ const NAV_ITEMS: NavItem[] = [
   { to: "/decisao", label: "Sala de Comando", icon: Gauge, roles: ["owner", "admin", "financeiro", "auditor"] },
   { to: "/", label: "Painel", icon: LayoutDashboard },
   { to: "/appointments", label: "Consultas", icon: CalendarCheck },
+  // Configuração da grade semanal que alimenta Agenda & Capacidade — não
+  // é o CRUD operacional de Profissionais removido no reposicionamento
+  // de produto (ver App.tsx); mesmo RBAC de ação administrativa restrita
+  // usado em /upload e /contracts.
+  { to: "/professionals", label: "Profissionais & Agenda", icon: CalendarClock, roles: ["owner", "admin"] },
   // Ação de escrita — mesmo RBAC do backend em ingestion.py/_CAN_MANAGE
   // e contracts.py/_CAN_WRITE (owner/admin/financeiro); sem auditor.
   { to: "/upload", label: "Central de upload", icon: UploadCloud, roles: ["owner", "admin", "financeiro"] },

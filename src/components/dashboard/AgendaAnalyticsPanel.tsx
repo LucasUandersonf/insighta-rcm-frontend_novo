@@ -18,6 +18,14 @@ function formatPct(rate: number): string {
   return `${(rate * 100).toFixed(0)}%`;
 }
 
+function formatHoursAndMinutes(totalMinutes: number): string {
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours === 0) return `${minutes} min`;
+  if (minutes === 0) return `${hours}h`;
+  return `${hours}h${minutes}min`;
+}
+
 // 0=domingo .. 6=sábado — mesma convenção do backend (ver
 // capacity_service.py, WeekdayBucket em app/schemas/analytics.py).
 const WEEKDAY_SHORT_LABELS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
@@ -138,6 +146,16 @@ export function AgendaAnalyticsPanel({ dateFrom, dateTo }: { dateFrom: string; d
                   <Bar dataKey="ociosidade" stackId="a" fill={palette.barMuted} name="Ociosidade" radius={[0, 3, 3, 0]} animationDuration={700} />
                 </BarChart>
               </ResponsiveContainer>
+              {data && data.total_idle_minutes > 0 && (
+                <div className="mt-1 flex items-center justify-between border-t border-border-hairline pt-3 text-xs">
+                  <span className="text-ink-faint">
+                    {formatHoursAndMinutes(data.total_idle_minutes)} de agenda ociosa nesta janela
+                  </span>
+                  <span className="tabular font-mono font-medium text-pending">
+                    {formatCurrency(data.estimated_revenue_lost_to_idle_capacity)} estimados
+                  </span>
+                </div>
+              )}
             </div>
           )}
         </Panel>

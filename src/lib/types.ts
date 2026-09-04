@@ -293,6 +293,13 @@ export interface AgendaMetrics {
   estimated_revenue_at_risk: number;
   patient_no_show_ranking: PatientNoShowRankingItem[];
   upcoming_risk_appointments: UpcomingRiskAppointment[];
+  // Minutos disponíveis (grade semanal) menos minutos agendados, somado
+  // entre profissionais com grade cadastrada, e a tradução em R$ dessa
+  // ociosidade — o "outro lado" do problema de agenda em relação ao
+  // no-show (ver DECISÃO em capacity_service.estimate_idle_capacity_revenue_lost
+  // no backend). Mesma natureza de estimativa que estimated_revenue_at_risk.
+  total_idle_minutes: number;
+  estimated_revenue_lost_to_idle_capacity: number;
 }
 
 // Ranking de perda financeira por convênio (GET /analytics/plan-loss-ranking)
@@ -427,6 +434,17 @@ export interface ProfessionalCreateRequest {
   professional_registry?: string | null;
   specialty?: string | null;
   availability: AvailabilityBlock[];
+}
+
+// PATCH /professionals/{id} — todo campo é opcional (payload parcial).
+// availability, quando enviado, SUBSTITUI a grade inteira (omitir o
+// campo mantém a grade atual intacta).
+export interface ProfessionalUpdateRequest {
+  full_name?: string;
+  professional_registry?: string | null;
+  specialty?: string | null;
+  is_active?: boolean;
+  availability?: AvailabilityBlock[];
 }
 
 // --- Consultas (app/schemas/appointment.py) ---
