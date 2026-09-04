@@ -7,6 +7,7 @@ import {
   FileText,
   Gauge,
   LayoutDashboard,
+  ListChecks,
   Plug,
   ScrollText,
   Send,
@@ -46,6 +47,9 @@ const NAV_ITEMS: NavItem[] = [
   // Ação de escrita — mesmo RBAC do backend em ingestion.py/_CAN_MANAGE
   // e contracts.py/_CAN_WRITE (owner/admin/financeiro); sem auditor.
   { to: "/upload", label: "Central de upload", icon: UploadCloud, roles: ["owner", "admin", "financeiro"] },
+  // Destino do próprio toast de sucesso da Central de Upload quando um
+  // arquivo tem linha rejeitada — mesmo RBAC de /upload.
+  { to: "/setup", label: "Setup de importação", icon: ListChecks, roles: ["owner", "admin", "financeiro"] },
   // Convênios/Contratos: dado financeiro sensível (tabela de repasse) —
   // mesmo RBAC do backend em contracts.py, fora do alcance de "atendimento".
   { to: "/contracts", label: "Convênios e contratos", icon: FileText, roles: ["owner", "admin", "financeiro", "auditor"] },

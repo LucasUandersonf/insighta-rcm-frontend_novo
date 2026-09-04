@@ -113,6 +113,37 @@ export interface UploadIngestionFileResponse {
   message: string | null;
 }
 
+// --- Tela de Setup: linhas de importação rejeitadas (app/schemas/ingestion.py) ---
+// `reason` só tem um valor ACIONÁVEL hoje — "unknown_insurance_plan" (a
+// Etapa 2/normalização não reconheceu o texto do convênio) — resolvível
+// nesta tela via ResolveInsurancePlanRequest. Qualquer outro valor (hoje
+// só "validation_error", ver _to_response no backend) é falha
+// ESTRUTURAL da Etapa 1 (data/moeda/campo obrigatório malformado no
+// arquivo de origem) — não tem mapeamento possível, só corrigir o
+// arquivo e reenviar; `payload` vem vazio ({}) nesse caso porque a linha
+// nunca chegou a virar um RawBillingRow válido.
+export type RejectedRowReason = "unknown_insurance_plan" | "validation_error" | string;
+
+export interface RejectedRow {
+  id: number;
+  ingestion_file_id: string;
+  row_number: number;
+  payload: Record<string, unknown>;
+  reason: RejectedRowReason | null;
+  raw_value: string | null;
+  created_at: string;
+}
+
+export interface ResolveInsurancePlanRequest {
+  insurance_plan_id: string;
+}
+
+export interface ResolveInsurancePlanResponse {
+  row_id: number;
+  resolved: boolean;
+  additionally_resolved_count: number;
+}
+
 // --- Logs de Auditoria (app/schemas/audit_log.py) ---
 export interface AuditLogEntry {
   id: number;

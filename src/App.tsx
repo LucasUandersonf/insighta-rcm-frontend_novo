@@ -15,6 +15,7 @@ import { DenialAppealsPage } from "@/pages/DenialAppealsPage";
 import { AppointmentsPage } from "@/pages/AppointmentsPage";
 import { ProfessionalsPage } from "@/pages/ProfessionalsPage";
 import { UploadCenterPage } from "@/pages/UploadCenterPage";
+import { SetupPage } from "@/pages/SetupPage";
 import { UsersPage } from "@/pages/admin/UsersPage";
 import { IntegrationsPage } from "@/pages/admin/IntegrationsPage";
 import { TenantPage } from "@/pages/admin/TenantPage";
@@ -92,6 +93,10 @@ export default function App() {
                     (owner/admin/financeiro); sem auditor, que é só leitura. */}
                 <Route element={<RoleProtectedRoute allowedRoles={["owner", "admin", "financeiro"]} />}>
                   <Route path="/upload" element={<UploadCenterPage />} />
+                  {/* Destino que o próprio toast de sucesso da Central de Upload já
+                      promete ("veja a tela de Setup") — mesmo RBAC de /upload
+                      (ingestion.py/_CAN_MANAGE: owner/admin/financeiro). */}
+                  <Route path="/setup" element={<SetupPage />} />
                 </Route>
                 <Route element={<RoleProtectedRoute allowedRoles={["owner", "admin"]} />}>
                   <Route path="/admin/users" element={<UsersPage />} />
