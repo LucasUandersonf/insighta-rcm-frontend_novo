@@ -94,6 +94,9 @@ export interface IngestionFileEntry {
   id: string;
   original_filename: string | null;
   file_format: IngestionFileFormat;
+  // Template de integração que o arquivo segue — "faturamento" ou
+  // "agenda" (ver app/sql/019_agenda_ingestion.sql).
+  data_type: string;
   status: IngestionFileStatus;
   row_count: number;
   error_row_count: number;
@@ -105,6 +108,7 @@ export interface IngestionFileEntry {
 export interface UploadIngestionFileResponse {
   id: string;
   file_format: IngestionFileFormat;
+  data_type: string;
   status: IngestionFileStatus;
   row_count: number;
   error_row_count: number;
@@ -222,6 +226,32 @@ export interface TenantUpdateRequest {
   annual_revenue_goal?: number;
   no_show_low_threshold?: number;
   no_show_medium_threshold?: number;
+}
+
+// GET /tenant/no-show-thresholds/suggested — calculado a partir do
+// histórico REAL de faltas por paciente desta clínica (mediana/P85), não
+// um valor genérico. Campos null = ainda não há histórico suficiente
+// (menos de 10 pacientes qualificados) para uma sugestão confiável.
+export interface NoShowThresholdSuggestion {
+  low_threshold: number | null;
+  medium_threshold: number | null;
+  sample_size: number;
+}
+
+// --- Mapeador Automático de Coluna (app/schemas/ingestion.py) — escopo:
+// só CSV de Faturamento por ora (ver DECISÃO no backend). ---
+export interface ColumnMappingPreview {
+  raw_headers: string[];
+  suggested_mapping: Record<string, string>; // cabeçalho do arquivo -> campo canônico
+  unresolved_required_fields: string[];
+}
+
+export interface ColumnAlias {
+  id: string;
+  data_type: string;
+  source_header: string;
+  canonical_field: string;
+  created_at: string;
 }
 
 // --- Disparo sob demanda do relatório semanal (app/schemas/report.py) ---

@@ -1,10 +1,11 @@
 import { useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { UploadCloud } from "lucide-react";
+import { UploadCloud, Wand2 } from "lucide-react";
 import { Panel, EmptyState, LoadingState, ErrorState } from "@/components/ui/Panel";
 import { Button } from "@/components/ui/Button";
 import { Badge, type BadgeTone } from "@/components/ui/Badge";
 import { Dropzone } from "@/components/ui/Dropzone";
+import { Modal } from "@/components/ui/Modal";
 import { SelectField, TextField } from "@/components/ui/FormField";
 import { Pagination } from "@/components/ui/Pagination";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -13,12 +14,34 @@ import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useToast } from "@/context/ToastContext";
 import type {
+  ColumnMappingPreview,
   Contract,
   IngestionFileEntry,
   InsurancePlan,
   PaginatedResponse,
   UploadIngestionFileResponse,
 } from "@/lib/types";
+
+// Rótulo em português por campo canônico — espelha
+// app/services/column_mapping_service.py::CANONICAL_FIELD_LABELS no
+// backend (mantidos manualmente em sincronia, mesmo critério do resto
+// deste arquivo de tipos/telas).
+const CANONICAL_FIELD_LABELS: Record<string, string> = {
+  patient_cpf: "CPF do paciente",
+  patient_name: "Nome do paciente",
+  professional_name: "Nome do profissional",
+  professional_registry: "Registro do profissional",
+  insurance_plan_raw_name: "Convênio",
+  procedure_code: "Código do procedimento",
+  cid_code: "CID",
+  charged_value: "Valor cobrado",
+  service_date: "Data do atendimento",
+  local_name: "Local de atendimento",
+  tipo_paciente: "Tipo de paciente",
+  guia_tipo: "Tipo de guia",
+  guia_numero: "Número da guia",
+  guia_senha: "Senha da guia",
+};
 
 // Central de Upload — o caminho que faltava no produto para o cliente
 // colocar dado real no sistema pela própria UI, sem depender de acesso a
@@ -48,16 +71,134 @@ function formatDateTime(iso: string): string {
   return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "medium" }).format(new Date(iso));
 }
 
+/**
+ * Mapeador Automático de Coluna (ver DECISÃO em
+ * app/sql/021_ingestion_column_aliases.sql) — escopo: só CSV do template
+ * de Faturamento. Fluxo: abre já disparando o preview (só lê o
+ * cabeçalho, nunca processa linha); o usuário revisa/corrige a sugestão
+ * pros campos obrigatórios ainda não reconhecidos e confirma — depois
+ * disso, todo upload FUTURO deste tenant aplica o mapeamento sozinho.
+ */
+function ColumnMappingModal({ file, isOpen, onClose }: { file: File | null; isOpen: boolean; onClose: () => void }) {
+  const { showSuccess, showError } = useToast();
+  const [assignments, setAssignments] = useState<Record<string, string>>({});
+
+  const previewQuery = useQuery({
+    queryKey: ["ingestion-column-mapping-preview", file?.name, file?.size],
+    queryFn: async () => {
+      const formData = new FormData();
+      formData.append("file", file as File);
+      formData.append("data_type", "faturamento");
+      const result = await apiClient.upload<ColumnMappingPreview>("/api/v1/ingestion/preview-headers", formData);
+      // Pré-preenche com a sugestão automática — invertida (campo -> cabeçalho)
+      // pra alimentar um select por campo obrigatório.
+      const initial: Record<string, string> = {};
+      for (const [header, field] of Object.entries(result.suggested_mapping)) initial[field] = header;
+      setAssignments(initial);
+      return result;
+    },
+    enabled: isOpen && file !== null,
+  });
+
+  const saveMutation = useMutation({
+    mutationFn: (mapping: Record<string, string>) =>
+      apiClient.post("/api/v1/ingestion/column-aliases", { data_type: "faturamento", mapping }),
+    onSuccess: () => {
+      showSuccess("Mapeamento salvo — todo upload futuro deste template já aplica sozinho. Pode enviar o arquivo agora.");
+      onClose();
+    },
+    onError: (err) => showError(getApiErrorMessage(err)),
+  });
+
+  function handleConfirm() {
+    // Inverte de volta: {campo: cabeçalho} -> {cabeçalho: campo}, formato
+    // que POST /ingestion/column-aliases espera.
+    const mapping: Record<string, string> = {};
+    for (const [field, header] of Object.entries(assignments)) {
+      if (header) mapping[header] = field;
+    }
+    if (Object.keys(mapping).length === 0) {
+      showError("Associe pelo menos um cabeçalho a um campo antes de confirmar.");
+      return;
+    }
+    saveMutation.mutate(mapping);
+  }
+
+  const preview = previewQuery.data;
+  // Campos que precisam de uma decisão do usuário: os que o backend não
+  // resolveu sozinho (nem padrão, nem sugestão automática confiante o
+  // bastante) — sempre incluindo os já sugeridos, pra o usuário poder
+  // corrigir uma sugestão errada antes de confirmar.
+  const fieldsToReview = preview
+    ? Array.from(new Set([...preview.unresolved_required_fields, ...Object.values(preview.suggested_mapping)]))
+    : [];
+
+  return (
+    <Modal title="Mapear colunas do arquivo" isOpen={isOpen} onClose={onClose}>
+      {previewQuery.isLoading && <p className="text-xs text-ink-faint">Lendo cabeçalho do arquivo...</p>}
+      {previewQuery.error && <p className="text-xs text-denied">{getApiErrorMessage(previewQuery.error)}</p>}
+      {preview && (
+        <div>
+          <p className="mb-4 text-xs leading-relaxed text-ink-faint">
+            Seu arquivo usa cabeçalhos diferentes do nosso padrão. Associe cada campo obrigatório à coluna correspondente do
+            seu arquivo — a gente já tentou adivinhar, é só conferir. Depois de confirmar, todo próximo upload já reconhece
+            sozinho, sem precisar repetir isso.
+          </p>
+          {fieldsToReview.length === 0 && (
+            <p className="text-xs text-ink-muted">Este arquivo já usa o cabeçalho padrão — nenhum mapeamento necessário.</p>
+          )}
+          {fieldsToReview.map((field) => (
+            <SelectField
+              key={field}
+              label={CANONICAL_FIELD_LABELS[field] ?? field}
+              value={assignments[field] ?? ""}
+              onChange={(e) => setAssignments((a) => ({ ...a, [field]: e.target.value }))}
+            >
+              <option value="">Não mapear</option>
+              {preview.raw_headers.map((header) => (
+                <option key={header} value={header}>
+                  {header}
+                </option>
+              ))}
+            </SelectField>
+          ))}
+          {preview.unresolved_required_fields.length > 0 && (
+            <p className="-mt-2 mb-4 text-2xs text-pending">
+              Sem mapear todos os campos obrigatórios acima, o arquivo continuará rejeitando as linhas.
+            </p>
+          )}
+          <div className="mt-5 flex justify-end gap-2">
+            <Button type="button" variant="secondary" onClick={onClose}>
+              Cancelar
+            </Button>
+            <Button type="button" onClick={handleConfirm} disabled={saveMutation.isPending || fieldsToReview.length === 0}>
+              {saveMutation.isPending ? "Salvando..." : "Confirmar mapeamento"}
+            </Button>
+          </div>
+        </div>
+      )}
+    </Modal>
+  );
+}
+
+const DATA_TYPE_LABELS: Record<string, string> = {
+  faturamento: "Faturamento",
+  agenda: "Agenda",
+};
+
 function BatchUploadTab() {
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
   const [file, setFile] = useState<File | null>(null);
+  const [dataType, setDataType] = useState<"faturamento" | "agenda">("faturamento");
   const [offset, setOffset] = useState(0);
+  const [isMappingModalOpen, setIsMappingModalOpen] = useState(false);
 
   const mutation = useMutation({
     mutationFn: (f: File) => {
       const formData = new FormData();
       formData.append("file", f);
+      formData.append("data_type", dataType);
       return apiClient.upload<UploadIngestionFileResponse>("/api/v1/ingestion/upload", formData);
     },
     onSuccess: (result) => {
@@ -88,9 +229,18 @@ function BatchUploadTab() {
     <div className="space-y-4">
       <Panel
         title="Upload de lotes operacionais"
-        subtitle="CSV, XML ou JSON — faturamento, agenda ou repasses do seu ERP. Processado na hora: você vê o resultado nesta mesma tela."
+        subtitle="CSV, XML ou JSON — faturamento ou agenda do seu ERP. Processado na hora: você vê o resultado nesta mesma tela."
       >
         <div className="p-4">
+          <SelectField
+            label="Template"
+            value={dataType}
+            onChange={(e) => setDataType(e.target.value as "faturamento" | "agenda")}
+            className="mb-4 max-w-xs"
+          >
+            <option value="faturamento">Faturamento</option>
+            <option value="agenda">Agenda</option>
+          </SelectField>
           <Dropzone
             accept={[".csv", ".xml", ".json"]}
             hint="CSV, XML ou JSON — até 20MB"
@@ -98,13 +248,25 @@ function BatchUploadTab() {
             onFileSelected={setFile}
             isUploading={mutation.isPending}
           />
-          <div className="mt-4 flex justify-end">
+          <div className="mt-4 flex justify-end gap-2">
+            {dataType === "faturamento" && file?.name.toLowerCase().endsWith(".csv") && (
+              <Button type="button" variant="secondary" onClick={() => setIsMappingModalOpen(true)} className="flex items-center gap-1.5">
+                <Wand2 size={14} />
+                Mapear colunas
+              </Button>
+            )}
             <Button disabled={!file || mutation.isPending} onClick={() => file && mutation.mutate(file)}>
               {mutation.isPending ? "Enviando..." : "Enviar arquivo"}
             </Button>
           </div>
+          <p className="mt-2 text-2xs text-ink-faint">
+            Cabeçalho do arquivo diferente do nosso padrão? Use "Mapear colunas" antes de enviar — evita que o arquivo
+            inteiro seja rejeitado por um nome de coluna diferente.
+          </p>
         </div>
       </Panel>
+
+      <ColumnMappingModal file={file} isOpen={isMappingModalOpen} onClose={() => setIsMappingModalOpen(false)} />
 
       <Panel title="Histórico de importações" subtitle="Últimos arquivos enviados por este tenant, mais recente primeiro">
         {isLoading && <LoadingState variant="table" rows={4} />}
@@ -117,6 +279,7 @@ function BatchUploadTab() {
               <thead>
                 <tr className="border-b border-border-hairline text-2xs uppercase tracking-wide text-ink-faint">
                   <th className="px-4 py-2.5 font-medium">Arquivo</th>
+                  <th className="px-4 py-2.5 font-medium">Template</th>
                   <th className="px-4 py-2.5 font-medium">Formato</th>
                   <th className="px-4 py-2.5 font-medium">Status</th>
                   <th className="px-4 py-2.5 font-medium">Linhas importadas</th>
@@ -128,6 +291,7 @@ function BatchUploadTab() {
                 {(history?.items ?? []).map((f) => (
                   <tr key={f.id} className="border-b border-border-hairline last:border-0 transition-colors hover:bg-canvas-raised/60">
                     <td className="px-4 py-2.5 text-ink">{f.original_filename ?? "—"}</td>
+                    <td className="px-4 py-2.5 text-ink-muted">{DATA_TYPE_LABELS[f.data_type] ?? f.data_type}</td>
                     <td className="px-4 py-2.5 text-ink-muted uppercase">{f.file_format}</td>
                     <td className="px-4 py-2.5">
                       <Badge tone={STATUS_TONE[f.status] ?? "neutral"}>{STATUS_LABELS[f.status] ?? f.status}</Badge>

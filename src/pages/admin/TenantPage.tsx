@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Building2 } from "lucide-react";
+import { Building2, Sparkles } from "lucide-react";
 import { Panel, LoadingState, ErrorState } from "@/components/ui/Panel";
 import { Button } from "@/components/ui/Button";
 import { TextField } from "@/components/ui/FormField";
@@ -10,7 +10,7 @@ import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useToast } from "@/context/ToastContext";
 import { useAuth } from "@/context/AuthContext";
-import type { Tenant } from "@/lib/types";
+import type { NoShowThresholdSuggestion, Tenant } from "@/lib/types";
 
 const PLAN_LABELS: Record<string, string> = {
   starter: "Starter",
@@ -119,6 +119,22 @@ function NoShowThresholdsPanel({ tenant, isOwner }: { tenant: Tenant; isOwner: b
     setMediumInput(tenant.no_show_medium_threshold !== null ? String(tenant.no_show_medium_threshold * 100) : "");
   }, [tenant.no_show_low_threshold, tenant.no_show_medium_threshold]);
 
+  // Sugestão calculada do HISTÓRICO REAL desta clínica (mediana/P85 da
+  // taxa de falta por paciente) — buscada só quando o usuário pede
+  // (`enabled: false` + refetch manual), não em toda visita à página.
+  const suggestionQuery = useQuery({
+    queryKey: ["tenant", "no-show-thresholds", "suggested"],
+    queryFn: () => apiClient.get<NoShowThresholdSuggestion>("/api/v1/tenant/no-show-thresholds/suggested"),
+    enabled: false,
+  });
+
+  function applySuggestion() {
+    const suggestion = suggestionQuery.data;
+    if (!suggestion || suggestion.low_threshold === null || suggestion.medium_threshold === null) return;
+    setLowInput((suggestion.low_threshold * 100).toFixed(1));
+    setMediumInput((suggestion.medium_threshold * 100).toFixed(1));
+  }
+
   const mutation = useMutation({
     mutationFn: (payload: { no_show_low_threshold: number; no_show_medium_threshold: number }) =>
       apiClient.patch<Tenant>("/api/v1/tenant", payload),
@@ -186,6 +202,46 @@ function NoShowThresholdsPanel({ tenant, isOwner }: { tenant: Tenant; isOwner: b
           />
         </div>
         <p className="mt-2 text-2xs text-ink-faint">Acima do limiar de risco médio, o paciente/agendamento vira risco alto.</p>
+
+        {isOwner && (
+          <div className="mt-3 rounded-md border border-border-hairline bg-canvas-raised/40 p-3">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-2xs text-ink-faint">
+                Calculado a partir do histórico real de falta dos pacientes desta clínica, não um valor genérico.
+              </p>
+              <Button
+                type="button"
+                variant="secondary"
+                size="xs"
+                className="flex shrink-0 items-center gap-1.5"
+                onClick={() => suggestionQuery.refetch()}
+                disabled={suggestionQuery.isFetching}
+              >
+                <Sparkles size={12} />
+                {suggestionQuery.isFetching ? "Calculando..." : "Sugerir com base no histórico"}
+              </Button>
+            </div>
+            {suggestionQuery.data && suggestionQuery.data.low_threshold === null && (
+              <p className="mt-2 text-2xs text-pending">
+                Ainda não há histórico suficiente ({suggestionQuery.data.sample_size} paciente(s) qualificado(s) — são
+                necessários pelo menos 10) para uma sugestão confiável.
+              </p>
+            )}
+            {suggestionQuery.data && suggestionQuery.data.low_threshold !== null && suggestionQuery.data.medium_threshold !== null && (
+              <div className="mt-2 flex items-center justify-between gap-3">
+                <p className="text-2xs text-ink-muted">
+                  Sugestão (baseada em {suggestionQuery.data.sample_size} pacientes): baixo até{" "}
+                  <span className="font-mono">{(suggestionQuery.data.low_threshold * 100).toFixed(1)}%</span>, médio até{" "}
+                  <span className="font-mono">{(suggestionQuery.data.medium_threshold * 100).toFixed(1)}%</span>.
+                </p>
+                <Button type="button" variant="ghost" size="xs" onClick={applySuggestion}>
+                  Preencher campos
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+
         {isOwner && (
           <div className="mt-3 flex justify-end">
             <Button type="submit" disabled={mutation.isPending || !lowInput || !mediumInput}>
