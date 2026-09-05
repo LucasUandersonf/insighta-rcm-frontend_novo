@@ -272,6 +272,18 @@ export interface WeeklyReportResponse {
   detail: string;
 }
 
+// POST /reports/risk-alert/send — irmão de WeeklyReportResponse, sem
+// period_start/period_end (o alerta é sempre "próximas 24h a partir de
+// agora", ver DECISÃO em app/worker/daily_alert_job.py no backend).
+export interface RiskAlertSendResponse {
+  sent_via_whatsapp: boolean;
+  recipients_checked: number;
+  high_risk_appointments: number;
+  sent: number;
+  failed: number;
+  detail: string;
+}
+
 // --- Central de Integrações & Webhooks (app/schemas/integration.py) ---
 export interface ApiKey {
   id: string;

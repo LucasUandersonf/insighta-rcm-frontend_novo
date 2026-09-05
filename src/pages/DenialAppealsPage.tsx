@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Paperclip, Plus, ShieldAlert } from "lucide-react";
+import { FileText, Paperclip, Plus, ShieldAlert } from "lucide-react";
 import { Panel, EmptyState, LoadingState, ErrorState } from "@/components/ui/Panel";
 import { Button } from "@/components/ui/Button";
 import { Badge, type BadgeTone } from "@/components/ui/Badge";
@@ -295,14 +295,43 @@ function AttachmentsModal({ appeal, onClose }: { appeal: DenialAppeal | null; on
 // Página
 // ---------------------------------------------------------------------
 
+/**
+ * Baixa e abre o RASCUNHO em PDF do recurso (GET /denial-appeals/{id}/document
+ * — ver DECISÃO completa em app/services/denial_appeal_pdf_builder.py no
+ * backend: dados factuais já preenchidos, justificativa fica um
+ * placeholder para o usuário completar). Abre em nova aba em vez de
+ * forçar download direto — o usuário normalmente quer LER/editar antes
+ * de protocolar, não só guardar o arquivo.
+ */
+async function downloadAppealDocument(appealId: string): Promise<void> {
+  const blob = await apiClient.getBlob(`/api/v1/denial-appeals/${appealId}/document`);
+  const url = URL.createObjectURL(blob);
+  window.open(url, "_blank", "noopener,noreferrer");
+  // Revoga depois de um tempo generoso para dar chance da aba nova
+  // carregar o PDF antes do objeto ser liberado.
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
 export function DenialAppealsPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [resolvingAppealId, setResolvingAppealId] = useState<string | null>(null);
   const [attachmentsAppealId, setAttachmentsAppealId] = useState<string | null>(null);
+  const [downloadingAppealId, setDownloadingAppealId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [appealsOffset, setAppealsOffset] = useState(0);
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
+
+  async function handleDownloadDocument(appealId: string) {
+    setDownloadingAppealId(appealId);
+    try {
+      await downloadAppealDocument(appealId);
+    } catch (err) {
+      showError(getApiErrorMessage(err));
+    } finally {
+      setDownloadingAppealId(null);
+    }
+  }
 
   const {
     data: appealsPage,
@@ -411,6 +440,16 @@ export function DenialAppealsPage() {
                     )}
                     <Button variant="ghost" size="xs" onClick={() => setAttachmentsAppealId(a.id)}>
                       Anexos ({a.attachments.length})
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="xs"
+                      className="flex items-center gap-1"
+                      onClick={() => handleDownloadDocument(a.id)}
+                      disabled={downloadingAppealId === a.id}
+                    >
+                      <FileText size={13} />
+                      {downloadingAppealId === a.id ? "Gerando..." : "Documento"}
                     </Button>
                   </td>
                 </tr>
