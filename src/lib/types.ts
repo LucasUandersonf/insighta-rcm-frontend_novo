@@ -94,6 +94,9 @@ export interface IngestionFileEntry {
   id: string;
   original_filename: string | null;
   file_format: IngestionFileFormat;
+  // Template de integração que o arquivo segue — "faturamento" ou
+  // "agenda" (ver app/sql/019_agenda_ingestion.sql).
+  data_type: string;
   status: IngestionFileStatus;
   row_count: number;
   error_row_count: number;
@@ -105,12 +108,44 @@ export interface IngestionFileEntry {
 export interface UploadIngestionFileResponse {
   id: string;
   file_format: IngestionFileFormat;
+  data_type: string;
   status: IngestionFileStatus;
   row_count: number;
   error_row_count: number;
   received_at: string;
   already_processed: boolean;
   message: string | null;
+}
+
+// --- Tela de Setup: linhas de importação rejeitadas (app/schemas/ingestion.py) ---
+// `reason` só tem um valor ACIONÁVEL hoje — "unknown_insurance_plan" (a
+// Etapa 2/normalização não reconheceu o texto do convênio) — resolvível
+// nesta tela via ResolveInsurancePlanRequest. Qualquer outro valor (hoje
+// só "validation_error", ver _to_response no backend) é falha
+// ESTRUTURAL da Etapa 1 (data/moeda/campo obrigatório malformado no
+// arquivo de origem) — não tem mapeamento possível, só corrigir o
+// arquivo e reenviar; `payload` vem vazio ({}) nesse caso porque a linha
+// nunca chegou a virar um RawBillingRow válido.
+export type RejectedRowReason = "unknown_insurance_plan" | "validation_error" | string;
+
+export interface RejectedRow {
+  id: number;
+  ingestion_file_id: string;
+  row_number: number;
+  payload: Record<string, unknown>;
+  reason: RejectedRowReason | null;
+  raw_value: string | null;
+  created_at: string;
+}
+
+export interface ResolveInsurancePlanRequest {
+  insurance_plan_id: string;
+}
+
+export interface ResolveInsurancePlanResponse {
+  row_id: number;
+  resolved: boolean;
+  additionally_resolved_count: number;
 }
 
 // --- Logs de Auditoria (app/schemas/audit_log.py) ---
@@ -177,12 +212,76 @@ export interface Tenant {
   // (nunca calculada automaticamente, ver DECISÃO no backend). Alimenta
   // o insight de desempenho anual da Sala de Comando.
   annual_revenue_goal: number | null;
+  // Limiares de risco de falta (frações 0-1, ex: 0.10 = 10%) — null usa
+  // o default do motor (10%/30%, ver no_show_risk_engine.py). Achado do
+  // usuário: cada especialidade tem um perfil de falta diferente, os
+  // cortes do MVP eram um chute de partida, não uma calibração validada.
+  no_show_low_threshold: number | null;
+  no_show_medium_threshold: number | null;
 }
 
 export interface TenantUpdateRequest {
   legal_name?: string;
   trade_name?: string;
   annual_revenue_goal?: number;
+  no_show_low_threshold?: number;
+  no_show_medium_threshold?: number;
+}
+
+// GET /tenant/no-show-thresholds/suggested — calculado a partir do
+// histórico REAL de faltas por paciente desta clínica (mediana/P85), não
+// um valor genérico. Campos null = ainda não há histórico suficiente
+// (menos de 10 pacientes qualificados) para uma sugestão confiável.
+export interface NoShowThresholdSuggestion {
+  low_threshold: number | null;
+  medium_threshold: number | null;
+  sample_size: number;
+}
+
+// --- Mapeador Automático de Coluna (app/schemas/ingestion.py) — escopo:
+// só CSV de Faturamento por ora (ver DECISÃO no backend). ---
+export interface ColumnMappingPreview {
+  raw_headers: string[];
+  suggested_mapping: Record<string, string>; // cabeçalho do arquivo -> campo canônico
+  unresolved_required_fields: string[];
+}
+
+export interface ColumnAlias {
+  id: string;
+  data_type: string;
+  source_header: string;
+  canonical_field: string;
+  created_at: string;
+}
+
+// --- Disparo sob demanda do relatório semanal (app/schemas/report.py) ---
+export interface WeeklyReportRequest {
+  period_start?: string;
+  period_end?: string;
+}
+
+export interface WeeklyReportResponse {
+  period_start: string;
+  period_end: string;
+  sent_via_whatsapp: boolean;
+  // Detalhamento por destinatário — core.report_recipients suporta N
+  // contatos por tenant (ver DECISÃO no backend, report_send_service.py).
+  recipients_checked: number;
+  sent: number;
+  failed: number;
+  detail: string;
+}
+
+// POST /reports/risk-alert/send — irmão de WeeklyReportResponse, sem
+// period_start/period_end (o alerta é sempre "próximas 24h a partir de
+// agora", ver DECISÃO em app/worker/daily_alert_job.py no backend).
+export interface RiskAlertSendResponse {
+  sent_via_whatsapp: boolean;
+  recipients_checked: number;
+  high_risk_appointments: number;
+  sent: number;
+  failed: number;
+  detail: string;
 }
 
 // --- Central de Integrações & Webhooks (app/schemas/integration.py) ---
@@ -257,6 +356,18 @@ export interface WeekdayBucket {
   appointment_count: number;
 }
 
+// Taxa de falta por dia da semana — diferente de WeekdayBucket (volume
+// bruto), responde diretamente "quinta tem taxa de falta X%". Só conta
+// atendimentos RESOLVIDOS (completed/no_show), nunca 'scheduled'.
+// no_show_rate é null quando total_appointments é 0 ("sem amostra",
+// nunca 0%) — ver AnalyticsRepository.weekday_no_show_rate_breakdown.
+export interface WeekdayNoShowRateBucket {
+  weekday: number;
+  no_show_count: number;
+  total_appointments: number;
+  no_show_rate: number | null;
+}
+
 // "Lista vermelha" — ranking de pacientes por taxa de falta no período
 // (ver AnalyticsRepository.top_no_show_patients no backend). Só entram
 // pacientes com amostra mínima e pelo menos 1 falta.
@@ -289,10 +400,24 @@ export interface AgendaMetrics {
   // dia da semana (ver SmartInsightsFeed) — evidência, não o elemento
   // principal da tela.
   weekday_histogram: WeekdayBucket[];
+  weekday_no_show_rates: WeekdayNoShowRateBucket[];
   no_show_risk_breakdown: NoShowRiskBucket[];
   estimated_revenue_at_risk: number;
   patient_no_show_ranking: PatientNoShowRankingItem[];
   upcoming_risk_appointments: UpcomingRiskAppointment[];
+  // Minutos disponíveis (grade semanal) menos minutos agendados, somado
+  // entre profissionais com grade cadastrada, e a tradução em R$ dessa
+  // ociosidade — o "outro lado" do problema de agenda em relação ao
+  // no-show (ver DECISÃO em capacity_service.estimate_idle_capacity_revenue_lost
+  // no backend). Mesma natureza de estimativa que estimated_revenue_at_risk.
+  total_idle_minutes: number;
+  estimated_revenue_lost_to_idle_capacity: number;
+  // Quantos profissionais ATIVOS ainda não têm grade semanal cadastrada
+  // — todo profissional auto-criado por upload de arquivo (Faturamento
+  // OU Agenda) nasce sem grade, o que deixa total_idle_minutes/
+  // estimated_revenue_lost_to_idle_capacity incompletos para eles (ver
+  // DECISÃO no backend, AgendaMetricsResponse).
+  professionals_without_availability_count: number;
 }
 
 // Ranking de perda financeira por convênio (GET /analytics/plan-loss-ranking)
@@ -429,6 +554,17 @@ export interface ProfessionalCreateRequest {
   availability: AvailabilityBlock[];
 }
 
+// PATCH /professionals/{id} — todo campo é opcional (payload parcial).
+// availability, quando enviado, SUBSTITUI a grade inteira (omitir o
+// campo mantém a grade atual intacta).
+export interface ProfessionalUpdateRequest {
+  full_name?: string;
+  professional_registry?: string | null;
+  specialty?: string | null;
+  is_active?: boolean;
+  availability?: AvailabilityBlock[];
+}
+
 // --- Consultas (app/schemas/appointment.py) ---
 export type NoShowRiskLevel = "indeterminado" | "baixo" | "medio" | "alto";
 
@@ -466,6 +602,11 @@ export interface InsuranceCompany {
   // contrato (ver app/sql/008_denial_appeals.sql). NULL usa o fallback
   // genérico do backend.
   default_appeal_deadline_days: number | null;
+  // Desativação, não exclusão — Contract/Appointment/Billing referenciam
+  // planos desta operadora, apagar de verdade quebraria essas FKs (ver
+  // DECISÃO em app/sql/014_insurance_is_active.sql, backend). Mesmo
+  // padrão de Professional.is_active/User.is_active.
+  is_active: boolean;
   created_at: string;
 }
 
@@ -477,6 +618,7 @@ export interface InsuranceCompanyCreateRequest {
 
 export interface InsuranceCompanyUpdateRequest {
   default_appeal_deadline_days?: number | null;
+  is_active?: boolean;
 }
 
 // --- Planos (app/schemas/insurance_plan.py) ---
@@ -486,6 +628,10 @@ export interface InsurancePlan {
   display_name: string;
   normalized_key: string;
   ans_registry: string | null;
+  // Ver DECISÃO em InsuranceCompany.is_active acima — mesmo princípio,
+  // por plano. Desativar NÃO afeta a resolução automática de convênio
+  // durante a ingestão de arquivo (ver backend InsurancePlanRepository.resolve).
+  is_active: boolean;
   created_at: string;
 }
 
@@ -493,6 +639,10 @@ export interface InsurancePlanCreateRequest {
   insurance_company_id: string;
   display_name: string;
   ans_registry?: string | null;
+}
+
+export interface InsurancePlanUpdateRequest {
+  is_active?: boolean;
 }
 
 // --- Contratos & Itens (app/schemas/contract.py) ---

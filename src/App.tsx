@@ -13,7 +13,9 @@ import { ExecutiveOverviewPage } from "@/pages/ExecutiveOverviewPage";
 import { ContractsPage } from "@/pages/ContractsPage";
 import { DenialAppealsPage } from "@/pages/DenialAppealsPage";
 import { AppointmentsPage } from "@/pages/AppointmentsPage";
+import { ProfessionalsPage } from "@/pages/ProfessionalsPage";
 import { UploadCenterPage } from "@/pages/UploadCenterPage";
+import { SetupPage } from "@/pages/SetupPage";
 import { UsersPage } from "@/pages/admin/UsersPage";
 import { IntegrationsPage } from "@/pages/admin/IntegrationsPage";
 import { TenantPage } from "@/pages/admin/TenantPage";
@@ -65,11 +67,22 @@ export default function App() {
               <Route element={<AppShell />}>
                 <Route path="/" element={<DashboardPage />} />
                 <Route path="/appointments" element={<AppointmentsPage />} />
-                {/* Módulos operacionais de Profissionais/Pacientes foram removidos por
-                    decisão de produto — o SaaS opera exclusivamente sobre dados
-                    consolidados do ERP externo (ver auditoria Go-Live). O catch-all
-                    "*" abaixo já cobre qualquer link antigo para /patients ou
-                    /professionals, então não é necessária uma rota dedicada aqui. */}
+                {/* O CRUD operacional de Pacientes foi removido por decisão de produto
+                    — o SaaS opera exclusivamente sobre dados consolidados do ERP
+                    externo (ver auditoria Go-Live). /professionals é diferente:
+                    voltou (achado F-02) porque o profissional já entra sozinho pela
+                    própria ingestão de faturamento, mas SEMPRE sem grade semanal — um
+                    CSV não carrega horário de atendimento. Sem esta tela, Agenda &
+                    Capacidade fica estruturalmente inviável para quem opera só via
+                    ingestão. Não é reintrodução do CRUD antigo, é configuração de um
+                    parâmetro de cálculo que não tem outra fonte de dado possível (ver
+                    ProfessionalsPage.tsx). O catch-all "*" abaixo cobre qualquer link
+                    antigo para /patients.
+                    RBAC: mesmo critério de escrita restrita de /upload e /contracts —
+                    editar grade é ação administrativa, fora do alcance de atendimento. */}
+                <Route element={<RoleProtectedRoute allowedRoles={["owner", "admin"]} />}>
+                  <Route path="/professionals" element={<ProfessionalsPage />} />
+                </Route>
                 <Route element={<RoleProtectedRoute allowedRoles={["owner", "admin", "financeiro", "auditor"]} />}>
                   <Route path="/decisao" element={<ExecutiveOverviewPage />} />
                   <Route path="/contracts" element={<ContractsPage />} />
@@ -80,6 +93,10 @@ export default function App() {
                     (owner/admin/financeiro); sem auditor, que é só leitura. */}
                 <Route element={<RoleProtectedRoute allowedRoles={["owner", "admin", "financeiro"]} />}>
                   <Route path="/upload" element={<UploadCenterPage />} />
+                  {/* Destino que o próprio toast de sucesso da Central de Upload já
+                      promete ("veja a tela de Setup") — mesmo RBAC de /upload
+                      (ingestion.py/_CAN_MANAGE: owner/admin/financeiro). */}
+                  <Route path="/setup" element={<SetupPage />} />
                 </Route>
                 <Route element={<RoleProtectedRoute allowedRoles={["owner", "admin"]} />}>
                   <Route path="/admin/users" element={<UsersPage />} />

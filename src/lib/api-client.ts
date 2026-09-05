@@ -122,6 +122,47 @@ export const apiClient = {
   patch: <T>(path: string, body?: unknown) => request<T>(path, { method: "PATCH", body }),
   delete: <T>(path: string) => request<T>(path, { method: "DELETE" }),
   /**
+   * GET que devolve um arquivo binário (hoje só o PDF do recurso de
+   * glosa, GET /denial-appeals/{id}/document) em vez de JSON — fora de
+   * `request()` de propósito: `response.json()` quebraria num corpo que
+   * não é JSON. Devolve o Blob pronto para `URL.createObjectURL`.
+   */
+  async getBlob(path: string): Promise<Blob> {
+    if (!API_BASE_URL) {
+      throw new ApiError(0, {
+        error_code: "configuracao_ausente",
+        message: "VITE_API_BASE_URL não configurada neste ambiente.",
+        request_id: "-",
+      });
+    }
+    const headers: Record<string, string> = {};
+    const token = getStoredToken();
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+
+    const response = await fetch(`${API_BASE_URL}${path}`, { method: "GET", headers });
+
+    if (!response.ok) {
+      let errorBody: ApiErrorBody;
+      try {
+        errorBody = await response.json();
+      } catch {
+        errorBody = {
+          error_code: "erro_desconhecido",
+          message: "Não foi possível se conectar ao servidor. Tente novamente em instantes.",
+          request_id: "-",
+        };
+      }
+      if (response.status === 401) {
+        window.dispatchEvent(new CustomEvent("auth:unauthorized"));
+      }
+      if (response.status >= 500) {
+        reportError(new ApiError(response.status, errorBody), { path, method: "GET (blob)" });
+      }
+      throw new ApiError(response.status, errorBody);
+    }
+    return response.blob();
+  },
+  /**
    * multipart/form-data — usado só pelo upload de PDF de contrato
    * (POST /contracts/upload). Fora de `request()` de propósito: FormData
    * NUNCA pode levar `Content-Type: application/json` (o fetch monta o

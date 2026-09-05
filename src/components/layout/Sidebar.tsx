@@ -3,9 +3,11 @@ import { motion } from "framer-motion";
 import {
   Building2,
   CalendarCheck,
+  CalendarClock,
   FileText,
   Gauge,
   LayoutDashboard,
+  ListChecks,
   Plug,
   ScrollText,
   Send,
@@ -37,9 +39,17 @@ const NAV_ITEMS: NavItem[] = [
   { to: "/decisao", label: "Sala de Comando", icon: Gauge, roles: ["owner", "admin", "financeiro", "auditor"] },
   { to: "/", label: "Painel", icon: LayoutDashboard },
   { to: "/appointments", label: "Consultas", icon: CalendarCheck },
+  // Configuração da grade semanal que alimenta Agenda & Capacidade — não
+  // é o CRUD operacional de Profissionais removido no reposicionamento
+  // de produto (ver App.tsx); mesmo RBAC de ação administrativa restrita
+  // usado em /upload e /contracts.
+  { to: "/professionals", label: "Profissionais & Agenda", icon: CalendarClock, roles: ["owner", "admin"] },
   // Ação de escrita — mesmo RBAC do backend em ingestion.py/_CAN_MANAGE
   // e contracts.py/_CAN_WRITE (owner/admin/financeiro); sem auditor.
   { to: "/upload", label: "Central de upload", icon: UploadCloud, roles: ["owner", "admin", "financeiro"] },
+  // Destino do próprio toast de sucesso da Central de Upload quando um
+  // arquivo tem linha rejeitada — mesmo RBAC de /upload.
+  { to: "/setup", label: "Setup de importação", icon: ListChecks, roles: ["owner", "admin", "financeiro"] },
   // Convênios/Contratos: dado financeiro sensível (tabela de repasse) —
   // mesmo RBAC do backend em contracts.py, fora do alcance de "atendimento".
   { to: "/contracts", label: "Convênios e contratos", icon: FileText, roles: ["owner", "admin", "financeiro", "auditor"] },
