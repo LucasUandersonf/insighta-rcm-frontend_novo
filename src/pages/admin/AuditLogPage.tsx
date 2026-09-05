@@ -13,27 +13,37 @@ import type { AuditLogEntry, PaginatedResponse } from "@/lib/types";
 
 const PAGE_SIZE = 30;
 
+// Espelha as ações que AuditLogRepository.record() de fato grava hoje
+// (ver DECISÃO em app/repositories/audit_log_repository.py e em cada
+// service — patient_service.py, billing_service.py, user_service.py,
+// denial_appeal_service.py) — não um chute: até a rodada de auditoria de
+// acesso/LGPD, `core.audit_log` nunca era escrita por nenhum fluxo, e
+// este mapa listava valores genéricos ("create"/"update"/"delete") que
+// não batiam com nada de real.
 const ACTION_LABELS: Record<string, string> = {
-  create: "Criação",
-  update: "Atualização",
-  delete: "Remoção",
+  created: "Criação",
+  updated: "Atualização",
+  settled: "Liquidação",
+  filed: "Protocolado",
+  resolved: "Resolvido",
+  password_reset: "Reset de senha",
 };
 
 const ACTION_TONE: Record<string, BadgeTone> = {
-  create: "revenue",
-  update: "pending",
-  delete: "denied",
+  created: "revenue",
+  updated: "pending",
+  settled: "revenue",
+  filed: "pending",
+  resolved: "revenue",
+  password_reset: "neutral",
 };
 
-// Valores espelham os nomes de entidade usados no restante do produto
-// (billing/contract/user) — ver DECISÃO em
-// app/api/v1/endpoints/audit_log.py no backend: `core.audit_log` ainda
-// não é gravado por nenhum fluxo hoje, então esta lista é a melhor
-// aproximação disponível até existir instrumentação real.
+// Mesma correção: lista os tipos de entidade REALMENTE auditados hoje.
 const ENTITY_TYPE_OPTIONS: { value: string; label: string }[] = [
+  { value: "patient", label: "Paciente" },
   { value: "billing", label: "Faturamento" },
-  { value: "contract", label: "Contrato" },
   { value: "user", label: "Usuário" },
+  { value: "denial_appeal", label: "Recurso de Glosa" },
 ];
 
 function formatDateTime(iso: string): string {
