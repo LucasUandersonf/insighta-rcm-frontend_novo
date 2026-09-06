@@ -298,6 +298,33 @@ export interface ApiKeyCreated extends ApiKey {
   api_key: string;
 }
 
+// --- Webhooks OUTBOUND (sentido inverso da chave de API acima: a
+// plataforma AVISA o Slack/CRM/planilha do cliente — ver
+// app/services/webhook_dispatch_service.py) ---
+export interface WebhookSubscription {
+  id: string;
+  name: string;
+  url: string;
+  event_types: string[];
+  active: boolean;
+  created_at: string;
+}
+
+export interface WebhookSubscriptionCreated extends WebhookSubscription {
+  secret: string;
+}
+
+export interface WebhookSubscriptionCreateRequest {
+  name: string;
+  url: string;
+  event_types: string[];
+  active: boolean;
+}
+
+export interface WebhookSubscriptionUpdateRequest {
+  active?: boolean;
+}
+
 // --- Dashboards de Decisão (app/schemas/analytics.py) ---
 export interface PeriodKpi {
   value: number;
