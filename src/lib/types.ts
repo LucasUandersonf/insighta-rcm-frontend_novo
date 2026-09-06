@@ -325,6 +325,22 @@ export interface WebhookSubscriptionUpdateRequest {
   active?: boolean;
 }
 
+// Visibilidade da fila de retentativa — GET /integrations/webhooks/deliveries
+// (ver app/sql/028_webhook_delivery_queue.sql no backend).
+export type WebhookDeliveryStatus = "pending" | "delivered" | "failed";
+
+export interface WebhookDeliveryEntry {
+  id: string;
+  subscription_id: string;
+  event_type: string;
+  status: WebhookDeliveryStatus;
+  attempt_count: number;
+  next_attempt_at: string;
+  last_error: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 // --- Dashboards de Decisão (app/schemas/analytics.py) ---
 export interface PeriodKpi {
   value: number;
