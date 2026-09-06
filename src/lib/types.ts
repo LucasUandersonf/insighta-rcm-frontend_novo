@@ -740,3 +740,34 @@ export interface DenialAppealResolveRequest {
   status: "deferido" | "indeferido" | "nip_aberta";
   resolution_notes?: string | null;
 }
+
+// Central de Notificações (sino) — GET /announcements. Sem endpoint de
+// criação: quem publica é a equipe da plataforma, via
+// app/scripts/publish_announcement.py no backend (ver DECISÃO em
+// app/sql/023_announcements_and_support.sql).
+export interface Announcement {
+  id: string;
+  title: string;
+  body: string;
+  published_at: string;
+  is_read: boolean;
+}
+
+export interface AnnouncementListResponse {
+  items: Announcement[];
+  unread_count: number;
+}
+
+// Central de Ajuda — POST/GET /support-requests.
+export interface SupportRequestCreateRequest {
+  subject: string;
+  message: string;
+}
+
+export interface SupportRequest {
+  id: string;
+  subject: string;
+  message: string;
+  status: "aberto" | "respondido";
+  created_at: string;
+}
