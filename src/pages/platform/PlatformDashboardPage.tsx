@@ -9,7 +9,16 @@ import { ApiError } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { clearStoredPlatformToken, platformApiClient } from "@/lib/platform-api-client";
 import { useToast } from "@/context/ToastContext";
-import type { PlatformAlertRunResult, TenantEngagementStatus, TenantUsageSummary } from "@/lib/types";
+import type { PlatformAlertRunResult, PlatformAuditLogEntry, TenantEngagementStatus, TenantUsageSummary } from "@/lib/types";
+
+const ACTION_LABEL: Record<string, string> = {
+  login: "Entrou no painel",
+  alerts_run: "Verificou alertas manualmente",
+};
+
+function formatDateTime(iso: string): string {
+  return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(iso));
+}
 
 function describeAlertRun(result: PlatformAlertRunResult): string {
   if (result.new_alerts.length === 0 && result.reminders_sent.length === 0 && result.recovered.length === 0) {
@@ -60,6 +69,13 @@ export function PlatformDashboardPage() {
     retry: false,
   });
 
+  const { data: auditLog, refetch: refetchAuditLog } = useQuery({
+    queryKey: ["platform", "audit-log"],
+    queryFn: () => platformApiClient.getAuditLog(),
+    retry: false,
+    enabled: !(error instanceof ApiError && error.status === 401),
+  });
+
   // Disparo manual (ver POST /platform/alerts/run) — em produção isto
   // roda sozinho via app/worker/platform_risk_alert_job.py agendado
   // externamente; este botão é só para checar agora, sem esperar o
@@ -69,6 +85,7 @@ export function PlatformDashboardPage() {
     onSuccess: (result) => {
       showSuccess(describeAlertRun(result));
       refetch();
+      refetchAuditLog();
     },
     onError: (err) => showError(getApiErrorMessage(err)),
   });
@@ -90,6 +107,7 @@ export function PlatformDashboardPage() {
 
   const rows: TenantUsageSummary[] = data ?? [];
   const atRiskCount = rows.filter((r) => r.engagement_status === "risco").length;
+  const auditRows: PlatformAuditLogEntry[] = auditLog ?? [];
 
   return (
     <div className="min-h-screen bg-canvas px-6 py-8">
@@ -165,6 +183,31 @@ export function PlatformDashboardPage() {
             </div>
           )}
         </Panel>
+
+        {auditRows.length > 0 && (
+          <Panel title="Histórico" subtitle="Quem fez o quê neste painel — login individual, ver core.platform_audit_log.">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-border-hairline text-2xs uppercase tracking-wide text-ink-faint">
+                    <th className="px-4 py-2.5 font-medium">Quem</th>
+                    <th className="px-4 py-2.5 font-medium">Ação</th>
+                    <th className="px-4 py-2.5 font-medium">Quando</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {auditRows.map((entry) => (
+                    <tr key={entry.id} className="border-b border-border-hairline last:border-0">
+                      <td className="px-4 py-2.5 text-ink">{entry.actor_email}</td>
+                      <td className="px-4 py-2.5 text-ink-muted">{ACTION_LABEL[entry.action] ?? entry.action}</td>
+                      <td className="tabular px-4 py-2.5 font-mono text-ink-muted">{formatDateTime(entry.created_at)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Panel>
+        )}
       </div>
     </div>
   );

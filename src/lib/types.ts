@@ -843,3 +843,12 @@ export interface PlatformAlertRunResult {
   reminders_sent: string[];
   recovered: string[];
 }
+
+// "Histórico de quem fez o quê" — GET /platform/audit-log (ver DECISÃO
+// em app/sql/029_platform_users.sql no backend).
+export interface PlatformAuditLogEntry {
+  id: number;
+  actor_email: string;
+  action: string;
+  created_at: string;
+}

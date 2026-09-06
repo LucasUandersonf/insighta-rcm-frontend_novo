@@ -9,12 +9,15 @@ import { platformApiClient, storePlatformToken } from "@/lib/platform-api-client
 /**
  * Deliberadamente SEM a identidade visual de marketing do LoginPage.tsx
  * (marca, ilustrações, "esqueci minha senha") — esta tela não é para
- * cliente nenhum ver. Uma única senha compartilhada da equipe Insighta
- * (ver DECISÃO em app/api/platform_admin_auth.py no backend), nunca
- * linkada de nenhum lugar dentro do produto.
+ * cliente nenhum ver. Login individual da equipe Insighta
+ * (core.platform_users — ver DECISÃO em app/sql/029_platform_users.sql
+ * no backend), nunca linkada de nenhum lugar dentro do produto. Contas
+ * são criadas/resetadas via `python -m app.scripts.create_platform_user`
+ * — não existe self-signup nem "esqueci minha senha" aqui.
  */
 export function PlatformLoginPage() {
   const navigate = useNavigate();
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -24,7 +27,7 @@ export function PlatformLoginPage() {
     setError(null);
     setIsSubmitting(true);
     try {
-      const { access_token } = await platformApiClient.login(password);
+      const { access_token } = await platformApiClient.login(email, password);
       storePlatformToken(access_token);
       navigate("/plataforma", { replace: true });
     } catch (err) {
@@ -43,10 +46,17 @@ export function PlatformLoginPage() {
         </div>
         <form onSubmit={handleSubmit}>
           <TextField
-            label="Senha da equipe"
-            type="password"
+            label="E-mail"
+            type="email"
             required
             autoFocus
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+          <TextField
+            label="Senha"
+            type="password"
+            required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
