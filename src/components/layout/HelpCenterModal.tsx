@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ChevronDown, LifeBuoy } from "lucide-react";
+import { ChevronDown, Compass, LifeBuoy } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -173,11 +173,33 @@ function AskQuestionPanel() {
  * cheia (diferente do sino, que é um dropdown leve) porque aqui tem
  * conteúdo de verdade para ler — FAQ + formulário + histórico.
  */
-export function HelpCenterModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+export function HelpCenterModal({
+  isOpen,
+  onClose,
+  onStartTour,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  /** Reabre o tour de boas-vindas guiado (ver OnboardingTour.tsx) — quem
+   * já concluiu o tour uma vez também pode revisitá-lo por aqui, não só
+   * na primeira sessão. */
+  onStartTour: () => void;
+}) {
   const [tab, setTab] = useState<"faq" | "ask">("faq");
 
   return (
     <Modal title="Central de Ajuda" isOpen={isOpen} onClose={onClose} size="2xl">
+      <button
+        type="button"
+        onClick={onStartTour}
+        className="mb-4 flex w-full items-center gap-2.5 rounded-md border border-border-subtle bg-canvas-raised/60 px-3.5 py-2.5 text-left text-xs text-ink transition-colors hover:border-accent/40"
+      >
+        <Compass aria-hidden size={15} className="shrink-0 text-accent" />
+        <span className="flex-1">
+          <span className="font-medium">Rever tour de boas-vindas</span>
+          <span className="block text-2xs text-ink-faint">Um passeio guiado pelos módulos principais do sistema.</span>
+        </span>
+      </button>
       <Tabs
         groupId="help-center"
         active={tab}
