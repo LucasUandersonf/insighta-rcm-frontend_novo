@@ -1,14 +1,26 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { ShieldCheck, LogOut } from "lucide-react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { ShieldCheck, LogOut, BellRing } from "lucide-react";
 import { Panel, EmptyState, LoadingState, ErrorState } from "@/components/ui/Panel";
 import { Button } from "@/components/ui/Button";
 import { Badge, type BadgeTone } from "@/components/ui/Badge";
 import { ApiError } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { clearStoredPlatformToken, platformApiClient } from "@/lib/platform-api-client";
-import type { TenantEngagementStatus, TenantUsageSummary } from "@/lib/types";
+import { useToast } from "@/context/ToastContext";
+import type { PlatformAlertRunResult, TenantEngagementStatus, TenantUsageSummary } from "@/lib/types";
+
+function describeAlertRun(result: PlatformAlertRunResult): string {
+  if (result.new_alerts.length === 0 && result.reminders_sent.length === 0 && result.recovered.length === 0) {
+    return "Nenhuma mudança de status desde a última checagem.";
+  }
+  const parts: string[] = [];
+  if (result.new_alerts.length > 0) parts.push(`${result.new_alerts.length} nova(s) em risco: ${result.new_alerts.join(", ")}`);
+  if (result.reminders_sent.length > 0) parts.push(`${result.reminders_sent.length} lembrete(s) reenviado(s): ${result.reminders_sent.join(", ")}`);
+  if (result.recovered.length > 0) parts.push(`${result.recovered.length} recuperada(s): ${result.recovered.join(", ")}`);
+  return parts.join(" · ");
+}
 
 const STATUS_LABEL: Record<TenantEngagementStatus, string> = {
   engajado: "Engajado",
@@ -40,11 +52,25 @@ function formatDaysAgo(days: number | null): string {
 
 export function PlatformDashboardPage() {
   const navigate = useNavigate();
+  const { showSuccess, showError } = useToast();
 
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["platform", "tenants-usage"],
     queryFn: () => platformApiClient.getTenantsUsage(),
     retry: false,
+  });
+
+  // Disparo manual (ver POST /platform/alerts/run) — em produção isto
+  // roda sozinho via app/worker/platform_risk_alert_job.py agendado
+  // externamente; este botão é só para checar agora, sem esperar o
+  // agendador (mesmo espírito do "Enviar agora" do relatório semanal).
+  const runAlertsMutation = useMutation({
+    mutationFn: () => platformApiClient.runAlerts(),
+    onSuccess: (result) => {
+      showSuccess(describeAlertRun(result));
+      refetch();
+    },
+    onError: (err) => showError(getApiErrorMessage(err)),
   });
 
   // Sessão inválida/expirada (401) — mesma lógica de app/api/deps.py: o
@@ -85,7 +111,22 @@ export function PlatformDashboardPage() {
           </div>
         )}
 
-        <Panel title="Clínicas" subtitle="Mais em risco primeiro — ver PlatformReportingService para a régua de classificação.">
+        <Panel
+          title="Clínicas"
+          subtitle="Mais em risco primeiro — ver PlatformReportingService para a régua de classificação."
+          action={
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={runAlertsMutation.isPending}
+              onClick={() => runAlertsMutation.mutate()}
+              className="flex items-center gap-1.5"
+            >
+              <BellRing size={13} />
+              {runAlertsMutation.isPending ? "Verificando..." : "Verificar alertas agora"}
+            </Button>
+          }
+        >
           {isLoading && <LoadingState />}
           {error && !(error instanceof ApiError && error.status === 401) && <ErrorState message={getApiErrorMessage(error)} />}
           {!isLoading && !error && rows.length === 0 && <EmptyState message="Nenhuma clínica cadastrada ainda." />}

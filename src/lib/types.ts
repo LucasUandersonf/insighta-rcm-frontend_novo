@@ -819,3 +819,11 @@ export interface TenantUsageSummary {
   days_since_last_activity: number | null;
   engagement_status: TenantEngagementStatus;
 }
+
+// Resultado de POST /platform/alerts/run — nomes de clínica (não ids),
+// já que quem lê isto é sempre um humano da equipe.
+export interface PlatformAlertRunResult {
+  new_alerts: string[];
+  reminders_sent: string[];
+  recovered: string[];
+}

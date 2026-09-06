@@ -56,4 +56,9 @@ async function platformRequest<T>(path: string, options: { method?: "GET" | "POS
 export const platformApiClient = {
   login: (password: string) => platformRequest<{ access_token: string; token_type: string }>("/api/v1/platform/login", { method: "POST", body: { password } }),
   getTenantsUsage: () => platformRequest<import("./types").TenantUsageSummary[]>("/api/v1/platform/tenants-usage", { auth: true }),
+  // Disparo manual dos alertas proativos (ver POST /platform/alerts/run
+  // no backend) — útil para checar agora em vez de esperar o agendador
+  // externo (mesmo espírito do botão "Enviar agora" do relatório
+  // semanal em ReportRecipientsPage.tsx).
+  runAlerts: () => platformRequest<import("./types").PlatformAlertRunResult>("/api/v1/platform/alerts/run", { method: "POST", auth: true }),
 };
