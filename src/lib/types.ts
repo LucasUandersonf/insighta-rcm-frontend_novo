@@ -298,6 +298,33 @@ export interface ApiKeyCreated extends ApiKey {
   api_key: string;
 }
 
+// --- Webhooks OUTBOUND (sentido inverso da chave de API acima: a
+// plataforma AVISA o Slack/CRM/planilha do cliente — ver
+// app/services/webhook_dispatch_service.py) ---
+export interface WebhookSubscription {
+  id: string;
+  name: string;
+  url: string;
+  event_types: string[];
+  active: boolean;
+  created_at: string;
+}
+
+export interface WebhookSubscriptionCreated extends WebhookSubscription {
+  secret: string;
+}
+
+export interface WebhookSubscriptionCreateRequest {
+  name: string;
+  url: string;
+  event_types: string[];
+  active: boolean;
+}
+
+export interface WebhookSubscriptionUpdateRequest {
+  active?: boolean;
+}
+
 // --- Dashboards de Decisão (app/schemas/analytics.py) ---
 export interface PeriodKpi {
   value: number;
@@ -739,4 +766,56 @@ export interface DenialAppealFileRequest {
 export interface DenialAppealResolveRequest {
   status: "deferido" | "indeferido" | "nip_aberta";
   resolution_notes?: string | null;
+}
+
+// Central de Notificações (sino) — GET /announcements. Sem endpoint de
+// criação: quem publica é a equipe da plataforma, via
+// app/scripts/publish_announcement.py no backend (ver DECISÃO em
+// app/sql/023_announcements_and_support.sql).
+export interface Announcement {
+  id: string;
+  title: string;
+  body: string;
+  published_at: string;
+  is_read: boolean;
+}
+
+export interface AnnouncementListResponse {
+  items: Announcement[];
+  unread_count: number;
+}
+
+// Central de Ajuda — POST/GET /support-requests.
+export interface SupportRequestCreateRequest {
+  subject: string;
+  message: string;
+}
+
+export interface SupportRequest {
+  id: string;
+  subject: string;
+  message: string;
+  status: "aberto" | "respondido";
+  created_at: string;
+}
+
+// --- Painel interno de Customer Success (/plataforma) — nunca acessível
+// por um usuário de clínica, só pela equipe que opera a Insighta (ver
+// DECISÃO em app/sql/026_platform_customer_success.sql no backend). ---
+export type TenantEngagementStatus = "engajado" | "atencao" | "risco" | "novo" | "inativo";
+
+export interface TenantUsageSummary {
+  tenant_id: string;
+  trade_name: string;
+  plan_tier: string;
+  tenant_is_active: boolean;
+  tenant_created_at: string;
+  active_users: number;
+  last_activity_at: string | null;
+  events_last_30d: number;
+  patients_total: number;
+  appointments_last_30d: number;
+  billings_last_30d: number;
+  days_since_last_activity: number | null;
+  engagement_status: TenantEngagementStatus;
 }

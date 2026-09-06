@@ -1,4 +1,4 @@
-import type { InputHTMLAttributes, SelectHTMLAttributes, ReactNode } from "react";
+import type { InputHTMLAttributes, SelectHTMLAttributes, TextareaHTMLAttributes, ReactNode } from "react";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -39,6 +39,28 @@ export function TextField({ label, error, id, className, ...props }: TextFieldPr
         id={fieldId}
         className={cn(
           "w-full rounded-md border bg-canvas-raised px-3 py-2 text-sm text-ink placeholder:text-ink-faint transition-colors focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/15",
+          error ? "border-denied/50" : "border-border-default",
+          className
+        )}
+        {...props}
+      />
+    </FieldWrapper>
+  );
+}
+
+interface TextareaFieldProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
+  label: string;
+  error?: string;
+}
+
+export function TextareaField({ label, error, id, className, ...props }: TextareaFieldProps) {
+  const fieldId = id ?? `field-${label}`;
+  return (
+    <FieldWrapper label={label} htmlFor={fieldId} error={error} required={props.required}>
+      <textarea
+        id={fieldId}
+        className={cn(
+          "w-full resize-none rounded-md border bg-canvas-raised px-3 py-2 text-sm text-ink placeholder:text-ink-faint transition-colors focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/15",
           error ? "border-denied/50" : "border-border-default",
           className
         )}

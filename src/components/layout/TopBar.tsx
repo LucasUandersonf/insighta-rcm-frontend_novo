@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { LogOut } from "lucide-react";
+import { LifeBuoy, LogOut } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { UserAvatar } from "@/components/ui/UserAvatar";
@@ -8,6 +8,8 @@ import { useCurrentUserProfile } from "@/lib/useCurrentUserProfile";
 import { apiClient } from "@/lib/api-client";
 import { cn } from "@/lib/cn";
 import type { Tenant } from "@/lib/types";
+import { NotificationBell } from "./NotificationBell";
+import { HelpCenterModal } from "./HelpCenterModal";
 
 type SystemStatus = "checking" | "operational" | "degraded";
 
@@ -22,6 +24,7 @@ const ROLE_LABELS: Record<string, string> = {
 export function TopBar() {
   const { user, logout } = useAuth();
   const [status, setStatus] = useState<SystemStatus>("checking");
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
 
   // Identificação do usuário (avatar + nome + clínica) — mesma queryKey
   // ["tenant"] já usada por TenantPage.tsx, então navegar até "Minha
@@ -61,6 +64,18 @@ export function TopBar() {
 
         <div className="h-4 w-px bg-border-subtle" aria-hidden />
 
+        <button
+          type="button"
+          onClick={() => setIsHelpOpen(true)}
+          aria-label="Central de Ajuda"
+          title="Central de Ajuda"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border-subtle bg-canvas-raised/60 text-ink-muted transition-colors hover:border-accent/40 hover:text-ink"
+        >
+          <LifeBuoy aria-hidden size={15} strokeWidth={2} />
+        </button>
+
+        <NotificationBell />
+
         <ThemeToggle />
 
         <div className="h-4 w-px bg-border-subtle" aria-hidden />
@@ -86,6 +101,8 @@ export function TopBar() {
           </button>
         </div>
       </div>
+
+      <HelpCenterModal isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
     </header>
   );
 }
