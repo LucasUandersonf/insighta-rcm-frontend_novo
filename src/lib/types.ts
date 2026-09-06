@@ -798,3 +798,24 @@ export interface SupportRequest {
   status: "aberto" | "respondido";
   created_at: string;
 }
+
+// --- Painel interno de Customer Success (/plataforma) — nunca acessível
+// por um usuário de clínica, só pela equipe que opera a Insighta (ver
+// DECISÃO em app/sql/026_platform_customer_success.sql no backend). ---
+export type TenantEngagementStatus = "engajado" | "atencao" | "risco" | "novo" | "inativo";
+
+export interface TenantUsageSummary {
+  tenant_id: string;
+  trade_name: string;
+  plan_tier: string;
+  tenant_is_active: boolean;
+  tenant_created_at: string;
+  active_users: number;
+  last_activity_at: string | null;
+  events_last_30d: number;
+  patients_total: number;
+  appointments_last_30d: number;
+  billings_last_30d: number;
+  days_since_last_activity: number | null;
+  engagement_status: TenantEngagementStatus;
+}

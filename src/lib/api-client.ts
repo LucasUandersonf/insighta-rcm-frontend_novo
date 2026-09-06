@@ -1,7 +1,9 @@
 import type { ApiErrorBody, GoogleAuthResponse, RegisterRequest, RegisterResponse, TokenResponse } from "./types";
 import { reportError } from "./monitoring";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL as string | undefined;
+// Exportado para src/lib/platform-api-client.ts reaproveitar a mesma
+// URL base sem duplicar a leitura de import.meta.env.
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL as string | undefined;
 const TOKEN_STORAGE_KEY = "insighta_access_token";
 
 // DECISÃO — nunca "throw" na carga do módulo por configuração ausente

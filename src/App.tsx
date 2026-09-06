@@ -22,6 +22,9 @@ import { TenantPage } from "@/pages/admin/TenantPage";
 import { ReportRecipientsPage } from "@/pages/admin/ReportRecipientsPage";
 import { AuditLogPage } from "@/pages/admin/AuditLogPage";
 import { RoleProtectedRoute } from "@/routes/ProtectedRoute";
+import { PlatformProtectedRoute } from "@/routes/PlatformProtectedRoute";
+import { PlatformLoginPage } from "@/pages/platform/PlatformLoginPage";
+import { PlatformDashboardPage } from "@/pages/platform/PlatformDashboardPage";
 import { isApiConfigured } from "@/lib/api-client";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
@@ -63,6 +66,14 @@ export default function App() {
               <Route path="/signup" element={<SignUpPage />} />
               <Route path="/forgot-password" element={<ForgotPasswordPage />} />
               <Route path="/reset-password" element={<ResetPasswordPage />} />
+              {/* Painel interno de Customer Success — NUNCA linkado de
+                  dentro do produto, fora do AuthContext/RBAC de clínica
+                  de propósito (ver DECISÃO em src/routes/PlatformProtectedRoute.tsx
+                  e app/api/platform_admin_auth.py no backend). */}
+              <Route path="/plataforma/login" element={<PlatformLoginPage />} />
+              <Route element={<PlatformProtectedRoute />}>
+                <Route path="/plataforma" element={<PlatformDashboardPage />} />
+              </Route>
             <Route element={<ProtectedRoute />}>
               <Route element={<AppShell />}>
                 <Route path="/" element={<DashboardPage />} />
