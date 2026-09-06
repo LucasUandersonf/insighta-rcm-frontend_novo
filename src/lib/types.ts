@@ -325,6 +325,22 @@ export interface WebhookSubscriptionUpdateRequest {
   active?: boolean;
 }
 
+// Visibilidade da fila de retentativa — GET /integrations/webhooks/deliveries
+// (ver app/sql/028_webhook_delivery_queue.sql no backend).
+export type WebhookDeliveryStatus = "pending" | "delivered" | "failed";
+
+export interface WebhookDeliveryEntry {
+  id: string;
+  subscription_id: string;
+  event_type: string;
+  status: WebhookDeliveryStatus;
+  attempt_count: number;
+  next_attempt_at: string;
+  last_error: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 // --- Dashboards de Decisão (app/schemas/analytics.py) ---
 export interface PeriodKpi {
   value: number;
@@ -818,4 +834,12 @@ export interface TenantUsageSummary {
   billings_last_30d: number;
   days_since_last_activity: number | null;
   engagement_status: TenantEngagementStatus;
+}
+
+// Resultado de POST /platform/alerts/run — nomes de clínica (não ids),
+// já que quem lê isto é sempre um humano da equipe.
+export interface PlatformAlertRunResult {
+  new_alerts: string[];
+  reminders_sent: string[];
+  recovered: string[];
 }

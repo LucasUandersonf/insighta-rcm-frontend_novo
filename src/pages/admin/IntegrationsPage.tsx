@@ -6,11 +6,30 @@ import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { TextField } from "@/components/ui/FormField";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { Badge } from "@/components/ui/Badge";
+import { Badge, type BadgeTone } from "@/components/ui/Badge";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useToast } from "@/context/ToastContext";
-import type { ApiKey, ApiKeyCreated, WebhookSubscription, WebhookSubscriptionCreated } from "@/lib/types";
+import type {
+  ApiKey,
+  ApiKeyCreated,
+  WebhookDeliveryEntry,
+  WebhookDeliveryStatus,
+  WebhookSubscription,
+  WebhookSubscriptionCreated,
+} from "@/lib/types";
+
+const DELIVERY_STATUS_LABEL: Record<WebhookDeliveryStatus, string> = {
+  pending: "Aguardando retentativa",
+  delivered: "Entregue",
+  failed: "Desistido",
+};
+
+const DELIVERY_STATUS_TONE: Record<WebhookDeliveryStatus, BadgeTone> = {
+  pending: "pending",
+  delivered: "revenue",
+  failed: "denied",
+};
 
 function formatDateTime(iso: string | null): string {
   if (!iso) return "—";
@@ -157,10 +176,16 @@ function CreateWebhookModal({
         />
         <TextField
           label="Eventos (opcional)"
-          placeholder="billing.held_for_review — vazio recebe todos"
+          placeholder="billing.held_for_review, denial_appeal.resolved — vazio recebe todos"
           value={eventTypes}
           onChange={(e) => setEventTypes(e.target.value)}
         />
+        <p className="mb-4 text-2xs text-ink-faint">
+          Separe vários por vírgula. Disponíveis hoje: <code className="font-mono">billing.held_for_review</code> (faturamento
+          retido por risco de glosa), <code className="font-mono">denial_appeal.resolved</code> (recurso de glosa
+          deferido/indeferido/escalado para NIP) e <code className="font-mono">no_show_risk.high</code> (agendamento com alto
+          risco de falta).
+        </p>
         <div className="mt-5 flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancelar
@@ -264,6 +289,59 @@ function WebhooksSection() {
   );
 }
 
+/** Visibilidade da fila de retentativa (ver app/sql/028_webhook_delivery_queue.sql
+ * no backend) — "por que meu Slack não recebeu aquele aviso?" sem
+ * precisar abrir um chamado de suporte. Só leitura: reenviar antes da
+ * hora não existe nesta v1, o worker já cobre isso automaticamente. */
+function WebhookDeliveriesSection() {
+  const { data: deliveries, isLoading, error } = useQuery({
+    queryKey: ["webhook-deliveries"],
+    queryFn: () => apiClient.get<WebhookDeliveryEntry[]>("/api/v1/integrations/webhooks/deliveries"),
+    // Refetch periódico bem mais lento que o intervalo de retentativa
+    // (mínimo 1 min) — só para a tela não parecer "parada" se alguém
+    // deixar aberta enquanto o worker processa a fila em segundo plano.
+    refetchInterval: 60_000,
+  });
+
+  const rows = deliveries ?? [];
+  if (!isLoading && !error && rows.length === 0) return null; // nada a mostrar ainda — não polui a tela com um painel vazio
+
+  return (
+    <Panel title="Entregas recentes" subtitle="As 50 tentativas mais recentes de envio de webhook, pendentes e já resolvidas.">
+      {isLoading && <LoadingState />}
+      {error && <ErrorState message={getApiErrorMessage(error)} />}
+      {!isLoading && rows.length > 0 && (
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr className="border-b border-border-hairline text-2xs uppercase tracking-wide text-ink-faint">
+                <th className="px-4 py-2.5 font-medium">Evento</th>
+                <th className="px-4 py-2.5 font-medium">Tentativas</th>
+                <th className="px-4 py-2.5 font-medium">Status</th>
+                <th className="px-4 py-2.5 font-medium">Próxima tentativa / erro</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((d) => (
+                <tr key={d.id} className="border-b border-border-hairline last:border-0 transition-colors hover:bg-canvas-raised/60">
+                  <td className="px-4 py-2.5 font-mono text-ink-muted">{d.event_type}</td>
+                  <td className="tabular px-4 py-2.5 text-ink-muted">{d.attempt_count}</td>
+                  <td className="px-4 py-2.5">
+                    <Badge tone={DELIVERY_STATUS_TONE[d.status]}>{DELIVERY_STATUS_LABEL[d.status]}</Badge>
+                  </td>
+                  <td className="max-w-xs truncate px-4 py-2.5 text-ink-muted" title={d.last_error ?? undefined}>
+                    {d.status === "pending" ? formatDateTime(d.next_attempt_at) : d.last_error ?? "—"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Panel>
+  );
+}
+
 export function IntegrationsPage() {
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
@@ -347,6 +425,7 @@ export function IntegrationsPage() {
       <CreatedKeyModal created={createdKey} onClose={() => setCreatedKey(null)} />
 
       <WebhooksSection />
+      <WebhookDeliveriesSection />
     </div>
   );
 }
