@@ -176,10 +176,16 @@ function CreateWebhookModal({
         />
         <TextField
           label="Eventos (opcional)"
-          placeholder="billing.held_for_review — vazio recebe todos"
+          placeholder="billing.held_for_review, denial_appeal.resolved — vazio recebe todos"
           value={eventTypes}
           onChange={(e) => setEventTypes(e.target.value)}
         />
+        <p className="mb-4 text-2xs text-ink-faint">
+          Separe vários por vírgula. Disponíveis hoje: <code className="font-mono">billing.held_for_review</code> (faturamento
+          retido por risco de glosa), <code className="font-mono">denial_appeal.resolved</code> (recurso de glosa
+          deferido/indeferido/escalado para NIP) e <code className="font-mono">no_show_risk.high</code> (agendamento com alto
+          risco de falta).
+        </p>
         <div className="mt-5 flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancelar
