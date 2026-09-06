@@ -9,7 +9,7 @@ import { ApiError } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { clearStoredPlatformToken, platformApiClient } from "@/lib/platform-api-client";
 import { useToast } from "@/context/ToastContext";
-import type { PlatformAlertRunResult, PlatformAuditLogEntry, TenantEngagementStatus, TenantUsageSummary } from "@/lib/types";
+import type { FeatureUsageKey, PlatformAlertRunResult, PlatformAuditLogEntry, TenantEngagementStatus, TenantUsageSummary } from "@/lib/types";
 
 const ACTION_LABEL: Record<string, string> = {
   login: "Entrou no painel",
@@ -57,6 +57,38 @@ function formatDaysAgo(days: number | null): string {
   if (days === 0) return "hoje";
   if (days === 1) return "ontem";
   return `há ${days} dias`;
+}
+
+// Mesmas 6 chaves de app/sql/030_platform_feature_usage.sql — mede
+// MUTAÇÃO (ação real de escrita), não navegação/leitura de tela.
+const FEATURE_LABEL: Record<FeatureUsageKey, string> = {
+  pacientes: "Pacientes",
+  agenda: "Agenda",
+  faturamento: "Faturamento",
+  recurso_de_glosa: "Recurso de glosa",
+  contratos: "Contratos",
+  usuarios: "Usuários",
+};
+const FEATURE_KEYS = Object.keys(FEATURE_LABEL) as FeatureUsageKey[];
+
+/** "Mais usa" de uma clínica: os 1-2 recursos com mais mutação nos
+ * últimos 30 dias, ou "—" quando não há nenhuma (clínica nova/inativa). */
+function topFeatureSummary(usage: Record<FeatureUsageKey, number>): string {
+  const entries = FEATURE_KEYS.map((key) => [key, usage[key] ?? 0] as const).filter(([, count]) => count > 0);
+  entries.sort((a, b) => b[1] - a[1]);
+  if (entries.length === 0) return "—";
+  return entries.slice(0, 2).map(([key, count]) => `${FEATURE_LABEL[key]} (${count})`).join(", ");
+}
+
+/** Soma feature_usage_last_30d de TODAS as clínicas — o ranking "o que a
+ * base inteira mais usa", o sinal mais direto para priorização de
+ * backlog (ver Laudo de Vistoria Técnica, parecer PM/PO). */
+function aggregateFeatureUsage(rows: TenantUsageSummary[]): (readonly [FeatureUsageKey, number])[] {
+  const totals = Object.fromEntries(FEATURE_KEYS.map((key) => [key, 0])) as Record<FeatureUsageKey, number>;
+  for (const row of rows) {
+    for (const key of FEATURE_KEYS) totals[key] += row.feature_usage_last_30d[key] ?? 0;
+  }
+  return FEATURE_KEYS.map((key) => [key, totals[key]] as const).sort((a, b) => b[1] - a[1]);
 }
 
 export function PlatformDashboardPage() {
@@ -108,6 +140,8 @@ export function PlatformDashboardPage() {
   const rows: TenantUsageSummary[] = data ?? [];
   const atRiskCount = rows.filter((r) => r.engagement_status === "risco").length;
   const auditRows: PlatformAuditLogEntry[] = auditLog ?? [];
+  const featureRanking = aggregateFeatureUsage(rows);
+  const maxFeatureCount = Math.max(1, ...featureRanking.map(([, count]) => count));
 
   return (
     <div className="min-h-screen bg-canvas px-6 py-8">
@@ -127,6 +161,28 @@ export function PlatformDashboardPage() {
           <div className="rounded-md border border-denied/25 bg-denied-bg px-4 py-2.5 text-sm text-denied">
             {atRiskCount} {atRiskCount === 1 ? "clínica está" : "clínicas estão"} sem nenhuma atividade nos últimos 30 dias.
           </div>
+        )}
+
+        {!isLoading && rows.length > 0 && (
+          <Panel
+            title="Recursos mais usados na plataforma"
+            subtitle="Soma de todas as clínicas nos últimos 30 dias — mede mutação (ação real), não navegação. Usar para priorizar backlog."
+          >
+            <ul className="space-y-2.5">
+              {featureRanking.map(([key, count]) => (
+                <li key={key} className="flex items-center gap-3">
+                  <span className="w-32 shrink-0 text-xs text-ink-muted">{FEATURE_LABEL[key]}</span>
+                  <span className="h-2 flex-1 overflow-hidden rounded-full bg-canvas-inset">
+                    <span
+                      className="block h-full rounded-full bg-accent"
+                      style={{ width: `${Math.max(2, (count / maxFeatureCount) * 100)}%` }}
+                    />
+                  </span>
+                  <span className="tabular w-10 shrink-0 text-right text-xs font-medium text-ink">{count}</span>
+                </li>
+              ))}
+            </ul>
+          </Panel>
         )}
 
         <Panel
@@ -159,6 +215,7 @@ export function PlatformDashboardPage() {
                     <th className="px-4 py-2.5 font-medium">Usuários ativos</th>
                     <th className="px-4 py-2.5 font-medium">Última atividade</th>
                     <th className="px-4 py-2.5 font-medium">Eventos (30d)</th>
+                    <th className="px-4 py-2.5 font-medium">Mais usa (30d)</th>
                     <th className="px-4 py-2.5 font-medium">Pacientes</th>
                     <th className="px-4 py-2.5 font-medium">Status</th>
                   </tr>
@@ -172,6 +229,7 @@ export function PlatformDashboardPage() {
                       <td className="tabular px-4 py-2.5 text-ink-muted">{r.active_users}</td>
                       <td className="px-4 py-2.5 text-ink-muted">{formatDaysAgo(r.days_since_last_activity)}</td>
                       <td className="tabular px-4 py-2.5 text-ink-muted">{r.events_last_30d}</td>
+                      <td className="px-4 py-2.5 text-ink-muted">{topFeatureSummary(r.feature_usage_last_30d)}</td>
                       <td className="tabular px-4 py-2.5 text-ink-muted">{r.patients_total}</td>
                       <td className="px-4 py-2.5">
                         <Badge tone={STATUS_TONE[r.engagement_status]}>{STATUS_LABEL[r.engagement_status]}</Badge>

@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
 import type { PlatformUser } from "@/lib/types";
 
@@ -19,6 +19,22 @@ export function useCurrentUserProfile() {
     queryKey: ["users", "me"],
     queryFn: () => apiClient.get<PlatformUser>("/api/v1/users/me"),
     staleTime: 5 * 60 * 1000,
+  });
+}
+
+/**
+ * Marca o tour de boas-vindas guiado (ver OnboardingTour.tsx) como
+ * visto/pulado — POST /api/v1/users/me/onboarding-complete, self-service
+ * (qualquer papel). Invalida o cache de "users","me" ao terminar para o
+ * onboarding_completed_at recém-gravado refletir sem precisar de reload.
+ */
+export function useCompleteOnboarding() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => apiClient.post<void>("/api/v1/users/me/onboarding-complete"),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users", "me"] });
+    },
   });
 }
 

@@ -32,7 +32,11 @@ interface NavItem {
 // um item só aparece pra quem o backend de fato deixaria usar. Esconder
 // não é a camada de segurança (o backend já barra por conta própria);
 // é só não oferecer um botão que vai dar 403.
-const NAV_ITEMS: NavItem[] = [
+// Exportados para o tour de boas-vindas guiado (ver
+// OnboardingTourContext.tsx) reaproveitar a MESMA lista e o MESMO filtro
+// de papel — assim um item escondido para um papel também não aparece
+// no tour, sem duplicar a régua de RBAC visual num segundo lugar.
+export const NAV_ITEMS: NavItem[] = [
   // Sala de Comando (Dashboards de Decisão) — dado estratégico/financeiro
   // agregado, mesmo critério de RBAC do backend em analytics.py: fora do
   // alcance de "atendimento" (recepção).
@@ -62,7 +66,7 @@ const NAV_ITEMS: NavItem[] = [
 // para /users, /tenant e /integrations). Renderizada como grupo à parte
 // na navegação para não misturar "operação da clínica" com
 // "administração da conta SaaS".
-const ADMIN_NAV_ITEMS: NavItem[] = [
+export const ADMIN_NAV_ITEMS: NavItem[] = [
   { to: "/admin/users", label: "Usuários", icon: Users, roles: ["owner", "admin"] },
   { to: "/admin/integrations", label: "Integrações e webhooks", icon: Plug, roles: ["owner", "admin"] },
   { to: "/admin/tenant", label: "Minha clínica", icon: Building2, roles: ["owner", "admin"] },
@@ -85,6 +89,10 @@ export function Sidebar() {
         <NavLink
           to={item.to}
           end={item.to === "/"}
+          // Âncora do tour de boas-vindas guiado (ver OnboardingTour.tsx) —
+          // reaproveita o próprio `to` como chave, não precisa de um id
+          // separado por item.
+          data-tour-id={item.to}
           className={({ isActive }) =>
             cn(
               "relative flex items-center gap-2.5 rounded-sm py-2 pl-3 pr-3 text-sm transition-colors",

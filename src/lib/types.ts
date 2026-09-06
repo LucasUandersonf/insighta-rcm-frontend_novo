@@ -180,6 +180,9 @@ export interface PlatformUser {
   must_change_password: boolean;
   last_login_at: string | null;
   created_at: string;
+  // Tour de boas-vindas guiado (ver OnboardingTour.tsx) — null = o
+  // AppShell ainda deve mostrar o tour nesta sessão.
+  onboarding_completed_at: string | null;
 }
 
 export interface UserCreateRequest {
@@ -820,6 +823,11 @@ export interface SupportRequest {
 // DECISÃO em app/sql/026_platform_customer_success.sql no backend). ---
 export type TenantEngagementStatus = "engajado" | "atencao" | "risco" | "novo" | "inativo";
 
+// Mesmas 6 chaves de app/sql/030_platform_feature_usage.sql, sempre
+// presentes (mesmo zeradas) — mede MUTAÇÃO (ação real de escrita), não
+// navegação/leitura de tela (ver DECISÃO no arquivo SQL).
+export type FeatureUsageKey = "pacientes" | "agenda" | "faturamento" | "recurso_de_glosa" | "contratos" | "usuarios";
+
 export interface TenantUsageSummary {
   tenant_id: string;
   trade_name: string;
@@ -832,6 +840,7 @@ export interface TenantUsageSummary {
   patients_total: number;
   appointments_last_30d: number;
   billings_last_30d: number;
+  feature_usage_last_30d: Record<FeatureUsageKey, number>;
   days_since_last_activity: number | null;
   engagement_status: TenantEngagementStatus;
 }

@@ -5,6 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { UserAvatar } from "@/components/ui/UserAvatar";
 import { useCurrentUserProfile } from "@/lib/useCurrentUserProfile";
+import { useOnboardingTour } from "@/context/OnboardingTourContext";
 import { apiClient } from "@/lib/api-client";
 import { cn } from "@/lib/cn";
 import type { Tenant } from "@/lib/types";
@@ -23,6 +24,7 @@ const ROLE_LABELS: Record<string, string> = {
 
 export function TopBar() {
   const { user, logout } = useAuth();
+  const { startTour } = useOnboardingTour();
   const [status, setStatus] = useState<SystemStatus>("checking");
   const [isHelpOpen, setIsHelpOpen] = useState(false);
 
@@ -102,7 +104,14 @@ export function TopBar() {
         </div>
       </div>
 
-      <HelpCenterModal isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
+      <HelpCenterModal
+        isOpen={isHelpOpen}
+        onClose={() => setIsHelpOpen(false)}
+        onStartTour={() => {
+          setIsHelpOpen(false);
+          startTour();
+        }}
+      />
     </header>
   );
 }
