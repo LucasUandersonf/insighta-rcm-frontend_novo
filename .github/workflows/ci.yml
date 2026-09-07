@@ -1,0 +1,44 @@
+name: CI
+
+# Achado do Laudo de Vistoria Técnica (parecer DevOps/SRE, bloqueador, e
+# parecer Frontend): "nada IMPEDE um código quebrado de ir para
+# produção" — nem os 77 testes de interface nem o build eram checados
+# antes do deploy. O gatilho `push` em `main` abaixo é EXIGÊNCIA do
+# próprio Railway para o toggle "Wait for CI" (ver
+# https://docs.railway.com/deployments/github-autodeploys#wait-for-ci):
+# sem essa combinação exata de evento/branch, a opção nem aparece nas
+# configurações do serviço.
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    name: Testes + build de produção
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Rodar suíte de testes (Vitest + Testing Library + axe-core)
+        run: npm test
+
+      - name: Checar tipos e gerar o build de produção
+        # Sem VITE_API_BASE_URL configurada aqui de propósito: a variável
+        # só é lida em tempo de EXECUÇÃO (ver isApiConfigured em
+        # api-client.ts), nunca falha o build em si — o valor real de
+        # produção continua vindo só da própria Railway.
+        run: npm run build
