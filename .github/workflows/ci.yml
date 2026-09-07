@@ -42,3 +42,20 @@ jobs:
         # api-client.ts), nunca falha o build em si — o valor real de
         # produção continua vindo só da própria Railway.
         run: npm run build
+
+      # Achado do Laudo de Vistoria Técnica (parecer Backend/Segurança,
+      # aplicado também ao frontend): nenhuma biblioteca de terceiro era
+      # verificada contra falha de segurança conhecida.
+      #
+      # DECISÃO — só dependências de PRODUÇÃO (--omit=dev), nível alto+
+      # -------------------------------------------------------------------
+      # As vulnerabilidades conhecidas hoje (checado nesta mesma rodada)
+      # são todas em ferramenta de BUILD/teste (esbuild/vite/vitest,
+      # nunca embarcadas no pacote que o navegador baixa) — bump maior
+      # de versão, fora do escopo de "ligar o scanner". Rodar contra
+      # produção mantém o scanner ÚTIL desde o primeiro dia (0
+      # vulnerabilidades hoje) em vez de já nascer ignorando tudo — e
+      # continua pegando qualquer coisa nova que afete o que roda de
+      # verdade no navegador do cliente.
+      - name: Verificar vulnerabilidades conhecidas nas dependências de produção
+        run: npm audit --omit=dev --audit-level=high

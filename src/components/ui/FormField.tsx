@@ -11,6 +11,16 @@ interface FieldWrapperProps {
   className?: string;
 }
 
+/** Achado do Laudo de Vistoria Técnica (parecer UX/acessibilidade): a
+ * mensagem de erro era só visual — um leitor de tela não tinha como
+ * saber que o campo estava inválido nem ouvir o motivo. `errorId` liga
+ * o `<p>` de erro ao controle via `aria-describedby` (aplicado por cada
+ * campo abaixo), e é exportado para o controle poder montar o mesmo id
+ * sem repetir a lógica de nome aqui. */
+function errorIdFor(fieldId: string): string {
+  return `${fieldId}-error`;
+}
+
 function FieldWrapper({ label, htmlFor, error, required, children, className }: FieldWrapperProps) {
   return (
     <div className={cn("mb-4", className)}>
@@ -21,7 +31,11 @@ function FieldWrapper({ label, htmlFor, error, required, children, className }: 
         </label>
       )}
       {children}
-      {error && <p className="mt-1 text-2xs text-denied">{error}</p>}
+      {error && (
+        <p id={errorIdFor(htmlFor)} role="alert" className="mt-1 text-2xs text-denied">
+          {error}
+        </p>
+      )}
     </div>
   );
 }
@@ -37,6 +51,8 @@ export function TextField({ label, error, id, className, ...props }: TextFieldPr
     <FieldWrapper label={label} htmlFor={fieldId} error={error} required={props.required}>
       <input
         id={fieldId}
+        aria-invalid={!!error}
+        aria-describedby={error ? errorIdFor(fieldId) : undefined}
         className={cn(
           "w-full rounded-md border bg-canvas-raised px-3 py-2 text-sm text-ink placeholder:text-ink-faint transition-colors focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/15",
           error ? "border-denied/50" : "border-border-default",
@@ -59,6 +75,8 @@ export function TextareaField({ label, error, id, className, ...props }: Textare
     <FieldWrapper label={label} htmlFor={fieldId} error={error} required={props.required}>
       <textarea
         id={fieldId}
+        aria-invalid={!!error}
+        aria-describedby={error ? errorIdFor(fieldId) : undefined}
         className={cn(
           "w-full resize-none rounded-md border bg-canvas-raised px-3 py-2 text-sm text-ink placeholder:text-ink-faint transition-colors focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/15",
           error ? "border-denied/50" : "border-border-default",
@@ -83,6 +101,8 @@ export function SelectField({ label, error, id, className, children, ...props }:
       <div className="relative">
         <select
           id={fieldId}
+          aria-invalid={!!error}
+          aria-describedby={error ? errorIdFor(fieldId) : undefined}
           className={cn(
             "w-full appearance-none rounded-md border bg-canvas-raised px-3 py-2 pr-8 text-sm text-ink transition-colors focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/15",
             error ? "border-denied/50" : "border-border-default"

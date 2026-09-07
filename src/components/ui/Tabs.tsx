@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useRef, type KeyboardEvent, type ReactNode } from "react";
 import { motion } from "framer-motion";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/cn";
@@ -39,6 +39,17 @@ interface TabItem {
  * `<TabPanel>` correspondente, renderizado por quem chama, consiga
  * casar `aria-labelledby`/`id` com este componente sem os dois
  * precisarem compartilhar uma instância de hook.
+ *
+ * Achado do Laudo de Vistoria Técnica (parecer UX/acessibilidade) —
+ * navegação por seta do teclado
+ * -------------------------------------------------------------------
+ * O padrão WAI-ARIA de `tablist` espera Seta-Esquerda/Direita (e
+ * Home/End) para mover o foco ENTRE abas, com "tabindex circulante"
+ * (só a aba ativa fica no fluxo normal de Tab — as outras só são
+ * alcançáveis pelas setas, exatamente como abas de navegador de verdade
+ * funcionam). Antes desta correção, cada `<button>` ficava no fluxo
+ * normal de Tab (nenhuma seta funcionava) — utilizável, mas não no
+ * padrão que um usuário de leitor de tela espera de uma aba.
  */
 export function Tabs({
   items,
@@ -53,19 +64,54 @@ export function Tabs({
   groupId: string;
   className?: string;
 }) {
+  const buttonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+
+  function focusAndActivate(index: number) {
+    const clamped = (index + items.length) % items.length;
+    const target = items[clamped]!;
+    buttonRefs.current[target.id]?.focus();
+    onChange(target.id);
+  }
+
+  function handleKeyDown(e: KeyboardEvent<HTMLButtonElement>, index: number) {
+    switch (e.key) {
+      case "ArrowRight":
+        e.preventDefault();
+        focusAndActivate(index + 1);
+        break;
+      case "ArrowLeft":
+        e.preventDefault();
+        focusAndActivate(index - 1);
+        break;
+      case "Home":
+        e.preventDefault();
+        focusAndActivate(0);
+        break;
+      case "End":
+        e.preventDefault();
+        focusAndActivate(items.length - 1);
+        break;
+    }
+  }
+
   return (
     <div role="tablist" aria-orientation="horizontal" className={cn("flex gap-1 border-b border-border-hairline", className)}>
-      {items.map((item) => {
+      {items.map((item, index) => {
         const isActive = item.id === active;
         return (
           <button
             key={item.id}
+            ref={(el) => {
+              buttonRefs.current[item.id] = el;
+            }}
             id={`tab-${groupId}-${item.id}`}
             role="tab"
             type="button"
             aria-selected={isActive}
             aria-controls={`tabpanel-${groupId}-${item.id}`}
+            tabIndex={isActive ? 0 : -1}
             onClick={() => onChange(item.id)}
+            onKeyDown={(e) => handleKeyDown(e, index)}
             className={cn(
               "relative flex items-center gap-1.5 rounded-t-[10px] px-3.5 py-2.5 text-sm font-medium transition-colors",
               isActive ? "bg-canvas-raised text-ink" : "text-ink-faint hover:text-ink-muted"

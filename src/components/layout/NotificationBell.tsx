@@ -34,8 +34,19 @@ function formatRelativeDate(iso: string): string {
 export function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const queryClient = useQueryClient();
   const { showError } = useToast();
+
+  // Achado do Laudo de Vistoria Técnica (parecer UX/acessibilidade):
+  // fechar pelo Escape ou clique fora não devolvia o foco ao botão do
+  // sino — quem estava navegando por teclado/leitor de tela "perdia o
+  // lugar" (o foco caía de volta no <body>). closeAndRestoreFocus
+  // fecha e devolve o foco explicitamente, como o Modal.tsx já faz.
+  function closeAndRestoreFocus() {
+    setIsOpen(false);
+    triggerRef.current?.focus();
+  }
 
   const { data, error } = useQuery({
     queryKey: ["announcements"],
@@ -55,10 +66,13 @@ export function NotificationBell() {
   useEffect(() => {
     if (!isOpen) return;
     function handleClickOutside(e: MouseEvent) {
+      // Só devolve o foco ao sino se ele não foi o próprio alvo do
+      // clique (senão brigaria com o toggle do botão, que já cuida do
+      // próprio foco ao ser clicado).
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) setIsOpen(false);
     }
     function handleEscape(e: KeyboardEvent) {
-      if (e.key === "Escape") setIsOpen(false);
+      if (e.key === "Escape") closeAndRestoreFocus();
     }
     document.addEventListener("mousedown", handleClickOutside);
     document.addEventListener("keydown", handleEscape);
@@ -78,6 +92,7 @@ export function NotificationBell() {
   return (
     <div ref={containerRef} className="relative">
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => setIsOpen((v) => !v)}
         aria-label={unreadCount > 0 ? `Notificações — ${unreadCount} não lida(s)` : "Notificações"}
@@ -103,7 +118,15 @@ export function NotificationBell() {
             exit={{ opacity: 0, y: -4, scale: 0.98 }}
             transition={{ duration: 0.15, ease: "easeOut" }}
             className="absolute right-0 top-10 z-30 w-80 rounded-lg border border-border-hairline bg-glass shadow-elevated-lg backdrop-blur-xl"
-            role="menu"
+            // Achado do Laudo de Vistoria Técnica (parecer UX/acessibilidade):
+            // `role="menu"` promete o padrão ARIA de menu (setas do
+            // teclado, `menuitem` nos filhos) que este componente nunca
+            // implementou — os itens são botões normais, navegáveis por
+            // Tab. `role="region"` + rótulo é a semântica correta pro
+            // que isto de fato é: uma lista de novidades, não um menu de
+            // comando.
+            role="region"
+            aria-label="Novidades"
           >
             <div className="border-b border-border-hairline px-4 py-3">
               <p className="font-serif text-sm font-medium tracking-premium text-ink">Novidades</p>

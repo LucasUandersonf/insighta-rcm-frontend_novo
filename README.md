@@ -109,6 +109,91 @@ confirmação "continuando como X · e-mail@... · via Google") — só CNPJ e
 plano continuam sendo perguntados, e o cadastro final envia
 `google_credential` no lugar de `owner_name`/`email`/`password`.
 
+## Testes automatizados
+
+Achado do Laudo de Vistoria Técnica (parecer Product Designer/UX): até
+esta rodada, zero teste automatizado de interface — a única forma de
+pegar um botão quebrado era alguém clicar nele manualmente. Vitest +
+Testing Library + axe-core cobrem parte real do design system e dos
+fluxos mais críticos (login de clínica, login da plataforma interna, o
+tour de boas-vindas guiado, navegação por papel na barra lateral).
+
+```bash
+npm test          # roda a suíte uma vez (CI)
+npm run test:watch  # modo watch, para desenvolvimento
+```
+
+Cada arquivo de teste vive ao lado do que testa, em `__tests__/`
+(`src/components/ui/__tests__/Button.test.tsx`, por exemplo) — mesmo
+padrão de proximidade já usado no backend (`tests/integration/`, ainda
+que lá seja uma pasta central por causa do banco de teste compartilhado
+entre arquivos).
+
+### Acessibilidade — checagem automatizada dentro dos próprios testes
+
+`src/test/a11y.ts` roda o **axe-core** sobre o container renderizado de
+cada teste (`expectNoA11yViolations(container)`) — quase toda página e
+componente de UI testado nesta rodada chama isso pelo menos uma vez, uma
+regressão de acessibilidade (label sem associação, botão sem nome
+acessível, papel ARIA inválido) quebra a suíte, não só "parece certo
+visualmente".
+
+**Limitação documentada, não escondida**: a regra `color-contrast` do
+axe fica desligada nesses testes — jsdom não calcula layout/estilo
+computado de verdade (não é um motor de renderização), então essa regra
+especificamente produz falso positivo/negativo sob jsdom. Uma auditoria
+de contraste real precisa de um navegador de verdade (Playwright) —
+fora do escopo desta rodada, é a pendência formal registrada aqui em vez
+de simplesmente não ser mencionada.
+
+### Achados corrigidos na mesma rodada (não só "testado", também consertado)
+
+A auditoria manual que acompanhou a criação desta suíte encontrou e
+corrigiu, entre outros:
+- **Mensagem de erro de formulário só visual** (`FormField.tsx`) — sem
+  `aria-invalid`/`aria-describedby`, um leitor de tela nunca anunciava
+  que um campo estava inválido nem por quê. Corrigido, coberto por
+  teste.
+- **`Tabs.tsx` sem navegação por seta do teclado** — o padrão WAI-ARIA
+  de `tablist` espera Seta-Esquerda/Direita/Home/End movendo o foco
+  ENTRE abas, com tabindex circulante (só a aba ativa no fluxo normal de
+  Tab). Implementado, coberto por teste.
+- **`NotificationBell.tsx` com `role="menu"` incorreto** — os itens são
+  botões normais navegáveis por Tab, não um menu de comando com setas —
+  a promessa ARIA de "menu" nunca foi cumprida. Trocado por
+  `role="region"` + rótulo, e o foco agora volta para o sino ao fechar
+  (Escape/clique fora), o que não acontecia antes.
+- **`OnboardingTour.tsx` prometia `aria-modal="true"`** sem nunca travar
+  o resto da página (decisão deliberada de design — ver
+  `OnboardingTour.tsx`) — mentia para tecnologia assistiva sobre o
+  próprio comportamento. Removido, e o foco agora move para o card a
+  cada passo (antes, um usuário de teclado precisava adivinhar que o
+  tour tinha aberto).
+- Grupos de botões-filtro (`ReportRecipientsPage.tsx`,
+  `DenialAppealsPage.tsx`) sem `aria-pressed` — o estado
+  selecionado/não-selecionado só existia visualmente.
+
+## Bundle e code-splitting
+
+Achado do Laudo de Vistoria Técnica (parecer UX): o pacote baixado pelo
+navegador crescia sem divisão por tela (quase 1MB) — pesado numa conexão
+ruim, realidade de muita clínica pequena no Brasil. Duas mudanças, sem
+tocar em nenhuma tela:
+- Toda página vira seu próprio chunk (`React.lazy` em `App.tsx`, com
+  `<Suspense>` em dois níveis — um cobrindo a app inteira antes do
+  `AppShell` montar, outro dentro do `AppShell` para trocar de rota sem
+  desmontar TopBar/Sidebar).
+- `build.rollupOptions.output.manualChunks` (`vite.config.ts`) separa as
+  bibliotecas de terceiros (`react`/`react-dom`, `react-router`,
+  `framer-motion`, `@tanstack/react-query`, `recharts`, `lucide-react`)
+  em arquivos próprios, cacheáveis pelo navegador independentemente do
+  código da aplicação.
+
+Resultado prático: quem abre `/login` baixa só o essencial daquela tela
+(React + roteador + o próprio LoginPage, ~200KB) — não mais o pacote
+inteiro (Recharts, todas as páginas administrativas, etc.) só para ver
+um formulário de e-mail/senha.
+
 ## Build para produção
 
 ```bash

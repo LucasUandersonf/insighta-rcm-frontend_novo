@@ -1,32 +1,42 @@
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/context/AuthContext";
 import { ToastProvider } from "@/context/ToastContext";
 import { ModalStackProvider } from "@/context/ModalStackContext";
 import { ProtectedRoute } from "@/routes/ProtectedRoute";
 import { AppShell } from "@/components/layout/AppShell";
-import { LoginPage } from "@/pages/LoginPage";
-import { SignUpPage } from "@/pages/SignUpPage";
-import { ForgotPasswordPage } from "@/pages/ForgotPasswordPage";
-import { ResetPasswordPage } from "@/pages/ResetPasswordPage";
-import { DashboardPage } from "@/pages/DashboardPage";
-import { ExecutiveOverviewPage } from "@/pages/ExecutiveOverviewPage";
-import { ContractsPage } from "@/pages/ContractsPage";
-import { DenialAppealsPage } from "@/pages/DenialAppealsPage";
-import { AppointmentsPage } from "@/pages/AppointmentsPage";
-import { ProfessionalsPage } from "@/pages/ProfessionalsPage";
-import { UploadCenterPage } from "@/pages/UploadCenterPage";
-import { SetupPage } from "@/pages/SetupPage";
-import { UsersPage } from "@/pages/admin/UsersPage";
-import { IntegrationsPage } from "@/pages/admin/IntegrationsPage";
-import { TenantPage } from "@/pages/admin/TenantPage";
-import { ReportRecipientsPage } from "@/pages/admin/ReportRecipientsPage";
-import { AuditLogPage } from "@/pages/admin/AuditLogPage";
 import { RoleProtectedRoute } from "@/routes/ProtectedRoute";
 import { PlatformProtectedRoute } from "@/routes/PlatformProtectedRoute";
-import { PlatformLoginPage } from "@/pages/platform/PlatformLoginPage";
-import { PlatformDashboardPage } from "@/pages/platform/PlatformDashboardPage";
 import { isApiConfigured } from "@/lib/api-client";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { RouteLoadingFallback } from "@/components/RouteLoadingFallback";
+
+// Achado do Laudo de Vistoria Técnica (parecer UX): o pacote baixado
+// pelo navegador crescia sem divisão por tela (quase 1MB) — pesado numa
+// conexão ruim, realidade de muita clínica pequena no Brasil. Cada
+// PÁGINA (não AppShell/rotas guardas, pequenas e sempre necessárias)
+// agora é seu próprio chunk, baixado só quando a rota é de fato visitada
+// — ver também `build.rollupOptions.output.manualChunks` em
+// vite.config.ts, que separa as bibliotecas de terceiros do mesmo jeito.
+const LoginPage = lazy(() => import("@/pages/LoginPage").then((m) => ({ default: m.LoginPage })));
+const SignUpPage = lazy(() => import("@/pages/SignUpPage").then((m) => ({ default: m.SignUpPage })));
+const ForgotPasswordPage = lazy(() => import("@/pages/ForgotPasswordPage").then((m) => ({ default: m.ForgotPasswordPage })));
+const ResetPasswordPage = lazy(() => import("@/pages/ResetPasswordPage").then((m) => ({ default: m.ResetPasswordPage })));
+const DashboardPage = lazy(() => import("@/pages/DashboardPage").then((m) => ({ default: m.DashboardPage })));
+const ExecutiveOverviewPage = lazy(() => import("@/pages/ExecutiveOverviewPage").then((m) => ({ default: m.ExecutiveOverviewPage })));
+const ContractsPage = lazy(() => import("@/pages/ContractsPage").then((m) => ({ default: m.ContractsPage })));
+const DenialAppealsPage = lazy(() => import("@/pages/DenialAppealsPage").then((m) => ({ default: m.DenialAppealsPage })));
+const AppointmentsPage = lazy(() => import("@/pages/AppointmentsPage").then((m) => ({ default: m.AppointmentsPage })));
+const ProfessionalsPage = lazy(() => import("@/pages/ProfessionalsPage").then((m) => ({ default: m.ProfessionalsPage })));
+const UploadCenterPage = lazy(() => import("@/pages/UploadCenterPage").then((m) => ({ default: m.UploadCenterPage })));
+const SetupPage = lazy(() => import("@/pages/SetupPage").then((m) => ({ default: m.SetupPage })));
+const UsersPage = lazy(() => import("@/pages/admin/UsersPage").then((m) => ({ default: m.UsersPage })));
+const IntegrationsPage = lazy(() => import("@/pages/admin/IntegrationsPage").then((m) => ({ default: m.IntegrationsPage })));
+const TenantPage = lazy(() => import("@/pages/admin/TenantPage").then((m) => ({ default: m.TenantPage })));
+const ReportRecipientsPage = lazy(() => import("@/pages/admin/ReportRecipientsPage").then((m) => ({ default: m.ReportRecipientsPage })));
+const AuditLogPage = lazy(() => import("@/pages/admin/AuditLogPage").then((m) => ({ default: m.AuditLogPage })));
+const PlatformLoginPage = lazy(() => import("@/pages/platform/PlatformLoginPage").then((m) => ({ default: m.PlatformLoginPage })));
+const PlatformDashboardPage = lazy(() => import("@/pages/platform/PlatformDashboardPage").then((m) => ({ default: m.PlatformDashboardPage })));
 
 /**
  * Tela de erro REAL, visível, em vez de deixar a aplicação simplesmente
@@ -61,6 +71,7 @@ export default function App() {
         <ToastProvider>
           <ModalStackProvider>
           <BrowserRouter>
+            <Suspense fallback={<RouteLoadingFallback fullScreen />}>
             <Routes>
               <Route path="/login" element={<LoginPage />} />
               <Route path="/signup" element={<SignUpPage />} />
@@ -123,6 +134,7 @@ export default function App() {
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
+            </Suspense>
           </BrowserRouter>
           </ModalStackProvider>
         </ToastProvider>

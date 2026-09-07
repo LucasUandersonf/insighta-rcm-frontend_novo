@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { X } from "lucide-react";
@@ -90,6 +90,7 @@ function cardPosition(rect: Rect | null): { top: number; left: number } | null {
 export function OnboardingTour({ isOpen, steps, onFinish }: { isOpen: boolean; steps: TourStep[]; onFinish: () => void }) {
   const [index, setIndex] = useState(0);
   const prefersReducedMotion = useReducedMotion();
+  const cardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (isOpen) setIndex(0);
@@ -104,6 +105,16 @@ export function OnboardingTour({ isOpen, steps, onFinish }: { isOpen: boolean; s
     return () => window.removeEventListener("keydown", handleKey);
   }, [isOpen, onFinish]);
 
+  // Achado do Laudo de Vistoria Técnica (parecer UX/acessibilidade): sem
+  // isto, um usuário de teclado/leitor de tela nunca tinha o foco movido
+  // para o card do tour — precisaria adivinhar que ele apareceu e ir
+  // caçá-lo na página. Foca o card (não um botão específico dele) a
+  // cada passo, o suficiente para o leitor de tela anunciar título +
+  // descrição via aria-labelledby/aria-describedby abaixo.
+  useEffect(() => {
+    if (isOpen) cardRef.current?.focus();
+  }, [isOpen, index]);
+
   const step = steps[index];
   const rect = useTargetRect(step?.targetSelector, isOpen);
 
@@ -112,9 +123,11 @@ export function OnboardingTour({ isOpen, steps, onFinish }: { isOpen: boolean; s
   const isFirst = index === 0;
   const isLast = index === steps.length - 1;
   const position = cardPosition(rect);
+  const titleId = `onboarding-tour-title-${index}`;
+  const descriptionId = `onboarding-tour-description-${index}`;
 
   const content = (
-    <div className="pointer-events-none fixed inset-0 z-[70]" role="dialog" aria-modal="true" aria-label="Tour de boas-vindas">
+    <div className="pointer-events-none fixed inset-0 z-[70]">
       {rect && (
         <motion.div
           aria-hidden
@@ -132,14 +145,23 @@ export function OnboardingTour({ isOpen, steps, onFinish }: { isOpen: boolean; s
 
       <AnimatePresence mode="wait">
         <motion.div
+          ref={cardRef}
           key={index}
+          role="dialog"
+          aria-labelledby={titleId}
+          aria-describedby={descriptionId}
+          // Sem aria-modal: de propósito NÃO-modal (ver DECISÃO na
+          // documentação do componente) — travar o resto da página pra
+          // leitor de tela mentiria sobre o comportamento real, que é
+          // deixar tudo clicável por trás.
+          tabIndex={-1}
           initial={prefersReducedMotion ? false : { opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
           exit={prefersReducedMotion ? undefined : { opacity: 0, y: -4 }}
           transition={{ duration: 0.16 }}
           style={position ? { position: "fixed", top: position.top, left: position.left, width: CARD_WIDTH } : { width: CARD_WIDTH }}
           className={cn(
-            "pointer-events-auto rounded-lg border border-border-default bg-canvas-raised p-4 shadow-elevated",
+            "pointer-events-auto rounded-lg border border-border-default bg-canvas-raised p-4 shadow-elevated focus:outline-none",
             !position && "fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
           )}
         >
@@ -157,8 +179,12 @@ export function OnboardingTour({ isOpen, steps, onFinish }: { isOpen: boolean; s
               <X aria-hidden size={14} />
             </button>
           </div>
-          <h2 className="mb-1 text-sm font-semibold text-ink">{step.title}</h2>
-          <p className="mb-4 text-xs leading-relaxed text-ink-muted">{step.description}</p>
+          <h2 id={titleId} className="mb-1 text-sm font-semibold text-ink">
+            {step.title}
+          </h2>
+          <p id={descriptionId} className="mb-4 text-xs leading-relaxed text-ink-muted">
+            {step.description}
+          </p>
           <div className="flex items-center justify-between gap-2">
             <button type="button" onClick={onFinish} className="text-2xs font-medium text-ink-faint transition-colors hover:text-ink">
               Pular tour

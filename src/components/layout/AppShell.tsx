@@ -1,8 +1,10 @@
+import { Suspense } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { TopBar } from "./TopBar";
 import { Sidebar } from "./Sidebar";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { RouteLoadingFallback } from "@/components/RouteLoadingFallback";
 import { useIsAnyModalOpen } from "@/context/ModalStackContext";
 import { OnboardingTourProvider } from "@/context/OnboardingTourContext";
 import { cn } from "@/lib/cn";
@@ -48,7 +50,9 @@ export function AppShell() {
                     exit={{ opacity: 0, y: -4 }}
                     transition={{ duration: 0.18, ease: "easeOut" }}
                   >
-                    <Outlet />
+                    <Suspense fallback={<RouteLoadingFallback />}>
+                      <Outlet />
+                    </Suspense>
                   </motion.div>
                 </AnimatePresence>
               </ErrorBoundary>
