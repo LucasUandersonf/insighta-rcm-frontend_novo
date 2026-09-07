@@ -4,27 +4,52 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Insighta RCM</title>
-    <!-- Aplica o tema salvo ANTES do primeiro paint — evita o "flash"
-         de tema errado (ex: usuário escolheu claro, mas a página pisca
-         escura por uma fração de segundo antes do React montar). -->
-    <script>
-      (function () {
-        try {
-          var stored = localStorage.getItem("insighta-rcm:theme");
-          var theme =
-            stored === "light" || stored === "dark"
-              ? stored
-              : stored === "system" || !stored
-                ? window.matchMedia("(prefers-color-scheme: dark)").matches
-                  ? "dark"
-                  : "light"
-                : "dark";
-          document.documentElement.classList.toggle("dark", theme === "dark");
-        } catch (e) {
-          document.documentElement.classList.add("dark");
-        }
-      })();
-    </script>
+    <!--
+      Content-Security-Policy — achado da vistoria de Segurança, deixado
+      de fora da rodada anterior de cabeçalhos HTTP por exigir checar o
+      bundle real do frontend antes de ligar às cegas. Verificado: sem
+      script/estilo de CDN externo (só Google Fonts, já liberado
+      abaixo), sem import dinâmico de origem externa, sem imagem
+      carregada de URL absoluta — o app é pequeno o bastante pra ligar
+      isso com uma política restritiva de verdade, não um "report-only"
+      genérico que nunca vira aplicado.
+
+      style-src precisa de 'unsafe-inline': framer-motion (usado em
+      quase toda animação do produto — cartões, gráficos, tour de
+      boas-vindas) escreve `style="..."` diretamente no elemento em
+      tempo de execução; não existe hash/nonce para estilo inline
+      gerado dinamicamente pelo React, só a opção de permitir ou trocar
+      a biblioteca de animação inteira. Trade-off aceito conscientemente
+      (injeção de CSS tem superfície de ataque bem menor que injeção de
+      script) — script-src continua estrito, sem 'unsafe-inline'.
+
+      SEM frame-ancestors aqui de propósito: testado com um navegador
+      de verdade (Playwright) e confirmado que essa diretiva específica
+      é IGNORADA pelo navegador quando entregue via <meta> — limitação
+      do próprio padrão CSP, não um bug nosso. A proteção real contra
+      clickjacking está no cabeçalho X-Frame-Options, configurado em
+      vite.config.ts (preview.headers) — esse sim chega como cabeçalho
+      HTTP de verdade, porque é `vite preview` quem serve a resposta em
+      produção.
+
+      connect-src usa a sintaxe "por cento, nome da env var, por cento"
+      que o próprio Vite substitui pelo valor real NO MOMENTO DO BUILD
+      (recurso nativo do Vite para HTML, não é código nosso) — o mesmo
+      valor que api-client.ts já usa para saber onde fica o backend
+      (ver esse placeholder aplicado de verdade na diretiva abaixo). Se
+      a env var não estiver configurada no build, vira string vazia e o
+      navegador ignora esse pedaço da diretiva (equivale a não ter
+      nenhuma origem extra liberada) — reforça a mesma dose de cuidado
+      do resto do projeto: recurso ausente não quebra o app, só fica
+      sem esse acesso extra.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' %VITE_API_BASE_URL%; object-src 'none'; base-uri 'self'"
+    />
+    <!-- Aplica o tema salvo ANTES do primeiro paint (ver public/theme-init.js
+         para o motivo de ser um arquivo próprio, não inline). -->
+    <script src="/theme-init.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
