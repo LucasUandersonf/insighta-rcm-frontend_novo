@@ -130,6 +130,7 @@ function RecipientModal({
               <button
                 key={value}
                 type="button"
+                aria-pressed={checked}
                 onClick={() =>
                   setValues((v) => ({
                     ...v,

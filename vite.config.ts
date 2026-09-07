@@ -1,5 +1,6 @@
+/// <reference types="vitest/config" />
 import { fileURLToPath, URL } from "node:url";
-import { defineConfig } from "vite";
+import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 
 // resolve.alias É NECESSÁRIO aqui, separado do "paths" no tsconfig.json:
@@ -25,5 +26,48 @@ export default defineConfig({
     // (Railway serve tudo sob *.up.railway.app), então liberamos esse
     // padrão especificamente, em vez de desligar a proteção por inteiro.
     allowedHosts: [".up.railway.app"],
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        // DECISÃO — divisão do pacote por biblioteca de fornecedor, não
+        // só por rota (achado do Laudo de Vistoria Técnica, parecer
+        // UX: "quase 1MB, sem divisão por tela" pesa em conexão ruim —
+        // realidade de muita clínica pequena no Brasil).
+        // ---------------------------------------------------------
+        // O code-splitting por ROTA (React.lazy em App.tsx) já separa o
+        // código de CADA TELA em seu próprio arquivo — mas todo esse
+        // código ainda importava React/Framer Motion/Recharts/Sentry
+        // etc. do MESMO chunk vendor gigante, que carregava por inteiro
+        // mesmo pra quem só abre a tela de login. Agrupar por biblioteca
+        // aqui faz cada vendor virar seu próprio arquivo, cacheável
+        // separadamente pelo navegador (framer-motion muda de versão
+        // bem menos que o código da aplicação — não faz sentido o
+        // usuário rebaixar esse cache a cada deploy).
+        manualChunks(id: string) {
+          if (!id.includes("node_modules")) return undefined;
+          if (id.includes("react-router")) return "vendor-router";
+          if (id.includes("/react/") || id.includes("/react-dom/") || id.includes("scheduler")) return "vendor-react";
+          if (id.includes("framer-motion")) return "vendor-motion";
+          if (id.includes("@tanstack")) return "vendor-query";
+          if (id.includes("recharts") || id.includes("d3-")) return "vendor-charts";
+          // @sentry/react FICA DE FORA de propósito — já é importado
+          // dinamicamente (`import("@sentry/react")`) em
+          // src/lib/monitoring.ts, só quando VITE_SENTRY_DSN está
+          // configurado; forçar aqui só duplicava o mesmo code-split que
+          // já existe e gerava um chunk vazio nesta build (sem a
+          // variável configurada, o terser já elimina o import inteiro
+          // como código morto).
+          if (id.includes("lucide-react")) return "vendor-icons";
+          return "vendor";
+        },
+      },
+    },
+  },
+  test: {
+    environment: "jsdom",
+    globals: true,
+    setupFiles: ["./src/test/setup.ts"],
+    css: false,
   },
 });

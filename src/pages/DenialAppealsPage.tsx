@@ -378,6 +378,8 @@ export function DenialAppealsPage() {
         {(["", "aberto", "protocolado", "deferido", "indeferido", "nip_aberta"] as const).map((s) => (
           <button
             key={s}
+            type="button"
+            aria-pressed={statusFilter === s}
             onClick={() => {
               setStatusFilter(s);
               setAppealsOffset(0);
