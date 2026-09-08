@@ -32,6 +32,20 @@
       HTTP de verdade, porque é `vite preview` quem serve a resposta em
       produção.
 
+      CORREÇÃO — accounts.google.com liberado em script-src e frame-src
+      -------------------------------------------------------------------
+      Achado real (reportado pelo usuário, confirmado com navegador de
+      verdade): a CSP original derrubou o botão "Continuar com Google"
+      sem avisar — script-src 'self' bloqueava o carregamento de
+      https://accounts.google.com/gsi/client (Google Identity Services),
+      então o botão nunca renderizava (container ficava vazio, sem
+      nenhum erro visível fora do console). frame-src também precisa da
+      mesma origem: o widget do Google usa um iframe para o
+      seletor de conta. Sem isso, GoogleSignInButton.tsx degrada em
+      silêncio (mesmo comportamento de "sem rede") — o problema nunca
+      quebrava o resto da tela, só sumia o botão sem deixar rastro para
+      quem não olhasse o console do navegador.
+
       connect-src usa a sintaxe "por cento, nome da env var, por cento"
       que o próprio Vite substitui pelo valor real NO MOMENTO DO BUILD
       (recurso nativo do Vite para HTML, não é código nosso) — o mesmo
@@ -45,7 +59,7 @@
     -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' %VITE_API_BASE_URL%; object-src 'none'; base-uri 'self'"
+      content="default-src 'self'; script-src 'self' https://accounts.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' %VITE_API_BASE_URL%; frame-src https://accounts.google.com; object-src 'none'; base-uri 'self'"
     />
     <!-- Aplica o tema salvo ANTES do primeiro paint (ver public/theme-init.js
          para o motivo de ser um arquivo próprio, não inline). -->
