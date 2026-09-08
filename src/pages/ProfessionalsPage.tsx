@@ -244,6 +244,13 @@ export function ProfessionalsPage() {
     onError: (err) => showError(getApiErrorMessage(err)),
   });
 
+  // Mesmo estado que já vira alerta em Agenda & Capacidade
+  // (professionals_without_availability_count) — aqui, onde a grade é de
+  // fato cadastrada, um profissional ATIVO sem grade é a ação pendente.
+  const hasActiveProfessionalWithoutAvailability = (professionals ?? []).some(
+    (p) => p.is_active && p.availability.length === 0
+  );
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -258,7 +265,7 @@ export function ProfessionalsPage() {
         }
       />
 
-      <Panel>
+      <Panel glow={hasActiveProfessionalWithoutAvailability ? "pending" : "none"}>
         <FilterBar>
           <label className="flex items-center gap-2 pb-1.5 text-xs text-ink-muted">
             <input

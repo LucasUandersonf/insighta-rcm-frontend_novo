@@ -2,14 +2,21 @@ import type { ReactNode } from "react";
 import { motion } from "framer-motion";
 import { AlertTriangle, Circle, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { BentoCard } from "@/components/ui/BentoGrid";
+import { BentoCard, type BentoCardProps } from "@/components/ui/BentoGrid";
 
 /** Card de conteúdo padrão — mesma casca visual do BentoCard (borda
  * fio de cabelo + sombra rasa + leve levitação no hover), com um
  * header opcional de título/subtítulo/ações. `colSpan`/`rowSpan`
  * deixam o Panel participar diretamente de um <BentoGrid> quando a
  * página precisa de layout assimétrico — omitidos, o Panel se
- * comporta como um bloco de largura total (uso tradicional). */
+ * comporta como um bloco de largura total (uso tradicional).
+ *
+ * `glow` — mesmo mecanismo de "atenção" da Sala de Comando
+ * (SmartInsightsFeed/HealthScoreWidget): borda de hover tingida pela
+ * severidade real do conteúdo (fila de correção com item pendente,
+ * recurso de glosa vencido, convênio não reconhecido...), nunca uma cor
+ * decorativa. Omitido (ou "none") continua sendo o padrão de qualquer
+ * Panel sem um estado de atenção genuíno para comunicar. */
 export function Panel({
   title,
   subtitle,
@@ -17,6 +24,7 @@ export function Panel({
   actions,
   colSpan,
   rowSpan,
+  glow,
   className,
   children,
 }: {
@@ -27,11 +35,12 @@ export function Panel({
   actions?: ReactNode;
   colSpan?: number;
   rowSpan?: number;
+  glow?: BentoCardProps["glow"];
   className?: string;
   children: ReactNode;
 }) {
   return (
-    <BentoCard colSpan={colSpan ?? 12} rowSpan={rowSpan} noPadding className={cn("w-full", className)}>
+    <BentoCard colSpan={colSpan ?? 12} rowSpan={rowSpan} glow={glow} noPadding className={cn("w-full", className)}>
       {(title || subtitle || action || actions) && (
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-hairline px-5 py-4">
           <div>

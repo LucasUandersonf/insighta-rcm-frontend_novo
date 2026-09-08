@@ -268,7 +268,11 @@ function BatchUploadTab() {
 
       <ColumnMappingModal file={file} isOpen={isMappingModalOpen} onClose={() => setIsMappingModalOpen(false)} />
 
-      <Panel title="Histórico de importações" subtitle="Últimos arquivos enviados por este tenant, mais recente primeiro">
+      <Panel
+        title="Histórico de importações"
+        subtitle="Últimos arquivos enviados por este tenant, mais recente primeiro"
+        glow={(history?.items ?? []).some((f) => f.error_row_count > 0) ? "pending" : "none"}
+      >
         {isLoading && <LoadingState variant="table" rows={4} />}
         {error && <ErrorState message={getApiErrorMessage(error)} onRetry={() => refetch()} />}
         {!isLoading && !error && (history?.items ?? []).length === 0 && (

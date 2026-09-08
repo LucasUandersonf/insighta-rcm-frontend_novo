@@ -40,7 +40,7 @@ export function BentoGrid({ className, children, ...props }: HTMLAttributes<HTML
   );
 }
 
-interface BentoCardProps extends HTMLAttributes<HTMLDivElement> {
+export interface BentoCardProps extends HTMLAttributes<HTMLDivElement> {
   /** Quantas das 12 colunas o card ocupa em telas grandes (padrão: 4). */
   colSpan?: number;
   /** Quantas linhas o card ocupa — só relevante quando outros cards ao

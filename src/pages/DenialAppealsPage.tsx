@@ -351,6 +351,18 @@ export function DenialAppealsPage() {
   const resolvingAppeal = (appeals ?? []).find((a) => a.id === resolvingAppealId) ?? null;
   const attachmentsAppeal = (appeals ?? []).find((a) => a.id === attachmentsAppealId) ?? null;
 
+  // Mesmo critério de deadlineClass() acima, resumido a nível de painel
+  // (glow, não só a cor da célula) — vencido é crítico de verdade, "vence
+  // em breve" é atenção; nenhum dos dois é decoração, os dois já existiam
+  // como cor de texto por linha, isto só torna o card inteiro reagir.
+  const openOrFiled = (appeals ?? []).filter((a) => a.status === "aberto" || a.status === "protocolado");
+  const hasOverdueAppeal = openOrFiled.some((a) => new Date(a.deadline_at).getTime() < Date.now());
+  const hasAppealDueSoon = openOrFiled.some((a) => {
+    const daysLeft = Math.floor((new Date(a.deadline_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+    return daysLeft >= 0 && daysLeft <= DUE_SOON_HORIZON_DAYS;
+  });
+  const appealsGlow = hasOverdueAppeal ? "denied" : hasAppealDueSoon ? "pending" : "none";
+
   const fileMutation = useMutation({
     mutationFn: (appealId: string) => apiClient.post<DenialAppeal>(`/api/v1/denial-appeals/${appealId}/file`, {}),
     onSuccess: () => {
@@ -396,7 +408,7 @@ export function DenialAppealsPage() {
         ))}
       </div>
 
-      <Panel>
+      <Panel glow={appealsGlow}>
         {isLoading && <LoadingState variant="table" rows={4} />}
         {error && <ErrorState message={getApiErrorMessage(error)} onRetry={() => refetchAppeals()} />}
         {!isLoading && !error && (appeals ?? []).length === 0 && (

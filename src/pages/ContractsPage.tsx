@@ -775,6 +775,12 @@ export function ContractsPage() {
   });
   const contracts = contractsPage?.items;
 
+  // Mesmo mecanismo de "atenção" da Sala de Comando (glow por estado
+  // real, nunca decorativo): um contrato "em_revisao" precisa de alguém
+  // conferir a extração da IA antes de homologar — vale destacar o card,
+  // não só a pílula da linha.
+  const hasContractAwaitingReview = (contracts ?? []).some((c) => c.status === "em_revisao");
+
   const planNameById = useMemo(() => {
     const map = new Map<string, string>();
     // `allPlans` (ativos + inativos) — um contrato antigo não deveria
@@ -856,6 +862,7 @@ export function ContractsPage() {
 
       <Panel
         title="Contratos"
+        glow={hasContractAwaitingReview ? "pending" : "none"}
         action={
           <div className="flex gap-2">
             <Button variant="secondary" size="xs" className="flex items-center gap-1" onClick={() => setIsManualModalOpen(true)}>

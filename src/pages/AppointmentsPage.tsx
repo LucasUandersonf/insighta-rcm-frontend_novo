@@ -202,7 +202,15 @@ export function AppointmentsPage() {
         </SelectField>
       </div>
 
-      <Panel>
+      <Panel
+        glow={
+          (appointments ?? []).some((a) => a.no_show_risk_level === "alto")
+            ? "denied"
+            : (appointments ?? []).some((a) => a.no_show_risk_level === "medio")
+              ? "pending"
+              : "none"
+        }
+      >
         {!selectedPatientId && <EmptyState icon={<UserRound size={17} strokeWidth={1.5} />} message="Selecione um paciente acima para ver as consultas dele." />}
         {selectedPatientId && appointmentsLoading && <LoadingState />}
         {selectedPatientId && appointmentsError && <ErrorState message={getApiErrorMessage(appointmentsError)} />}
