@@ -40,3 +40,23 @@ if (!window.ResizeObserver) {
 if (!Element.prototype.scrollIntoView) {
   Element.prototype.scrollIntoView = () => {};
 }
+
+// jsdom não implementa IntersectionObserver — usado pelo `whileInView`
+// do framer-motion em BentoCard.tsx (Sala de Comando 2.0: HealthScoreWidget,
+// NetworkBenchmarkPanel, SimuladorPanel). Sem este stub, qualquer teste
+// que monte um BentoCard quebra com "IntersectionObserver is not
+// defined" assim que o componente é montado — mesmo padrão de stub
+// mínimo do ResizeObserver acima.
+if (!window.IntersectionObserver) {
+  window.IntersectionObserver = class IntersectionObserver {
+    root = null;
+    rootMargin = "";
+    thresholds: ReadonlyArray<number> = [];
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+    takeRecords() {
+      return [];
+    }
+  } as unknown as typeof window.IntersectionObserver;
+}

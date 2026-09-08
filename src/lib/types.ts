@@ -533,6 +533,36 @@ export interface SmartInsights {
   insights: SmartInsight[];
 }
 
+// Nota de Saúde Financeira (GET /analytics/health-score) — Sala de Comando 2.0
+export interface HealthScoreComponent {
+  key: string; // "denial" | "no_show" | "appeal"
+  label: string;
+  rate: number; // 0.0-1.0
+  sub_score: number; // 0-100
+  weight: number; // peso efetivo, soma 1.0 entre os componentes presentes
+}
+
+export interface HealthScore {
+  score: number | null; // null = amostra insuficiente em todos os componentes ainda
+  components: HealthScoreComponent[];
+  window_days: number;
+}
+
+// Comparativo entre clínicas (GET /analytics/network-benchmark) — Sala de Comando 2.0
+export interface NetworkBenchmarkMetric {
+  key: string; // "denial" | "no_show"
+  label: string;
+  your_rate: number | null;
+  your_sample: number;
+  network_median: number | null; // null = amostra de clínicas na base ainda insuficiente
+  cohort_size: number;
+}
+
+export interface NetworkBenchmark {
+  metrics: NetworkBenchmarkMetric[];
+  window_days: number;
+}
+
 export interface BillingResponse {
   id: string;
   appointment_id: string;
