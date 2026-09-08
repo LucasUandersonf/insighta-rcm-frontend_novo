@@ -70,6 +70,14 @@ export default function App() {
       <AuthProvider>
         <ToastProvider>
           <ModalStackProvider>
+          {/* Migração v6 -> v7 (achado do Laudo de Vistoria Técnica, parecer
+              AppSec: as duas CVEs abertas do react-router-dom só têm correção
+              na v7, nenhum patch de v6 resolve). Passo 1 foi ligar as future
+              flags v7_startTransition/v7_relativeSplatPath ainda na v6, rodar
+              a suíte inteira e confirmar zero mudança de comportamento — na
+              v7 esses dois comportamentos viram o único modo de operar (a
+              prop `future` do BrowserRouter nem aceita mais essas duas
+              chaves), então não há mais nada para configurar aqui. */}
           <BrowserRouter>
             <Suspense fallback={<RouteLoadingFallback fullScreen />}>
             <Routes>
