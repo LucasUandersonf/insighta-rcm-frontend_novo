@@ -73,6 +73,18 @@ export default {
           2: withOpacity("--aura-2"),
           3: withOpacity("--aura-3"),
         },
+        // Tier 1/2 — Sala de Comando 2.0 (ver DECISÃO em index.css):
+        // violeta para "comparativo entre clínicas" (cross-tenant),
+        // azul para "recurso novo da plataforma" — nunca usados para
+        // comunicar bom/ruim (isso continua exclusivo de revenue/pending/denied).
+        tier1: {
+          DEFAULT: withOpacity("--tier1"),
+          bg: "hsl(var(--tier1) / var(--tint-alpha))",
+        },
+        tier2: {
+          DEFAULT: withOpacity("--tier2"),
+          bg: "hsl(var(--tier2) / var(--tint-alpha))",
+        },
         // Superfície "vidro fosco" dos cards — mesma cor de canvas-surface,
         // com a opacidade controlada por --glass-alpha (quase opaca no
         // claro, translúcida no escuro). Combinar sempre com
@@ -136,6 +148,9 @@ export default {
         "grad-revenue": "linear-gradient(135deg, hsl(150 85% 58%), hsl(var(--revenue)))",
         "grad-pending": "linear-gradient(135deg, hsl(45 95% 62%), hsl(var(--pending)))",
         "grad-denied": "linear-gradient(135deg, hsl(8 92% 68%), hsl(var(--denied)))",
+        // Mesmo gradiente do card de manchete "Comparativo" no conceito
+        // de design aprovado (Sala de Comando — Conceito).
+        "grad-tier1": "linear-gradient(135deg, hsl(271 76% 70%), hsl(var(--tier1)))",
       },
       keyframes: {
         "fade-up": {

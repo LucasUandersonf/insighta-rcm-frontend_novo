@@ -69,6 +69,16 @@
      claro (quase opaco: vidro sobre branco não tem contraste de fundo
      para valer a pena), plena no escuro. */
   --glass-alpha: 0.94;
+
+  /* Tier 1/2 — Sala de Comando 2.0 (roadmap "Comparativo entre clínicas"
+     e "recursos novos"), MESMOS valores do conceito de design aprovado
+     (Sala de Comando — Conceito). Não são cores semânticas de dado (isso
+     continua sendo revenue/pending/denied) — são a identidade visual do
+     que é "cross-tenant / rede" (tier1, violeta) e "recurso novo da
+     plataforma" (tier2, azul), reaproveitável em qualquer tela nova que
+     precise da mesma distinção. */
+  --tier1: 271 60% 48%;
+  --tier2: 199 70% 40%;
 }
 
 .dark {
@@ -110,6 +120,9 @@
      auras de fundo atravessarem o card (com backdrop-blur, ver
      BentoCard.tsx), sem comprometer a leitura do texto por cima. */
   --glass-alpha: 0.66;
+
+  --tier1: 271 75% 76%;
+  --tier2: 199 85% 72%;
 }
 
 @layer base {

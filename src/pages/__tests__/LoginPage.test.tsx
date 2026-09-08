@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { LoginPage } from "@/pages/LoginPage";
 import { useAuth } from "@/context/AuthContext";
@@ -9,6 +9,15 @@ import { expectNoA11yViolations } from "@/test/a11y";
 vi.mock("@/context/AuthContext", () => ({
   useAuth: vi.fn(),
 }));
+
+// Só o useNavigate é mockado (Link/MemoryRouter continuam reais) — para
+// provar QUAL rota o login bem-sucedido chama, sem montar um segundo
+// <Routes> só para este teste.
+const navigateMock = vi.fn();
+vi.mock("react-router-dom", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("react-router-dom")>();
+  return { ...actual, useNavigate: () => navigateMock };
+});
 
 const baseAuth = {
   login: vi.fn(),
@@ -53,6 +62,19 @@ describe("LoginPage", () => {
     await user.click(screen.getByRole("button", { name: /Entrar no sistema/ }));
 
     expect(login).toHaveBeenCalledWith("dono@clinica.com", "senha-123");
+  });
+
+  it("login bem-sucedido cai direto na Sala de Comando (/decisao), não no Dashboard", async () => {
+    const login = vi.fn().mockResolvedValue(undefined);
+    mockAuth({ login });
+    const user = userEvent.setup();
+    renderWithProviders(<LoginPage />);
+
+    await user.type(screen.getByLabelText("E-mail"), "dono@clinica.com");
+    await user.type(screen.getByLabelText("Senha"), "senha-123");
+    await user.click(screen.getByRole("button", { name: /Entrar no sistema/ }));
+
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith("/decisao", { replace: true }));
   });
 
   it("mostra a mensagem de erro do contexto quando o login falha", () => {

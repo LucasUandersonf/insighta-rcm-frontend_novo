@@ -48,7 +48,7 @@ interface BentoCardProps extends HTMLAttributes<HTMLDivElement> {
   rowSpan?: number;
   /** Tonalidade da borda de destaque no hover/foco — deixa o card
    * "vivo" no toque sem depender de sombra pesada. */
-  glow?: "none" | "revenue" | "pending" | "denied" | "accent";
+  glow?: "none" | "revenue" | "pending" | "denied" | "accent" | "comparativo";
   /** Remove o padding interno padrão, para cards que controlam o
    * próprio espaçamento (ex: com header + corpo com fundo diferente). */
   noPadding?: boolean;
@@ -67,6 +67,7 @@ const GLOW_HOVER_CLASSES: Record<NonNullable<BentoCardProps["glow"]>, string> = 
   pending: "hover:border-pending/40",
   denied: "hover:border-denied/40",
   accent: "hover:border-accent/40",
+  comparativo: "hover:border-tier1/40",
 };
 
 const SHADOW_CLASSES: Record<NonNullable<BentoCardProps["shadow"]>, string> = {

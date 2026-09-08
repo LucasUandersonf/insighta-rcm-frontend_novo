@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { CheckCircle2, TrendingDown, TrendingUp, TriangleAlert } from "lucide-react";
+import { CheckCircle2, TrendingDown, TrendingUp, TriangleAlert, Users } from "lucide-react";
 import { LoadingState, ErrorState } from "@/components/ui/Panel";
 import { BentoCard } from "@/components/ui/BentoGrid";
 import { Badge, type BadgeTone } from "@/components/ui/Badge";
@@ -22,11 +22,25 @@ import type { InsightSeverity, SmartInsight, SmartInsights } from "@/lib/types";
 
 const SEVERITY_CONFIG: Record<
   InsightSeverity,
-  { label: string; icon: typeof TrendingUp; text: string; border: string; bg: string; dot: string; glow: "revenue" | "pending" | "denied"; badgeTone: BadgeTone }
+  {
+    label: string;
+    icon: typeof TrendingUp;
+    text: string;
+    border: string;
+    bg: string;
+    dot: string;
+    glow: "revenue" | "pending" | "denied" | "comparativo";
+    badgeTone: BadgeTone;
+  }
 > = {
   critical: { label: "Crítico", icon: TrendingDown, text: "text-denied", border: "border-denied/25", bg: "bg-denied-bg", dot: "bg-denied", glow: "denied", badgeTone: "denied" },
   warning: { label: "Atenção", icon: TriangleAlert, text: "text-pending", border: "border-pending/25", bg: "bg-pending-bg", dot: "bg-pending", glow: "pending", badgeTone: "pending" },
   positive: { label: "Eficiência", icon: TrendingUp, text: "text-revenue", border: "border-revenue/25", bg: "bg-revenue-bg", dot: "bg-revenue", glow: "revenue", badgeTone: "revenue" },
+  // Comparativo entre clínicas (Sala de Comando 2.0, Nível 1) — tom
+  // próprio (tier1/violeta, ver DECISÃO em index.css), deliberadamente
+  // FORA da paleta crítico/atenção/positivo: não é um veredito sobre a
+  // clínica, é uma comparação com a rede.
+  comparativo: { label: "Comparativo", icon: Users, text: "text-tier1", border: "border-tier1/25", bg: "bg-tier1-bg", dot: "bg-tier1", glow: "comparativo", badgeTone: "comparativo" },
 };
 
 // Valor de destaque em texto-gradiente + leve brilho (drop-shadow na cor
@@ -39,6 +53,7 @@ const IMPACT_GRADIENT_CLASSES: Record<InsightSeverity, string> = {
   critical: "bg-grad-denied bg-clip-text text-transparent drop-shadow-[0_0_24px_hsl(var(--denied)/0.35)]",
   warning: "bg-grad-pending bg-clip-text text-transparent drop-shadow-[0_0_24px_hsl(var(--pending)/0.35)]",
   positive: "bg-grad-revenue bg-clip-text text-transparent drop-shadow-[0_0_24px_hsl(var(--revenue)/0.35)]",
+  comparativo: "bg-grad-tier1 bg-clip-text text-transparent drop-shadow-[0_0_24px_hsl(var(--tier1)/0.35)]",
 };
 
 function formatCurrency(value: number): string {
@@ -49,6 +64,7 @@ const MESH_CSS_VAR: Record<InsightSeverity, string> = {
   critical: "--denied",
   warning: "--pending",
   positive: "--revenue",
+  comparativo: "--tier1",
 };
 
 function HeroInsight({ insight }: { insight: SmartInsight }) {
@@ -75,6 +91,7 @@ function HeroInsight({ insight }: { insight: SmartInsight }) {
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <Badge tone={cfg.badgeTone}>{cfg.label}</Badge>
+            {insight.is_new && <Badge tone="novo">Novo</Badge>}
             <h2 className="font-serif text-lg font-medium tracking-premium text-ink sm:text-xl">{insight.title}</h2>
           </div>
           <p className="mt-2.5 max-w-2xl text-sm leading-relaxed text-ink-muted sm:text-[0.95rem]">{insight.message}</p>
@@ -101,7 +118,10 @@ function SecondaryInsightCard({ insight }: { insight: SmartInsight }) {
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-2">
             <p className="text-sm font-medium text-ink">{insight.title}</p>
-            <Badge tone={cfg.badgeTone}>{cfg.label}</Badge>
+            <span className="flex shrink-0 items-center gap-1.5">
+              {insight.is_new && <Badge tone="novo">Novo</Badge>}
+              <Badge tone={cfg.badgeTone}>{cfg.label}</Badge>
+            </span>
           </div>
           <p className="mt-1 text-xs leading-relaxed text-ink-muted">{insight.message}</p>
           {insight.financial_impact !== null && (
