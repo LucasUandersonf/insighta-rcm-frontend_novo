@@ -194,6 +194,40 @@ Resultado prático: quem abre `/login` baixa só o essencial daquela tela
 inteiro (Recharts, todas as páginas administrativas, etc.) só para ver
 um formulário de e-mail/senha.
 
+## react-router-dom v6 -> v7
+
+Achado do Laudo de Vistoria Técnica (parecer AppSec): `npm audit` passou a
+apontar 2 CVEs moderadas em `react-router-dom` (redirecionamento aberto via
+barra invertida, `GHSA-wrjc-x8rr-h8h6`; e injeção de construtor via
+`deserializeErrors()` na hidratação SSR, `GHSA-337j-9hxr-rhxg`) — nenhuma
+tinha correção dentro da v6 (`npm audit fix --force` só resolvia subindo
+para v7). Migração feita em duas etapas, seguindo o caminho oficialmente
+recomendado pelo próprio React Router:
+
+1. Ligar as future flags `v7_startTransition`/`v7_relativeSplatPath` no
+   `<BrowserRouter>` ainda na v6 (os dois avisos de depreciação já
+   apareciam nos testes) e rodar a suíte inteira + build antes de mudar de
+   versão maior — forma segura de expor qualquer mudança de comportamento
+   com a versão antiga ainda instalada, fácil de reverter.
+2. Com isso limpo, subir `react-router-dom` para `^7.18.3`. Na v7 esses
+   dois comportamentos passam a ser o único modo de operar — a prop
+   `future` do `<BrowserRouter>` nem aceita mais essas duas chaves, então
+   a migração em si ficou em remover a prop de novo.
+
+O app usa só a API "clássica" do React Router (`BrowserRouter`, `Routes`,
+`Route`, `Navigate`, `Outlet`, `Link`, `NavLink`, `useNavigate`,
+`useLocation`, `useSearchParams`) — nenhuma API de data router
+(`createBrowserRouter`, loaders/actions, `useLoaderData`) — o que reduz
+bastante a superfície de quebra da v7 (a maior parte das mudanças da major
+version é justamente nas APIs de data router). Confirmado depois do bump:
+suíte de 77 testes verde, build de produção limpo (typecheck incluso),
+`npm audit --omit=dev --audit-level=high` zerado (as 2 CVEs somem), e um
+teste de navegação com navegador real (Playwright) contra o `vite preview`
+de produção — visita não autenticada em `/` redireciona para `/login`
+(guarda de rota), caminho desconhecido cai no catch-all e também redireciona,
+navegação client-side via `<Link>` funciona (login -> signup sem reload de
+página).
+
 ## Build para produção
 
 ```bash
