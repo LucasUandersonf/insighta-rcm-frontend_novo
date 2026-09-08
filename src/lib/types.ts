@@ -518,13 +518,22 @@ export interface DenialRiskDistribution {
   total_reviewed: number;
 }
 
-export type InsightSeverity = "critical" | "warning" | "positive";
+// "comparativo" — Comparativo entre clínicas como manchete do feed (Sala
+// de Comando 2.0, Nível 1) — ver build_network_comparativo_insight no
+// backend. Visualmente distinto de crítico/atenção/positivo (tom violeta,
+// não semântico de "bom"/"ruim") porque não é um veredito sobre a
+// clínica, é uma comparação.
+export type InsightSeverity = "critical" | "warning" | "positive" | "comparativo";
 
 export interface SmartInsight {
   severity: InsightSeverity;
   title: string;
   message: string;
   financial_impact: number | null;
+  // Marca insights de recursos lançados na Sala de Comando 2.0 (Radar de
+  // Profissional, Comparativo) — vira a pílula "Novo" no card. Default
+  // false no backend para respostas antigas.
+  is_new?: boolean;
 }
 
 export interface SmartInsights {

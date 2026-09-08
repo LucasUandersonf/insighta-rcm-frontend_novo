@@ -24,7 +24,7 @@ function TenantSelector() {
   async function handleSelect(tenantId: string) {
     try {
       await selectTenant(tenantId);
-      navigate("/", { replace: true });
+      navigate(POST_LOGIN_ROUTE, { replace: true });
     } catch {
       // loginError já foi setado pelo contexto — nada a fazer aqui.
     }
@@ -65,6 +65,15 @@ function TenantSelector() {
   );
 }
 
+// Destino pós-login — a Sala de Comando (não mais "/", que cai no
+// Dashboard de números). Pedido explícito do usuário: a resposta em
+// texto de "onde estamos perdendo dinheiro hoje?" agora é a primeira
+// tela depois de entrar, não uma tela para navegar até. /decisao já é
+// gated por RoleProtectedRoute (owner/admin/financeiro/auditor) — quem
+// não tem esse papel só bate no redirect de volta para "/" (Dashboard),
+// um hop a mais, nunca uma tela quebrada.
+const POST_LOGIN_ROUTE = "/decisao";
+
 const BRAND_HIGHLIGHTS = [
   { icon: LineChart, text: "Sala de Comando com diagnóstico automático de onde a receita está vazando." },
   { icon: ShieldCheck, text: "Motor anti-glosa audita cada faturamento antes do envio à operadora." },
@@ -88,7 +97,7 @@ export function LoginPage() {
       // Se o login exigir seleção de clínica, o AuthContext preenche
       // tenantSelection e este componente troca para o seletor acima —
       // navegar só faz sentido quando o token já foi emitido.
-      navigate("/", { replace: true });
+      navigate(POST_LOGIN_ROUTE, { replace: true });
     } catch {
       // loginError já foi setado pelo contexto — nada a fazer aqui.
     }
@@ -106,7 +115,7 @@ export function LoginPage() {
       }
       if (!result.requiresTenantSelection) {
         // Login direto — token já emitido pelo contexto.
-        navigate("/", { replace: true });
+        navigate(POST_LOGIN_ROUTE, { replace: true });
       }
       // Se exigir seleção de clínica, o AuthContext já preencheu
       // tenantSelection e o TenantSelector assume a tela sozinho.

@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
-export type BadgeTone = "revenue" | "pending" | "denied" | "neutral" | "accent";
+export type BadgeTone = "revenue" | "pending" | "denied" | "neutral" | "accent" | "comparativo" | "novo";
 
 const TONE_CLASSES: Record<BadgeTone, string> = {
   revenue: "bg-revenue-bg text-revenue border-revenue/25",
@@ -9,6 +9,12 @@ const TONE_CLASSES: Record<BadgeTone, string> = {
   denied: "bg-denied-bg text-denied border-denied/25",
   neutral: "bg-canvas-raised text-ink-faint border-border-default",
   accent: "bg-accent-bg text-accent border-accent/30",
+  // Tier 1/2 (ver DECISÃO em index.css/tailwind.config.ts) — "comparativo"
+  // marca um insight cross-tenant (Sala de Comando 2.0), "novo" marca um
+  // TIPO de insight recém-lançado na plataforma. Nenhum dos dois é
+  // semântico de bom/ruim, por isso ficam fora da paleta revenue/pending/denied.
+  comparativo: "bg-tier1-bg text-tier1 border-tier1/30",
+  novo: "bg-tier2-bg text-tier2 border-tier2/30",
 };
 
 /**

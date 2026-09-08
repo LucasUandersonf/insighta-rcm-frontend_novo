@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { HeartPulse } from "lucide-react";
 import { BentoCard } from "@/components/ui/BentoGrid";
+import { Badge } from "@/components/ui/Badge";
 import { LoadingState, ErrorState } from "@/components/ui/Panel";
 import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
 import { apiClient } from "@/lib/api-client";
@@ -25,6 +26,17 @@ import type { HealthScore } from "@/lib/types";
  * exatamente o tipo de número inventado que este produto inteiro evita
  * (ver DECISÃO em health_score_engine.py). Quando o backend passar a
  * guardar snapshots mensais, a variação entra aqui — não antes.
+ *
+ * DECISÃO — anel com cor por FAIXA de nota, não uma cor fixa
+ * -------------------------------------------------------------------
+ * O conceito de design usava uma cor fixa (tier2/azul) só para bater
+ * com a pílula "Nível 2". Aqui o anel usa a MESMA lógica de
+ * revenue/pending/denied do resto do produto (nota boa = verde, média =
+ * âmbar, baixa = vermelho) — uma nota de 20 pintada de azul "bonito"
+ * comunicaria segurança que não existe. A pílula "Nível 2 · Novo" abaixo
+ * é só sobre o RECURSO ser novo na plataforma (fato verdadeiro), não
+ * sobre o valor da nota — por isso pode usar a cor do conceito sem
+ * conflito com a honestidade do anel.
  */
 
 const RING_RADIUS = 32;
@@ -117,6 +129,13 @@ export function HealthScoreWidget() {
               </span>
             ))}
           </div>
+        </div>
+        {/* "Nível 2" = classificação do roadmap (Sala de Comando 2.0) —
+            dado que já cabia no sistema, sem tela de operação nova.
+            "Novo" é verdadeiro (recurso lançado nesta rodada); a nota em
+            si NÃO fica azul por causa desta pílula (ver DECISÃO acima). */}
+        <div className="self-start">
+          <Badge tone="novo">Nível 2 · Novo</Badge>
         </div>
       </div>
     </BentoCard>

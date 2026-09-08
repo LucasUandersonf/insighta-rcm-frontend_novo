@@ -30,7 +30,7 @@ function BenchmarkBar({ metric }: { metric: NetworkBenchmarkMetric }) {
     diff === null ? null : diff > 0.05 ? `+${diff.toFixed(1)}pp acima da mediana` : diff < -0.05 ? `${diff.toFixed(1)}pp abaixo da mediana` : "na mediana da rede";
 
   return (
-    <BentoCard colSpan={12} className="mb-3">
+    <BentoCard colSpan={12} glow="comparativo" className="mb-3">
       <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
         <span className="text-sm font-medium text-ink">{metric.label}</span>
         {diffLabel && (
@@ -41,8 +41,12 @@ function BenchmarkBar({ metric }: { metric: NetworkBenchmarkMetric }) {
       </div>
       <div className="relative h-7 overflow-hidden rounded-md bg-canvas-raised/50">
         {yourPct !== null && (
+          // Gradiente tier1 (ver DECISÃO em index.css) — mesmo tom
+          // "cross-tenant/rede" do badge Comparativo no feed de insights,
+          // idêntico ao conceito de design aprovado (Sala de Comando —
+          // Conceito, .cmp-bar-fill.you).
           <div
-            className="flex h-full items-center rounded-md bg-gradient-to-r from-accent to-[hsl(271_70%_60%)] px-2.5 text-2xs font-semibold text-white"
+            className="flex h-full items-center rounded-md bg-gradient-to-r from-tier1 to-[hsl(271_70%_60%)] px-2.5 text-2xs font-semibold text-white"
             style={{ width: `${Math.max(yourWidth, 14)}%` }}
           >
             Você — {yourPct.toFixed(1)}%
