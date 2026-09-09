@@ -534,6 +534,14 @@ export interface SmartInsight {
   // Profissional, Comparativo) — vira a pílula "Novo" no card. Default
   // false no backend para respostas antigas.
   is_new?: boolean;
+  // Botão de ação real do card — o rótulo do botão e o destino, em 3
+  // formatos que ExecutiveOverviewPage/SmartInsightsFeed interpretam:
+  // "/rota" (navega pra outra página), "#tab:id" (troca de aba dentro da
+  // própria Sala de Comando) ou "#id" (rola até aquele elemento na
+  // mesma tela). Ambos null quando o insight não tem uma tela/seção
+  // específica de destino.
+  action_label?: string | null;
+  action_href?: string | null;
 }
 
 export interface SmartInsights {
