@@ -572,6 +572,20 @@ export interface HealthScore {
   trend: HealthScoreTrend | null; // null = ainda não há fotografia de referência (base nova)
 }
 
+// Carteira de pacientes inativos (GET /analytics/inactive-patients) — Sala de Comando
+export interface InactivePatientItem {
+  patient_id: string;
+  full_name: string;
+  last_appointment_at: string;
+  days_since_last_appointment: number;
+}
+
+export interface InactivePatients {
+  items: InactivePatientItem[];
+  total_count: number; // pode ser maior que items.length — a lista é sempre truncada
+  inactive_after_days: number;
+}
+
 // Comparativo entre clínicas (GET /analytics/network-benchmark) — Sala de Comando 2.0
 export interface NetworkBenchmarkMetric {
   key: string; // "denial" | "no_show"
