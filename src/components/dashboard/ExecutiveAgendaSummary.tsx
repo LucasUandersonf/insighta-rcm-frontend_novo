@@ -12,6 +12,7 @@ import type { AgendaMetrics } from "@/lib/types";
 // então a ORDEM de exibição precisa reindexar, não só relabelar.
 const WEEKDAY_DISPLAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
 const WEEKDAY_LABELS = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
+const WEEKDAY_LABELS_FULL = ["Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado", "Domingo"];
 
 const CHART_LEFT = 4;
 const CHART_RIGHT = 336;
@@ -26,11 +27,30 @@ const GRID_LINES = [12, 34.4, 56.9, 80];
  * raciocínio de DonutChart.tsx: é um único traço estático sem
  * interação/tooltip, não justifica puxar Recharts.
  */
+// Narrativa em texto simples acima do gráfico — antes esta seção inteira
+// (Agenda & Capacidade) era só barra/gráfico/lista, sem nenhuma frase,
+// na contramão do resto da tela (achado do usuário: "menos BI, mais
+// consultor" não tinha chegado até aqui). Só aponta o dia mais fraco
+// quando a diferença é grande o bastante pra valer a pena mencionar —
+// um dia levemente mais fraco que os outros é variação normal, não notícia.
+function weakestDayNote(values: number[], labels: string[]): string | null {
+  // Só considera dias com pelo menos 1 consulta — do contrário, o
+  // "dia mais fraco" seria sempre sábado/domingo numa clínica comum
+  // (que não atende no fim de semana), o que não é notícia nenhuma.
+  const workingDays = values.map((v, i) => ({ v, i })).filter((d) => d.v > 0);
+  if (workingDays.length < 3) return null; // amostra pequena demais pra comparar dia a dia
+  const max = Math.max(...workingDays.map((d) => d.v));
+  const weakest = workingDays.reduce((min, d) => (d.v < min.v ? d : min));
+  if (weakest.v > max * 0.6) return null; // diferença pequena, não vale destacar
+  return `${labels[weakest.i]} costuma ser seu dia mais fraco da semana.`;
+}
+
 function AppointmentVolumeChart({ weekdayHistogram }: { weekdayHistogram: AgendaMetrics["weekday_histogram"] }) {
   const countByWeekday = new Map(weekdayHistogram.map((b) => [b.weekday, b.appointment_count]));
   const values = WEEKDAY_DISPLAY_ORDER.map((day) => countByWeekday.get(day) ?? 0);
   const total = values.reduce((sum, v) => sum + v, 0);
   const max = Math.max(...values, 1);
+  const note = weakestDayNote(values, WEEKDAY_LABELS_FULL);
 
   const step = (CHART_RIGHT - CHART_LEFT) / (values.length - 1);
   const points = values.map((v, i) => ({
@@ -64,6 +84,7 @@ function AppointmentVolumeChart({ weekdayHistogram }: { weekdayHistogram: Agenda
           <span key={label}>{label}</span>
         ))}
       </div>
+      {note && <p className="mt-2 text-2xs leading-relaxed text-ink-muted">{note}</p>}
     </div>
   );
 }
@@ -78,6 +99,18 @@ function occupancyBarClass(rate: number): string {
   if (rate >= 0.85) return "bg-revenue";
   if (rate < 0.6) return "bg-pending";
   return "bg-aura-line";
+}
+
+// Mesma ideia de weakestDayNote acima: uma frase simples explicando o
+// que os números abaixo significam, em vez de deixar 4 barras coloridas
+// falarem por si só.
+function occupancyNote(professionals: AgendaMetrics["professionals"]): string | null {
+  const withGrade = professionals.filter((p) => p.available_minutes > 0);
+  if (withGrade.length === 0) return null;
+  const freeCount = withGrade.filter((p) => p.utilization_rate < 0.6).length;
+  if (freeCount === 0) return "Sua equipe está com a agenda bem ocupada — nenhum profissional com muito horário livre.";
+  const plural = freeCount === 1 ? "" : "s";
+  return `${freeCount} profissional${plural} está${freeCount === 1 ? "" : "ão"} com a agenda bem mais livre que o normal — vale tentar preencher esses horários.`;
 }
 
 function relativeDateLabel(iso: string): string {
@@ -118,6 +151,8 @@ export function ExecutiveAgendaSummary({ dateFrom, dateTo }: { dateFrom: string;
   if (!data) return null;
 
   const topProfessionals = [...data.professionals].sort((a, b) => b.utilization_rate - a.utilization_rate).slice(0, 4);
+  const occupancyText = occupancyNote(data.professionals);
+  const highRiskCount = data.upcoming_risk_appointments.filter((a) => a.risk_level === "alto").length;
 
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
@@ -126,20 +161,23 @@ export function ExecutiveAgendaSummary({ dateFrom, dateTo }: { dateFrom: string;
         {topProfessionals.length === 0 ? (
           <p className="text-xs text-ink-faint">Nenhum profissional com grade cadastrada.</p>
         ) : (
-          <div className="space-y-3">
-            {topProfessionals.map((p) => (
-              <div key={p.professional_id} className="flex items-center gap-3">
-                <span className="w-[168px] shrink-0 truncate text-[12.5px] text-ink-muted">{p.full_name}</span>
-                <div className="h-[7px] flex-1 overflow-hidden rounded-full bg-canvas-raised">
-                  <div
-                    className={cn("h-full rounded-full", occupancyBarClass(p.utilization_rate))}
-                    style={{ width: `${Math.min(p.utilization_rate * 100, 100)}%` }}
-                  />
+          <>
+            <div className="space-y-3">
+              {topProfessionals.map((p) => (
+                <div key={p.professional_id} className="flex items-center gap-3">
+                  <span className="w-[168px] shrink-0 truncate text-[12.5px] text-ink-muted">{p.full_name}</span>
+                  <div className="h-[7px] flex-1 overflow-hidden rounded-full bg-canvas-raised">
+                    <div
+                      className={cn("h-full rounded-full", occupancyBarClass(p.utilization_rate))}
+                      style={{ width: `${Math.min(p.utilization_rate * 100, 100)}%` }}
+                    />
+                  </div>
+                  <span className="tabular w-16 shrink-0 text-right text-xs text-ink">{(p.utilization_rate * 100).toFixed(0)}%</span>
                 </div>
-                <span className="tabular w-16 shrink-0 text-right text-xs text-ink">{(p.utilization_rate * 100).toFixed(0)}%</span>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+            {occupancyText && <p className="mt-3 text-2xs leading-relaxed text-ink-muted">{occupancyText}</p>}
+          </>
         )}
       </BentoCard>
 
@@ -150,9 +188,14 @@ export function ExecutiveAgendaSummary({ dateFrom, dateTo }: { dateFrom: string;
       <BentoCard colSpan={4}>
         <p className="mb-1.5 text-2xs font-medium text-ink-muted">Risco de falta — próximos dias</p>
         {data.upcoming_risk_appointments.length === 0 ? (
-          <p className="py-2 text-xs text-ink-faint">Nenhum agendamento de alto risco nos próximos dias.</p>
+          <p className="py-2 text-xs text-ink-faint">Ninguém com risco relevante de faltar nos próximos dias — pode ficar tranquilo.</p>
         ) : (
           <div>
+            {highRiskCount > 0 && (
+              <p className="mb-2 text-2xs leading-relaxed text-ink-muted">
+                Ligar ou mandar mensagem confirmando a presença costuma evitar boa parte dessas faltas.
+              </p>
+            )}
             {data.upcoming_risk_appointments.map((appt) => {
               const cfg = RISK_CONFIG[appt.risk_level];
               return (

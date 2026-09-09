@@ -96,7 +96,7 @@ export function ExecutiveOverviewPage() {
                 perdendo dinheiro hoje?". Os números continuam existindo
                 logo abaixo, como evidência de apoio para quem quer
                 conferir, não como o elemento principal da tela. */}
-            <SmartInsightsFeed dateFrom={dateFrom} dateTo={dateTo} />
+            <SmartInsightsFeed dateFrom={dateFrom} dateTo={dateTo} onNavigateTab={(id) => setActiveTab(id as TabId)} />
 
             {isLoading && <LoadingState variant="cards" rows={6} />}
             {error && <ErrorState message={getApiErrorMessage(error)} />}
@@ -169,7 +169,12 @@ export function ExecutiveOverviewPage() {
               </section>
             )}
 
-            <section>
+            {/* id="agenda-resumo" — destino dos botões "Ver ocupação por
+                profissional"/"Ver quem está em risco"/"Ver volume de
+                consultas" dos insights de agenda acima (ver DECISÃO em
+                InsightActionButton, SmartInsightsFeed.tsx): rola até aqui
+                em vez de deixar o usuário procurar sozinho. */}
+            <section id="agenda-resumo">
               <h2 className="mb-3 text-sm font-medium text-ink">Agenda & Capacidade Operacional</h2>
               <ExecutiveAgendaSummary dateFrom={dateFrom} dateTo={dateTo} />
             </section>
