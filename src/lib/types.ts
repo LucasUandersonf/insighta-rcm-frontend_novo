@@ -559,10 +559,17 @@ export interface HealthScoreComponent {
   weight: number; // peso efetivo, soma 1.0 entre os componentes presentes
 }
 
+export interface HealthScoreTrend {
+  reference_score: number;
+  reference_month: string; // YYYY-MM-01
+  delta: number; // score atual - reference_score; positivo = melhorou
+}
+
 export interface HealthScore {
   score: number | null; // null = amostra insuficiente em todos os componentes ainda
   components: HealthScoreComponent[];
   window_days: number;
+  trend: HealthScoreTrend | null; // null = ainda não há fotografia de referência (base nova)
 }
 
 // Comparativo entre clínicas (GET /analytics/network-benchmark) — Sala de Comando 2.0
