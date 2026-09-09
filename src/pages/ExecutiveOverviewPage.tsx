@@ -130,16 +130,23 @@ export function ExecutiveOverviewPage() {
                   <KpiCard
                     size="compact"
                     colSpan={2}
-                    label="Margem vs. contratada"
+                    label="Você faturou do que podia"
                     value={summary.margin_vs_contracted_pct !== null ? `${summary.margin_vs_contracted_pct.toFixed(1)}%` : "—"}
                     numericValue={summary.margin_vs_contracted_pct ?? undefined}
                     format={summary.margin_vs_contracted_pct !== null ? (n) => `${n.toFixed(1)}%` : undefined}
                     tone="neutral"
                   />
+                  {/* DECISÃO — rótulo corrigido (era "Faturamento retido", dando
+                      a entender que era um valor em R$; o número por baixo
+                      sempre foi uma CONTAGEM de faturamentos travados
+                      esperando revisão de risco, nunca dinheiro — ver
+                      high_risk_pending_count em app/repositories/reporting_repository.py,
+                      backend). O rótulo agora descreve o que o número
+                      realmente é. */}
                   <KpiCard
                     size="compact"
                     colSpan={2}
-                    label="Faturamento retido"
+                    label="Faturamentos travados por risco"
                     value={String(summary.high_risk_pending_count)}
                     numericValue={summary.high_risk_pending_count}
                     format={(n) => String(Math.round(n))}
@@ -158,7 +165,7 @@ export function ExecutiveOverviewPage() {
                   <KpiCard
                     size="compact"
                     colSpan={2}
-                    label="Ocupação da agenda"
+                    label="Agenda ocupada"
                     value={summary.avg_capacity_utilization ? formatPct(summary.avg_capacity_utilization.value) : "—"}
                     numericValue={summary.avg_capacity_utilization ? summary.avg_capacity_utilization.value * 100 : undefined}
                     format={summary.avg_capacity_utilization ? (n) => `${n.toFixed(1)}%` : undefined}
