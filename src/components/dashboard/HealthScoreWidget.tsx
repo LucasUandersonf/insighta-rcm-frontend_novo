@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { HeartPulse } from "lucide-react";
+import { ArrowDown, ArrowUp, HeartPulse } from "lucide-react";
 import { BentoCard } from "@/components/ui/BentoGrid";
 import { Badge } from "@/components/ui/Badge";
 import { LoadingState, ErrorState } from "@/components/ui/Panel";
@@ -16,16 +16,15 @@ import type { HealthScore } from "@/lib/types";
  * troca de card conforme o que dói mais na semana) — é um estado que se
  * acompanha ao longo dos meses, não um alerta que aparece e some.
  *
- * DECISÃO — sem "tendência" fake
+ * DECISÃO — tendência real, só quando existe histórico de verdade
  * -------------------------------------------------------------------
- * O conceito de design mostrava "+12 pontos este trimestre" como
- * ilustração — este componente real NÃO inventa uma tendência: o
- * backend hoje só calcula a nota do momento (ver
- * AnalyticsService.get_health_score), não guarda snapshot histórico
- * nenhum ainda. Mostrar uma variação sem ter o dado real seria
- * exatamente o tipo de número inventado que este produto inteiro evita
- * (ver DECISÃO em health_score_engine.py). Quando o backend passar a
- * guardar snapshots mensais, a variação entra aqui — não antes.
+ * O backend agora guarda uma fotografia mensal da nota (ver
+ * core.health_score_snapshots + app/worker/health_score_snapshot_job.py)
+ * e só preenche `trend` quando já existe uma fotografia de referência
+ * de ~90 dias atrás — em bases novas, sem 3 meses de histórico ainda,
+ * `trend` vem `null` e a pílula simplesmente não aparece. Nunca uma
+ * variação inventada (mesmo espírito de honestidade de
+ * health_score_engine.py).
  *
  * DECISÃO — anel com cor por FAIXA de nota, não uma cor fixa
  * -------------------------------------------------------------------
@@ -46,6 +45,15 @@ function scoreTone(score: number): { stroke: string; text: string } {
   if (score >= 70) return { stroke: "hsl(var(--revenue))", text: "text-revenue" };
   if (score >= 40) return { stroke: "hsl(var(--pending))", text: "text-pending" };
   return { stroke: "hsl(var(--denied))", text: "text-denied" };
+}
+
+// "mês/ano" curto — mais fácil de escanear numa pílula pequena do que a
+// data ISO completa que o backend devolve (sempre o dia 1 do mês).
+function formatReferenceMonth(isoDate: string): string {
+  const [year, month] = isoDate.split("-");
+  return new Intl.DateTimeFormat("pt-BR", { month: "short", year: "numeric" }).format(
+    new Date(Number(year), Number(month) - 1, 1)
+  );
 }
 
 export function HealthScoreWidget() {
@@ -118,7 +126,20 @@ export function HealthScoreWidget() {
           </div>
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium text-ink">Nota de saúde financeira</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-sm font-medium text-ink">Nota de saúde financeira</p>
+            {data.trend && (
+              <span
+                className={cn(
+                  "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-2xs font-medium",
+                  data.trend.delta >= 0 ? "bg-revenue-bg text-revenue" : "bg-denied-bg text-denied"
+                )}
+              >
+                {data.trend.delta >= 0 ? <ArrowUp aria-hidden size={10} /> : <ArrowDown aria-hidden size={10} />}
+                {Math.abs(data.trend.delta).toFixed(0)} pontos desde {formatReferenceMonth(data.trend.reference_month)}
+              </span>
+            )}
+          </div>
           <p className="mt-1 text-xs leading-relaxed text-ink-muted">
             Combina taxa de glosa, taxa de falta e sucesso em recurso — janela dos últimos {data.window_days} dias.
           </p>

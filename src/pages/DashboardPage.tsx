@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { CalendarCheck2, CheckCircle2, Gauge, Receipt } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
+import { CalendarCheck2, CheckCircle2, Filter, Gauge, Receipt, X } from "lucide-react";
 import { KpiCard } from "@/components/ui/KpiCard";
 import { RiskBadge } from "@/components/ui/RiskBadge";
 import { Panel, EmptyState, LoadingState, ErrorState } from "@/components/ui/Panel";
@@ -74,17 +75,36 @@ export function DashboardPage() {
   const { windowDays, setWindowDays, dateFrom, dateTo } = useDateWindow(7);
   const [activeTab, setActiveTab] = useState<"faturamento" | "agenda">("faturamento");
 
+  // Deep-link do botão de ação da Sala de Comando (ver DECISÃO em
+  // smart_insights_engine.py::_denial_spike_insights, backend): o
+  // insight de recusa em alta de um convênio específico já chega aqui
+  // com esse parâmetro — a fila abre JÁ FILTRADA, em vez da fila geral
+  // que o usuário tinha que vasculhar sozinho pra achar as linhas do
+  // convênio certo.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const filterPlanId = searchParams.get("insurance_plan_id");
+
   const {
     data: highRiskPage,
     isLoading,
     error,
     refetch,
   } = useQuery({
-    queryKey: ["billing", "high-risk", offset],
+    queryKey: ["billing", "high-risk", offset, filterPlanId],
     queryFn: () =>
-      apiClient.get<PaginatedResponse<BillingResponse>>(`/api/v1/billing/high-risk?limit=${PAGE_SIZE}&offset=${offset}`),
+      apiClient.get<PaginatedResponse<BillingResponse>>(
+        `/api/v1/billing/high-risk?limit=${PAGE_SIZE}&offset=${offset}${filterPlanId ? `&insurance_plan_id=${filterPlanId}` : ""}`
+      ),
     enabled: canViewBillingQueue,
   });
+
+  function clearPlanFilter() {
+    setSearchParams((params) => {
+      params.delete("insurance_plan_id");
+      return params;
+    });
+    setOffset(0);
+  }
 
   const {
     data: summary,
@@ -286,10 +306,33 @@ export function DashboardPage() {
           subtitle="Ordenado por criação — dados reais de GET /billing/high-risk"
           glow={(highRiskPage?.total ?? 0) > 0 ? "pending" : "revenue"}
         >
+          {filterPlanId && (
+            <div className="mb-3 flex items-center justify-between gap-2 rounded-md border border-tier1/25 bg-tier1-bg px-3 py-2 text-xs text-ink">
+              <span className="flex items-center gap-1.5">
+                <Filter aria-hidden size={12} />
+                Filtrando por 1 convênio — veio de um card da Sala de Comando.
+              </span>
+              <button
+                type="button"
+                onClick={clearPlanFilter}
+                className="flex items-center gap-1 rounded-sm px-1.5 py-0.5 font-medium text-tier1 hover:bg-canvas-surface/60"
+              >
+                <X aria-hidden size={11} />
+                Limpar filtro
+              </button>
+            </div>
+          )}
           {isLoading && <LoadingState variant="table" rows={5} />}
           {error && <ErrorState message={getApiErrorMessage(error)} onRetry={() => refetch()} />}
           {!isLoading && !error && highRiskBillings.length === 0 && (
-            <EmptyState icon={<CheckCircle2 size={17} strokeWidth={1.5} />} message="Nenhum faturamento de alto risco no momento — a agenda está limpa." />
+            <EmptyState
+              icon={<CheckCircle2 size={17} strokeWidth={1.5} />}
+              message={
+                filterPlanId
+                  ? "Nenhum faturamento de alto risco deste convênio no momento."
+                  : "Nenhum faturamento de alto risco no momento — a agenda está limpa."
+              }
+            />
           )}
           {!isLoading && highRiskBillings.length > 0 && (
             <table className="w-full text-left text-sm">

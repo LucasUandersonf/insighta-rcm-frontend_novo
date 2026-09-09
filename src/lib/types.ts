@@ -559,10 +559,17 @@ export interface HealthScoreComponent {
   weight: number; // peso efetivo, soma 1.0 entre os componentes presentes
 }
 
+export interface HealthScoreTrend {
+  reference_score: number;
+  reference_month: string; // YYYY-MM-01
+  delta: number; // score atual - reference_score; positivo = melhorou
+}
+
 export interface HealthScore {
   score: number | null; // null = amostra insuficiente em todos os componentes ainda
   components: HealthScoreComponent[];
   window_days: number;
+  trend: HealthScoreTrend | null; // null = ainda não há fotografia de referência (base nova)
 }
 
 // Comparativo entre clínicas (GET /analytics/network-benchmark) — Sala de Comando 2.0
@@ -577,6 +584,26 @@ export interface NetworkBenchmarkMetric {
 
 export interface NetworkBenchmark {
   metrics: NetworkBenchmarkMetric[];
+  window_days: number;
+}
+
+// Oportunidades (GET /analytics/oportunidades) — Sala de Comando 2.0
+export interface OportunidadeItem {
+  insurance_plan_id: string;
+  plan_display_name: string;
+  tuss_code: string;
+  procedure_name: string | null;
+  your_price: number;
+  network_median_price: number;
+  network_cohort_size: number;
+  monthly_volume: number;
+  gap_value: number;
+  gap_pct: number;
+  estimated_monthly_opportunity: number;
+}
+
+export interface Oportunidades {
+  items: OportunidadeItem[];
   window_days: number;
 }
 
