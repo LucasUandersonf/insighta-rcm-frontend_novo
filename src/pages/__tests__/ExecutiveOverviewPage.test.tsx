@@ -62,6 +62,9 @@ function mockAllEndpoints() {
     if (url.includes("oportunidades")) {
       return Promise.resolve({ window_days: 90, items: [] } as never);
     }
+    if (url.includes("inactive-patients")) {
+      return Promise.resolve({ total_count: 0, inactive_after_days: 365, items: [] } as never);
+    }
     if (url.includes("/users/me")) {
       return Promise.resolve(null as never);
     }

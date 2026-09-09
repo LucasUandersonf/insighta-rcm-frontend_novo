@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { PeriodWindowSelect } from "@/components/ui/PeriodWindowSelect";
 import { Tabs, TabPanel } from "@/components/ui/Tabs";
 import { ExecutiveAgendaSummary } from "@/components/dashboard/ExecutiveAgendaSummary";
+import { InactivePatientsPanel } from "@/components/dashboard/InactivePatientsPanel";
 import { SmartInsightsFeed } from "@/components/dashboard/SmartInsightsFeed";
 import { HealthScoreWidget } from "@/components/dashboard/HealthScoreWidget";
 import { NetworkBenchmarkPanel } from "@/components/dashboard/NetworkBenchmarkPanel";
@@ -184,6 +185,16 @@ export function ExecutiveOverviewPage() {
             <section id="agenda-resumo">
               <h2 className="mb-3 text-sm font-medium text-ink">Agenda & Capacidade Operacional</h2>
               <ExecutiveAgendaSummary dateFrom={dateFrom} dateTo={dateTo} />
+            </section>
+
+            {/* id="carteira-inativa" — destino do botão "Ver quem não
+                voltou" do insight de meta anual atrasada (ver DECISÃO em
+                smart_insights_engine.py::_annual_goal_insight). Sem
+                janela de período (mesmo espírito da Nota de Saúde): é
+                sempre "quem não volta há mais de 1 ano a partir de
+                hoje", não um recorte dos últimos 7 dias. */}
+            <section id="carteira-inativa">
+              <InactivePatientsPanel />
             </section>
           </div>
         </TabPanel>
