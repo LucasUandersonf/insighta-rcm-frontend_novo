@@ -30,6 +30,7 @@ describe("SmartInsightsFeed", () => {
       insights: [
         {
           severity: "comparativo",
+          category: "faturamento",
           title: "Sua taxa de glosa está acima da rede",
           message: "9,2% nesta janela — a mediana da rede é 5,1%.",
           financial_impact: 6480,
@@ -53,7 +54,7 @@ describe("SmartInsightsFeed", () => {
       period_start: "2026-01-01",
       period_end: "2026-01-07",
       insights: [
-        { severity: "critical", title: "Prazo de recurso vencendo", message: "2 recursos vencem em breve.", financial_impact: 3140 },
+        { severity: "critical", category: "faturamento", title: "Prazo de recurso vencendo", message: "2 recursos vencem em breve.", financial_impact: 3140 },
       ],
     };
     vi.mocked(apiClient.get).mockResolvedValue(data);
@@ -71,6 +72,7 @@ describe("SmartInsightsFeed", () => {
       insights: [
         {
           severity: "critical",
+          category: "faturamento",
           title: "Boa parte do que você faturou corre risco de ser recusada pelo convênio",
           message: "...",
           financial_impact: 9000,
@@ -96,6 +98,7 @@ describe("SmartInsightsFeed", () => {
       insights: [
         {
           severity: "comparativo",
+          category: "faturamento",
           title: "Sua taxa de glosa está acima da rede",
           message: "...",
           financial_impact: 6480,
@@ -120,7 +123,7 @@ describe("SmartInsightsFeed", () => {
     const data: SmartInsights = {
       period_start: "2026-01-01",
       period_end: "2026-01-07",
-      insights: [{ severity: "positive", title: "Tudo certo", message: "...", financial_impact: null }],
+      insights: [{ severity: "positive", category: "faturamento", title: "Tudo certo", message: "...", financial_impact: null }],
     };
     vi.mocked(apiClient.get).mockResolvedValue(data);
 
@@ -128,5 +131,45 @@ describe("SmartInsightsFeed", () => {
 
     await screen.findByText("Tudo certo");
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  it("agrupa o feed em Faturamento & Convênios / Agenda & Ocupação, deixando a manchete fora das seções", async () => {
+    const data: SmartInsights = {
+      period_start: "2026-01-01",
+      period_end: "2026-01-07",
+      insights: [
+        { severity: "critical", category: "faturamento", title: "Glosa disparou", message: "...", financial_impact: 9000 },
+        { severity: "critical", category: "faturamento", title: "Outro convênio recusando mais", message: "...", financial_impact: 4000 },
+        { severity: "warning", category: "agenda", title: "Quarta-feira com menos consultas", message: "...", financial_impact: null },
+      ],
+    };
+    vi.mocked(apiClient.get).mockResolvedValue(data);
+
+    renderWithProviders(<SmartInsightsFeed dateFrom="2026-01-01" dateTo="2026-01-07" />);
+
+    // A manchete (maior impacto) some do texto de qualquer seção — ela
+    // não é filha de "Faturamento & Convênios" nem de "Agenda & Ocupação".
+    expect(await screen.findByText("Glosa disparou")).toBeInTheDocument();
+    expect(screen.getByText("Faturamento & Convênios")).toBeInTheDocument();
+    expect(screen.getByText("Outro convênio recusando mais")).toBeInTheDocument();
+    expect(screen.getByText("Agenda & Ocupação")).toBeInTheDocument();
+    expect(screen.getByText("Quarta-feira com menos consultas")).toBeInTheDocument();
+  });
+
+  it("não mostra o título de uma seção sem nenhum card nela", async () => {
+    const data: SmartInsights = {
+      period_start: "2026-01-01",
+      period_end: "2026-01-07",
+      insights: [
+        { severity: "critical", category: "faturamento", title: "Glosa disparou", message: "...", financial_impact: 9000 },
+        { severity: "warning", category: "faturamento", title: "Cobrança abaixo do contrato", message: "...", financial_impact: 1000 },
+      ],
+    };
+    vi.mocked(apiClient.get).mockResolvedValue(data);
+
+    renderWithProviders(<SmartInsightsFeed dateFrom="2026-01-01" dateTo="2026-01-07" />);
+
+    await screen.findByText("Cobrança abaixo do contrato");
+    expect(screen.queryByText("Agenda & Ocupação")).not.toBeInTheDocument();
   });
 });

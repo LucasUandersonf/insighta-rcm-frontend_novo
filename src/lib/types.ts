@@ -525,8 +525,15 @@ export interface DenialRiskDistribution {
 // clínica, é uma comparação.
 export type InsightSeverity = "critical" | "warning" | "positive" | "comparativo";
 
+// "faturamento" | "agenda" — área do card, usada por SmartInsightsFeed.tsx
+// pra agrupar o feed em seções em vez de uma lista única misturando
+// cobrança/glosa com ocupação de agenda (ver DECISÃO em
+// smart_insights_engine.Insight.category, backend).
+export type InsightCategory = "faturamento" | "agenda";
+
 export interface SmartInsight {
   severity: InsightSeverity;
+  category: InsightCategory;
   title: string;
   message: string;
   financial_impact: number | null;

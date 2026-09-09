@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowRight, CheckCircle2, TrendingDown, TrendingUp, TriangleAlert, Users } from "lucide-react";
+import { ArrowRight, CalendarClock, CheckCircle2, TrendingDown, TrendingUp, TriangleAlert, Users, Wallet } from "lucide-react";
 import { LoadingState, ErrorState } from "@/components/ui/Panel";
 import { BentoCard } from "@/components/ui/BentoGrid";
 import { Badge, type BadgeTone } from "@/components/ui/Badge";
@@ -190,6 +190,49 @@ function SecondaryInsightCard({ insight, onNavigateTab }: { insight: SmartInsigh
   );
 }
 
+const CATEGORY_CONFIG: Record<SmartInsight["category"], { label: string; icon: typeof Wallet }> = {
+  faturamento: { label: "Faturamento & Convênios", icon: Wallet },
+  agenda: { label: "Agenda & Ocupação", icon: CalendarClock },
+};
+
+/**
+ * DECISÃO — feed agrupado por área (pedido explícito do usuário depois de
+ * ver a tela em produção: cobrança/glosa e agenda misturados na mesma
+ * lista ficava "embolado", ainda mais com vários cards de convênio
+ * seguidos). O card de maior impacto continua como manchete solta, FORA
+ * de qualquer seção — é "o problema nº1 agora", não pertence a uma área
+ * específica. O resto entra na seção da sua `category` (ver DECISÃO em
+ * smart_insights_engine.Insight.category, backend), mantendo a ordem de
+ * prioridade que o backend já calculou dentro de cada seção. Seção sem
+ * nenhum card não aparece — nunca um título "Agenda & Ocupação" sobre um
+ * espaço vazio.
+ */
+function CategorySection({
+  category,
+  insights,
+  onNavigateTab,
+}: {
+  category: SmartInsight["category"];
+  insights: SmartInsight[];
+  onNavigateTab?: (tabId: string) => void;
+}) {
+  if (insights.length === 0) return null;
+  const { label, icon: Icon } = CATEGORY_CONFIG[category];
+  return (
+    <div>
+      <h3 className="mb-3 flex items-center gap-1.5 text-2xs font-medium uppercase tracking-wide text-ink-faint">
+        <Icon aria-hidden size={13} />
+        {label}
+      </h3>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+        {insights.map((insight, idx) => (
+          <SecondaryInsightCard key={idx} insight={insight} onNavigateTab={onNavigateTab} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function AllClearHero() {
   return (
     <BentoCard colSpan={12} glow="revenue" className="border border-revenue/25 bg-revenue-bg">
@@ -240,18 +283,21 @@ export function SmartInsightsFeed({
   if (insights.length === 0) return <AllClearHero />;
 
   const [topInsight, ...rest] = insights;
+  const faturamentoInsights = rest.filter((insight) => insight.category === "faturamento");
+  const agendaInsights = rest.filter((insight) => insight.category === "agenda");
 
   return (
     <motion.div
-      className="grid grid-cols-1 gap-4 lg:grid-cols-12"
+      className="space-y-6"
       initial="hidden"
       animate="show"
       variants={{ hidden: {}, show: { transition: { staggerChildren: 0.06 } } }}
     >
-      <HeroInsight insight={topInsight} onNavigateTab={onNavigateTab} />
-      {rest.map((insight, idx) => (
-        <SecondaryInsightCard key={idx} insight={insight} onNavigateTab={onNavigateTab} />
-      ))}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+        <HeroInsight insight={topInsight} onNavigateTab={onNavigateTab} />
+      </div>
+      <CategorySection category="faturamento" insights={faturamentoInsights} onNavigateTab={onNavigateTab} />
+      <CategorySection category="agenda" insights={agendaInsights} onNavigateTab={onNavigateTab} />
     </motion.div>
   );
 }
