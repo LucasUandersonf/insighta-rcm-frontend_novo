@@ -580,6 +580,26 @@ export interface NetworkBenchmark {
   window_days: number;
 }
 
+// Oportunidades (GET /analytics/oportunidades) — Sala de Comando 2.0
+export interface OportunidadeItem {
+  insurance_plan_id: string;
+  plan_display_name: string;
+  tuss_code: string;
+  procedure_name: string | null;
+  your_price: number;
+  network_median_price: number;
+  network_cohort_size: number;
+  monthly_volume: number;
+  gap_value: number;
+  gap_pct: number;
+  estimated_monthly_opportunity: number;
+}
+
+export interface Oportunidades {
+  items: OportunidadeItem[];
+  window_days: number;
+}
+
 export interface BillingResponse {
   id: string;
   appointment_id: string;

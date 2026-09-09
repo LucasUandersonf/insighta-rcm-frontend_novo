@@ -59,6 +59,9 @@ function mockAllEndpoints() {
     if (url.includes("network-benchmark")) {
       return Promise.resolve({ window_days: 90, metrics: [] } as never);
     }
+    if (url.includes("oportunidades")) {
+      return Promise.resolve({ window_days: 90, items: [] } as never);
+    }
     if (url.includes("/users/me")) {
       return Promise.resolve(null as never);
     }
@@ -75,7 +78,7 @@ describe("ExecutiveOverviewPage", () => {
     expect(await screen.findByText("Agenda & Capacidade Operacional")).toBeInTheDocument();
 
     await user.click(screen.getByRole("tab", { name: /Oportunidades/ }));
-    await waitFor(() => expect(screen.getByText(/Em construção/)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/Nenhuma oportunidade de renegociação/)).toBeInTheDocument());
 
     await user.click(screen.getByRole("tab", { name: /Comparativo/ }));
     await waitFor(() => expect(screen.queryByText("Agenda & Capacidade Operacional")).not.toBeInTheDocument());
