@@ -1,5 +1,6 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSearchParams } from "react-router-dom";
 import { CalendarClock, Pencil, Plus, X } from "lucide-react";
 import { Panel, EmptyState, LoadingState, ErrorState } from "@/components/ui/Panel";
 import { Button } from "@/components/ui/Button";
@@ -9,6 +10,7 @@ import { FilterBar } from "@/components/ui/FilterBar";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Badge } from "@/components/ui/Badge";
 import { apiClient } from "@/lib/api-client";
+import { cn } from "@/lib/cn";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useToast } from "@/context/ToastContext";
 import type { AvailabilityBlock, Professional, ProfessionalCreateRequest, ProfessionalUpdateRequest } from "@/lib/types";
@@ -231,11 +233,26 @@ export function ProfessionalsPage() {
     editing: null,
   });
 
+  // Deep-link do botão de ação do Radar de Profissional Fora do Padrão
+  // (ver DECISÃO em smart_insights_engine.py::_professional_outlier_insight,
+  // backend): o insight já chega aqui sabendo QUAL profissional disparou
+  // o card — a tela rola até a linha exata e a realça, em vez de deixar
+  // o usuário procurar sozinho na lista.
+  const [searchParams] = useSearchParams();
+  const highlightId = searchParams.get("highlight");
+  const highlightedRowRef = useRef<HTMLTableRowElement | null>(null);
+
   const { data: professionals, isLoading, error, refetch } = useQuery({
     queryKey: ["professionals", showInactive],
     queryFn: () =>
       apiClient.get<Professional[]>(`/api/v1/professionals?include_inactive=${showInactive}`),
   });
+
+  useEffect(() => {
+    if (highlightId && highlightedRowRef.current) {
+      highlightedRowRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [highlightId, professionals]);
 
   const toggleActiveMutation = useMutation({
     mutationFn: ({ id, is_active }: { id: string; is_active: boolean }) =>
@@ -299,7 +316,14 @@ export function ProfessionalsPage() {
             </thead>
             <tbody>
               {(professionals ?? []).map((p) => (
-                <tr key={p.id} className="border-b border-border-hairline last:border-0 transition-colors hover:bg-canvas-raised/60">
+                <tr
+                  key={p.id}
+                  ref={p.id === highlightId ? highlightedRowRef : undefined}
+                  className={cn(
+                    "border-b border-border-hairline last:border-0 transition-colors hover:bg-canvas-raised/60",
+                    p.id === highlightId && "bg-pending-bg ring-1 ring-inset ring-pending"
+                  )}
+                >
                   <td className="px-4 py-2.5 text-ink">{p.full_name}</td>
                   <td className="px-4 py-2.5 text-ink-muted">{p.professional_registry ?? "—"}</td>
                   <td className="px-4 py-2.5 text-ink-muted">{p.specialty ?? "—"}</td>
