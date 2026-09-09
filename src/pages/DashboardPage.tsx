@@ -281,7 +281,11 @@ export function DashboardPage() {
           />
         </div>
 
-        <Panel title="Faturamentos de alto risco" subtitle="Ordenado por criação — dados reais de GET /billing/high-risk">
+        <Panel
+          title="Faturamentos de alto risco"
+          subtitle="Ordenado por criação — dados reais de GET /billing/high-risk"
+          glow={(highRiskPage?.total ?? 0) > 0 ? "pending" : "revenue"}
+        >
           {isLoading && <LoadingState variant="table" rows={5} />}
           {error && <ErrorState message={getApiErrorMessage(error)} onRetry={() => refetch()} />}
           {!isLoading && !error && highRiskBillings.length === 0 && (

@@ -22,18 +22,25 @@ interface TabItem {
  * renderizar o conteúdo (`tabpanel`) da aba ativa, não por esconder com
  * CSS (evita montar 2x as queries/gráficos da aba escondida).
  *
- * DECISÃO — aba sublinhada (`.underline-tabs`/`.utab`), não mais pílula
- * deslizante
+ * DECISÃO — cápsula de vidro com pílula deslizante (v2, substitui a
+ * aba sublinhada)
  * -------------------------------------------------------------------
- * A primeira versão deste componente usava um indicador em pílula com
- * o gradiente de marca deslizando por trás da aba ativa. O canvas de
- * design (fonte da verdade visual, ver Painel.dc.html/CentralDeUpload.dc.html)
- * usa um tratamento mais discreto e "de aplicativo denso": abas sem
- * moldura, fundo raised só na ativa, e uma barrinha fina na cor de
- * acento embaixo dela — mais parecido com abas de navegador do que com
- * um seletor de segmento. O toque de Motion se mantém (a barrinha
- * desliza via `layoutId` em vez de só trocar de lugar), só a "pele"
- * mudou.
+ * A versão anterior usava abas soltas sobre uma linha inferior (sem
+ * moldura própria, barrinha de acento embaixo da ativa) — ver histórico
+ * abaixo. A Sala de Comando 2.0 (conceito de design aprovado, "Sala de
+ * Comando — Conceito") virou a REFERÊNCIA visual para o projeto inteiro
+ * (pedido explícito do usuário: "quero identico no layout... pode
+ * replicar para as outras telas"), e o conceito usa uma cápsula fechada
+ * (fundo raised translúcido + borda) com a aba ativa como uma pílula de
+ * vidro (`bg-glass` + sombra) DENTRO dela — mais parecido com um
+ * seletor de segmento do que com abas de navegador. Aplicado aqui uma
+ * vez só, propaga para toda tela que usa `<Tabs>` (Painel, Central de
+ * Upload, Sala de Comando).
+ *
+ * Histórico: a v1 (aba sublinhada) por sua vez tinha substituído uma
+ * v0 em pílula deslizante — o pêndulo volta pra pílula agora porque a
+ * fonte da verdade visual mudou (canvas de design antigo -> conceito
+ * da Sala de Comando 2.0), não por preferência estética solta.
  *
  * `groupId` é explícito (não gerado internamente via useId) para que o
  * `<TabPanel>` correspondente, renderizado por quem chama, consiga
@@ -95,7 +102,14 @@ export function Tabs({
   }
 
   return (
-    <div role="tablist" aria-orientation="horizontal" className={cn("flex gap-1 border-b border-border-hairline", className)}>
+    <div
+      role="tablist"
+      aria-orientation="horizontal"
+      className={cn(
+        "inline-flex gap-1 rounded-xl border border-border-hairline bg-canvas-raised/60 p-1 backdrop-blur-xl",
+        className
+      )}
+    >
       {items.map((item, index) => {
         const isActive = item.id === active;
         return (
@@ -113,19 +127,21 @@ export function Tabs({
             onClick={() => onChange(item.id)}
             onKeyDown={(e) => handleKeyDown(e, index)}
             className={cn(
-              "relative flex items-center gap-1.5 rounded-t-[10px] px-3.5 py-2.5 text-sm font-medium transition-colors",
-              isActive ? "bg-canvas-raised text-ink" : "text-ink-faint hover:text-ink-muted"
+              "relative flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors",
+              isActive ? "text-accent" : "text-ink-faint hover:text-ink"
             )}
           >
-            {item.icon && <item.icon aria-hidden size={13} />}
-            <span>{item.label}</span>
             {isActive && (
               <motion.span
-                layoutId={`tabs-active-underline-${groupId}`}
-                className="absolute inset-x-3 -bottom-px h-0.5 rounded-full bg-accent"
+                layoutId={`tabs-active-pill-${groupId}`}
+                className="absolute inset-0 rounded-lg bg-glass shadow-card"
                 transition={{ type: "spring", stiffness: 420, damping: 34 }}
               />
             )}
+            {item.icon && (
+              <item.icon aria-hidden size={13} className="relative" />
+            )}
+            <span className="relative">{item.label}</span>
           </button>
         );
       })}

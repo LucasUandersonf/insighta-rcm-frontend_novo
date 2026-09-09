@@ -185,6 +185,7 @@ export function SetupPage() {
           <Panel
             title="Convênios não reconhecidos"
             subtitle="Texto do arquivo não bateu com nenhum convênio cadastrado — mapeie uma vez e todas as linhas com o mesmo texto são promovidas juntas."
+            glow={unknownPlanGroups.length > 0 ? "pending" : "none"}
           >
             {unknownPlanGroups.length === 0 && (
               <EmptyState
@@ -230,6 +231,7 @@ export function SetupPage() {
           <Panel
             title="Erros estruturais do arquivo"
             subtitle="Linha com dado inválido (data, valor, campo obrigatório) — sem mapeamento possível aqui; corrija na origem e reenvie o arquivo."
+            glow={structuralErrorRows.length > 0 ? "denied" : "none"}
           >
             {structuralErrorRows.length === 0 && (
               <EmptyState
