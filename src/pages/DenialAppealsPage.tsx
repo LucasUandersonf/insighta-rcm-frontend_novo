@@ -8,6 +8,7 @@ import { Modal } from "@/components/ui/Modal";
 import { TextField, SelectField } from "@/components/ui/FormField";
 import { Pagination } from "@/components/ui/Pagination";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { BillingSearchPicker } from "@/components/billing/BillingSearchPicker";
 import { cn } from "@/lib/cn";
 import { apiClient, ApiError } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
@@ -15,6 +16,7 @@ import { useToast } from "@/context/ToastContext";
 import type {
   AppealStatus,
   AppealType,
+  BillingSearchItem,
   DenialAppeal,
   DenialAppealCreateRequest,
   DenialAppealResolveRequest,
@@ -66,7 +68,7 @@ function deadlineClass(deadlineAt: string, status: AppealStatus): string {
 function CreateAppealModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
-  const [billingId, setBillingId] = useState("");
+  const [selectedBilling, setSelectedBilling] = useState<BillingSearchItem | null>(null);
   const [appealType, setAppealType] = useState<AppealType>("administrativa");
   const [operatorDenialReason, setOperatorDenialReason] = useState("");
   const [deniedAt, setDeniedAt] = useState("");
@@ -92,7 +94,7 @@ function CreateAppealModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =
   });
 
   function resetAndClose() {
-    setBillingId("");
+    setSelectedBilling(null);
     setAppealType("administrativa");
     setOperatorDenialReason("");
     setDeniedAt("");
@@ -104,8 +106,12 @@ function CreateAppealModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setFieldErrors({});
+    if (!selectedBilling) {
+      setFieldErrors({ billing_id: "Busque e selecione o faturamento glosado." });
+      return;
+    }
     mutation.mutate({
-      billing_id: billingId,
+      billing_id: selectedBilling.id,
       appeal_type: appealType,
       operator_denial_reason: operatorDenialReason || null,
       denied_at: deniedAt,
@@ -120,14 +126,7 @@ function CreateAppealModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =
           Para uma negativa FORMAL recebida da operadora (glosa administrativa ou médica) — diferente do alerta de
           risco pré-envio do Painel Anti-Glosa. O ID do faturamento aparece na tela de Faturamento.
         </p>
-        <TextField
-          label="ID do faturamento"
-          placeholder="UUID do billing"
-          required
-          value={billingId}
-          onChange={(e) => setBillingId(e.target.value)}
-          error={fieldErrors["billing_id"]}
-        />
+        <BillingSearchPicker selected={selectedBilling} onSelect={setSelectedBilling} error={fieldErrors["billing_id"]} />
         <SelectField
           label="Tipo de glosa"
           required

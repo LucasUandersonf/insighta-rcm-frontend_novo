@@ -700,6 +700,47 @@ export interface BillingSettleRequest {
   received_value: number;
 }
 
+// Resultado de GET /billing/search — busca por nome/CPF do paciente,
+// usada pelo autocomplete de "registrar pagamento recebido" e do
+// Recurso de Glosa (ver DECISÃO em BillingRepository.search, backend).
+export interface BillingSearchItem {
+  id: string;
+  patient_name: string;
+  procedure_code: string | null;
+  insurance_plan_name: string;
+  charged_value: number;
+  status: BillingResponse["status"];
+  denial_risk_level: BillingResponse["denial_risk_level"];
+  created_at: string;
+}
+
+// Guia (TISS) — ver app/models/guia.py no backend. Fase 1 do plano de
+// adequação ao fluxo real de mercado; já é preenchida automaticamente
+// pela ingestão de Faturamento (colunas guia_tipo/guia_numero/guia_senha)
+// e também pode ser cadastrada manualmente aqui.
+export type GuiaTipo = "consulta" | "sadt" | "resumo_internacao" | "honorario";
+
+export interface Guia {
+  id: string;
+  insurance_plan_id: string;
+  tipo: GuiaTipo;
+  numero: string | null;
+  senha: string | null;
+  senha_validade: string | null;
+  tabela_procedimento: string | null;
+  lote_id: string | null;
+  created_at: string;
+}
+
+export interface GuiaCreateRequest {
+  insurance_plan_id: string;
+  tipo: GuiaTipo;
+  numero?: string | null;
+  senha?: string | null;
+  senha_validade?: string | null;
+  tabela_procedimento?: string | null;
+}
+
 // Formato de erro único que app/main.py devolve para TODO erro da API
 // (ver DECISÃO em app/main.py — o mesmo mecanismo serve o frontend e o
 // usuário final).

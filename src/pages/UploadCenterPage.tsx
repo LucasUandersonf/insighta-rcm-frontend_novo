@@ -184,13 +184,14 @@ function ColumnMappingModal({ file, isOpen, onClose }: { file: File | null; isOp
 const DATA_TYPE_LABELS: Record<string, string> = {
   faturamento: "Faturamento",
   agenda: "Agenda",
+  glosa: "Glosa (demonstrativo de pagamento)",
 };
 
 function BatchUploadTab() {
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
   const [file, setFile] = useState<File | null>(null);
-  const [dataType, setDataType] = useState<"faturamento" | "agenda">("faturamento");
+  const [dataType, setDataType] = useState<"faturamento" | "agenda" | "glosa">("faturamento");
   const [offset, setOffset] = useState(0);
   const [isMappingModalOpen, setIsMappingModalOpen] = useState(false);
 
@@ -235,12 +236,19 @@ function BatchUploadTab() {
           <SelectField
             label="Template"
             value={dataType}
-            onChange={(e) => setDataType(e.target.value as "faturamento" | "agenda")}
+            onChange={(e) => setDataType(e.target.value as "faturamento" | "agenda" | "glosa")}
             className="mb-4 max-w-xs"
           >
             <option value="faturamento">Faturamento</option>
             <option value="agenda">Agenda</option>
+            <option value="glosa">Glosa (demonstrativo de pagamento)</option>
           </SelectField>
+          {dataType === "glosa" && (
+            <p className="mb-4 -mt-2 text-2xs text-ink-faint">
+              Cada linha liquida um faturamento já existente (casado por convênio + número da guia) — nunca cria
+              paciente/consulta novos. Envie primeiro o Faturamento da guia; o demonstrativo de pagamento vem depois.
+            </p>
+          )}
           <Dropzone
             accept={[".csv", ".xml", ".json"]}
             hint="CSV, XML ou JSON — até 20MB"
