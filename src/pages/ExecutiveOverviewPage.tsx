@@ -18,7 +18,7 @@ import { getApiErrorMessage } from "@/lib/query-client";
 import { useDateWindow } from "@/lib/useDateWindow";
 import { trendFrom } from "@/lib/narrative";
 import { firstNameFrom, useCurrentUserProfile } from "@/lib/useCurrentUserProfile";
-import type { ExecutiveSummary } from "@/lib/types";
+import type { AgendaFocus, ExecutiveSummary } from "@/lib/types";
 
 /** Saudação por horário do dia — mesmo raciocínio de qualquer painel
  * executivo (o de referência do briefing inclusive): "bom dia" às 9h e
@@ -57,6 +57,12 @@ export function ExecutiveOverviewPage() {
   const { windowDays, setWindowDays, dateFrom, dateTo } = useDateWindow(7);
   const { data: profile } = useCurrentUserProfile();
   const [activeTab, setActiveTab] = useState<TabId>("diagnostico");
+  // Foco de agenda (ver AgendaFocus, lib/types.ts) — disparado pelos
+  // botões de ação dos insights de queda de agenda/agenda ociosa (ver
+  // DECISÃO em SmartInsightsFeed.tsx::InsightActionButton). Mora aqui
+  // (não dentro de ExecutiveAgendaSummary) porque quem dispara é um
+  // componente IRMÃO (SmartInsightsFeed), mais acima na árvore.
+  const [agendaFocus, setAgendaFocus] = useState<AgendaFocus | null>(null);
 
   const { data: summary, isLoading, error } = useQuery({
     queryKey: ["analytics", "executive-summary", dateFrom, dateTo],
@@ -97,7 +103,12 @@ export function ExecutiveOverviewPage() {
                 perdendo dinheiro hoje?". Os números continuam existindo
                 logo abaixo, como evidência de apoio para quem quer
                 conferir, não como o elemento principal da tela. */}
-            <SmartInsightsFeed dateFrom={dateFrom} dateTo={dateTo} onNavigateTab={(id) => setActiveTab(id as TabId)} />
+            <SmartInsightsFeed
+              dateFrom={dateFrom}
+              dateTo={dateTo}
+              onNavigateTab={(id) => setActiveTab(id as TabId)}
+              onFocusAgenda={setAgendaFocus}
+            />
 
             {isLoading && <LoadingState variant="cards" rows={6} />}
             {error && <ErrorState message={getApiErrorMessage(error)} />}
@@ -184,7 +195,12 @@ export function ExecutiveOverviewPage() {
                 em vez de deixar o usuário procurar sozinho. */}
             <section id="agenda-resumo">
               <h2 className="mb-3 text-sm font-medium text-ink">Agenda & Capacidade Operacional</h2>
-              <ExecutiveAgendaSummary dateFrom={dateFrom} dateTo={dateTo} />
+              <ExecutiveAgendaSummary
+                dateFrom={dateFrom}
+                dateTo={dateTo}
+                focus={agendaFocus}
+                onClearFocus={() => setAgendaFocus(null)}
+              />
             </section>
 
             {/* id="carteira-inativa" — destino do botão "Ver quem não

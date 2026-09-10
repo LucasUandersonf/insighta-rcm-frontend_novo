@@ -119,6 +119,62 @@ describe("SmartInsightsFeed", () => {
     expect(navigateMock).not.toHaveBeenCalled();
   });
 
+  it("botão de ação com destino '#weekday:' chama onFocusAgenda com o dia da semana, sem navegar", async () => {
+    const data: SmartInsights = {
+      period_start: "2026-01-01",
+      period_end: "2026-01-07",
+      insights: [
+        {
+          severity: "warning",
+          category: "agenda",
+          title: "Quarta-feira está com menos consultas marcadas",
+          message: "...",
+          financial_impact: null,
+          action_label: "Ver quem costumava vir quarta-feira",
+          action_href: "#weekday:3",
+        },
+      ],
+    };
+    vi.mocked(apiClient.get).mockResolvedValue(data);
+    const user = userEvent.setup();
+    const onFocusAgenda = vi.fn();
+
+    renderWithProviders(<SmartInsightsFeed dateFrom="2026-01-01" dateTo="2026-01-07" onFocusAgenda={onFocusAgenda} />);
+
+    const button = await screen.findByRole("button", { name: "Ver quem costumava vir quarta-feira" });
+    await user.click(button);
+    expect(onFocusAgenda).toHaveBeenCalledWith({ type: "weekday", weekday: 3 });
+    expect(navigateMock).not.toHaveBeenCalled();
+  });
+
+  it("botão de ação com destino '#professional:' chama onFocusAgenda com o id do profissional, sem navegar", async () => {
+    const data: SmartInsights = {
+      period_start: "2026-01-01",
+      period_end: "2026-01-07",
+      insights: [
+        {
+          severity: "warning",
+          category: "agenda",
+          title: "Sua agenda está com mais horários vazios do que o normal",
+          message: "...",
+          financial_impact: null,
+          action_label: "Ver candidatos pra agenda de Dra. Ana",
+          action_href: "#professional:prof-123",
+        },
+      ],
+    };
+    vi.mocked(apiClient.get).mockResolvedValue(data);
+    const user = userEvent.setup();
+    const onFocusAgenda = vi.fn();
+
+    renderWithProviders(<SmartInsightsFeed dateFrom="2026-01-01" dateTo="2026-01-07" onFocusAgenda={onFocusAgenda} />);
+
+    const button = await screen.findByRole("button", { name: "Ver candidatos pra agenda de Dra. Ana" });
+    await user.click(button);
+    expect(onFocusAgenda).toHaveBeenCalledWith({ type: "professional", professionalId: "prof-123" });
+    expect(navigateMock).not.toHaveBeenCalled();
+  });
+
   it("insight sem action_label/action_href não mostra nenhum botão", async () => {
     const data: SmartInsights = {
       period_start: "2026-01-01",

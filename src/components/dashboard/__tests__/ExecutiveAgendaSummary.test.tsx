@@ -1,9 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
-import { screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { ExecutiveAgendaSummary } from "@/components/dashboard/ExecutiveAgendaSummary";
 import { apiClient } from "@/lib/api-client";
 import { renderWithProviders } from "@/test/utils";
-import type { AgendaMetrics } from "@/lib/types";
+import type { AgendaMetrics, RecallCandidates } from "@/lib/types";
 
 vi.mock("@/lib/api-client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api-client")>();
@@ -93,5 +94,75 @@ describe("ExecutiveAgendaSummary", () => {
     renderWithProviders(<ExecutiveAgendaSummary dateFrom="2026-01-01" dateTo="2026-01-07" />);
 
     expect(await screen.findByText(/pode ficar tranquilo/)).toBeInTheDocument();
+  });
+
+  it("foco por dia da semana filtra o risco de falta e mostra os candidatos a recontato daquele dia", async () => {
+    const sameWeekdayAppt = { appointment_id: "a1", patient_full_name: "Do Dia Focado", scheduled_at: "2026-01-14T12:00:00Z", risk_level: "alto" as const };
+    const otherWeekdayAppt = {
+      appointment_id: "a2",
+      patient_full_name: "De Outro Dia",
+      // 7 dias depois cai no mesmo dia da semana — usa 3 dias depois pra
+      // garantir um dia da semana DIFERENTE independente do fuso do runner.
+      scheduled_at: "2026-01-17T12:00:00Z",
+      risk_level: "alto" as const,
+    };
+    const focusedWeekday = new Date(sameWeekdayAppt.scheduled_at).getDay();
+    const recallData: RecallCandidates = {
+      total_count: 1,
+      weekday: focusedWeekday,
+      professional_id: null,
+      professional_name: null,
+      items: [{ patient_id: "p1", full_name: "Costumava Vir Nesse Dia", last_appointment_at: "2025-12-01T00:00:00Z", days_since_last_appointment: 44, last_professional_name: null }],
+    };
+    vi.mocked(apiClient.get).mockImplementation((url: string) => {
+      if (url.includes("recall-candidates")) return Promise.resolve(recallData as never);
+      return Promise.resolve(baseMetrics({ upcoming_risk_appointments: [sameWeekdayAppt, otherWeekdayAppt] }) as never);
+    });
+
+    renderWithProviders(
+      <ExecutiveAgendaSummary dateFrom="2026-01-01" dateTo="2026-01-07" focus={{ type: "weekday", weekday: focusedWeekday }} />
+    );
+
+    expect(await screen.findByText("Do Dia Focado")).toBeInTheDocument();
+    expect(screen.queryByText("De Outro Dia")).not.toBeInTheDocument();
+    expect(await screen.findByText("Costumava Vir Nesse Dia")).toBeInTheDocument();
+  });
+
+  it("foco por profissional mostra o nome do profissional no título dos candidatos", async () => {
+    const recallData: RecallCandidates = {
+      total_count: 1,
+      weekday: null,
+      professional_id: "prof-1",
+      professional_name: "Dra. Ana",
+      items: [{ patient_id: "p1", full_name: "Paciente Da Dra. Ana", last_appointment_at: "2025-12-01T00:00:00Z", days_since_last_appointment: 20, last_professional_name: "Dra. Ana" }],
+    };
+    vi.mocked(apiClient.get).mockImplementation((url: string) => {
+      if (url.includes("recall-candidates")) return Promise.resolve(recallData as never);
+      return Promise.resolve(baseMetrics() as never);
+    });
+
+    renderWithProviders(
+      <ExecutiveAgendaSummary dateFrom="2026-01-01" dateTo="2026-01-07" focus={{ type: "professional", professionalId: "prof-1" }} />
+    );
+
+    expect(await screen.findByText("Candidatos a recontato — agenda de Dra. Ana")).toBeInTheDocument();
+    expect(screen.getByText("Paciente Da Dra. Ana")).toBeInTheDocument();
+  });
+
+  it("botão de fechar do card de candidatos chama onClearFocus", async () => {
+    vi.mocked(apiClient.get).mockImplementation((url: string) => {
+      if (url.includes("recall-candidates")) return Promise.resolve({ total_count: 0, weekday: 3, professional_id: null, professional_name: null, items: [] } as never);
+      return Promise.resolve(baseMetrics() as never);
+    });
+    const onClearFocus = vi.fn();
+    const user = userEvent.setup();
+
+    renderWithProviders(
+      <ExecutiveAgendaSummary dateFrom="2026-01-01" dateTo="2026-01-07" focus={{ type: "weekday", weekday: 3 }} onClearFocus={onClearFocus} />
+    );
+
+    const closeButton = await screen.findByRole("button", { name: "Fechar candidatos a recontato" });
+    await user.click(closeButton);
+    await waitFor(() => expect(onClearFocus).toHaveBeenCalled());
   });
 });

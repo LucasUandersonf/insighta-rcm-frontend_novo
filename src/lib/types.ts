@@ -593,6 +593,37 @@ export interface InactivePatients {
   inactive_after_days: number;
 }
 
+// Candidatos a recontato (GET /analytics/recall-candidates) — a lista
+// real por trás dos botões de ação dos insights de agenda que apontam
+// pra um dia da semana ou um profissional específico (ver DECISÃO em
+// smart_insights_engine.py::_weekday_drop_insight/_weekday_no_show_rate_insight/
+// _capacity_drop_insight, backend). Diferente de InactivePatientItem
+// (piso fixo de 365 dias): aqui days_since_last_appointment pode ser
+// bem menor — o critério é só "sem retorno futuro marcado".
+export interface RecallCandidateItem {
+  patient_id: string;
+  full_name: string;
+  last_appointment_at: string;
+  days_since_last_appointment: number;
+  last_professional_name: string | null;
+}
+
+export interface RecallCandidates {
+  items: RecallCandidateItem[];
+  total_count: number;
+  weekday: number | null;
+  professional_id: string | null;
+  professional_name: string | null;
+}
+
+// Foco de agenda — estado compartilhado entre SmartInsightsFeed (dispara
+// via o botão de ação dos insights de agenda), ExecutiveOverviewPage
+// (guarda o estado) e ExecutiveAgendaSummary (busca e mostra os
+// candidatos a recontato correspondentes). Ver DECISÃO em
+// InsightActionButton (SmartInsightsFeed.tsx) sobre os formatos
+// "#weekday:<n>"/"#professional:<id>" que originam este estado.
+export type AgendaFocus = { type: "weekday"; weekday: number } | { type: "professional"; professionalId: string };
+
 // Comparativo entre clínicas (GET /analytics/network-benchmark) — Sala de Comando 2.0
 export interface NetworkBenchmarkMetric {
   key: string; // "denial" | "no_show"
