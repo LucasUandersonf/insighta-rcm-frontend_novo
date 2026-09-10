@@ -616,6 +616,30 @@ export interface RecallCandidates {
   professional_name: string | null;
 }
 
+// Contas de "Divergência de Cobrança" (GET /analytics/financial-hole-billings)
+// — a lista real por trás do insight "Você está cobrando menos do que
+// devia de alguns convênios" (ver DECISÃO em
+// smart_insights_engine.py::_financial_hole_insight, backend).
+// `agreed_price` é sempre > `charged_value` (nunca uma linha "certa" ou
+// cobrada a mais aparece aqui).
+export interface FinancialHoleBillingItem {
+  billing_id: string;
+  patient_full_name: string;
+  procedure_label: string;
+  insurance_plan_name: string;
+  charged_value: number;
+  agreed_price: number;
+  hole_value: number;
+}
+
+export interface FinancialHoleBillings {
+  period_start: string;
+  period_end: string;
+  items: FinancialHoleBillingItem[];
+  total_count: number; // pode ser maior que items.length — a lista é sempre truncada
+  total_hole_value: number; // mesmo número que o insight cita
+}
+
 // Foco de agenda — estado compartilhado entre SmartInsightsFeed (dispara
 // via o botão de ação dos insights de agenda), ExecutiveOverviewPage
 // (guarda o estado) e ExecutiveAgendaSummary (busca e mostra os

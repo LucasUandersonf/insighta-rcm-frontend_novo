@@ -65,6 +65,9 @@ function mockAllEndpoints() {
     if (url.includes("inactive-patients")) {
       return Promise.resolve({ total_count: 0, inactive_after_days: 365, items: [] } as never);
     }
+    if (url.includes("financial-hole-billings")) {
+      return Promise.resolve({ period_start: "2026-01-01", period_end: "2026-01-07", total_count: 0, total_hole_value: 0, items: [] } as never);
+    }
     if (url.includes("/users/me")) {
       return Promise.resolve(null as never);
     }

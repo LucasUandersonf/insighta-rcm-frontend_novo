@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { PeriodWindowSelect } from "@/components/ui/PeriodWindowSelect";
 import { Tabs, TabPanel } from "@/components/ui/Tabs";
 import { ExecutiveAgendaSummary } from "@/components/dashboard/ExecutiveAgendaSummary";
+import { FinancialHoleBillingsPanel } from "@/components/dashboard/FinancialHoleBillingsPanel";
 import { InactivePatientsPanel } from "@/components/dashboard/InactivePatientsPanel";
 import { SmartInsightsFeed } from "@/components/dashboard/SmartInsightsFeed";
 import { HealthScoreWidget } from "@/components/dashboard/HealthScoreWidget";
@@ -187,6 +188,17 @@ export function ExecutiveOverviewPage() {
                 </div>
               </section>
             )}
+
+            {/* id="buraco-financeiro" — destino do botão "Ver contas abaixo
+                do combinado" do insight de cobrança abaixo do contrato (ver
+                DECISÃO em smart_insights_engine.py::_financial_hole_insight).
+                Mesmo período do resto do Diagnóstico (dateFrom/dateTo) —
+                diferente de Carteira de Inativos/Candidatos a recontato, que
+                são sempre "agora". */}
+            <section id="buraco-financeiro">
+              <h2 className="mb-3 text-sm font-medium text-ink">Contas abaixo do combinado</h2>
+              <FinancialHoleBillingsPanel dateFrom={dateFrom} dateTo={dateTo} />
+            </section>
 
             {/* id="agenda-resumo" — destino dos botões "Ver ocupação por
                 profissional"/"Ver quem está em risco"/"Ver volume de
