@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowRight, CheckCircle2, TrendingDown, TrendingUp, TriangleAlert, Users } from "lucide-react";
+import { ArrowRight, CalendarClock, CheckCircle2, TrendingDown, TrendingUp, TriangleAlert, Users, Wallet } from "lucide-react";
 import { LoadingState, ErrorState } from "@/components/ui/Panel";
 import { BentoCard } from "@/components/ui/BentoGrid";
 import { Badge, type BadgeTone } from "@/components/ui/Badge";
@@ -10,7 +10,7 @@ import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { cn } from "@/lib/cn";
-import type { InsightSeverity, SmartInsight, SmartInsights } from "@/lib/types";
+import type { AgendaFocus, InsightSeverity, SmartInsight, SmartInsights } from "@/lib/types";
 
 /**
  * Redesenho da Sala de Comando ("menos BI, mais consultor"): esta
@@ -81,15 +81,25 @@ const MESH_CSS_VAR: Record<InsightSeverity, string> = {
  *                "Ver comparativo completo" abre a aba Comparativo).
  *   "#id"     -> rola até aquele card na MESMA tela (ex: os 3 cards de
  *                Agenda & Capacidade, que já mostram a lista completa).
+ *   "#weekday:<n>"/"#professional:<id>" -> foca a seção de Agenda &
+ *                Capacidade num dia da semana ou profissional específico
+ *                (ver AgendaFocus, lib/types.ts) — dispara onFocusAgenda
+ *                em vez de só rolar, porque ExecutiveAgendaSummary
+ *                precisa SABER o foco pra buscar e mostrar os candidatos
+ *                a recontato certos (ver DECISÃO em
+ *                smart_insights_engine.py::_weekday_drop_insight/
+ *                _capacity_drop_insight).
  * Nunca inventa destino: só aponta pra telas/seções que já existem.
  */
 function InsightActionButton({
   insight,
   onNavigateTab,
+  onFocusAgenda,
   toneClass,
 }: {
   insight: SmartInsight;
   onNavigateTab?: (tabId: string) => void;
+  onFocusAgenda?: (focus: AgendaFocus) => void;
   toneClass: string;
 }) {
   const navigate = useNavigate();
@@ -99,6 +109,16 @@ function InsightActionButton({
     const href = insight.action_href!;
     if (href.startsWith("#tab:")) {
       onNavigateTab?.(href.slice("#tab:".length));
+      return;
+    }
+    if (href.startsWith("#weekday:")) {
+      onFocusAgenda?.({ type: "weekday", weekday: Number(href.slice("#weekday:".length)) });
+      document.getElementById("agenda-resumo")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
+    if (href.startsWith("#professional:")) {
+      onFocusAgenda?.({ type: "professional", professionalId: href.slice("#professional:".length) });
+      document.getElementById("agenda-resumo")?.scrollIntoView({ behavior: "smooth", block: "start" });
       return;
     }
     if (href.startsWith("#")) {
@@ -122,7 +142,15 @@ function InsightActionButton({
   );
 }
 
-function HeroInsight({ insight, onNavigateTab }: { insight: SmartInsight; onNavigateTab?: (tabId: string) => void }) {
+function HeroInsight({
+  insight,
+  onNavigateTab,
+  onFocusAgenda,
+}: {
+  insight: SmartInsight;
+  onNavigateTab?: (tabId: string) => void;
+  onFocusAgenda?: (focus: AgendaFocus) => void;
+}) {
   const cfg = SEVERITY_CONFIG[insight.severity];
   const Icon = cfg.icon;
   const meshVar = MESH_CSS_VAR[insight.severity];
@@ -158,14 +186,22 @@ function HeroInsight({ insight, onNavigateTab }: { insight: SmartInsight; onNavi
               </div>
             </div>
           )}
-          <InsightActionButton insight={insight} onNavigateTab={onNavigateTab} toneClass={cfg.text} />
+          <InsightActionButton insight={insight} onNavigateTab={onNavigateTab} onFocusAgenda={onFocusAgenda} toneClass={cfg.text} />
         </div>
       </div>
     </BentoCard>
   );
 }
 
-function SecondaryInsightCard({ insight, onNavigateTab }: { insight: SmartInsight; onNavigateTab?: (tabId: string) => void }) {
+function SecondaryInsightCard({
+  insight,
+  onNavigateTab,
+  onFocusAgenda,
+}: {
+  insight: SmartInsight;
+  onNavigateTab?: (tabId: string) => void;
+  onFocusAgenda?: (focus: AgendaFocus) => void;
+}) {
   const cfg = SEVERITY_CONFIG[insight.severity];
   return (
     <BentoCard colSpan={4} glow={cfg.glow} className="p-4">
@@ -183,10 +219,55 @@ function SecondaryInsightCard({ insight, onNavigateTab }: { insight: SmartInsigh
           {insight.financial_impact !== null && (
             <p className="mt-1.5 font-mono text-2xs text-ink-faint">Impacto estimado: {formatCurrency(insight.financial_impact)}</p>
           )}
-          <InsightActionButton insight={insight} onNavigateTab={onNavigateTab} toneClass={cfg.text} />
+          <InsightActionButton insight={insight} onNavigateTab={onNavigateTab} onFocusAgenda={onFocusAgenda} toneClass={cfg.text} />
         </div>
       </div>
     </BentoCard>
+  );
+}
+
+const CATEGORY_CONFIG: Record<SmartInsight["category"], { label: string; icon: typeof Wallet }> = {
+  faturamento: { label: "Faturamento & Convênios", icon: Wallet },
+  agenda: { label: "Agenda & Ocupação", icon: CalendarClock },
+};
+
+/**
+ * DECISÃO — feed agrupado por área (pedido explícito do usuário depois de
+ * ver a tela em produção: cobrança/glosa e agenda misturados na mesma
+ * lista ficava "embolado", ainda mais com vários cards de convênio
+ * seguidos). O card de maior impacto continua como manchete solta, FORA
+ * de qualquer seção — é "o problema nº1 agora", não pertence a uma área
+ * específica. O resto entra na seção da sua `category` (ver DECISÃO em
+ * smart_insights_engine.Insight.category, backend), mantendo a ordem de
+ * prioridade que o backend já calculou dentro de cada seção. Seção sem
+ * nenhum card não aparece — nunca um título "Agenda & Ocupação" sobre um
+ * espaço vazio.
+ */
+function CategorySection({
+  category,
+  insights,
+  onNavigateTab,
+  onFocusAgenda,
+}: {
+  category: SmartInsight["category"];
+  insights: SmartInsight[];
+  onNavigateTab?: (tabId: string) => void;
+  onFocusAgenda?: (focus: AgendaFocus) => void;
+}) {
+  if (insights.length === 0) return null;
+  const { label, icon: Icon } = CATEGORY_CONFIG[category];
+  return (
+    <div>
+      <h3 className="mb-3 flex items-center gap-1.5 text-2xs font-medium uppercase tracking-wide text-ink-faint">
+        <Icon aria-hidden size={13} />
+        {label}
+      </h3>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+        {insights.map((insight, idx) => (
+          <SecondaryInsightCard key={idx} insight={insight} onNavigateTab={onNavigateTab} onFocusAgenda={onFocusAgenda} />
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -213,12 +294,17 @@ export function SmartInsightsFeed({
   dateFrom,
   dateTo,
   onNavigateTab,
+  onFocusAgenda,
 }: {
   dateFrom: string;
   dateTo: string;
   /** Ver DECISÃO em InsightActionButton — permite o botão "Ver comparativo
    * completo" trocar de aba dentro da própria Sala de Comando. */
   onNavigateTab?: (tabId: string) => void;
+  /** Ver DECISÃO em InsightActionButton — permite os botões de agenda
+   * ("Ver quem costumava vir quarta", "Ver candidatos pra agenda de X")
+   * focarem ExecutiveAgendaSummary num dia da semana/profissional. */
+  onFocusAgenda?: (focus: AgendaFocus) => void;
 }) {
   const { data, isLoading, error } = useQuery({
     queryKey: ["analytics", "smart-insights", dateFrom, dateTo],
@@ -240,18 +326,21 @@ export function SmartInsightsFeed({
   if (insights.length === 0) return <AllClearHero />;
 
   const [topInsight, ...rest] = insights;
+  const faturamentoInsights = rest.filter((insight) => insight.category === "faturamento");
+  const agendaInsights = rest.filter((insight) => insight.category === "agenda");
 
   return (
     <motion.div
-      className="grid grid-cols-1 gap-4 lg:grid-cols-12"
+      className="space-y-6"
       initial="hidden"
       animate="show"
       variants={{ hidden: {}, show: { transition: { staggerChildren: 0.06 } } }}
     >
-      <HeroInsight insight={topInsight} onNavigateTab={onNavigateTab} />
-      {rest.map((insight, idx) => (
-        <SecondaryInsightCard key={idx} insight={insight} onNavigateTab={onNavigateTab} />
-      ))}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+        <HeroInsight insight={topInsight} onNavigateTab={onNavigateTab} onFocusAgenda={onFocusAgenda} />
+      </div>
+      <CategorySection category="faturamento" insights={faturamentoInsights} onNavigateTab={onNavigateTab} onFocusAgenda={onFocusAgenda} />
+      <CategorySection category="agenda" insights={agendaInsights} onNavigateTab={onNavigateTab} onFocusAgenda={onFocusAgenda} />
     </motion.div>
   );
 }

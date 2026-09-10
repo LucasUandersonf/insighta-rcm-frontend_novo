@@ -1,11 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
+import { X } from "lucide-react";
 import { BentoCard } from "@/components/ui/BentoGrid";
-import { LoadingState, ErrorState } from "@/components/ui/Panel";
+import { LoadingState, ErrorState, EmptyState } from "@/components/ui/Panel";
 import { Badge } from "@/components/ui/Badge";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { cn } from "@/lib/cn";
-import type { AgendaMetrics } from "@/lib/types";
+import type { AgendaFocus, AgendaMetrics, RecallCandidates } from "@/lib/types";
 
 // Seg..Dom para exibição — o backend usa a convenção 0=domingo..6=sábado
 // (EXTRACT(DOW) do Postgres, ver AnalyticsRepository.appointment_weekday_histogram),
@@ -13,6 +14,11 @@ import type { AgendaMetrics } from "@/lib/types";
 const WEEKDAY_DISPLAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
 const WEEKDAY_LABELS = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
 const WEEKDAY_LABELS_FULL = ["Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado", "Domingo"];
+// Mesmas 7 labels, mas indexadas DIRETO pelo número do dia (0=domingo..
+// 6=sábado, convenção EXTRACT(DOW)/AgendaFocus) — diferente dos dois
+// arrays acima, que são indexados pela ORDEM DE EXIBIÇÃO (segunda
+// primeiro). Usado só para traduzir um AgendaFocus de volta em texto.
+const WEEKDAY_LABELS_BY_DOW = ["domingo", "segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira", "sábado"];
 
 const CHART_LEFT = 4;
 const CHART_RIGHT = 336;
@@ -130,6 +136,95 @@ const RISK_CONFIG = {
   alto: { tone: "denied", label: "Alto" },
 } as const;
 
+// "Há X dias/meses/anos" pro card de candidatos a recontato — diferente
+// de formatDaysInactive (InactivePatientsPanel.tsx), que nunca mostra
+// menos de "há mais de 1 mês" (faz sentido lá: piso de 365 dias já
+// garante isso). Aqui days_since_last_appointment pode ser bem pequeno
+// (ver DECISÃO em AnalyticsRepository._recall_candidates_last_appointment
+// — sem piso de tempo), então precisa de granularidade de dias também.
+function formatDaysAgo(days: number): string {
+  if (days < 30) return days <= 1 ? "há 1 dia" : `há ${days} dias`;
+  if (days < 365) {
+    const months = Math.floor(days / 30);
+    return months === 1 ? "há 1 mês" : `há ${months} meses`;
+  }
+  const years = Math.floor(days / 365);
+  return years === 1 ? "há 1 ano" : `há ${years} anos`;
+}
+
+function agendaFocusTitle(focus: AgendaFocus, recallData: RecallCandidates | undefined): string {
+  if (focus.type === "weekday") return `Candidatos a recontato — ${WEEKDAY_LABELS_BY_DOW[focus.weekday]}`;
+  const name = recallData?.professional_name;
+  return name ? `Candidatos a recontato — agenda de ${name}` : "Candidatos a recontato";
+}
+
+/**
+ * Card de "candidatos a recontato" — o destino real dos botões "Ver quem
+ * costumava vir {dia}"/"Ver candidatos pra agenda de {profissional}" (ver
+ * DECISÃO em smart_insights_engine.py::_weekday_drop_insight/
+ * _weekday_no_show_rate_insight/_capacity_drop_insight). Só aparece
+ * quando `focus` está setado — o gestor chega aqui clicando num botão de
+ * insight, nunca por padrão (mesmo espírito de InactivePatientsPanel:
+ * NÃO é reintrodução do CRUD de Pacientes, é uma lista de leitura
+ * rápida, "por onde começar a ligar hoje").
+ */
+function RecallCandidatesCard({ focus, onClearFocus }: { focus: AgendaFocus; onClearFocus?: () => void }) {
+  const query = focus.type === "weekday" ? `weekday=${focus.weekday}` : `professional_id=${focus.professionalId}`;
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["analytics", "recall-candidates", focus],
+    queryFn: () => apiClient.get<RecallCandidates>(`/api/v1/analytics/recall-candidates?${query}`),
+  });
+
+  return (
+    <BentoCard colSpan={12} glow="pending">
+      <div className="mb-1 flex items-start justify-between gap-3">
+        <p className="text-sm font-medium text-ink">{agendaFocusTitle(focus, data)}</p>
+        {onClearFocus && (
+          <button
+            type="button"
+            onClick={onClearFocus}
+            aria-label="Fechar candidatos a recontato"
+            className="shrink-0 rounded-full p-1 text-ink-faint transition-colors hover:bg-canvas-raised hover:text-ink"
+          >
+            <X size={14} strokeWidth={2} />
+          </button>
+        )}
+      </div>
+      {isLoading && <LoadingState rows={2} />}
+      {error && <ErrorState message={getApiErrorMessage(error)} />}
+      {data && data.total_count === 0 && (
+        <EmptyState message="Ninguém nessa situação agora — sem candidato a recontato pra mostrar." />
+      )}
+      {data && data.total_count > 0 && (
+        <>
+          <p className="mb-4 max-w-2xl text-xs text-ink-muted">
+            Já foram atendidos e não têm nenhum retorno marcado — por onde começar a ligar hoje.
+          </p>
+          <div className="space-y-2.5">
+            {data.items.map((patient) => (
+              <div
+                key={patient.patient_id}
+                className="flex items-center justify-between gap-3 rounded-md border border-border-hairline bg-canvas-raised/40 px-3 py-2"
+              >
+                <span className="truncate text-sm text-ink">{patient.full_name}</span>
+                <span className="shrink-0 text-right text-xs text-ink-faint">
+                  {patient.last_professional_name && `${patient.last_professional_name} · `}
+                  {formatDaysAgo(patient.days_since_last_appointment)}
+                </span>
+              </div>
+            ))}
+          </div>
+          {data.total_count > data.items.length && (
+            <p className="mt-3 text-2xs text-ink-faint">
+              Mostrando os {data.items.length} há mais tempo sem retorno de {data.total_count} no total.
+            </p>
+          )}
+        </>
+      )}
+    </BentoCard>
+  );
+}
+
 /**
  * Seção "Agenda & Capacidade Operacional" da Sala de Comando — versão
  * COMPACTA e específica desta tela (3 cards fixos), diferente da
@@ -140,7 +235,20 @@ const RISK_CONFIG = {
  * diagnóstico rápido, o Painel é auditoria completa (ver canvas de
  * design: as duas telas nunca mostram os mesmos 5 widgets).
  */
-export function ExecutiveAgendaSummary({ dateFrom, dateTo }: { dateFrom: string; dateTo: string }) {
+export function ExecutiveAgendaSummary({
+  dateFrom,
+  dateTo,
+  focus,
+  onClearFocus,
+}: {
+  dateFrom: string;
+  dateTo: string;
+  /** Ver AgendaFocus (lib/types.ts) e DECISÃO em RecallCandidatesCard —
+   * quando setado, filtra "Risco de falta" pro dia da semana focado (se
+   * for esse o tipo de foco) e mostra o card de candidatos a recontato. */
+  focus?: AgendaFocus | null;
+  onClearFocus?: () => void;
+}) {
   const { data, isLoading, error } = useQuery({
     queryKey: ["analytics", "agenda-metrics", dateFrom, dateTo],
     queryFn: () => apiClient.get<AgendaMetrics>(`/api/v1/analytics/agenda-metrics?date_from=${dateFrom}&date_to=${dateTo}`),
@@ -152,7 +260,16 @@ export function ExecutiveAgendaSummary({ dateFrom, dateTo }: { dateFrom: string;
 
   const topProfessionals = [...data.professionals].sort((a, b) => b.utilization_rate - a.utilization_rate).slice(0, 4);
   const occupancyText = occupancyNote(data.professionals);
-  const highRiskCount = data.upcoming_risk_appointments.filter((a) => a.risk_level === "alto").length;
+  // DECISÃO — filtra "Risco de falta" pro dia da semana focado (achado do
+  // usuário: o insight de taxa de falta por dia apontava aqui, mas a
+  // lista continuava mostrando TODOS os dias — o gestor tinha que
+  // caçar sozinho quem era de fato daquele dia). getDay() do JS já usa a
+  // mesma convenção 0=domingo..6=sábado do backend, sem conversão.
+  const upcomingRiskAppointments =
+    focus?.type === "weekday"
+      ? data.upcoming_risk_appointments.filter((appt) => new Date(appt.scheduled_at).getDay() === focus.weekday)
+      : data.upcoming_risk_appointments;
+  const highRiskCount = upcomingRiskAppointments.filter((a) => a.risk_level === "alto").length;
 
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
@@ -186,9 +303,16 @@ export function ExecutiveAgendaSummary({ dateFrom, dateTo }: { dateFrom: string;
       </BentoCard>
 
       <BentoCard colSpan={4}>
-        <p className="mb-1.5 text-2xs font-medium text-ink-muted">Risco de falta — próximos dias</p>
-        {data.upcoming_risk_appointments.length === 0 ? (
-          <p className="py-2 text-xs text-ink-faint">Ninguém com risco relevante de faltar nos próximos dias — pode ficar tranquilo.</p>
+        <p className="mb-1.5 text-2xs font-medium text-ink-muted">
+          Risco de falta — próximos dias
+          {focus?.type === "weekday" && ` (${WEEKDAY_LABELS_BY_DOW[focus.weekday]})`}
+        </p>
+        {upcomingRiskAppointments.length === 0 ? (
+          <p className="py-2 text-xs text-ink-faint">
+            {focus?.type === "weekday"
+              ? `Ninguém marcado pra ${WEEKDAY_LABELS_BY_DOW[focus.weekday]} com risco relevante de faltar.`
+              : "Ninguém com risco relevante de faltar nos próximos dias — pode ficar tranquilo."}
+          </p>
         ) : (
           <div>
             {highRiskCount > 0 && (
@@ -196,7 +320,7 @@ export function ExecutiveAgendaSummary({ dateFrom, dateTo }: { dateFrom: string;
                 Ligar ou mandar mensagem confirmando a presença costuma evitar boa parte dessas faltas.
               </p>
             )}
-            {data.upcoming_risk_appointments.map((appt) => {
+            {upcomingRiskAppointments.map((appt) => {
               const cfg = RISK_CONFIG[appt.risk_level];
               return (
                 <div key={appt.appointment_id} className="flex items-center justify-between border-b border-border-hairline py-[9px] last:border-0">
@@ -211,6 +335,8 @@ export function ExecutiveAgendaSummary({ dateFrom, dateTo }: { dateFrom: string;
           </div>
         )}
       </BentoCard>
+
+      {focus && <RecallCandidatesCard focus={focus} onClearFocus={onClearFocus} />}
     </div>
   );
 }

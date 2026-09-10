@@ -525,8 +525,15 @@ export interface DenialRiskDistribution {
 // clínica, é uma comparação.
 export type InsightSeverity = "critical" | "warning" | "positive" | "comparativo";
 
+// "faturamento" | "agenda" — área do card, usada por SmartInsightsFeed.tsx
+// pra agrupar o feed em seções em vez de uma lista única misturando
+// cobrança/glosa com ocupação de agenda (ver DECISÃO em
+// smart_insights_engine.Insight.category, backend).
+export type InsightCategory = "faturamento" | "agenda";
+
 export interface SmartInsight {
   severity: InsightSeverity;
+  category: InsightCategory;
   title: string;
   message: string;
   financial_impact: number | null;
@@ -585,6 +592,61 @@ export interface InactivePatients {
   total_count: number; // pode ser maior que items.length — a lista é sempre truncada
   inactive_after_days: number;
 }
+
+// Candidatos a recontato (GET /analytics/recall-candidates) — a lista
+// real por trás dos botões de ação dos insights de agenda que apontam
+// pra um dia da semana ou um profissional específico (ver DECISÃO em
+// smart_insights_engine.py::_weekday_drop_insight/_weekday_no_show_rate_insight/
+// _capacity_drop_insight, backend). Diferente de InactivePatientItem
+// (piso fixo de 365 dias): aqui days_since_last_appointment pode ser
+// bem menor — o critério é só "sem retorno futuro marcado".
+export interface RecallCandidateItem {
+  patient_id: string;
+  full_name: string;
+  last_appointment_at: string;
+  days_since_last_appointment: number;
+  last_professional_name: string | null;
+}
+
+export interface RecallCandidates {
+  items: RecallCandidateItem[];
+  total_count: number;
+  weekday: number | null;
+  professional_id: string | null;
+  professional_name: string | null;
+}
+
+// Contas de "Divergência de Cobrança" (GET /analytics/financial-hole-billings)
+// — a lista real por trás do insight "Você está cobrando menos do que
+// devia de alguns convênios" (ver DECISÃO em
+// smart_insights_engine.py::_financial_hole_insight, backend).
+// `agreed_price` é sempre > `charged_value` (nunca uma linha "certa" ou
+// cobrada a mais aparece aqui).
+export interface FinancialHoleBillingItem {
+  billing_id: string;
+  patient_full_name: string;
+  procedure_label: string;
+  insurance_plan_name: string;
+  charged_value: number;
+  agreed_price: number;
+  hole_value: number;
+}
+
+export interface FinancialHoleBillings {
+  period_start: string;
+  period_end: string;
+  items: FinancialHoleBillingItem[];
+  total_count: number; // pode ser maior que items.length — a lista é sempre truncada
+  total_hole_value: number; // mesmo número que o insight cita
+}
+
+// Foco de agenda — estado compartilhado entre SmartInsightsFeed (dispara
+// via o botão de ação dos insights de agenda), ExecutiveOverviewPage
+// (guarda o estado) e ExecutiveAgendaSummary (busca e mostra os
+// candidatos a recontato correspondentes). Ver DECISÃO em
+// InsightActionButton (SmartInsightsFeed.tsx) sobre os formatos
+// "#weekday:<n>"/"#professional:<id>" que originam este estado.
+export type AgendaFocus = { type: "weekday"; weekday: number } | { type: "professional"; professionalId: string };
 
 // Comparativo entre clínicas (GET /analytics/network-benchmark) — Sala de Comando 2.0
 export interface NetworkBenchmarkMetric {
