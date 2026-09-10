@@ -14,6 +14,7 @@ import {
   ShieldAlert,
   UploadCloud,
   Users,
+  Wallet,
   type LucideIcon,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
@@ -60,6 +61,9 @@ export const NAV_ITEMS: NavItem[] = [
   // Mesmo RBAC dos outros itens financeiros — recurso de glosa é dado
   // financeiro/jurídico sensível, fora do alcance de "atendimento".
   { to: "/denial-appeals", label: "Recurso de glosa", icon: ShieldAlert, roles: ["owner", "admin", "financeiro", "auditor"] },
+  // Registrar pagamento recebido + Guias TISS — mesmo RBAC de /upload
+  // (ação de escrita financeira, sem auditor).
+  { to: "/faturamento", label: "Faturamento & guias", icon: Wallet, roles: ["owner", "admin", "financeiro"] },
 ];
 
 // Administração da plataforma — só owner/admin (mesmo RBAC do backend

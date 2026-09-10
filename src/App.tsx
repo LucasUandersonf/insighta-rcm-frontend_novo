@@ -26,6 +26,7 @@ const DashboardPage = lazy(() => import("@/pages/DashboardPage").then((m) => ({ 
 const ExecutiveOverviewPage = lazy(() => import("@/pages/ExecutiveOverviewPage").then((m) => ({ default: m.ExecutiveOverviewPage })));
 const ContractsPage = lazy(() => import("@/pages/ContractsPage").then((m) => ({ default: m.ContractsPage })));
 const DenialAppealsPage = lazy(() => import("@/pages/DenialAppealsPage").then((m) => ({ default: m.DenialAppealsPage })));
+const BillingOperationsPage = lazy(() => import("@/pages/BillingOperationsPage").then((m) => ({ default: m.BillingOperationsPage })));
 const AppointmentsPage = lazy(() => import("@/pages/AppointmentsPage").then((m) => ({ default: m.AppointmentsPage })));
 const ProfessionalsPage = lazy(() => import("@/pages/ProfessionalsPage").then((m) => ({ default: m.ProfessionalsPage })));
 const UploadCenterPage = lazy(() => import("@/pages/UploadCenterPage").then((m) => ({ default: m.UploadCenterPage })));
@@ -123,6 +124,11 @@ export default function App() {
                     (owner/admin/financeiro); sem auditor, que é só leitura. */}
                 <Route element={<RoleProtectedRoute allowedRoles={["owner", "admin", "financeiro"]} />}>
                   <Route path="/upload" element={<UploadCenterPage />} />
+                  {/* Registrar pagamento recebido (POST /billing/{id}/settle) e
+                      cadastro avulso de Guia TISS (POST /guias) — mesmo RBAC de
+                      /upload: ação de escrita financeira, fora do alcance de
+                      "atendimento" e de "auditor" (leitura só). */}
+                  <Route path="/faturamento" element={<BillingOperationsPage />} />
                   {/* Destino que o próprio toast de sucesso da Central de Upload já
                       promete ("veja a tela de Setup") — mesmo RBAC de /upload
                       (ingestion.py/_CAN_MANAGE: owner/admin/financeiro). */}
