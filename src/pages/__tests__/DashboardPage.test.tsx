@@ -27,6 +27,7 @@ const SUMMARY: ExecutiveSummary = {
   appeals_due_soon_count: 0,
   denial_risk_pct: null,
   denial_at_risk_value: 0,
+  avg_days_to_receive: null,
 };
 
 function billingPage(items: BillingResponse[]): PaginatedResponse<BillingResponse> {

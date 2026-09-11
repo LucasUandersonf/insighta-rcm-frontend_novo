@@ -13,6 +13,7 @@ import { AgendaAnalyticsPanel } from "@/components/dashboard/AgendaAnalyticsPane
 import { PlanLossRankingPanel } from "@/components/dashboard/PlanLossRankingPanel";
 import { ContractUtilizationPanel } from "@/components/dashboard/ContractUtilizationPanel";
 import { DenialRiskDistributionPanel } from "@/components/dashboard/DenialRiskDistributionPanel";
+import { PaymentLagPanel } from "@/components/dashboard/PaymentLagPanel";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useDateWindow } from "@/lib/useDateWindow";
@@ -268,15 +269,31 @@ export function DashboardPage() {
               format={(n) => String(Math.round(n))}
               tone={summary.appeals_due_soon_count > 0 ? "denied" : "revenue"}
             />
+            {/* Achado 2 da auditoria "Veredito do Gestor Clínico": PMR
+                (Prazo Médio de Recebimento) — billing.created_at/settled_at
+                sempre existiram no banco, mas nenhum indicador calculava
+                essa diferença. null quando não há billing conciliado no
+                período (amostra vazia, não "0 dias"). */}
+            <KpiCard
+              colSpan={3}
+              label="Prazo médio de recebimento"
+              value={summary.avg_days_to_receive ? `${summary.avg_days_to_receive.value.toFixed(0)} dias` : "—"}
+              numericValue={summary.avg_days_to_receive ? summary.avg_days_to_receive.value : undefined}
+              format={summary.avg_days_to_receive ? (n) => `${n.toFixed(0)} dias` : undefined}
+              tone={summary.avg_days_to_receive && summary.avg_days_to_receive.value >= 60 ? "pending" : "neutral"}
+              trend={summary.avg_days_to_receive ? trendFrom(summary.avg_days_to_receive, { invert: true }) : undefined}
+              narrative="Média entre faturamento e recebimento — só contas já conciliadas."
+            />
           </div>
         </section>
       )}
 
       {summary && (
-        <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <PlanLossRankingPanel dateFrom={dateFrom} dateTo={dateTo} />
           <ContractUtilizationPanel dateFrom={dateFrom} dateTo={dateTo} />
           <DenialRiskDistributionPanel dateFrom={dateFrom} dateTo={dateTo} />
+          <PaymentLagPanel dateFrom={dateFrom} dateTo={dateTo} />
         </section>
       )}
 

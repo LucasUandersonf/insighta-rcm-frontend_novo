@@ -373,6 +373,12 @@ export interface ExecutiveSummary {
   // no período (% sobre base zero é indefinida).
   denial_risk_pct: number | null;
   denial_at_risk_value: number;
+  // PMR (Prazo Médio de Recebimento) — achado da auditoria "Veredito do
+  // Gestor Clínico": billing.created_at/settled_at sempre existiram no
+  // banco, mas nenhum indicador calculava essa diferença até esta
+  // rodada. null quando não há nenhum billing conciliado no período
+  // (amostra vazia, nunca "0 dias").
+  avg_days_to_receive: PeriodKpi | null;
 }
 
 export interface ProfessionalCapacityMetric {
@@ -481,6 +487,27 @@ export interface PlanLossRanking {
   period_start: string;
   period_end: string;
   plans: PlanLossItem[];
+}
+
+// Ranking de PMR por convênio (GET /analytics/payment-lag-by-plan) —
+// achado da auditoria "Veredito do Gestor Clínico": pior prazo primeiro,
+// pra apontar QUAL operadora está de fato travando o caixa.
+export interface PaymentLagByPlanItem {
+  insurance_plan_id: string;
+  insurance_plan_name: string;
+  avg_days_to_receive: number;
+  billings_settled_count: number;
+}
+
+export interface PaymentLagByPlan {
+  period_start: string;
+  period_end: string;
+  // Agregado do tenant inteiro — mesmo número de
+  // ExecutiveSummary.avg_days_to_receive.value. null quando não há
+  // nenhum billing conciliado no período.
+  avg_days_to_receive: number | null;
+  billings_settled_count: number;
+  items: PaymentLagByPlanItem[]; // ordenado por avg_days_to_receive desc, pior primeiro
 }
 
 // Utilização de contrato (GET /analytics/contract-utilization) — dos

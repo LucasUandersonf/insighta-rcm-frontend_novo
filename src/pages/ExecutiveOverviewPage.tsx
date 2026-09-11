@@ -185,6 +185,21 @@ export function ExecutiveOverviewPage() {
                     tone="neutral"
                     trend={summary.avg_capacity_utilization ? trendFrom(summary.avg_capacity_utilization) : undefined}
                   />
+                  {/* Achado 2 da auditoria "Veredito do Gestor Clínico": PMR
+                      (Prazo Médio de Recebimento) — billing.created_at/
+                      settled_at sempre existiram no banco, mas nenhum
+                      indicador calculava essa diferença. null quando não
+                      há billing conciliado no período. */}
+                  <KpiCard
+                    size="compact"
+                    colSpan={2}
+                    label="Prazo médio de recebimento"
+                    value={summary.avg_days_to_receive ? `${summary.avg_days_to_receive.value.toFixed(0)} dias` : "—"}
+                    numericValue={summary.avg_days_to_receive ? summary.avg_days_to_receive.value : undefined}
+                    format={summary.avg_days_to_receive ? (n) => `${n.toFixed(0)} dias` : undefined}
+                    tone={summary.avg_days_to_receive && summary.avg_days_to_receive.value >= 60 ? "pending" : "neutral"}
+                    trend={summary.avg_days_to_receive ? trendFrom(summary.avg_days_to_receive, { invert: true }) : undefined}
+                  />
                 </div>
               </section>
             )}
