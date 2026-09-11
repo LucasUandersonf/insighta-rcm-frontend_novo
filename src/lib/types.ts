@@ -636,8 +636,14 @@ export interface FinancialHoleBillings {
   period_start: string;
   period_end: string;
   items: FinancialHoleBillingItem[];
-  total_count: number; // pode ser maior que items.length — a lista é sempre truncada
-  total_hole_value: number; // mesmo número que o insight cita
+  total_count: number; // sempre TODAS as contas do período, não só as da página atual
+  total_hole_value: number; // mesmo número que o insight cita — soma de TODAS, não só da página
+  // Achado do usuário direto na tela: a lista era fixa em `limit` linhas
+  // sem jeito de ver o resto quando total_count era maior. Agora
+  // paginável de verdade (mesmo formato de PaginatedResponse) — ver
+  // DECISÃO em app/schemas/analytics.py::FinancialHoleBillingsResponse.
+  limit: number;
+  offset: number;
 }
 
 // Foco de agenda — estado compartilhado entre SmartInsightsFeed (dispara
