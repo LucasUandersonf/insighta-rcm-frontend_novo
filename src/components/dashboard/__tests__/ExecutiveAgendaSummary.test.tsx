@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { ExecutiveAgendaSummary } from "@/components/dashboard/ExecutiveAgendaSummary";
 import { apiClient } from "@/lib/api-client";
 import { renderWithProviders } from "@/test/utils";
-import type { AgendaMetrics, RecallCandidates } from "@/lib/types";
+import type { AgendaMetrics, AppointmentListItem, PaginatedResponse, RecallCandidates } from "@/lib/types";
 
 vi.mock("@/lib/api-client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api-client")>();
@@ -164,5 +164,73 @@ describe("ExecutiveAgendaSummary", () => {
     const closeButton = await screen.findByRole("button", { name: "Fechar candidatos a recontato" });
     await user.click(closeButton);
     await waitFor(() => expect(onClearFocus).toHaveBeenCalled());
+  });
+
+  // Achado 12 da Auditoria de Templates e Insights ("O que resta em
+  // aberto"): os insights de canal de agendamento/motivo de
+  // cancelamento apontavam pra "#agenda-resumo", mas essa seção não
+  // tinha nenhuma tela listando agendamentos individuais com esses
+  // campos. Os 3 testes abaixo cobrem o painel "Agendamentos do
+  // período" (AppointmentListPanel) que fecha essa lacuna.
+  function appointmentsPage(overrides: Partial<PaginatedResponse<AppointmentListItem>> = {}): PaginatedResponse<AppointmentListItem> {
+    return { items: [], total: 0, limit: 10, offset: 0, ...overrides };
+  }
+
+  it("lista agendamentos do período com canal de agendamento e motivo de cancelamento", async () => {
+    const item: AppointmentListItem = {
+      id: "a1",
+      patient_name: "Paciente Canal",
+      scheduled_at: "2026-01-05T14:00:00Z",
+      status: "no_show",
+      procedure_code: null,
+      visit_type: null,
+      booking_channel: "whatsapp",
+      cancellation_reason: null,
+    };
+    vi.mocked(apiClient.get).mockImplementation((url: string) => {
+      if (url.includes("/api/v1/appointments?")) return Promise.resolve(appointmentsPage({ items: [item], total: 1 }) as never);
+      return Promise.resolve(baseMetrics() as never);
+    });
+
+    renderWithProviders(<ExecutiveAgendaSummary dateFrom="2026-01-01" dateTo="2026-01-07" />);
+
+    expect(await screen.findByText("Agendamentos do período")).toBeInTheDocument();
+    expect(await screen.findByText("Paciente Canal")).toBeInTheDocument();
+    expect(screen.getByText("Faltou")).toBeInTheDocument();
+    expect(screen.getByText("whatsapp")).toBeInTheDocument();
+  });
+
+  it("mostra travessão quando não há motivo de cancelamento registrado", async () => {
+    const item: AppointmentListItem = {
+      id: "a1",
+      patient_name: "Paciente Sem Motivo",
+      scheduled_at: "2026-01-05T14:00:00Z",
+      status: "scheduled",
+      procedure_code: null,
+      visit_type: null,
+      booking_channel: null,
+      cancellation_reason: null,
+    };
+    vi.mocked(apiClient.get).mockImplementation((url: string) => {
+      if (url.includes("/api/v1/appointments?")) return Promise.resolve(appointmentsPage({ items: [item], total: 1 }) as never);
+      return Promise.resolve(baseMetrics() as never);
+    });
+
+    renderWithProviders(<ExecutiveAgendaSummary dateFrom="2026-01-01" dateTo="2026-01-07" />);
+
+    await screen.findByText("Paciente Sem Motivo");
+    const dashes = screen.getAllByText("—");
+    expect(dashes.length).toBeGreaterThanOrEqual(2); // canal e motivo, ambos nulos
+  });
+
+  it("período vazio mostra o estado vazio, não uma tabela em branco", async () => {
+    vi.mocked(apiClient.get).mockImplementation((url: string) => {
+      if (url.includes("/api/v1/appointments?")) return Promise.resolve(appointmentsPage() as never);
+      return Promise.resolve(baseMetrics() as never);
+    });
+
+    renderWithProviders(<ExecutiveAgendaSummary dateFrom="2026-01-01" dateTo="2026-01-07" />);
+
+    expect(await screen.findByText("Nenhum agendamento nesse período.")).toBeInTheDocument();
   });
 });

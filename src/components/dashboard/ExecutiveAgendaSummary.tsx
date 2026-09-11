@@ -1,12 +1,101 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { X } from "lucide-react";
 import { BentoCard } from "@/components/ui/BentoGrid";
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/Panel";
 import { Badge } from "@/components/ui/Badge";
+import { Pagination } from "@/components/ui/Pagination";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { cn } from "@/lib/cn";
-import type { AgendaFocus, AgendaMetrics, RecallCandidates } from "@/lib/types";
+import type { AgendaFocus, AgendaMetrics, AppointmentListItem, PaginatedResponse, RecallCandidates } from "@/lib/types";
+
+// Mesmo mapa de STATUS_LABELS de AppointmentsPage.tsx — vocabulário
+// fechado idêntico (_KNOWN_STATUSES em app/schemas/appointment.py),
+// duplicado aqui de propósito (é só rótulo de exibição, não lógica de
+// validação — não é o mesmo tipo de "duas portas" que motivou extrair
+// text_utils.py) pra esta seção não depender de outra página.
+const APPOINTMENT_STATUS_LABELS: Record<string, string> = {
+  scheduled: "Agendada",
+  completed: "Realizada",
+  cancelled: "Cancelada",
+  no_show: "Faltou",
+};
+
+function formatAppointmentDateTime(iso: string): string {
+  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).format(
+    new Date(iso)
+  );
+}
+
+const APPOINTMENT_LIST_PAGE_SIZE = 10;
+
+/**
+ * "Agendamentos do período" — tela que faltava depois do Achado 12 da
+ * Auditoria de Templates e Insights: os insights de canal de
+ * agendamento/motivo de cancelamento concentrado (ver
+ * smart_insights_engine.py::_booking_channel_no_show_insight/
+ * _cancellation_reason_insight, que apontam pra "#agenda-resumo") já
+ * tinham o dado exposto pela API, mas não existia NENHUMA tela que
+ * listasse agendamentos individuais mostrando QUAL agendamento tem qual
+ * canal/motivo — só o card de "Risco de falta" acima, que é outro
+ * recorte (risco preditivo de falta futura, não canal/motivo
+ * histórico). Espelha GET /appointments (AppointmentListItem, backend).
+ */
+function AppointmentListPanel({ dateFrom, dateTo }: { dateFrom: string; dateTo: string }) {
+  const [offset, setOffset] = useState(0);
+
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["appointments", "list", dateFrom, dateTo, offset],
+    queryFn: () =>
+      apiClient.get<PaginatedResponse<AppointmentListItem>>(
+        `/api/v1/appointments?date_from=${dateFrom}&date_to=${dateTo}&limit=${APPOINTMENT_LIST_PAGE_SIZE}&offset=${offset}`
+      ),
+  });
+
+  return (
+    <BentoCard colSpan={12}>
+      <p className="mb-1 text-2xs font-medium text-ink-muted">Agendamentos do período</p>
+      <p className="mb-4 max-w-2xl text-xs text-ink-muted">
+        Canal de agendamento e motivo de cancelamento por consulta — o detalhe individual por trás dos insights de Agenda acima.
+      </p>
+      {isLoading && <LoadingState rows={4} />}
+      {error && <ErrorState message={getApiErrorMessage(error)} />}
+      {data && data.total === 0 && (
+        <EmptyState message="Nenhum agendamento nesse período." />
+      )}
+      {data && data.total > 0 && (
+        <>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-border-hairline text-2xs uppercase tracking-wide text-ink-faint">
+                  <th className="px-4 py-2.5 font-medium">Paciente</th>
+                  <th className="px-4 py-2.5 font-medium">Data</th>
+                  <th className="px-4 py-2.5 font-medium">Status</th>
+                  <th className="px-4 py-2.5 font-medium">Canal de agendamento</th>
+                  <th className="px-4 py-2.5 font-medium">Motivo de cancelamento</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.items.map((item) => (
+                  <tr key={item.id} className="border-b border-border-hairline last:border-0 transition-colors hover:bg-canvas-raised/60">
+                    <td className="px-4 py-2.5 text-ink">{item.patient_name}</td>
+                    <td className="tabular px-4 py-2.5 font-mono text-ink-muted">{formatAppointmentDateTime(item.scheduled_at)}</td>
+                    <td className="px-4 py-2.5 text-ink-muted">{APPOINTMENT_STATUS_LABELS[item.status] ?? item.status}</td>
+                    <td className="px-4 py-2.5 text-ink-muted">{item.booking_channel ?? "—"}</td>
+                    <td className="px-4 py-2.5 text-ink-muted">{item.cancellation_reason ?? "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <Pagination total={data.total} limit={data.limit} offset={data.offset} onOffsetChange={setOffset} />
+        </>
+      )}
+    </BentoCard>
+  );
+}
 
 // Seg..Dom para exibição — o backend usa a convenção 0=domingo..6=sábado
 // (EXTRACT(DOW) do Postgres, ver AnalyticsRepository.appointment_weekday_histogram),
@@ -337,6 +426,8 @@ export function ExecutiveAgendaSummary({
       </BentoCard>
 
       {focus && <RecallCandidatesCard focus={focus} onClearFocus={onClearFocus} />}
+
+      <AppointmentListPanel dateFrom={dateFrom} dateTo={dateTo} />
     </div>
   );
 }

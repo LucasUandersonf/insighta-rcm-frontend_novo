@@ -848,6 +848,24 @@ export interface AppointmentCreateRequest {
   cid_code?: string | null;
 }
 
+// Item de GET /appointments (listagem paginada por período) — espelha
+// AppointmentListItem no backend (app/schemas/appointment.py). Peça que
+// faltava depois do Achado 12 da Auditoria de Templates e Insights: os
+// insights de canal de agendamento/motivo de cancelamento apontavam o
+// problema em AGREGADO, mas não existia nenhuma tela que mostrasse QUAL
+// agendamento tinha qual canal/motivo — mesmo raciocínio de
+// BillingSearchItem (nome do paciente já resolvido, evita N+1).
+export interface AppointmentListItem {
+  id: string;
+  patient_name: string;
+  scheduled_at: string;
+  status: string;
+  procedure_code: string | null;
+  visit_type: string | null;
+  booking_channel: string | null;
+  cancellation_reason: string | null;
+}
+
 // --- Parser Inteligente de Contratos: Convênios (app/schemas/insurance_company.py) ---
 export interface InsuranceCompany {
   id: string;
