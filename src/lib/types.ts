@@ -694,6 +694,14 @@ export interface BillingResponse {
   received_value: number | null;
   settled_at: string | null;
   created_at: string;
+  // Achado 12 da Auditoria de Templates e Insights (médio) — campos
+  // novos do Dicionário de Dados, espelhando app/schemas/billing.py
+  // (backend): existiam na escrita desde a Rodada 1, mas nenhuma
+  // resposta de leitura os devolvia até esta correção.
+  quantity: number;
+  member_card_number: string | null;
+  item_type: string | null;
+  coparticipation_value: number | null;
 }
 
 export interface BillingSettleRequest {
@@ -712,6 +720,9 @@ export interface BillingSearchItem {
   status: BillingResponse["status"];
   denial_risk_level: BillingResponse["denial_risk_level"];
   created_at: string;
+  // Achado 12 da Auditoria (médio) — mesmo motivo de BillingResponse.
+  item_type: string | null;
+  member_card_number: string | null;
 }
 
 // Guia (TISS) — ver app/models/guia.py no backend. Fase 1 do plano de
@@ -818,6 +829,14 @@ export interface Appointment {
   no_show_risk_level: NoShowRiskLevel | null;
   no_show_risk_score: number | null;
   created_at: string;
+  // Achado 12 da Auditoria de Templates e Insights (médio) — campos
+  // novos do Dicionário de Dados, espelhando app/schemas/appointment.py
+  // (backend): existiam na escrita desde a Rodada 1, mas nenhuma
+  // resposta de leitura os devolvia até esta correção.
+  booked_at: string | null;
+  visit_type: string | null;
+  cancellation_reason: string | null;
+  booking_channel: string | null;
 }
 
 export interface AppointmentCreateRequest {

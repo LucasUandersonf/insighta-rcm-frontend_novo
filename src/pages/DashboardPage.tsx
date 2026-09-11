@@ -58,6 +58,19 @@ const PAGE_SIZE = 20;
 const CAN_VIEW_ANALYTICS: UserRole[] = ["owner", "admin", "financeiro", "auditor"];
 const CAN_VIEW_BILLING_QUEUE: UserRole[] = ["owner", "admin", "financeiro"];
 
+// Achado 12 da Auditoria de Templates e Insights (médio) — rótulo em
+// português para `item_type` (ver ITEM_TYPE_VALUES, app/models/billing.py
+// no backend). Sem uma coluna que mostre isso aqui, o insight de
+// "concentração de OPME" (ver _opme_concentration_insight, backend)
+// linkava pra esta mesma tela sem nenhum jeito de ver QUAL linha é OPME.
+const ITEM_TYPE_LABELS: Record<string, string> = {
+  procedimento: "Procedimento",
+  material_opme: "OPME",
+  taxa: "Taxa",
+  diaria: "Diária",
+  medicamento: "Medicamento",
+};
+
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
 }
@@ -340,6 +353,7 @@ export function DashboardPage() {
                 <tr className="border-b border-border-hairline text-2xs uppercase tracking-wide text-ink-faint">
                   <th className="px-4 py-2.5 font-medium">Criado em</th>
                   <th className="px-4 py-2.5 font-medium">Valor cobrado</th>
+                  <th className="px-4 py-2.5 font-medium">Item</th>
                   <th className="px-4 py-2.5 font-medium">Risco</th>
                   <th className="px-4 py-2.5 font-medium">Motivos</th>
                   <th className="px-4 py-2.5 font-medium">Status</th>
@@ -354,6 +368,9 @@ export function DashboardPage() {
                     <tr key={billing.id} className="border-b border-border-hairline last:border-0 transition-colors hover:bg-canvas-raised/60">
                       <td className="px-4 py-2.5 text-ink-muted">{formatDate(billing.created_at)}</td>
                       <td className="tabular px-4 py-2.5 font-mono text-ink">{formatCurrency(billing.charged_value)}</td>
+                      <td className="px-4 py-2.5 text-ink-muted">
+                        {billing.item_type ? ITEM_TYPE_LABELS[billing.item_type] ?? billing.item_type : "—"}
+                      </td>
                       <td className="px-4 py-2.5">
                         <RiskBadge level={billing.denial_risk_level} />
                       </td>

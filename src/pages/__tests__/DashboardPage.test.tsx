@@ -45,6 +45,10 @@ function makeBilling(overrides: Partial<BillingResponse> = {}): BillingResponse 
     received_value: null,
     settled_at: null,
     created_at: "2026-01-05T00:00:00Z",
+    quantity: 1,
+    member_card_number: null,
+    item_type: null,
+    coparticipation_value: null,
     ...overrides,
   };
 }
