@@ -5,6 +5,7 @@ import { BentoCard } from "@/components/ui/BentoGrid";
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/Panel";
 import { Badge } from "@/components/ui/Badge";
 import { Pagination } from "@/components/ui/Pagination";
+import { AgendaRevenueForecastPanel } from "@/components/dashboard/AgendaRevenueForecastPanel";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { cn } from "@/lib/cn";
@@ -424,6 +425,8 @@ export function ExecutiveAgendaSummary({
           </div>
         )}
       </BentoCard>
+
+      <AgendaRevenueForecastPanel />
 
       {focus && <RecallCandidatesCard focus={focus} onClearFocus={onClearFocus} />}
 

@@ -510,6 +510,34 @@ export interface PaymentLagByPlan {
   items: PaymentLagByPlanItem[]; // ordenado por avg_days_to_receive desc, pior primeiro
 }
 
+// Previsão de receita futura da agenda (GET /analytics/agenda-revenue-forecast)
+// — pedido direto do usuário: "a receita da agenda... conseguimos tirar
+// metade do faturamento futuro da clínica". Período FUTURO por padrão
+// (diferente de todo o resto deste arquivo, que olha pra trás). Ver
+// DECISÃO completa em AnalyticsRepository.agenda_revenue_forecast
+// (backend): 3 baldes separados, nunca um único "valor esperado" que
+// esconderia a incerteza real do dado.
+export interface AgendaRevenueForecast {
+  period_start: string;
+  period_end: string;
+  total_scheduled_count: number;
+  // Soma bruta de agreed_price de todo agendamento com preço de contrato
+  // encontrado (known_risk_value + unrated_value).
+  total_scheduled_value: number;
+  // Subset com no_show_risk_score CALCULADO — expected_value é o
+  // ajustado por (1 - risco de falta), known_risk_value é o bruto.
+  known_risk_count: number;
+  known_risk_value: number;
+  expected_value: number;
+  // Preço encontrado, mas paciente "indeterminado" (sem histórico ainda)
+  // — de propósito FORA do ajuste de risco, nunca somado a expected_value.
+  unrated_count: number;
+  unrated_value: number;
+  // Sem convênio/procedimento definido ainda, ou sem contrato vigente —
+  // nem entra em total_scheduled_value.
+  unpriced_count: number;
+}
+
 // Utilização de contrato (GET /analytics/contract-utilization) — dos
 // procedimentos negociados num contrato, quantos foram de fato
 // faturados no período. idle_catalog_value é o valor de TABELA dos
