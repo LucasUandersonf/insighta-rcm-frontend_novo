@@ -690,6 +690,32 @@ export interface EarlyChurnRisk {
   inactive_after_days: number;
 }
 
+// Raio-X da Receita, frente "Gestão eficiente" — rentabilidade por
+// profissional e mix de receita por procedimento (GET /analytics/profitability).
+export interface ProfessionalProfitabilityItem {
+  professional_id: string;
+  full_name: string;
+  revenue: number;
+  booked_minutes: number;
+  revenue_per_hour: number | null; // null quando não há agenda ocupada no período
+}
+
+export interface ProcedureProfitabilityItem {
+  procedure_code: string;
+  procedure_name: string | null;
+  revenue: number;
+  billing_count: number;
+  share_pct: number;
+}
+
+export interface Profitability {
+  period_start: string;
+  period_end: string;
+  total_billed: number;
+  by_professional: ProfessionalProfitabilityItem[]; // ordenado por receita/hora, maior primeiro
+  by_procedure: ProcedureProfitabilityItem[]; // ordenado por receita, maior primeiro
+}
+
 // Candidatos a recontato (GET /analytics/recall-candidates) — a lista
 // real por trás dos botões de ação dos insights de agenda que apontam
 // pra um dia da semana ou um profissional específico (ver DECISÃO em

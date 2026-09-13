@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { LayoutDashboard, SlidersHorizontal, Target, Users } from "lucide-react";
+import { BadgeDollarSign, LayoutDashboard, SlidersHorizontal, Target, Users } from "lucide-react";
 import { KpiCard } from "@/components/ui/KpiCard";
 import { ErrorState, LoadingState } from "@/components/ui/Panel";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -14,6 +14,7 @@ import { SmartInsightsFeed } from "@/components/dashboard/SmartInsightsFeed";
 import { HealthScoreWidget } from "@/components/dashboard/HealthScoreWidget";
 import { NetworkBenchmarkPanel } from "@/components/dashboard/NetworkBenchmarkPanel";
 import { OportunidadesPanel } from "@/components/dashboard/OportunidadesPanel";
+import { ProfitabilityPanel } from "@/components/dashboard/ProfitabilityPanel";
 import { SimuladorPanel } from "@/components/dashboard/SimuladorPanel";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
@@ -44,7 +45,7 @@ function formatPct(value: number): string {
 }
 
 const TABS_GROUP = "sala-de-comando";
-type TabId = "diagnostico" | "oportunidades" | "comparativo" | "simulador";
+type TabId = "diagnostico" | "oportunidades" | "comparativo" | "simulador" | "rentabilidade";
 
 /**
  * Sala de Comando 2.0 (ver Roadmap "Sala de Comando 2.0") — a mesma
@@ -77,7 +78,11 @@ export function ExecutiveOverviewPage() {
         title="Sala de Comando"
         subtitle="Onde estamos perdendo dinheiro hoje?"
         greeting={profile ? `${timeOfDayGreeting()}, ${firstNameFrom(profile.full_name)}.` : undefined}
-        action={activeTab === "diagnostico" ? <PeriodWindowSelect windowDays={windowDays} onChange={setWindowDays} /> : undefined}
+        action={
+          activeTab === "diagnostico" || activeTab === "rentabilidade" ? (
+            <PeriodWindowSelect windowDays={windowDays} onChange={setWindowDays} />
+          ) : undefined
+        }
       />
 
       <Tabs
@@ -88,6 +93,7 @@ export function ExecutiveOverviewPage() {
           { id: "diagnostico", label: "Diagnóstico", icon: LayoutDashboard },
           { id: "oportunidades", label: "Oportunidades", icon: Target },
           { id: "comparativo", label: "Comparativo", icon: Users },
+          { id: "rentabilidade", label: "Rentabilidade", icon: BadgeDollarSign },
           { id: "simulador", label: "Simulador", icon: SlidersHorizontal },
         ]}
       />
@@ -258,6 +264,12 @@ export function ExecutiveOverviewPage() {
       {activeTab === "comparativo" && (
         <TabPanel id="comparativo" groupId={TABS_GROUP}>
           <NetworkBenchmarkPanel />
+        </TabPanel>
+      )}
+
+      {activeTab === "rentabilidade" && (
+        <TabPanel id="rentabilidade" groupId={TABS_GROUP}>
+          <ProfitabilityPanel dateFrom={dateFrom} dateTo={dateTo} />
         </TabPanel>
       )}
 
