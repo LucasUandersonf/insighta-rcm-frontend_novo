@@ -538,6 +538,27 @@ export interface AgendaRevenueForecast {
   unpriced_count: number;
 }
 
+// Taxa de confirmação real do motor de risco de glosa (GET
+// /analytics/denial-reason-confirmation) — Camada 2 do plano de IA
+// preditiva: as regras fixas do motor anti-glosa (denial_risk_engine.py,
+// backend) de fato preveem glosa real? Sem period_start/period_end de
+// propósito (olha todo o histórico já resolvido, não uma janela).
+export interface DenialReasonConfirmationItem {
+  reason_code: string;
+  reason_label: string;
+  sample_size: number;
+  confirmed_denial_rate: number; // fração 0.0-1.0
+}
+
+export interface DenialReasonConfirmation {
+  baseline_sample_size: number;
+  // null quando ainda não há nenhum faturamento "sem motivo sinalizado"
+  // resolvido — base zero, percentual indefinido.
+  baseline_denial_rate: number | null;
+  items: DenialReasonConfirmationItem[]; // ordenado do mais confirmado pro menos, amostra mínima já aplicada
+  min_sample: number;
+}
+
 // Utilização de contrato (GET /analytics/contract-utilization) — dos
 // procedimentos negociados num contrato, quantos foram de fato
 // faturados no período. idle_catalog_value é o valor de TABELA dos
