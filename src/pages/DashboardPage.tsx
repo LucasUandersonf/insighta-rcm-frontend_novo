@@ -13,6 +13,8 @@ import { AgendaAnalyticsPanel } from "@/components/dashboard/AgendaAnalyticsPane
 import { PlanLossRankingPanel } from "@/components/dashboard/PlanLossRankingPanel";
 import { ContractUtilizationPanel } from "@/components/dashboard/ContractUtilizationPanel";
 import { DenialRiskDistributionPanel } from "@/components/dashboard/DenialRiskDistributionPanel";
+import { DenialReasonConfirmationPanel } from "@/components/dashboard/DenialReasonConfirmationPanel";
+import { PaymentLagPanel } from "@/components/dashboard/PaymentLagPanel";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useDateWindow } from "@/lib/useDateWindow";
@@ -57,6 +59,19 @@ const PAGE_SIZE = 20;
 // backend logo ao entrar (esta é a rota "/" pós-login, para todo papel).
 const CAN_VIEW_ANALYTICS: UserRole[] = ["owner", "admin", "financeiro", "auditor"];
 const CAN_VIEW_BILLING_QUEUE: UserRole[] = ["owner", "admin", "financeiro"];
+
+// Achado 12 da Auditoria de Templates e Insights (médio) — rótulo em
+// português para `item_type` (ver ITEM_TYPE_VALUES, app/models/billing.py
+// no backend). Sem uma coluna que mostre isso aqui, o insight de
+// "concentração de OPME" (ver _opme_concentration_insight, backend)
+// linkava pra esta mesma tela sem nenhum jeito de ver QUAL linha é OPME.
+const ITEM_TYPE_LABELS: Record<string, string> = {
+  procedimento: "Procedimento",
+  material_opme: "OPME",
+  taxa: "Taxa",
+  diaria: "Diária",
+  medicamento: "Medicamento",
+};
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
@@ -255,15 +270,32 @@ export function DashboardPage() {
               format={(n) => String(Math.round(n))}
               tone={summary.appeals_due_soon_count > 0 ? "denied" : "revenue"}
             />
+            {/* Achado 2 da auditoria "Veredito do Gestor Clínico": PMR
+                (Prazo Médio de Recebimento) — billing.created_at/settled_at
+                sempre existiram no banco, mas nenhum indicador calculava
+                essa diferença. null quando não há billing conciliado no
+                período (amostra vazia, não "0 dias"). */}
+            <KpiCard
+              colSpan={3}
+              label="Prazo médio de recebimento"
+              value={summary.avg_days_to_receive ? `${summary.avg_days_to_receive.value.toFixed(0)} dias` : "—"}
+              numericValue={summary.avg_days_to_receive ? summary.avg_days_to_receive.value : undefined}
+              format={summary.avg_days_to_receive ? (n) => `${n.toFixed(0)} dias` : undefined}
+              tone={summary.avg_days_to_receive && summary.avg_days_to_receive.value >= 60 ? "pending" : "neutral"}
+              trend={summary.avg_days_to_receive ? trendFrom(summary.avg_days_to_receive, { invert: true }) : undefined}
+              narrative="Média entre faturamento e recebimento — só contas já conciliadas."
+            />
           </div>
         </section>
       )}
 
       {summary && (
-        <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <PlanLossRankingPanel dateFrom={dateFrom} dateTo={dateTo} />
           <ContractUtilizationPanel dateFrom={dateFrom} dateTo={dateTo} />
           <DenialRiskDistributionPanel dateFrom={dateFrom} dateTo={dateTo} />
+          <PaymentLagPanel dateFrom={dateFrom} dateTo={dateTo} />
+          <DenialReasonConfirmationPanel />
         </section>
       )}
 
@@ -340,6 +372,7 @@ export function DashboardPage() {
                 <tr className="border-b border-border-hairline text-2xs uppercase tracking-wide text-ink-faint">
                   <th className="px-4 py-2.5 font-medium">Criado em</th>
                   <th className="px-4 py-2.5 font-medium">Valor cobrado</th>
+                  <th className="px-4 py-2.5 font-medium">Item</th>
                   <th className="px-4 py-2.5 font-medium">Risco</th>
                   <th className="px-4 py-2.5 font-medium">Motivos</th>
                   <th className="px-4 py-2.5 font-medium">Status</th>
@@ -354,6 +387,9 @@ export function DashboardPage() {
                     <tr key={billing.id} className="border-b border-border-hairline last:border-0 transition-colors hover:bg-canvas-raised/60">
                       <td className="px-4 py-2.5 text-ink-muted">{formatDate(billing.created_at)}</td>
                       <td className="tabular px-4 py-2.5 font-mono text-ink">{formatCurrency(billing.charged_value)}</td>
+                      <td className="px-4 py-2.5 text-ink-muted">
+                        {billing.item_type ? ITEM_TYPE_LABELS[billing.item_type] ?? billing.item_type : "—"}
+                      </td>
                       <td className="px-4 py-2.5">
                         <RiskBadge level={billing.denial_risk_level} />
                       </td>

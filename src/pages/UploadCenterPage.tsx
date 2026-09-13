@@ -41,6 +41,12 @@ const CANONICAL_FIELD_LABELS: Record<string, string> = {
   guia_tipo: "Tipo de guia",
   guia_numero: "Número da guia",
   guia_senha: "Senha da guia",
+  // Campos novos, achado do Dicionário de Dados (auditoria BI/Dados).
+  quantidade: "Quantidade",
+  numero_carteirinha: "Número da carteirinha",
+  tabela_procedimento: "Tabela do procedimento",
+  tipo_item: "Tipo de item",
+  valor_coparticipacao: "Valor de coparticipação",
 };
 
 // Central de Upload — o caminho que faltava no produto para o cliente

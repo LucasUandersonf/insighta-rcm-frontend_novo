@@ -1,12 +1,16 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { FileWarning } from "lucide-react";
 import { BentoCard } from "@/components/ui/BentoGrid";
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/Panel";
 import { Button } from "@/components/ui/Button";
+import { Pagination } from "@/components/ui/Pagination";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import type { FinancialHoleBillingItem, FinancialHoleBillings } from "@/lib/types";
+
+const PAGE_SIZE = 15;
 
 /**
  * Contas reais por trás do insight "Você está cobrando menos do que
@@ -16,6 +20,12 @@ import type { FinancialHoleBillingItem, FinancialHoleBillings } from "@/lib/type
  * corrigir. Destino de `#buraco-financeiro`. A correção em si (ajustar
  * a tabela de preços) continua em Contratos — este painel é onde
  * enxergar o problema linha a linha, não onde editar o contrato.
+ *
+ * Segundo achado do usuário, direto na tela: esta lista era fixa em 15
+ * linhas, sem scroll nem jeito de ver o resto quando havia mais contas
+ * que isso (o texto só admitia "mostrando as 15 piores de N no total").
+ * Agora pagina de verdade, mesmo componente <Pagination> usado no
+ * resto do produto.
  */
 
 function formatCurrency(value: number): string {
@@ -41,10 +51,13 @@ function FinancialHoleRow({ item }: { item: FinancialHoleBillingItem }) {
 
 export function FinancialHoleBillingsPanel({ dateFrom, dateTo }: { dateFrom: string; dateTo: string }) {
   const navigate = useNavigate();
+  const [offset, setOffset] = useState(0);
   const { data, isLoading, error } = useQuery({
-    queryKey: ["analytics", "financial-hole-billings", dateFrom, dateTo],
+    queryKey: ["analytics", "financial-hole-billings", dateFrom, dateTo, offset],
     queryFn: () =>
-      apiClient.get<FinancialHoleBillings>(`/api/v1/analytics/financial-hole-billings?date_from=${dateFrom}&date_to=${dateTo}`),
+      apiClient.get<FinancialHoleBillings>(
+        `/api/v1/analytics/financial-hole-billings?date_from=${dateFrom}&date_to=${dateTo}&limit=${PAGE_SIZE}&offset=${offset}`
+      ),
   });
 
   if (isLoading) return <LoadingState variant="cards" rows={4} />;
@@ -96,13 +109,8 @@ export function FinancialHoleBillingsPanel({ dateFrom, dateTo }: { dateFrom: str
             </tbody>
           </table>
         </div>
+        <Pagination total={data.total_count} limit={data.limit} offset={data.offset} onOffsetChange={setOffset} />
       </BentoCard>
-
-      {data.total_count > data.items.length && (
-        <p className="text-2xs text-ink-faint">
-          Mostrando as {data.items.length} piores diferenças de {data.total_count} no total.
-        </p>
-      )}
     </div>
   );
 }

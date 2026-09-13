@@ -21,6 +21,8 @@ const RESULT: BillingSearchItem = {
   status: "pending",
   denial_risk_level: "high",
   created_at: "2026-08-20T00:00:00Z",
+  item_type: null,
+  member_card_number: null,
 };
 
 function Wrapper() {

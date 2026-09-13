@@ -373,6 +373,12 @@ export interface ExecutiveSummary {
   // no período (% sobre base zero é indefinida).
   denial_risk_pct: number | null;
   denial_at_risk_value: number;
+  // PMR (Prazo Médio de Recebimento) — achado da auditoria "Veredito do
+  // Gestor Clínico": billing.created_at/settled_at sempre existiram no
+  // banco, mas nenhum indicador calculava essa diferença até esta
+  // rodada. null quando não há nenhum billing conciliado no período
+  // (amostra vazia, nunca "0 dias").
+  avg_days_to_receive: PeriodKpi | null;
 }
 
 export interface ProfessionalCapacityMetric {
@@ -481,6 +487,76 @@ export interface PlanLossRanking {
   period_start: string;
   period_end: string;
   plans: PlanLossItem[];
+}
+
+// Ranking de PMR por convênio (GET /analytics/payment-lag-by-plan) —
+// achado da auditoria "Veredito do Gestor Clínico": pior prazo primeiro,
+// pra apontar QUAL operadora está de fato travando o caixa.
+export interface PaymentLagByPlanItem {
+  insurance_plan_id: string;
+  insurance_plan_name: string;
+  avg_days_to_receive: number;
+  billings_settled_count: number;
+}
+
+export interface PaymentLagByPlan {
+  period_start: string;
+  period_end: string;
+  // Agregado do tenant inteiro — mesmo número de
+  // ExecutiveSummary.avg_days_to_receive.value. null quando não há
+  // nenhum billing conciliado no período.
+  avg_days_to_receive: number | null;
+  billings_settled_count: number;
+  items: PaymentLagByPlanItem[]; // ordenado por avg_days_to_receive desc, pior primeiro
+}
+
+// Previsão de receita futura da agenda (GET /analytics/agenda-revenue-forecast)
+// — pedido direto do usuário: "a receita da agenda... conseguimos tirar
+// metade do faturamento futuro da clínica". Período FUTURO por padrão
+// (diferente de todo o resto deste arquivo, que olha pra trás). Ver
+// DECISÃO completa em AnalyticsRepository.agenda_revenue_forecast
+// (backend): 3 baldes separados, nunca um único "valor esperado" que
+// esconderia a incerteza real do dado.
+export interface AgendaRevenueForecast {
+  period_start: string;
+  period_end: string;
+  total_scheduled_count: number;
+  // Soma bruta de agreed_price de todo agendamento com preço de contrato
+  // encontrado (known_risk_value + unrated_value).
+  total_scheduled_value: number;
+  // Subset com no_show_risk_score CALCULADO — expected_value é o
+  // ajustado por (1 - risco de falta), known_risk_value é o bruto.
+  known_risk_count: number;
+  known_risk_value: number;
+  expected_value: number;
+  // Preço encontrado, mas paciente "indeterminado" (sem histórico ainda)
+  // — de propósito FORA do ajuste de risco, nunca somado a expected_value.
+  unrated_count: number;
+  unrated_value: number;
+  // Sem convênio/procedimento definido ainda, ou sem contrato vigente —
+  // nem entra em total_scheduled_value.
+  unpriced_count: number;
+}
+
+// Taxa de confirmação real do motor de risco de glosa (GET
+// /analytics/denial-reason-confirmation) — Camada 2 do plano de IA
+// preditiva: as regras fixas do motor anti-glosa (denial_risk_engine.py,
+// backend) de fato preveem glosa real? Sem period_start/period_end de
+// propósito (olha todo o histórico já resolvido, não uma janela).
+export interface DenialReasonConfirmationItem {
+  reason_code: string;
+  reason_label: string;
+  sample_size: number;
+  confirmed_denial_rate: number; // fração 0.0-1.0
+}
+
+export interface DenialReasonConfirmation {
+  baseline_sample_size: number;
+  // null quando ainda não há nenhum faturamento "sem motivo sinalizado"
+  // resolvido — base zero, percentual indefinido.
+  baseline_denial_rate: number | null;
+  items: DenialReasonConfirmationItem[]; // ordenado do mais confirmado pro menos, amostra mínima já aplicada
+  min_sample: number;
 }
 
 // Utilização de contrato (GET /analytics/contract-utilization) — dos
@@ -636,8 +712,14 @@ export interface FinancialHoleBillings {
   period_start: string;
   period_end: string;
   items: FinancialHoleBillingItem[];
-  total_count: number; // pode ser maior que items.length — a lista é sempre truncada
-  total_hole_value: number; // mesmo número que o insight cita
+  total_count: number; // sempre TODAS as contas do período, não só as da página atual
+  total_hole_value: number; // mesmo número que o insight cita — soma de TODAS, não só da página
+  // Achado do usuário direto na tela: a lista era fixa em `limit` linhas
+  // sem jeito de ver o resto quando total_count era maior. Agora
+  // paginável de verdade (mesmo formato de PaginatedResponse) — ver
+  // DECISÃO em app/schemas/analytics.py::FinancialHoleBillingsResponse.
+  limit: number;
+  offset: number;
 }
 
 // Foco de agenda — estado compartilhado entre SmartInsightsFeed (dispara
@@ -694,6 +776,14 @@ export interface BillingResponse {
   received_value: number | null;
   settled_at: string | null;
   created_at: string;
+  // Achado 12 da Auditoria de Templates e Insights (médio) — campos
+  // novos do Dicionário de Dados, espelhando app/schemas/billing.py
+  // (backend): existiam na escrita desde a Rodada 1, mas nenhuma
+  // resposta de leitura os devolvia até esta correção.
+  quantity: number;
+  member_card_number: string | null;
+  item_type: string | null;
+  coparticipation_value: number | null;
 }
 
 export interface BillingSettleRequest {
@@ -712,6 +802,9 @@ export interface BillingSearchItem {
   status: BillingResponse["status"];
   denial_risk_level: BillingResponse["denial_risk_level"];
   created_at: string;
+  // Achado 12 da Auditoria (médio) — mesmo motivo de BillingResponse.
+  item_type: string | null;
+  member_card_number: string | null;
 }
 
 // Guia (TISS) — ver app/models/guia.py no backend. Fase 1 do plano de
@@ -818,6 +911,14 @@ export interface Appointment {
   no_show_risk_level: NoShowRiskLevel | null;
   no_show_risk_score: number | null;
   created_at: string;
+  // Achado 12 da Auditoria de Templates e Insights (médio) — campos
+  // novos do Dicionário de Dados, espelhando app/schemas/appointment.py
+  // (backend): existiam na escrita desde a Rodada 1, mas nenhuma
+  // resposta de leitura os devolvia até esta correção.
+  booked_at: string | null;
+  visit_type: string | null;
+  cancellation_reason: string | null;
+  booking_channel: string | null;
 }
 
 export interface AppointmentCreateRequest {
@@ -827,6 +928,24 @@ export interface AppointmentCreateRequest {
   duration_minutes?: number | null;
   procedure_code?: string | null;
   cid_code?: string | null;
+}
+
+// Item de GET /appointments (listagem paginada por período) — espelha
+// AppointmentListItem no backend (app/schemas/appointment.py). Peça que
+// faltava depois do Achado 12 da Auditoria de Templates e Insights: os
+// insights de canal de agendamento/motivo de cancelamento apontavam o
+// problema em AGREGADO, mas não existia nenhuma tela que mostrasse QUAL
+// agendamento tinha qual canal/motivo — mesmo raciocínio de
+// BillingSearchItem (nome do paciente já resolvido, evita N+1).
+export interface AppointmentListItem {
+  id: string;
+  patient_name: string;
+  scheduled_at: string;
+  status: string;
+  procedure_code: string | null;
+  visit_type: string | null;
+  booking_channel: string | null;
+  cancellation_reason: string | null;
 }
 
 // --- Parser Inteligente de Contratos: Convênios (app/schemas/insurance_company.py) ---
