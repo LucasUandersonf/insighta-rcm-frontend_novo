@@ -716,6 +716,30 @@ export interface Profitability {
   by_procedure: ProcedureProfitabilityItem[]; // ordenado por receita, maior primeiro
 }
 
+// Raio-X da Receita, frente "Gestão eficiente" — CAC e receita média por
+// paciente (proxy de LTV), por campanha/canal de marketing (GET
+// /analytics/marketing-channels). `cac` usa o período do dashboard;
+// `avg_revenue_per_patient` usa o histórico TOTAL dos pacientes
+// atribuídos à campanha, não só o período.
+export interface MarketingChannelItem {
+  source: string;
+  campaign_id: string;
+  campaign_name: string | null;
+  spend: number;
+  patients_acquired: number;
+  cac: number | null;
+  lifetime_patients: number;
+  lifetime_revenue: number;
+  avg_revenue_per_patient: number | null;
+}
+
+export interface MarketingChannels {
+  period_start: string;
+  period_end: string;
+  total_spend: number;
+  items: MarketingChannelItem[]; // ordenado por gasto, maior primeiro
+}
+
 // Candidatos a recontato (GET /analytics/recall-candidates) — a lista
 // real por trás dos botões de ação dos insights de agenda que apontam
 // pra um dia da semana ou um profissional específico (ver DECISÃO em
