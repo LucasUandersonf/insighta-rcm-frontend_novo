@@ -669,6 +669,27 @@ export interface InactivePatients {
   inactive_after_days: number;
 }
 
+// Raio-X da Receita, frente "Prevendo movimentos" — risco de abandono
+// ANTECIPADO (GET /analytics/early-churn-risk), antes do piso fixo de 1
+// ano que vira InactivePatientItem. Diferente dele, o limiar é o
+// PRÓPRIO ritmo do paciente: avg_interval_days é o intervalo médio
+// histórico entre as consultas dele, days_since_last já ultrapassa isso
+// em pelo menos gap_multiplier vezes.
+export interface EarlyChurnRiskItem {
+  patient_id: string;
+  full_name: string;
+  last_appointment_at: string;
+  avg_interval_days: number;
+  days_since_last: number;
+}
+
+export interface EarlyChurnRisk {
+  items: EarlyChurnRiskItem[];
+  total_count: number;
+  gap_multiplier: number;
+  inactive_after_days: number;
+}
+
 // Candidatos a recontato (GET /analytics/recall-candidates) — a lista
 // real por trás dos botões de ação dos insights de agenda que apontam
 // pra um dia da semana ou um profissional específico (ver DECISÃO em

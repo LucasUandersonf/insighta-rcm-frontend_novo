@@ -6,6 +6,7 @@ import { ErrorState, LoadingState } from "@/components/ui/Panel";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PeriodWindowSelect } from "@/components/ui/PeriodWindowSelect";
 import { Tabs, TabPanel } from "@/components/ui/Tabs";
+import { EarlyChurnRiskPanel } from "@/components/dashboard/EarlyChurnRiskPanel";
 import { ExecutiveAgendaSummary } from "@/components/dashboard/ExecutiveAgendaSummary";
 import { FinancialHoleBillingsPanel } from "@/components/dashboard/FinancialHoleBillingsPanel";
 import { InactivePatientsPanel } from "@/components/dashboard/InactivePatientsPanel";
@@ -236,8 +237,13 @@ export function ExecutiveOverviewPage() {
                 janela de período (mesmo espírito da Nota de Saúde): é
                 sempre "quem não volta há mais de 1 ano a partir de
                 hoje", não um recorte dos últimos 7 dias. */}
-            <section id="carteira-inativa">
+            <section id="carteira-inativa" className="space-y-4">
               <InactivePatientsPanel />
+              {/* Raio-X da Receita, frente "Prevendo movimentos" — alerta
+                  ANTECIPADO, mesma âncora: as duas listas respondem "quem
+                  está indo embora", em estágios diferentes (ver DECISÃO
+                  em smart_insights_engine.py::_early_churn_insight). */}
+              <EarlyChurnRiskPanel />
             </section>
           </div>
         </TabPanel>
