@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { PeriodWindowSelect } from "@/components/ui/PeriodWindowSelect";
 import { Tabs, TabPanel } from "@/components/ui/Tabs";
 import { ExecutiveAgendaSummary } from "@/components/dashboard/ExecutiveAgendaSummary";
+import { ExecutiveNarrativeBanner } from "@/components/dashboard/ExecutiveNarrativeBanner";
 import { FinancialHoleBillingsPanel } from "@/components/dashboard/FinancialHoleBillingsPanel";
 import { InactivePatientsPanel } from "@/components/dashboard/InactivePatientsPanel";
 import { SmartInsightsFeed } from "@/components/dashboard/SmartInsightsFeed";
@@ -78,6 +79,8 @@ export function ExecutiveOverviewPage() {
         greeting={profile ? `${timeOfDayGreeting()}, ${firstNameFrom(profile.full_name)}.` : undefined}
         action={activeTab === "diagnostico" ? <PeriodWindowSelect windowDays={windowDays} onChange={setWindowDays} /> : undefined}
       />
+
+      <ExecutiveNarrativeBanner />
 
       <Tabs
         groupId={TABS_GROUP}

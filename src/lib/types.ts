@@ -538,6 +538,20 @@ export interface AgendaRevenueForecast {
   unpriced_count: number;
 }
 
+// Resumo executivo narrado por IA (GET /analytics/executive-narrative)
+// — "o Jarvis pegando os cálculos e transformando em texto explicativo"
+// (pedido direto do usuário). `narrative` é null quando a IA não está
+// configurada ou a geração falhou (degradação graciosa — ver DECISÃO em
+// AnalyticsService.get_executive_narrative, backend). Sem
+// period_start/period_end no filtro: a janela é sempre fixa (últimos 7
+// dias fechados), independente do seletor de período da tela.
+export interface ExecutiveNarrative {
+  period_start: string;
+  period_end: string;
+  narrative: string | null;
+  generated_at: string | null;
+}
+
 // Taxa de confirmação real do motor de risco de glosa (GET
 // /analytics/denial-reason-confirmation) — Camada 2 do plano de IA
 // preditiva: as regras fixas do motor anti-glosa (denial_risk_engine.py,
