@@ -27,6 +27,7 @@ const ExecutiveOverviewPage = lazy(() => import("@/pages/ExecutiveOverviewPage")
 const ContractsPage = lazy(() => import("@/pages/ContractsPage").then((m) => ({ default: m.ContractsPage })));
 const DenialAppealsPage = lazy(() => import("@/pages/DenialAppealsPage").then((m) => ({ default: m.DenialAppealsPage })));
 const LotesPage = lazy(() => import("@/pages/LotesPage").then((m) => ({ default: m.LotesPage })));
+const CostEntriesPage = lazy(() => import("@/pages/CostEntriesPage").then((m) => ({ default: m.CostEntriesPage })));
 const MyInsightsPage = lazy(() => import("@/pages/MyInsightsPage").then((m) => ({ default: m.MyInsightsPage })));
 const BillingOperationsPage = lazy(() => import("@/pages/BillingOperationsPage").then((m) => ({ default: m.BillingOperationsPage })));
 const AppointmentsPage = lazy(() => import("@/pages/AppointmentsPage").then((m) => ({ default: m.AppointmentsPage })));
@@ -131,6 +132,11 @@ export default function App() {
                       backend barra sozinho, mesmo critério já usado em
                       /denial-appeals acima. */}
                   <Route path="/lotes" element={<LotesPage />} />
+                  {/* Épico F3.1 do Plano Diretor — mesmo RBAC de /lotes
+                      acima (lotes.py/_CAN_READ: owner/admin/financeiro/
+                      auditor; escrita via cost_entries.py/_CAN_WRITE,
+                      sem auditor, barrado pelo próprio backend). */}
+                  <Route path="/custos" element={<CostEntriesPage />} />
                 </Route>
                 {/* Upload é ação de escrita — mesmo RBAC do backend em
                     ingestion.py/_CAN_MANAGE e contracts.py/_CAN_WRITE

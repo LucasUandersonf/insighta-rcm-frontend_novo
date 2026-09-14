@@ -11,6 +11,7 @@ import {
   Layers,
   ListChecks,
   Plug,
+  Receipt,
   ScrollText,
   Send,
   ShieldAlert,
@@ -72,6 +73,9 @@ export const NAV_ITEMS: NavItem[] = [
   // Gestão de Lotes (agrupa guias antes de virar fatura) — mesmo RBAC
   // do backend em lotes.py/_CAN_READ, igual a /denial-appeals acima.
   { to: "/lotes", label: "Lotes de faturamento", icon: Layers, roles: ["owner", "admin", "financeiro", "auditor"] },
+  // Épico F3.1 do Plano Diretor ("Módulo de custos e margem real") —
+  // mesmo RBAC de /lotes acima.
+  { to: "/custos", label: "Custos", icon: Receipt, roles: ["owner", "admin", "financeiro", "auditor"] },
 ];
 
 // Administração da plataforma — só owner/admin (mesmo RBAC do backend

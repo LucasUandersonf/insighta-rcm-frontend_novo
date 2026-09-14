@@ -776,6 +776,12 @@ export interface ProfessionalProfitabilityItem {
   revenue: number;
   booked_minutes: number;
   revenue_per_hour: number | null; // null quando não há agenda ocupada no período
+  // Épico F3.1 do Plano Diretor ("Módulo de custos e margem real") —
+  // todos null quando Profitability.has_cost_data é false (nenhum
+  // custo lançado ainda), nunca 0.
+  allocated_cost: number | null;
+  net_margin: number | null;
+  margin_per_hour: number | null;
 }
 
 export interface ProcedureProfitabilityItem {
@@ -792,6 +798,32 @@ export interface Profitability {
   total_billed: number;
   by_professional: ProfessionalProfitabilityItem[]; // ordenado por receita/hora, maior primeiro
   by_procedure: ProcedureProfitabilityItem[]; // ordenado por receita, maior primeiro
+  has_cost_data: boolean;
+  total_costs: number | null;
+  net_margin: number | null;
+}
+
+// Épico F3.1 do Plano Diretor — ver DECISÃO completa em
+// app/sql/039_cost_entries.sql no backend.
+export type CostEntryCategory = "folha_fixa" | "comissao_repasse" | "aluguel" | "insumo" | "outros";
+
+export interface CostEntry {
+  id: string;
+  category: CostEntryCategory;
+  description: string | null;
+  amount: number;
+  period_month: string;
+  professional_id: string | null;
+  created_by: string;
+  created_at: string;
+}
+
+export interface CostEntryCreateRequest {
+  category: CostEntryCategory;
+  description?: string | null;
+  amount: number;
+  period_month: string;
+  professional_id?: string | null;
 }
 
 // Raio-X da Receita, frente "Gestão eficiente" — CAC e receita média por
