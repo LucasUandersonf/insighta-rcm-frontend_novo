@@ -669,6 +669,77 @@ export interface InactivePatients {
   inactive_after_days: number;
 }
 
+// Raio-X da Receita, frente "Prevendo movimentos" — risco de abandono
+// ANTECIPADO (GET /analytics/early-churn-risk), antes do piso fixo de 1
+// ano que vira InactivePatientItem. Diferente dele, o limiar é o
+// PRÓPRIO ritmo do paciente: avg_interval_days é o intervalo médio
+// histórico entre as consultas dele, days_since_last já ultrapassa isso
+// em pelo menos gap_multiplier vezes.
+export interface EarlyChurnRiskItem {
+  patient_id: string;
+  full_name: string;
+  last_appointment_at: string;
+  avg_interval_days: number;
+  days_since_last: number;
+}
+
+export interface EarlyChurnRisk {
+  items: EarlyChurnRiskItem[];
+  total_count: number;
+  gap_multiplier: number;
+  inactive_after_days: number;
+}
+
+// Raio-X da Receita, frente "Gestão eficiente" — rentabilidade por
+// profissional e mix de receita por procedimento (GET /analytics/profitability).
+export interface ProfessionalProfitabilityItem {
+  professional_id: string;
+  full_name: string;
+  revenue: number;
+  booked_minutes: number;
+  revenue_per_hour: number | null; // null quando não há agenda ocupada no período
+}
+
+export interface ProcedureProfitabilityItem {
+  procedure_code: string;
+  procedure_name: string | null;
+  revenue: number;
+  billing_count: number;
+  share_pct: number;
+}
+
+export interface Profitability {
+  period_start: string;
+  period_end: string;
+  total_billed: number;
+  by_professional: ProfessionalProfitabilityItem[]; // ordenado por receita/hora, maior primeiro
+  by_procedure: ProcedureProfitabilityItem[]; // ordenado por receita, maior primeiro
+}
+
+// Raio-X da Receita, frente "Gestão eficiente" — CAC e receita média por
+// paciente (proxy de LTV), por campanha/canal de marketing (GET
+// /analytics/marketing-channels). `cac` usa o período do dashboard;
+// `avg_revenue_per_patient` usa o histórico TOTAL dos pacientes
+// atribuídos à campanha, não só o período.
+export interface MarketingChannelItem {
+  source: string;
+  campaign_id: string;
+  campaign_name: string | null;
+  spend: number;
+  patients_acquired: number;
+  cac: number | null;
+  lifetime_patients: number;
+  lifetime_revenue: number;
+  avg_revenue_per_patient: number | null;
+}
+
+export interface MarketingChannels {
+  period_start: string;
+  period_end: string;
+  total_spend: number;
+  items: MarketingChannelItem[]; // ordenado por gasto, maior primeiro
+}
+
 // Candidatos a recontato (GET /analytics/recall-candidates) — a lista
 // real por trás dos botões de ação dos insights de agenda que apontam
 // pra um dia da semana ou um profissional específico (ver DECISÃO em

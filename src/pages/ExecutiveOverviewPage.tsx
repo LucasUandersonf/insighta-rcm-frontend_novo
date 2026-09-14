@@ -1,18 +1,21 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { LayoutDashboard, SlidersHorizontal, Target, Users } from "lucide-react";
+import { BadgeDollarSign, LayoutDashboard, SlidersHorizontal, Target, Users } from "lucide-react";
 import { KpiCard } from "@/components/ui/KpiCard";
 import { ErrorState, LoadingState } from "@/components/ui/Panel";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PeriodWindowSelect } from "@/components/ui/PeriodWindowSelect";
 import { Tabs, TabPanel } from "@/components/ui/Tabs";
+import { EarlyChurnRiskPanel } from "@/components/dashboard/EarlyChurnRiskPanel";
 import { ExecutiveAgendaSummary } from "@/components/dashboard/ExecutiveAgendaSummary";
 import { FinancialHoleBillingsPanel } from "@/components/dashboard/FinancialHoleBillingsPanel";
 import { InactivePatientsPanel } from "@/components/dashboard/InactivePatientsPanel";
 import { SmartInsightsFeed } from "@/components/dashboard/SmartInsightsFeed";
 import { HealthScoreWidget } from "@/components/dashboard/HealthScoreWidget";
 import { NetworkBenchmarkPanel } from "@/components/dashboard/NetworkBenchmarkPanel";
+import { MarketingChannelsPanel } from "@/components/dashboard/MarketingChannelsPanel";
 import { OportunidadesPanel } from "@/components/dashboard/OportunidadesPanel";
+import { ProfitabilityPanel } from "@/components/dashboard/ProfitabilityPanel";
 import { SimuladorPanel } from "@/components/dashboard/SimuladorPanel";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
@@ -43,7 +46,7 @@ function formatPct(value: number): string {
 }
 
 const TABS_GROUP = "sala-de-comando";
-type TabId = "diagnostico" | "oportunidades" | "comparativo" | "simulador";
+type TabId = "diagnostico" | "oportunidades" | "comparativo" | "simulador" | "rentabilidade";
 
 /**
  * Sala de Comando 2.0 (ver Roadmap "Sala de Comando 2.0") — a mesma
@@ -76,7 +79,11 @@ export function ExecutiveOverviewPage() {
         title="Sala de Comando"
         subtitle="Onde estamos perdendo dinheiro hoje?"
         greeting={profile ? `${timeOfDayGreeting()}, ${firstNameFrom(profile.full_name)}.` : undefined}
-        action={activeTab === "diagnostico" ? <PeriodWindowSelect windowDays={windowDays} onChange={setWindowDays} /> : undefined}
+        action={
+          activeTab === "diagnostico" || activeTab === "rentabilidade" ? (
+            <PeriodWindowSelect windowDays={windowDays} onChange={setWindowDays} />
+          ) : undefined
+        }
       />
 
       <Tabs
@@ -87,6 +94,7 @@ export function ExecutiveOverviewPage() {
           { id: "diagnostico", label: "Diagnóstico", icon: LayoutDashboard },
           { id: "oportunidades", label: "Oportunidades", icon: Target },
           { id: "comparativo", label: "Comparativo", icon: Users },
+          { id: "rentabilidade", label: "Rentabilidade", icon: BadgeDollarSign },
           { id: "simulador", label: "Simulador", icon: SlidersHorizontal },
         ]}
       />
@@ -236,8 +244,13 @@ export function ExecutiveOverviewPage() {
                 janela de período (mesmo espírito da Nota de Saúde): é
                 sempre "quem não volta há mais de 1 ano a partir de
                 hoje", não um recorte dos últimos 7 dias. */}
-            <section id="carteira-inativa">
+            <section id="carteira-inativa" className="space-y-4">
               <InactivePatientsPanel />
+              {/* Raio-X da Receita, frente "Prevendo movimentos" — alerta
+                  ANTECIPADO, mesma âncora: as duas listas respondem "quem
+                  está indo embora", em estágios diferentes (ver DECISÃO
+                  em smart_insights_engine.py::_early_churn_insight). */}
+              <EarlyChurnRiskPanel />
             </section>
           </div>
         </TabPanel>
@@ -252,6 +265,15 @@ export function ExecutiveOverviewPage() {
       {activeTab === "comparativo" && (
         <TabPanel id="comparativo" groupId={TABS_GROUP}>
           <NetworkBenchmarkPanel />
+        </TabPanel>
+      )}
+
+      {activeTab === "rentabilidade" && (
+        <TabPanel id="rentabilidade" groupId={TABS_GROUP}>
+          <div className="space-y-4">
+            <ProfitabilityPanel dateFrom={dateFrom} dateTo={dateTo} />
+            <MarketingChannelsPanel dateFrom={dateFrom} dateTo={dateTo} />
+          </div>
         </TabPanel>
       )}
 
