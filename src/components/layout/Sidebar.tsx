@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   Layers,
   ListChecks,
+  Network,
   Plug,
   Receipt,
   ScrollText,
@@ -45,6 +46,12 @@ export const NAV_ITEMS: NavItem[] = [
   // agregado, mesmo critério de RBAC do backend em analytics.py: fora do
   // alcance de "atendimento" (recepção).
   { to: "/decisao", label: "Sala de Comando", icon: Gauge, roles: ["owner", "admin", "financeiro", "auditor"] },
+  // Épico F3.2 do Plano Diretor ("Consolidação multi-unidade") — mesmo
+  // RBAC de Sala de Comando acima (dado financeiro/estratégico
+  // agregado). Sempre visível a esses papéis, mesmo pra clínica avulsa
+  // (organization_id NULL) — a própria página mostra o estado honesto
+  // "não faz parte de um grupo", nunca escondida como se fosse um erro.
+  { to: "/consolidado", label: "Consolidado", icon: Network, roles: ["owner", "admin", "financeiro", "auditor"] },
   { to: "/", label: "Painel", icon: LayoutDashboard },
   { to: "/appointments", label: "Consultas", icon: CalendarCheck },
   // Épico F1.3 do Plano Diretor: aberto a QUALQUER papel (sem `roles`

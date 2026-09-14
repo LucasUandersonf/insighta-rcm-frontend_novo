@@ -981,6 +981,32 @@ export interface NetworkBenchmark {
   window_days: number;
 }
 
+// GET /analytics/organization-summary (Épico F3.2 do Plano Diretor —
+// "Consolidação multi-unidade") — dashboard consolidado comparando as
+// unidades do MESMO grupo lado a lado. AO CONTRÁRIO do Comparativo
+// entre Clínicas, NÃO é anonimizado (unidades do mesmo dono).
+// `belongs_to_organization: false` é o estado NORMAL da maioria das
+// clínicas (avulsas), nunca um erro.
+export interface OrganizationUnitSummary {
+  tenant_id: string;
+  trade_name: string;
+  is_requesting_tenant: boolean;
+  total_billed: number;
+  denial_risk_pct: number | null; // null = sem faturamento no período
+  appointment_count: number;
+  no_show_rate: number | null; // null = sem atendimento resolvido no período
+}
+
+export interface OrganizationSummary {
+  belongs_to_organization: boolean;
+  organization_name: string | null;
+  window_days: number;
+  units: OrganizationUnitSummary[];
+  consolidated_total_billed: number;
+  consolidated_denial_risk_pct: number | null;
+  consolidated_no_show_rate: number | null;
+}
+
 // GET /tenant/annual-goal/suggested (Épico F3.3 do Plano Diretor —
 // "Metas e cenários orientados a dados") — duas sugestões
 // independentes (crescimento histórico próprio vs. ritmo/percentil de

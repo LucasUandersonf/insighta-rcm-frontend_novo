@@ -24,6 +24,7 @@ const ForgotPasswordPage = lazy(() => import("@/pages/ForgotPasswordPage").then(
 const ResetPasswordPage = lazy(() => import("@/pages/ResetPasswordPage").then((m) => ({ default: m.ResetPasswordPage })));
 const DashboardPage = lazy(() => import("@/pages/DashboardPage").then((m) => ({ default: m.DashboardPage })));
 const ExecutiveOverviewPage = lazy(() => import("@/pages/ExecutiveOverviewPage").then((m) => ({ default: m.ExecutiveOverviewPage })));
+const OrganizationSummaryPage = lazy(() => import("@/pages/OrganizationSummaryPage").then((m) => ({ default: m.OrganizationSummaryPage })));
 const ContractsPage = lazy(() => import("@/pages/ContractsPage").then((m) => ({ default: m.ContractsPage })));
 const DenialAppealsPage = lazy(() => import("@/pages/DenialAppealsPage").then((m) => ({ default: m.DenialAppealsPage })));
 const LotesPage = lazy(() => import("@/pages/LotesPage").then((m) => ({ default: m.LotesPage })));
@@ -124,6 +125,8 @@ export default function App() {
                 </Route>
                 <Route element={<RoleProtectedRoute allowedRoles={["owner", "admin", "financeiro", "auditor"]} />}>
                   <Route path="/decisao" element={<ExecutiveOverviewPage />} />
+                  {/* Épico F3.2 do Plano Diretor — mesmo RBAC de /decisao acima. */}
+                  <Route path="/consolidado" element={<OrganizationSummaryPage />} />
                   <Route path="/contracts" element={<ContractsPage />} />
                   <Route path="/denial-appeals" element={<DenialAppealsPage />} />
                   {/* Mesmo RBAC do backend em lotes.py/_CAN_READ (owner/admin/
