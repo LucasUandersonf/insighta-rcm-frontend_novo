@@ -1195,6 +1195,14 @@ export interface DenialAppealResolveRequest {
   resolution_notes?: string | null;
 }
 
+// POST /denial-appeals/{id}/draft-justification — rascunho via IA, SEMPRE
+// grounded nos fatos do caso (ver DECISÃO em
+// app/services/denial_appeal_draft_service.py no backend). Volta como
+// texto editável, nunca gravado sozinho.
+export interface DenialAppealDraftJustificationResponse {
+  draft: string;
+}
+
 // Central de Notificações (sino) — GET /announcements. Sem endpoint de
 // criação: quem publica é a equipe da plataforma, via
 // app/scripts/publish_announcement.py no backend (ver DECISÃO em
