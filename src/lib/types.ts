@@ -221,6 +221,17 @@ export interface Tenant {
   // cortes do MVP eram um chute de partida, não uma calibração validada.
   no_show_low_threshold: number | null;
   no_show_medium_threshold: number | null;
+  // Épico F2.1 do Plano Diretor ("Calibração por especialidade/porte") —
+  // mesmo padrão acima. `specialty` é texto livre curto e descritivo
+  // (usado hoje só para contexto, não seleciona uma tabela de benchmark
+  // por especialidade que não existe). Limiares de risco de glosa são
+  // PERCENTUAIS (0-100, não frações); tetos da Nota de Saúde Financeira
+  // são frações 0-1 (mesma escala de no_show_*_threshold).
+  specialty: string | null;
+  denial_risk_warning_threshold: number | null;
+  denial_risk_critical_threshold: number | null;
+  health_score_denial_ceiling: number | null;
+  health_score_no_show_ceiling: number | null;
 }
 
 export interface TenantUpdateRequest {
@@ -229,6 +240,11 @@ export interface TenantUpdateRequest {
   annual_revenue_goal?: number;
   no_show_low_threshold?: number;
   no_show_medium_threshold?: number;
+  specialty?: string;
+  denial_risk_warning_threshold?: number;
+  denial_risk_critical_threshold?: number;
+  health_score_denial_ceiling?: number;
+  health_score_no_show_ceiling?: number;
 }
 
 // GET /tenant/no-show-thresholds/suggested — calculado a partir do
@@ -239,6 +255,26 @@ export interface NoShowThresholdSuggestion {
   low_threshold: number | null;
   medium_threshold: number | null;
   sample_size: number;
+}
+
+// GET /tenant/denial-risk-thresholds/suggested — mesmo raciocínio acima,
+// aplicado ao histórico MENSAL de risco de glosa desta clínica (Épico
+// F2.1 do Plano Diretor). Campos null = menos de 6 meses fechados de
+// histórico.
+export interface DenialRiskThresholdSuggestion {
+  warning_threshold: number | null;
+  critical_threshold: number | null;
+  sample_size: number;
+}
+
+// GET /tenant/health-score-ceilings/suggested — mesmo raciocínio, para os
+// DOIS tetos da Nota de Saúde Financeira. Cada teto tem sua própria
+// amostra (podem divergir).
+export interface HealthScoreCeilingSuggestion {
+  denial_ceiling: number | null;
+  denial_ceiling_sample_size: number;
+  no_show_ceiling: number | null;
+  no_show_ceiling_sample_size: number;
 }
 
 // --- Mapeador Automático de Coluna (app/schemas/ingestion.py) — escopo:
