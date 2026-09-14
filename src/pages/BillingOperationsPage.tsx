@@ -22,7 +22,7 @@ import type { BillingSearchItem, Guia, GuiaCreateRequest, GuiaTipo, InsurancePla
 // guia_tipo/guia_numero/guia_senha). Achado do Raio-X da Sala de
 // Comando: a lacuna era só de UI, não de lógica de negócio.
 
-type Tab = "pagamento" | "guias";
+type Tab = "pagamento" | "coparticipacao" | "guias";
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
@@ -114,6 +114,65 @@ function SettlementTab() {
           </Button>
         </div>
       </form>
+    </Panel>
+  );
+}
+
+// ---------------------------------------------------------------------
+// Confirmação de recebimento de coparticipação (Épico F4.2 do Plano
+// Diretor — "Fechar lacunas operacionais"). O sistema já sabia QUANTO
+// foi cobrado de coparticipação; faltava confirmar se esse valor de
+// fato entrou no caixa no momento do atendimento — a lacuna que os
+// insights de coparticipação já existentes deixavam em aberto.
+// ---------------------------------------------------------------------
+
+function CoparticipationTab() {
+  const queryClient = useQueryClient();
+  const { showSuccess, showError } = useToast();
+  const [selected, setSelected] = useState<BillingSearchItem | null>(null);
+
+  const mutation = useMutation({
+    mutationFn: (received: boolean) =>
+      apiClient.post(`/api/v1/billing/${selected!.id}/confirm-coparticipation`, { received }),
+    onSuccess: (_data, received) => {
+      queryClient.invalidateQueries({ queryKey: ["analytics"] });
+      showSuccess(received ? "Coparticipação confirmada como recebida." : "Registrado: coparticipação NÃO foi recebida.");
+      setSelected(null);
+    },
+    onError: (err) => showError(getApiErrorMessage(err)),
+  });
+
+  return (
+    <Panel
+      title="Confirmar recebimento de coparticipação"
+      subtitle="A parte que o próprio paciente paga, à parte do que o convênio cobre — confirme se ela de fato entrou no caixa."
+    >
+      <div className="p-4">
+        <BillingSearchPicker selected={selected} onSelect={setSelected} />
+        {selected && selected.coparticipation_value === null && (
+          <p className="mt-3 text-2xs text-pending">Este faturamento não tem coparticipação cobrada — nada para confirmar.</p>
+        )}
+        {selected && selected.coparticipation_value !== null && (
+          <div className="mt-3 rounded-md border border-border-hairline bg-canvas-raised/40 p-3">
+            <p className="text-sm text-ink">
+              Coparticipação cobrada: <span className="font-mono font-medium">{formatCurrency(selected.coparticipation_value)}</span>
+            </p>
+            <p className="mt-1 text-2xs text-ink-faint">
+              {selected.coparticipation_received === null && "Ainda não confirmado."}
+              {selected.coparticipation_received === true && "Já confirmado como recebido."}
+              {selected.coparticipation_received === false && "Já confirmado como NÃO recebido."}
+            </p>
+            <div className="mt-3 flex gap-2">
+              <Button type="button" onClick={() => mutation.mutate(true)} disabled={mutation.isPending}>
+                {mutation.isPending ? "Salvando..." : "Confirmar recebida"}
+              </Button>
+              <Button type="button" variant="secondary" onClick={() => mutation.mutate(false)} disabled={mutation.isPending}>
+                Confirmar NÃO recebida
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
     </Panel>
   );
 }
@@ -305,11 +364,14 @@ export function BillingOperationsPage() {
         onChange={(id) => setTab(id as Tab)}
         items={[
           { id: "pagamento", label: "Registrar pagamento" },
+          { id: "coparticipacao", label: "Coparticipação" },
           { id: "guias", label: "Guias" },
         ]}
       />
 
-      {tab === "pagamento" ? <SettlementTab /> : <GuiasTab />}
+      {tab === "pagamento" && <SettlementTab />}
+      {tab === "coparticipacao" && <CoparticipationTab />}
+      {tab === "guias" && <GuiasTab />}
     </div>
   );
 }

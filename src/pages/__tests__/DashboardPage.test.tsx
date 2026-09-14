@@ -50,6 +50,8 @@ function makeBilling(overrides: Partial<BillingResponse> = {}): BillingResponse 
     member_card_number: null,
     item_type: null,
     coparticipation_value: null,
+    coparticipation_received: null,
+    coparticipation_confirmed_at: null,
     ...overrides,
   };
 }

@@ -1061,6 +1061,11 @@ export interface BillingResponse {
   member_card_number: string | null;
   item_type: string | null;
   coparticipation_value: number | null;
+  // Épico F4.2 do Plano Diretor ("Fechar lacunas operacionais") — NULL
+  // = ainda não confirmado (estado inicial da maioria), nunca um false
+  // inventado (ver DECISÃO em 043_coparticipation_confirmation.sql).
+  coparticipation_received: boolean | null;
+  coparticipation_confirmed_at: string | null;
 }
 
 export interface BillingSettleRequest {
@@ -1082,6 +1087,9 @@ export interface BillingSearchItem {
   // Achado 12 da Auditoria (médio) — mesmo motivo de BillingResponse.
   item_type: string | null;
   member_card_number: string | null;
+  // Épico F4.2 — mesmo motivo de BillingResponse acima.
+  coparticipation_value: number | null;
+  coparticipation_received: boolean | null;
 }
 
 // Guia (TISS) — ver app/models/guia.py no backend. Fase 1 do plano de
