@@ -14,6 +14,7 @@ import { PlanLossRankingPanel } from "@/components/dashboard/PlanLossRankingPane
 import { ContractUtilizationPanel } from "@/components/dashboard/ContractUtilizationPanel";
 import { DenialRiskDistributionPanel } from "@/components/dashboard/DenialRiskDistributionPanel";
 import { DenialReasonConfirmationPanel } from "@/components/dashboard/DenialReasonConfirmationPanel";
+import { DataQualityPanel } from "@/components/dashboard/DataQualityPanel";
 import { PaymentLagPanel } from "@/components/dashboard/PaymentLagPanel";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
@@ -296,6 +297,7 @@ export function DashboardPage() {
           <DenialRiskDistributionPanel dateFrom={dateFrom} dateTo={dateTo} />
           <PaymentLagPanel dateFrom={dateFrom} dateTo={dateTo} />
           <DenialReasonConfirmationPanel />
+          <DataQualityPanel dateFrom={dateFrom} dateTo={dateTo} />
         </section>
       )}
 

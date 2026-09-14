@@ -635,6 +635,25 @@ export interface DenialRiskDistribution {
   total_value_reviewed: number;
 }
 
+// GET /analytics/data-quality (Épico F2.2 do Plano Diretor — "Qualidade
+// de dado na origem") — taxa de atendimento lançado já completo (CID +
+// procedimento) por atendente, ordenado do pior pro melhor. `items` só
+// traz atendente com amostra >= min_sample.
+export interface DataQualityByUserItem {
+  user_id: string;
+  full_name: string;
+  complete_count: number;
+  total_count: number;
+  completion_rate: number; // fração 0.0-1.0
+}
+
+export interface DataQuality {
+  items: DataQualityByUserItem[];
+  overall_completion_rate: number | null; // null sem nenhum atendente com amostra suficiente
+  total_considered: number;
+  min_sample: number;
+}
+
 // "comparativo" — Comparativo entre clínicas como manchete do feed (Sala
 // de Comando 2.0, Nível 1) — ver build_network_comparativo_insight no
 // backend. Visualmente distinto de crítico/atenção/positivo (tom violeta,
