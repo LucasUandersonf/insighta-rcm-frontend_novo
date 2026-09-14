@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { BadgeDollarSign, LayoutDashboard, ListChecks, SlidersHorizontal, Target, Users } from "lucide-react";
+import { Award, BadgeDollarSign, LayoutDashboard, ListChecks, SlidersHorizontal, Target, Users } from "lucide-react";
 import { KpiCard } from "@/components/ui/KpiCard";
 import { ErrorState, LoadingState } from "@/components/ui/Panel";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -18,6 +18,7 @@ import { MarketingChannelsPanel } from "@/components/dashboard/MarketingChannels
 import { OportunidadesPanel } from "@/components/dashboard/OportunidadesPanel";
 import { ProfitabilityPanel } from "@/components/dashboard/ProfitabilityPanel";
 import { SimuladorPanel } from "@/components/dashboard/SimuladorPanel";
+import { ProductRoiPanel } from "@/components/dashboard/ProductRoiPanel";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useDateWindow } from "@/lib/useDateWindow";
@@ -47,7 +48,7 @@ function formatPct(value: number): string {
 }
 
 const TABS_GROUP = "sala-de-comando";
-type TabId = "hoje" | "diagnostico" | "oportunidades" | "comparativo" | "simulador" | "rentabilidade";
+type TabId = "hoje" | "diagnostico" | "oportunidades" | "comparativo" | "simulador" | "rentabilidade" | "roi";
 
 /**
  * Sala de Comando 2.0 (ver Roadmap "Sala de Comando 2.0") — a mesma
@@ -114,6 +115,7 @@ export function ExecutiveOverviewPage() {
           { id: "comparativo", label: "Comparativo", icon: Users },
           { id: "rentabilidade", label: "Rentabilidade", icon: BadgeDollarSign },
           { id: "simulador", label: "Simulador", icon: SlidersHorizontal },
+          { id: "roi", label: "ROI", icon: Award },
         ]}
       />
 
@@ -309,6 +311,12 @@ export function ExecutiveOverviewPage() {
       {activeTab === "simulador" && (
         <TabPanel id="simulador" groupId={TABS_GROUP}>
           <SimuladorPanel />
+        </TabPanel>
+      )}
+
+      {activeTab === "roi" && (
+        <TabPanel id="roi" groupId={TABS_GROUP}>
+          <ProductRoiPanel />
         </TabPanel>
       )}
     </div>

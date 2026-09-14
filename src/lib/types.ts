@@ -586,6 +586,20 @@ export interface DenialReasonConfirmationItem {
   confirmed_denial_rate: number; // fração 0.0-1.0
 }
 
+// GET /analytics/product-roi (Épico F4.4 do Plano Diretor — "Prova de
+// ROI do próprio produto") — três componentes independentes e
+// CUMULATIVOS desde que a clínica começou a usar o produto (nunca uma
+// janela de período).
+export interface ProductRoi {
+  protected_from_denial_value: number;
+  recovered_appeals_value: number;
+  recovered_appeals_count: number;
+  realized_insight_outcomes_value: number;
+  realized_insight_outcomes_count: number;
+  total_roi_value: number;
+  tracking_since: string | null; // null quando a clínica ainda não tem faturamento nenhum
+}
+
 export interface DenialReasonConfirmation {
   baseline_sample_size: number;
   // null quando ainda não há nenhum faturamento "sem motivo sinalizado"
