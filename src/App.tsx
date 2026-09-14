@@ -26,6 +26,7 @@ const DashboardPage = lazy(() => import("@/pages/DashboardPage").then((m) => ({ 
 const ExecutiveOverviewPage = lazy(() => import("@/pages/ExecutiveOverviewPage").then((m) => ({ default: m.ExecutiveOverviewPage })));
 const ContractsPage = lazy(() => import("@/pages/ContractsPage").then((m) => ({ default: m.ContractsPage })));
 const DenialAppealsPage = lazy(() => import("@/pages/DenialAppealsPage").then((m) => ({ default: m.DenialAppealsPage })));
+const LotesPage = lazy(() => import("@/pages/LotesPage").then((m) => ({ default: m.LotesPage })));
 const BillingOperationsPage = lazy(() => import("@/pages/BillingOperationsPage").then((m) => ({ default: m.BillingOperationsPage })));
 const AppointmentsPage = lazy(() => import("@/pages/AppointmentsPage").then((m) => ({ default: m.AppointmentsPage })));
 const ProfessionalsPage = lazy(() => import("@/pages/ProfessionalsPage").then((m) => ({ default: m.ProfessionalsPage })));
@@ -118,6 +119,12 @@ export default function App() {
                   <Route path="/decisao" element={<ExecutiveOverviewPage />} />
                   <Route path="/contracts" element={<ContractsPage />} />
                   <Route path="/denial-appeals" element={<DenialAppealsPage />} />
+                  {/* Mesmo RBAC do backend em lotes.py/_CAN_READ (owner/admin/
+                      financeiro/auditor) — as ações de escrita (criar, fechar,
+                      atribuir/remover guia) usam _CAN_WRITE (sem auditor) e o
+                      backend barra sozinho, mesmo critério já usado em
+                      /denial-appeals acima. */}
+                  <Route path="/lotes" element={<LotesPage />} />
                 </Route>
                 {/* Upload é ação de escrita — mesmo RBAC do backend em
                     ingestion.py/_CAN_MANAGE e contracts.py/_CAN_WRITE

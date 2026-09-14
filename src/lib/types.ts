@@ -582,9 +582,13 @@ export interface ContractUtilization {
 }
 
 // Donut "Distribuição de risco de glosa" (GET /analytics/denial-risk-distribution)
+// — carrega contagem E valor em R$ por nível (achado do Parecer Técnico
+// "Boletim Insighta": eliminou a tela duplicada que só mostrava valor
+// agregado, sem abrir por nível de risco).
 export interface DenialRiskDistributionItem {
   level: "low" | "medium" | "high";
   count: number;
+  value: number;
 }
 
 export interface DenialRiskDistribution {
@@ -592,6 +596,7 @@ export interface DenialRiskDistribution {
   period_end: string;
   items: DenialRiskDistributionItem[];
   total_reviewed: number;
+  total_value_reviewed: number;
 }
 
 // "comparativo" — Comparativo entre clínicas como manchete do feed (Sala
@@ -903,6 +908,28 @@ export interface GuiaCreateRequest {
   senha?: string | null;
   senha_validade?: string | null;
   tabela_procedimento?: string | null;
+}
+
+// Lote — ver app/models/lote.py e app/schemas/lote.py no backend. Fase 2
+// do plano de adequação ao fluxo real de mercado: agrupa Guias do MESMO
+// convênio + tipo (aberto -> fechado -> faturado, este último setado
+// por FaturaService.create_from_lotes, fora do alcance desta tela).
+export type LoteStatus = "aberto" | "fechado" | "faturado";
+
+export interface Lote {
+  id: string;
+  insurance_plan_id: string;
+  tipo: GuiaTipo;
+  status: LoteStatus;
+  fatura_id: string | null;
+  closed_at: string | null;
+  created_at: string;
+  guias_count: number;
+}
+
+export interface LoteCreateRequest {
+  insurance_plan_id: string;
+  tipo: GuiaTipo;
 }
 
 // Formato de erro único que app/main.py devolve para TODO erro da API

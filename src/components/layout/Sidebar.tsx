@@ -7,6 +7,7 @@ import {
   FileText,
   Gauge,
   LayoutDashboard,
+  Layers,
   ListChecks,
   Plug,
   ScrollText,
@@ -64,6 +65,9 @@ export const NAV_ITEMS: NavItem[] = [
   // Registrar pagamento recebido + Guias TISS — mesmo RBAC de /upload
   // (ação de escrita financeira, sem auditor).
   { to: "/faturamento", label: "Faturamento & guias", icon: Wallet, roles: ["owner", "admin", "financeiro"] },
+  // Gestão de Lotes (agrupa guias antes de virar fatura) — mesmo RBAC
+  // do backend em lotes.py/_CAN_READ, igual a /denial-appeals acima.
+  { to: "/lotes", label: "Lotes de faturamento", icon: Layers, roles: ["owner", "admin", "financeiro", "auditor"] },
 ];
 
 // Administração da plataforma — só owner/admin (mesmo RBAC do backend
