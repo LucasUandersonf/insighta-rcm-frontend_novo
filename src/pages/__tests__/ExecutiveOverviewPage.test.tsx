@@ -37,6 +37,9 @@ function mockAllEndpoints() {
     if (url.includes("smart-insights")) {
       return Promise.resolve({ period_start: "2026-01-01", period_end: "2026-01-07", insights: [] } as never);
     }
+    if (url.includes("priority-queue")) {
+      return Promise.resolve({ period_start: "2026-01-01", period_end: "2026-01-07", items: [], total_considered: 0 } as never);
+    }
     if (url.includes("health-score")) {
       return Promise.resolve({ score: null, window_days: 90, components: [] } as never);
     }
@@ -77,11 +80,16 @@ function mockAllEndpoints() {
 }
 
 describe("ExecutiveOverviewPage", () => {
-  it("abre na aba Diagnóstico e troca para Oportunidades/Comparativo/Simulador ao clicar", async () => {
+  it("abre na aba Hoje (fila priorizada) e troca para Diagnóstico/Oportunidades/Comparativo/Simulador ao clicar", async () => {
     mockAllEndpoints();
     const user = userEvent.setup();
     renderWithProviders(<ExecutiveOverviewPage />);
 
+    // Épico F1.1 do Plano Diretor: "Hoje" é a página inicial agora — o
+    // gestor não escolhe mais aba antes de saber o que fazer.
+    expect(await screen.findByText(/Nenhuma ação prioritária agora/)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("tab", { name: /Diagnóstico/ }));
     expect(await screen.findByText("Agenda & Capacidade Operacional")).toBeInTheDocument();
 
     await user.click(screen.getByRole("tab", { name: /Oportunidades/ }));

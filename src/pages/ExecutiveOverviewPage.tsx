@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { BadgeDollarSign, LayoutDashboard, SlidersHorizontal, Target, Users } from "lucide-react";
+import { BadgeDollarSign, LayoutDashboard, ListChecks, SlidersHorizontal, Target, Users } from "lucide-react";
 import { KpiCard } from "@/components/ui/KpiCard";
 import { ErrorState, LoadingState } from "@/components/ui/Panel";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -10,6 +10,7 @@ import { EarlyChurnRiskPanel } from "@/components/dashboard/EarlyChurnRiskPanel"
 import { ExecutiveAgendaSummary } from "@/components/dashboard/ExecutiveAgendaSummary";
 import { FinancialHoleBillingsPanel } from "@/components/dashboard/FinancialHoleBillingsPanel";
 import { InactivePatientsPanel } from "@/components/dashboard/InactivePatientsPanel";
+import { PriorityQueuePanel } from "@/components/dashboard/PriorityQueuePanel";
 import { SmartInsightsFeed } from "@/components/dashboard/SmartInsightsFeed";
 import { HealthScoreWidget } from "@/components/dashboard/HealthScoreWidget";
 import { NetworkBenchmarkPanel } from "@/components/dashboard/NetworkBenchmarkPanel";
@@ -46,7 +47,7 @@ function formatPct(value: number): string {
 }
 
 const TABS_GROUP = "sala-de-comando";
-type TabId = "diagnostico" | "oportunidades" | "comparativo" | "simulador" | "rentabilidade";
+type TabId = "hoje" | "diagnostico" | "oportunidades" | "comparativo" | "simulador" | "rentabilidade";
 
 /**
  * Sala de Comando 2.0 (ver Roadmap "Sala de Comando 2.0") — a mesma
@@ -60,13 +61,29 @@ type TabId = "diagnostico" | "oportunidades" | "comparativo" | "simulador" | "re
 export function ExecutiveOverviewPage() {
   const { windowDays, setWindowDays, dateFrom, dateTo } = useDateWindow(7);
   const { data: profile } = useCurrentUserProfile();
-  const [activeTab, setActiveTab] = useState<TabId>("diagnostico");
+  // Épico F1.1 do Plano Diretor: "Hoje" é a página inicial da Sala de
+  // Comando agora — o gestor não escolhe mais aba antes de saber o que
+  // fazer (a fila única já chega ordenada por impacto).
+  const [activeTab, setActiveTab] = useState<TabId>("hoje");
   // Foco de agenda (ver AgendaFocus, lib/types.ts) — disparado pelos
   // botões de ação dos insights de queda de agenda/agenda ociosa (ver
   // DECISÃO em SmartInsightsFeed.tsx::InsightActionButton). Mora aqui
   // (não dentro de ExecutiveAgendaSummary) porque quem dispara é um
   // componente IRMÃO (SmartInsightsFeed), mais acima na árvore.
   const [agendaFocus, setAgendaFocus] = useState<AgendaFocus | null>(null);
+
+  // A fila "Hoje" pode disparar um foco de agenda (#weekday:/#professional:)
+  // de FORA da aba Diagnóstico, onde a seção agenda-resumo (destino do
+  // scroll em InsightActionButton) só existe no DOM depois da troca de
+  // aba — sem isso, o clique de dentro de "Hoje" focava o paciente certo
+  // mas nunca rolava a tela, porque o elemento ainda não tinha montado.
+  function handleFocusAgendaFromQueue(focus: AgendaFocus) {
+    setActiveTab("diagnostico");
+    setAgendaFocus(focus);
+    requestAnimationFrame(() => {
+      document.getElementById("agenda-resumo")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
 
   const { data: summary, isLoading, error } = useQuery({
     queryKey: ["analytics", "executive-summary", dateFrom, dateTo],
@@ -80,7 +97,7 @@ export function ExecutiveOverviewPage() {
         subtitle="Onde estamos perdendo dinheiro hoje?"
         greeting={profile ? `${timeOfDayGreeting()}, ${firstNameFrom(profile.full_name)}.` : undefined}
         action={
-          activeTab === "diagnostico" || activeTab === "rentabilidade" ? (
+          activeTab === "hoje" || activeTab === "diagnostico" || activeTab === "rentabilidade" ? (
             <PeriodWindowSelect windowDays={windowDays} onChange={setWindowDays} />
           ) : undefined
         }
@@ -91,6 +108,7 @@ export function ExecutiveOverviewPage() {
         active={activeTab}
         onChange={(id) => setActiveTab(id as TabId)}
         items={[
+          { id: "hoje", label: "Hoje", icon: ListChecks },
           { id: "diagnostico", label: "Diagnóstico", icon: LayoutDashboard },
           { id: "oportunidades", label: "Oportunidades", icon: Target },
           { id: "comparativo", label: "Comparativo", icon: Users },
@@ -98,6 +116,17 @@ export function ExecutiveOverviewPage() {
           { id: "simulador", label: "Simulador", icon: SlidersHorizontal },
         ]}
       />
+
+      {activeTab === "hoje" && (
+        <TabPanel id="hoje" groupId={TABS_GROUP}>
+          <PriorityQueuePanel
+            dateFrom={dateFrom}
+            dateTo={dateTo}
+            onNavigateTab={(id) => setActiveTab(id as TabId)}
+            onFocusAgenda={handleFocusAgendaFromQueue}
+          />
+        </TabPanel>
+      )}
 
       {activeTab === "diagnostico" && (
         <TabPanel id="diagnostico" groupId={TABS_GROUP}>

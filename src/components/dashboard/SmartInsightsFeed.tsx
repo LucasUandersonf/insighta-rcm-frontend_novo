@@ -91,7 +91,11 @@ const MESH_CSS_VAR: Record<InsightSeverity, string> = {
  *                _capacity_drop_insight).
  * Nunca inventa destino: só aponta pra telas/seções que já existem.
  */
-function InsightActionButton({
+// Exportado para PriorityQueuePanel.tsx (épico F1.1 do Plano Diretor)
+// reaproveitar a MESMA leitura de action_href (4 formatos) em vez de
+// duplicar o parser — a fila de hoje mistura insights normais com
+// itens sintéticos do Raio-X, mas o botão de ação é idêntico nos dois.
+export function InsightActionButton({
   insight,
   onNavigateTab,
   onFocusAgenda,
@@ -226,7 +230,11 @@ function SecondaryInsightCard({
   );
 }
 
-const CATEGORY_CONFIG: Record<SmartInsight["category"], { label: string; icon: typeof Wallet }> = {
+// "estrategia" fica fora deste config de propósito: generate_insights()
+// nunca emite essa categoria (só PriorityQueuePanel.tsx a usa, pra um
+// terceiro badge da fila "Hoje") — CategorySection abaixo só agrupa as
+// duas categorias reais do feed.
+const CATEGORY_CONFIG: Record<"faturamento" | "agenda", { label: string; icon: typeof Wallet }> = {
   faturamento: { label: "Faturamento & Convênios", icon: Wallet },
   agenda: { label: "Agenda & Ocupação", icon: CalendarClock },
 };
@@ -249,7 +257,7 @@ function CategorySection({
   onNavigateTab,
   onFocusAgenda,
 }: {
-  category: SmartInsight["category"];
+  category: "faturamento" | "agenda";
   insights: SmartInsight[];
   onNavigateTab?: (tabId: string) => void;
   onFocusAgenda?: (focus: AgendaFocus) => void;

@@ -609,8 +609,11 @@ export type InsightSeverity = "critical" | "warning" | "positive" | "comparativo
 // "faturamento" | "agenda" — área do card, usada por SmartInsightsFeed.tsx
 // pra agrupar o feed em seções em vez de uma lista única misturando
 // cobrança/glosa com ocupação de agenda (ver DECISÃO em
-// smart_insights_engine.Insight.category, backend).
-export type InsightCategory = "faturamento" | "agenda";
+// smart_insights_engine.Insight.category, backend). "estrategia" só
+// aparece em itens sintéticos da fila (PriorityQueueItem, ver abaixo) —
+// nunca emitido por generate_insights(), então SmartInsightsFeed.tsx
+// nunca precisa saber desse terceiro valor.
+export type InsightCategory = "faturamento" | "agenda" | "estrategia";
 
 export interface SmartInsight {
   severity: InsightSeverity;
@@ -636,6 +639,26 @@ export interface SmartInsights {
   period_start: string;
   period_end: string;
   insights: SmartInsight[];
+}
+
+// GET /analytics/priority-queue — épico F1.1 do Plano Diretor ("Fila
+// única de ação priorizada"). Mesmo shape de SmartInsight + `source`:
+// "insight" (veio do feed que já existe) ou "raiox" (extraído na hora
+// de um painel do Raio-X que nunca virou card de feed sozinho — ver
+// DECISÃO em AnalyticsService.get_priority_queue, backend). Nunca
+// esconde a proveniência — o mesmo motivo de `category` nunca ser
+// escondido no feed normal.
+export interface PriorityQueueItem extends SmartInsight {
+  source: "insight" | "raiox";
+}
+
+export interface PriorityQueue {
+  period_start: string;
+  period_end: string;
+  items: PriorityQueueItem[];
+  // Quantos itens existiam ANTES do corte por limit — mostra "3 de 14"
+  // em vez de fingir que a fila é só o que coube.
+  total_considered: number;
 }
 
 // Nota de Saúde Financeira (GET /analytics/health-score) — Sala de Comando 2.0
