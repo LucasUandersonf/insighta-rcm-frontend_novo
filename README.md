@@ -1,4 +1,14 @@
-# Insighta RCM — Frontend
+# Insighta — Plataforma de Inteligência de Receita e Decisão Estratégica (Frontend)
+
+> **Reposicionamento de produto (14/09/2026):** o nome "RCM" descrevia
+> o dado que o sistema processa (faturamento, glosa, convênio), não o
+> que ele entrega. O núcleo do produto — hoje concentrado em
+> `ExecutiveOverviewPage.tsx` ("Sala de Comando") — é previsão de
+> receita, comparativo com a mediana de outras clínicas (efeito de
+> rede que uma clínica isolada nunca reproduz sozinha) e ação
+> priorizada, não só faturamento estruturado. Ver o mesmo
+> reposicionamento, com mais detalhe técnico, no README do backend
+> (`insighta-rcm-backend`).
 
 React + Vite + TypeScript + Tailwind. Conversa com o backend
 (`insighta-rcm-backend`) via `VITE_API_BASE_URL`.
