@@ -3,11 +3,22 @@ import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ExecutiveOverviewPage } from "@/pages/ExecutiveOverviewPage";
 import { apiClient } from "@/lib/api-client";
+import { useAuth } from "@/context/AuthContext";
 import { renderWithProviders } from "@/test/utils";
+import type { CurrentUser } from "@/lib/types";
 
 vi.mock("@/lib/api-client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api-client")>();
   return { ...actual, apiClient: { ...actual.apiClient, get: vi.fn() } };
+});
+
+// PriorityQueuePanel (aba "Hoje", agora a padrão) usa useAuth() pra
+// decidir se mostra os botões de gestão (F1.2/F1.3) — mockado aqui
+// pelo mesmo motivo de Sidebar.test.tsx: AuthContext não é montado de
+// verdade nos testes de página (ver DECISÃO em test/utils.tsx).
+vi.mock("@/context/AuthContext", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/context/AuthContext")>();
+  return { ...actual, useAuth: vi.fn() };
 });
 
 /**
@@ -81,6 +92,9 @@ function mockAllEndpoints() {
 
 describe("ExecutiveOverviewPage", () => {
   it("abre na aba Hoje (fila priorizada) e troca para Diagnóstico/Oportunidades/Comparativo/Simulador ao clicar", async () => {
+    vi.mocked(useAuth).mockReturnValue({
+      user: { tenant_id: "t1", id: "u1", role: "owner" } as unknown as CurrentUser,
+    } as unknown as ReturnType<typeof useAuth>);
     mockAllEndpoints();
     const user = userEvent.setup();
     renderWithProviders(<ExecutiveOverviewPage />);

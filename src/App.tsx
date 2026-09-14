@@ -27,6 +27,7 @@ const ExecutiveOverviewPage = lazy(() => import("@/pages/ExecutiveOverviewPage")
 const ContractsPage = lazy(() => import("@/pages/ContractsPage").then((m) => ({ default: m.ContractsPage })));
 const DenialAppealsPage = lazy(() => import("@/pages/DenialAppealsPage").then((m) => ({ default: m.DenialAppealsPage })));
 const LotesPage = lazy(() => import("@/pages/LotesPage").then((m) => ({ default: m.LotesPage })));
+const MyInsightsPage = lazy(() => import("@/pages/MyInsightsPage").then((m) => ({ default: m.MyInsightsPage })));
 const BillingOperationsPage = lazy(() => import("@/pages/BillingOperationsPage").then((m) => ({ default: m.BillingOperationsPage })));
 const AppointmentsPage = lazy(() => import("@/pages/AppointmentsPage").then((m) => ({ default: m.AppointmentsPage })));
 const ProfessionalsPage = lazy(() => import("@/pages/ProfessionalsPage").then((m) => ({ default: m.ProfessionalsPage })));
@@ -99,6 +100,11 @@ export default function App() {
               <Route element={<AppShell />}>
                 <Route path="/" element={<DashboardPage />} />
                 <Route path="/appointments" element={<AppointmentsPage />} />
+                {/* Épico F1.3 do Plano Diretor: "Meus pendentes" é aberto a
+                    QUALQUER papel autenticado (mesmo RBAC de
+                    GET /insight-outcomes/mine — quem executa não é sempre
+                    quem gerencia) — sem RoleProtectedRoute de propósito. */}
+                <Route path="/meus-insights" element={<MyInsightsPage />} />
                 {/* O CRUD operacional de Pacientes foi removido por decisão de produto
                     — o SaaS opera exclusivamente sobre dados consolidados do ERP
                     externo (ver auditoria Go-Live). /professionals é diferente:

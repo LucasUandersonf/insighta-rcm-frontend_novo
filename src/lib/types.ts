@@ -661,6 +661,56 @@ export interface PriorityQueue {
   total_considered: number;
 }
 
+// Épicos F1.2 (ciclo fechado de insight) + F1.3 (atribuição/workflow)
+// do Plano Diretor — ver DECISÃO completa em
+// app/sql/038_insight_outcomes.sql no backend.
+export type InsightOutcomeStatus = "pendente" | "em_andamento" | "resolvido" | "ignorado";
+
+export interface InsightOutcome {
+  id: string;
+  insight_key: string;
+  source: "insight" | "raiox";
+  category: string;
+  severity: InsightSeverity;
+  title: string;
+  message: string;
+  financial_impact_snapshot: number | null;
+  status: InsightOutcomeStatus;
+  assigned_to: string | null;
+  due_date: string | null;
+  resolution_note: string | null;
+  resolved_at: string | null;
+  resolved_metric_value: number | null;
+  reevaluated_at: string | null;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface InsightOutcomeCreateRequest {
+  source: "insight" | "raiox";
+  category: string;
+  severity: InsightSeverity;
+  title: string;
+  message: string;
+  financial_impact?: number | null;
+  assigned_to?: string | null;
+  due_date?: string | null;
+}
+
+export interface InsightOutcomeUpdateRequest {
+  status?: InsightOutcomeStatus;
+  assigned_to?: string | null;
+  due_date?: string | null;
+  resolution_note?: string | null;
+}
+
+export interface InsightOutcomesRealizedSummary {
+  total_resolved_and_reevaluated: number;
+  total_delta_realized: number;
+  items: InsightOutcome[];
+}
+
 // Nota de Saúde Financeira (GET /analytics/health-score) — Sala de Comando 2.0
 export interface HealthScoreComponent {
   key: string; // "denial" | "no_show" | "appeal"

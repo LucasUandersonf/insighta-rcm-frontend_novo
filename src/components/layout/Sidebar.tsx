@@ -4,6 +4,7 @@ import {
   Building2,
   CalendarCheck,
   CalendarClock,
+  ClipboardList,
   FileText,
   Gauge,
   LayoutDashboard,
@@ -45,6 +46,9 @@ export const NAV_ITEMS: NavItem[] = [
   { to: "/decisao", label: "Sala de Comando", icon: Gauge, roles: ["owner", "admin", "financeiro", "auditor"] },
   { to: "/", label: "Painel", icon: LayoutDashboard },
   { to: "/appointments", label: "Consultas", icon: CalendarCheck },
+  // Épico F1.3 do Plano Diretor: aberto a QUALQUER papel (sem `roles`
+  // aqui, de propósito) — mesmo RBAC de GET /insight-outcomes/mine.
+  { to: "/meus-insights", label: "Meus insights", icon: ClipboardList },
   // Configuração da grade semanal que alimenta Agenda & Capacidade — não
   // é o CRUD operacional de Profissionais removido no reposicionamento
   // de produto (ver App.tsx); mesmo RBAC de ação administrativa restrita
