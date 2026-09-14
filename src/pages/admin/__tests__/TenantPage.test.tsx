@@ -141,6 +141,65 @@ describe("TenantPage — Épico F2.1 do Plano Diretor (Calibração por especial
     expect(within(panel).getByLabelText("Crítico a partir de (%)")).toHaveValue(38.2);
   });
 
+  it("owner vê e aplica a sugestão de meta anual (crescimento próprio e ritmo de rede)", async () => {
+    vi.mocked(useAuth).mockReturnValue({ user: { tenant_id: "t1", sub: "u1", role: "owner" } } as unknown as ReturnType<
+      typeof useAuth
+    >);
+    mockGetByPath({
+      "/api/v1/tenant/plans/available": [],
+      "/api/v1/tenant/annual-goal/suggested": {
+        trailing_12_months_total: 100_000,
+        own_growth_rate: 0.2,
+        own_trend_suggested_goal: 120_000,
+        network_growth_median: 0.1,
+        network_pace_suggested_goal: 110_000,
+        network_cohort_size: 6,
+      },
+      "/api/v1/tenant": makeTenant(),
+    });
+
+    renderWithProviders(<TenantPage />);
+    await waitFor(() => expect(screen.getByText("Meta de faturamento anual")).toBeInTheDocument());
+    const panel = panelFor("Meta de faturamento anual");
+
+    fireEvent.click(within(panel).getByRole("button", { name: /sugerir com base no histórico/i }));
+    await waitFor(() => expect(within(panel).getByText(/Pelo seu crescimento \(20%\)/)).toBeInTheDocument());
+    expect(within(panel).getByText(/Pelo ritmo da rede \(10%, 6 clínicas\)/)).toBeInTheDocument();
+
+    const useButtons = within(panel).getAllByRole("button", { name: "Usar" });
+    fireEvent.click(useButtons[0]);
+    expect(within(panel).getByLabelText("Meta de faturamento anual (R$)")).toHaveValue(120000);
+
+    fireEvent.click(useButtons[1]);
+    expect(within(panel).getByLabelText("Meta de faturamento anual (R$)")).toHaveValue(110000);
+  });
+
+  it("mostra mensagem honesta quando a sugestão de meta anual não tem base suficiente", async () => {
+    vi.mocked(useAuth).mockReturnValue({ user: { tenant_id: "t1", sub: "u1", role: "owner" } } as unknown as ReturnType<
+      typeof useAuth
+    >);
+    mockGetByPath({
+      "/api/v1/tenant/plans/available": [],
+      "/api/v1/tenant/annual-goal/suggested": {
+        trailing_12_months_total: 50_000,
+        own_growth_rate: null,
+        own_trend_suggested_goal: null,
+        network_growth_median: null,
+        network_pace_suggested_goal: null,
+        network_cohort_size: 0,
+      },
+      "/api/v1/tenant": makeTenant(),
+    });
+
+    renderWithProviders(<TenantPage />);
+    await waitFor(() => expect(screen.getByText("Meta de faturamento anual")).toBeInTheDocument());
+    const panel = panelFor("Meta de faturamento anual");
+
+    fireEvent.click(within(panel).getByRole("button", { name: /sugerir com base no histórico/i }));
+    await waitFor(() => expect(within(panel).getByText("sem histórico do período anterior suficiente")).toBeInTheDocument());
+    expect(within(panel).getByText("sem clínicas suficientes na base ainda")).toBeInTheDocument();
+  });
+
   it("não-owner vê os campos desabilitados e sem botão de salvar", async () => {
     vi.mocked(useAuth).mockReturnValue({
       user: { tenant_id: "t1", sub: "u2", role: "financeiro" },

@@ -981,6 +981,21 @@ export interface NetworkBenchmark {
   window_days: number;
 }
 
+// GET /tenant/annual-goal/suggested (Épico F3.3 do Plano Diretor —
+// "Metas e cenários orientados a dados") — duas sugestões
+// independentes (crescimento histórico próprio vs. ritmo/percentil de
+// rede), nunca uma média escondida entre elas. Campos de sugestão são
+// null quando a base necessária (período anterior próprio / cohort de
+// rede) ainda não existe.
+export interface AnnualGoalSuggestion {
+  trailing_12_months_total: number;
+  own_growth_rate: number | null;
+  own_trend_suggested_goal: number | null;
+  network_growth_median: number | null;
+  network_pace_suggested_goal: number | null;
+  network_cohort_size: number;
+}
+
 // Oportunidades (GET /analytics/oportunidades) — Sala de Comando 2.0
 export interface OportunidadeItem {
   insurance_plan_id: string;

@@ -1,12 +1,31 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Sparkles } from "lucide-react";
 import { BentoCard, BentoGrid } from "@/components/ui/BentoGrid";
 import { LoadingState, ErrorState } from "@/components/ui/Panel";
+import { Button } from "@/components/ui/Button";
 import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useDateWindow } from "@/lib/useDateWindow";
-import type { AgendaMetrics, ExecutiveSummary } from "@/lib/types";
+import type { AgendaMetrics, ExecutiveSummary, NetworkBenchmark } from "@/lib/types";
+
+/**
+ * Épico F3.3 do Plano Diretor ("Metas e cenários orientados a dados") —
+ * "cenário recomendado" pro Simulador. Em vez de inventar um percentual
+ * de redução "razoável" do nada, calcula quanto cada slider precisaria
+ * reduzir para trazer SUA taxa até a MEDIANA da rede (ver
+ * NetworkBenchmarkResponse, já usado no Comparativo entre clínicas) —
+ * um alvo com dado real por trás, não um chute de produto. `null`
+ * quando não há base pra recomendar (sem amostra própria, sem mediana
+ * de rede, ou sua taxa já está NA mediana ou melhor — nada a "recomendar
+ * reduzir").
+ */
+function recommendedReductionPct(yourRate: number | null, networkMedian: number | null): number | null {
+  if (yourRate === null || networkMedian === null || yourRate <= 0 || yourRate <= networkMedian) return null;
+  const pct = ((yourRate - networkMedian) / yourRate) * 100;
+  return Math.min(100, Math.max(0, Math.round(pct)));
+}
 
 /**
  * Simulador "e se" — Sala de Comando 2.0, Nível 2 do roadmap. Projeção
@@ -66,6 +85,10 @@ export function SimuladorPanel() {
     queryKey: ["analytics", "agenda-metrics", dateFrom, dateTo],
     queryFn: () => apiClient.get<AgendaMetrics>(`/api/v1/analytics/agenda-metrics?date_from=${dateFrom}&date_to=${dateTo}`),
   });
+  const benchmarkQuery = useQuery({
+    queryKey: ["analytics", "network-benchmark"],
+    queryFn: () => apiClient.get<NetworkBenchmark>("/api/v1/analytics/network-benchmark"),
+  });
 
   if (summaryQuery.isLoading || agendaQuery.isLoading) return <LoadingState variant="cards" rows={2} />;
   if (summaryQuery.error) return <ErrorState message={getApiErrorMessage(summaryQuery.error)} />;
@@ -76,13 +99,46 @@ export function SimuladorPanel() {
   const noShowBase = agendaQuery.data.estimated_revenue_at_risk;
   const projectedTotal = denialBase * (denialReduction / 100) + noShowBase * (noShowReduction / 100);
 
+  const denialMetric = benchmarkQuery.data?.metrics.find((m) => m.key === "denial");
+  const noShowMetric = benchmarkQuery.data?.metrics.find((m) => m.key === "no_show");
+  const recommendedDenialPct = recommendedReductionPct(denialMetric?.your_rate ?? null, denialMetric?.network_median ?? null);
+  const recommendedNoShowPct = recommendedReductionPct(noShowMetric?.your_rate ?? null, noShowMetric?.network_median ?? null);
+  const hasRecommendation = recommendedDenialPct !== null || recommendedNoShowPct !== null;
+
+  function applyRecommendedScenario() {
+    if (recommendedDenialPct !== null) setDenialReduction(recommendedDenialPct);
+    if (recommendedNoShowPct !== null) setNoShowReduction(recommendedNoShowPct);
+  }
+
   return (
     <BentoGrid>
       <BentoCard colSpan={6}>
-        <p className="mb-1 text-sm font-medium text-ink">Ajuste os cenários</p>
-        <p className="mb-5 text-2xs text-ink-muted">
-          Projeção sobre os últimos 30 dias — nada aqui altera dado real, é só simulação.
-        </p>
+        <div className="mb-5 flex items-start justify-between gap-3">
+          <div>
+            <p className="mb-1 text-sm font-medium text-ink">Ajuste os cenários</p>
+            <p className="text-2xs text-ink-muted">
+              Projeção sobre os últimos 30 dias — nada aqui altera dado real, é só simulação.
+            </p>
+          </div>
+          {hasRecommendation && (
+            <Button
+              type="button"
+              variant="secondary"
+              size="xs"
+              className="flex shrink-0 items-center gap-1.5"
+              onClick={applyRecommendedScenario}
+            >
+              <Sparkles size={12} />
+              Cenário recomendado
+            </Button>
+          )}
+        </div>
+        {hasRecommendation && (
+          <p className="-mt-3 mb-5 text-2xs text-ink-faint">
+            Reduzir sua taxa até a mediana de outras clínicas da base (Comparativo entre clínicas) — não é uma meta
+            oficial, é só um ponto de partida com dado real.
+          </p>
+        )}
         <SliderControl
           label="Reduzir valor em risco de glosa"
           value={denialReduction}

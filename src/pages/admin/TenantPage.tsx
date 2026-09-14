@@ -10,7 +10,13 @@ import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useToast } from "@/context/ToastContext";
 import { useAuth } from "@/context/AuthContext";
-import type { DenialRiskThresholdSuggestion, HealthScoreCeilingSuggestion, NoShowThresholdSuggestion, Tenant } from "@/lib/types";
+import type {
+  AnnualGoalSuggestion,
+  DenialRiskThresholdSuggestion,
+  HealthScoreCeilingSuggestion,
+  NoShowThresholdSuggestion,
+  Tenant,
+} from "@/lib/types";
 
 const PLAN_LABELS: Record<string, string> = {
   starter: "Starter",
@@ -39,6 +45,16 @@ function AnnualGoalPanel({ tenant, isOwner }: { tenant: Tenant; isOwner: boolean
   useEffect(() => {
     setGoalInput(tenant.annual_revenue_goal !== null ? String(tenant.annual_revenue_goal) : "");
   }, [tenant.annual_revenue_goal]);
+
+  // Épico F3.3 do Plano Diretor ("Metas e cenários orientados a dados")
+  // — "meta anual sugerida (crescimento histórico + percentil de
+  // rede)". Buscada só quando o usuário pede (mesmo padrão de
+  // NoShowThresholdsPanel), não em toda visita à página.
+  const suggestionQuery = useQuery({
+    queryKey: ["tenant", "annual-goal", "suggested"],
+    queryFn: () => apiClient.get<AnnualGoalSuggestion>("/api/v1/tenant/annual-goal/suggested"),
+    enabled: false,
+  });
 
   const mutation = useMutation({
     mutationFn: (annual_revenue_goal: number) => apiClient.patch<Tenant>("/api/v1/tenant", { annual_revenue_goal }),
@@ -95,6 +111,80 @@ function AnnualGoalPanel({ tenant, isOwner }: { tenant: Tenant; isOwner: boolean
           </p>
         )}
         {!isOwner && <p className="mt-2 text-2xs text-ink-faint">Só o papel "owner" pode editar a meta de faturamento.</p>}
+
+        {isOwner && (
+          <div className="mt-3 rounded-md border border-border-hairline bg-canvas-raised/40 p-3">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-2xs text-ink-faint">
+                Duas sugestões independentes: seu próprio crescimento e o ritmo de outras clínicas da base — nunca
+                aplicadas sozinhas.
+              </p>
+              <Button
+                type="button"
+                variant="secondary"
+                size="xs"
+                className="flex shrink-0 items-center gap-1.5"
+                onClick={() => suggestionQuery.refetch()}
+                disabled={suggestionQuery.isFetching}
+              >
+                <Sparkles size={12} />
+                {suggestionQuery.isFetching ? "Calculando..." : "Sugerir com base no histórico"}
+              </Button>
+            </div>
+            {suggestionQuery.data && (
+              <div className="mt-2 space-y-1.5">
+                <div className="flex items-center justify-between gap-3 text-2xs">
+                  <span className="text-ink-muted">
+                    Pelo seu crescimento{suggestionQuery.data.own_growth_rate !== null && (
+                      <> ({(suggestionQuery.data.own_growth_rate * 100).toFixed(0)}%)</>
+                    )}
+                    :
+                  </span>
+                  {suggestionQuery.data.own_trend_suggested_goal !== null ? (
+                    <span className="flex items-center gap-2">
+                      <span className="font-mono text-ink">{formatCurrency(suggestionQuery.data.own_trend_suggested_goal)}</span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="xs"
+                        onClick={() => setGoalInput(String(suggestionQuery.data!.own_trend_suggested_goal))}
+                      >
+                        Usar
+                      </Button>
+                    </span>
+                  ) : (
+                    <span className="text-pending">sem histórico do período anterior suficiente</span>
+                  )}
+                </div>
+                <div className="flex items-center justify-between gap-3 text-2xs">
+                  <span className="text-ink-muted">
+                    Pelo ritmo da rede{suggestionQuery.data.network_growth_median !== null && (
+                      <> ({(suggestionQuery.data.network_growth_median * 100).toFixed(0)}%, {suggestionQuery.data.network_cohort_size} clínicas)</>
+                    )}
+                    :
+                  </span>
+                  {suggestionQuery.data.network_pace_suggested_goal !== null ? (
+                    <span className="flex items-center gap-2">
+                      <span className="font-mono text-ink">
+                        {formatCurrency(suggestionQuery.data.network_pace_suggested_goal)}
+                      </span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="xs"
+                        onClick={() => setGoalInput(String(suggestionQuery.data!.network_pace_suggested_goal))}
+                      >
+                        Usar
+                      </Button>
+                    </span>
+                  ) : (
+                    <span className="text-pending">sem clínicas suficientes na base ainda</span>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </form>
     </Panel>
   );
