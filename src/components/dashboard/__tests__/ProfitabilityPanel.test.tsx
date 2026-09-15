@@ -27,6 +27,8 @@ describe("ProfitabilityPanel", () => {
       has_cost_data: false,
       total_costs: null,
       net_margin: null,
+      net_margin_pct: null,
+      fixed_cost_pct: null,
     };
     vi.mocked(apiClient.get).mockResolvedValue(data);
 
@@ -49,6 +51,8 @@ describe("ProfitabilityPanel", () => {
       has_cost_data: false,
       total_costs: null,
       net_margin: null,
+      net_margin_pct: null,
+      fixed_cost_pct: null,
     };
     vi.mocked(apiClient.get).mockResolvedValue(data);
 
@@ -66,6 +70,7 @@ describe("ProfitabilityPanel", () => {
         { professional_id: "p1", full_name: "Dr. Rentável", revenue: 300, booked_minutes: 60, revenue_per_hour: 300, allocated_cost: null, net_margin: null, margin_per_hour: null },
       ],
       by_procedure: [], has_cost_data: false, total_costs: null, net_margin: null,
+      net_margin_pct: null, fixed_cost_pct: null,
     };
     vi.mocked(apiClient.get).mockResolvedValueOnce(withoutCost);
     const { unmount } = renderWithProviders(<ProfitabilityPanel dateFrom="2026-09-01" dateTo="2026-09-07" />);
@@ -79,10 +84,63 @@ describe("ProfitabilityPanel", () => {
         { professional_id: "p1", full_name: "Dr. Rentável", revenue: 300, booked_minutes: 60, revenue_per_hour: 300, allocated_cost: 100, net_margin: 200, margin_per_hour: 200 },
       ],
       by_procedure: [], has_cost_data: true, total_costs: 100, net_margin: 200,
+      net_margin_pct: 66.7, fixed_cost_pct: null,
     };
     vi.mocked(apiClient.get).mockResolvedValueOnce(withCost);
     renderWithProviders(<ProfitabilityPanel dateFrom="2026-09-01" dateTo="2026-09-07" />);
     await waitFor(() => expect(screen.getByText("Margem líquida do período")).toBeInTheDocument());
     expect(screen.getByText("R$ 200,00")).toBeInTheDocument();
+  });
+
+  // "Junta Técnica Insighta" (reavaliação de mercado da Sala de Comando):
+  // "nenhuma dessas referências aparece hoje na tela" — cobre as duas
+  // faixas de benchmark (margem líquida, custo fixo) aparecendo (ou
+  // não, sem amostra) na tela.
+  describe("benchmarks de mercado", () => {
+    function baseData(overrides: Partial<Profitability> = {}): Profitability {
+      return {
+        period_start: "2026-09-01",
+        period_end: "2026-09-07",
+        total_billed: 1000,
+        by_professional: [],
+        by_procedure: [],
+        has_cost_data: false,
+        total_costs: null,
+        net_margin: null,
+        net_margin_pct: null,
+        fixed_cost_pct: null,
+        ...overrides,
+      };
+    }
+
+    it("mostra a margem líquida dentro da faixa saudável", async () => {
+      vi.mocked(apiClient.get).mockResolvedValue(baseData({ has_cost_data: true, net_margin_pct: 22.5 }));
+
+      renderWithProviders(<ProfitabilityPanel dateFrom="2026-09-01" dateTo="2026-09-07" />);
+
+      await waitFor(() => expect(screen.getByText("Como você está frente ao mercado")).toBeInTheDocument());
+      expect(screen.getByText("22.5%")).toBeInTheDocument();
+      expect(screen.getByText("Dentro da faixa")).toBeInTheDocument();
+    });
+
+    it("mostra o custo fixo fora da faixa saudável", async () => {
+      vi.mocked(apiClient.get).mockResolvedValue(baseData({ has_cost_data: true, fixed_cost_pct: 75 }));
+
+      renderWithProviders(<ProfitabilityPanel dateFrom="2026-09-01" dateTo="2026-09-07" />);
+
+      await waitFor(() => expect(screen.getByText("75.0%")).toBeInTheDocument());
+      expect(screen.getByText("Fora da faixa")).toBeInTheDocument();
+    });
+
+    it("não mostra a seção de benchmarks quando nenhuma referência tem amostra suficiente", async () => {
+      vi.mocked(apiClient.get).mockResolvedValue(baseData());
+
+      renderWithProviders(<ProfitabilityPanel dateFrom="2026-09-01" dateTo="2026-09-07" />);
+
+      await waitFor(() =>
+        expect(screen.getByText(/Nenhum faturamento vinculado a um profissional específico/)).toBeInTheDocument()
+      );
+      expect(screen.queryByText("Como você está frente ao mercado")).not.toBeInTheDocument();
+    });
   });
 });

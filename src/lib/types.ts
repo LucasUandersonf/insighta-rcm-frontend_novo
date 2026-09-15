@@ -893,6 +893,15 @@ export interface Profitability {
   has_cost_data: boolean;
   total_costs: number | null;
   net_margin: number | null;
+  // "Junta Técnica Insighta" — 2 referências externas de mercado (ver
+  // DECISÃO em AnalyticsService.get_profitability, backend): margem
+  // líquida saudável 15-30%; custo fixo saudável até 60% da receita.
+  // Ambos null sem dado/amostra suficiente. Um terceiro benchmark do
+  // relatório (convênio × particular) ficou de fora — o produto não
+  // modela uma cobrança genuinamente sem convênio hoje (ver DECISÃO
+  // completa no schema do backend).
+  net_margin_pct: number | null;
+  fixed_cost_pct: number | null;
 }
 
 // Épico F3.1 do Plano Diretor — ver DECISÃO completa em

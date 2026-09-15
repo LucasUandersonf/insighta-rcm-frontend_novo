@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { BadgeDollarSign, Receipt } from "lucide-react";
 import { BentoCard } from "@/components/ui/BentoGrid";
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/Panel";
+import { Badge, type BadgeTone } from "@/components/ui/Badge";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import type { ProcedureProfitabilityItem, Profitability, ProfessionalProfitabilityItem } from "@/lib/types";
@@ -39,6 +40,83 @@ function ProfessionalRow({ item, rank, hasCostData }: { item: ProfessionalProfit
         </td>
       )}
     </tr>
+  );
+}
+
+/**
+ * "Junta Técnica Insighta" (reavaliação de mercado da Sala de Comando):
+ * "achamos benchmark externo pronto pra usar como régua dentro do
+ * próprio painel [...] nenhuma dessas referências aparece hoje na
+ * tela". Duas faixas de mercado (margem líquida saudável 15-30%; custo
+ * fixo saudável até 60% da receita) contra o número REAL da clínica —
+ * cada uma só aparece quando o backend calculou o valor (amostra
+ * suficiente), nunca com um placeholder inventado. Um terceiro
+ * benchmark do relatório (convênio paga 30-50% a menos que particular)
+ * ficou de fora de propósito — ver DECISÃO em
+ * AnalyticsService.get_profitability (backend): o produto não modela
+ * uma cobrança genuinamente sem convênio hoje.
+ */
+function BenchmarkRow({
+  label,
+  value,
+  healthyRangeLabel,
+  isHealthy,
+}: {
+  label: string;
+  value: string;
+  healthyRangeLabel: string;
+  isHealthy: boolean;
+}) {
+  const tone: BadgeTone = isHealthy ? "revenue" : "pending";
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border-hairline py-2.5 last:border-0">
+      <div>
+        <p className="text-xs font-medium text-ink">{label}</p>
+        <p className="text-2xs text-ink-faint">Faixa saudável de mercado: {healthyRangeLabel}</p>
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="tabular font-mono text-sm font-semibold text-ink">{value}</span>
+        <Badge tone={tone}>{isHealthy ? "Dentro da faixa" : "Fora da faixa"}</Badge>
+      </div>
+    </div>
+  );
+}
+
+function MarketBenchmarks({ data }: { data: Profitability }) {
+  const rows: { key: string; label: string; value: string; healthyRangeLabel: string; isHealthy: boolean }[] = [];
+
+  if (data.net_margin_pct !== null) {
+    rows.push({
+      key: "margin",
+      label: "Margem líquida",
+      value: `${data.net_margin_pct.toFixed(1)}%`,
+      healthyRangeLabel: "15% a 30%",
+      isHealthy: data.net_margin_pct >= 15 && data.net_margin_pct <= 30,
+    });
+  }
+  if (data.fixed_cost_pct !== null) {
+    rows.push({
+      key: "fixed-cost",
+      label: "Custo fixo sobre a receita",
+      value: `${data.fixed_cost_pct.toFixed(1)}%`,
+      healthyRangeLabel: "até 60%",
+      isHealthy: data.fixed_cost_pct <= 60,
+    });
+  }
+  if (rows.length === 0) return null;
+
+  return (
+    <BentoCard colSpan={12} noPadding>
+      <p className="px-4 pt-4 text-sm font-medium text-ink">Como você está frente ao mercado</p>
+      <p className="px-4 pb-1 text-2xs text-ink-faint">
+        Referências de mercado (literatura de gestão hospitalar + pesquisa setorial), não medida interna do sistema.
+      </p>
+      <div className="px-4 pb-3">
+        {rows.map((row) => (
+          <BenchmarkRow key={row.key} label={row.label} value={row.value} healthyRangeLabel={row.healthyRangeLabel} isHealthy={row.isHealthy} />
+        ))}
+      </div>
+    </BentoCard>
   );
 }
 
@@ -103,6 +181,8 @@ export function ProfitabilityPanel({ dateFrom, dateTo }: { dateFrom: string; dat
           </span>
         </div>
       )}
+
+      <MarketBenchmarks data={data} />
 
       {data.by_professional.length === 0 ? (
         <EmptyState
