@@ -29,7 +29,7 @@ function barToneClass(days: number): string {
  * lista aqui, não é preciso abrir uma tela nova.
  */
 export function PaymentLagPanel({ dateFrom, dateTo }: { dateFrom: string; dateTo: string }) {
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error, dataUpdatedAt } = useQuery({
     queryKey: ["analytics", "payment-lag-by-plan", dateFrom, dateTo],
     queryFn: () =>
       apiClient.get<PaymentLagByPlan>(`/api/v1/analytics/payment-lag-by-plan?date_from=${dateFrom}&date_to=${dateTo}`),
@@ -39,7 +39,7 @@ export function PaymentLagPanel({ dateFrom, dateTo }: { dateFrom: string; dateTo
   const maxDays = Math.max(...plans.map((p) => p.avg_days_to_receive), 1);
 
   return (
-    <Panel title="Prazo de recebimento por convênio" subtitle="Pior prazo primeiro">
+    <Panel title="Prazo de recebimento por convênio" subtitle="Pior prazo primeiro" updatedAt={dataUpdatedAt || null}>
       {isLoading && (
         <div className="space-y-3 p-5">
           {Array.from({ length: 4 }).map((_, i) => (

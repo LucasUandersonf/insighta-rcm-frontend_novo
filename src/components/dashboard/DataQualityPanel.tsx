@@ -31,13 +31,17 @@ function rateToneClass(rate: number): string {
  * aparece primeiro.
  */
 export function DataQualityPanel({ dateFrom, dateTo }: { dateFrom: string; dateTo: string }) {
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error, dataUpdatedAt } = useQuery({
     queryKey: ["analytics", "data-quality", dateFrom, dateTo],
     queryFn: () => apiClient.get<DataQuality>(`/api/v1/analytics/data-quality?date_from=${dateFrom}&date_to=${dateTo}`),
   });
 
   return (
-    <Panel title="Qualidade de cadastro por atendente" subtitle="Atendimentos lançados já completos (CID + procedimento)">
+    <Panel
+      title="Qualidade de cadastro por atendente"
+      subtitle="Atendimentos lançados já completos (CID + procedimento)"
+      updatedAt={dataUpdatedAt || null}
+    >
       {isLoading && (
         <div className="space-y-3 p-5">
           {Array.from({ length: 3 }).map((_, i) => (

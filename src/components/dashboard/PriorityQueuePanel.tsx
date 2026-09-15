@@ -175,7 +175,7 @@ export function PriorityQueuePanel({
   // clicável pro mesmo item depois de já resolvido/atribuído.
   const [actionedKeys, setActionedKeys] = useState<Record<string, "resolvido" | "atribuido">>({});
 
-  const { data, isLoading, error, refetch } = useQuery({
+  const { data, isLoading, error, refetch, dataUpdatedAt } = useQuery({
     queryKey: ["analytics", "priority-queue", dateFrom, dateTo],
     queryFn: () =>
       apiClient.get<PriorityQueue>(`/api/v1/analytics/priority-queue?date_from=${dateFrom}&date_to=${dateTo}`),
@@ -206,6 +206,7 @@ export function PriorityQueuePanel({
     <Panel
       title="O que atacar primeiro"
       subtitle="Fila única, cruzando faturamento, agenda e estratégia — ordenada pelo maior impacto em R$."
+      updatedAt={dataUpdatedAt || null}
     >
       {isLoading && <LoadingState variant="cards" rows={4} />}
       {error && <ErrorState message={getApiErrorMessage(error)} onRetry={() => refetch()} />}

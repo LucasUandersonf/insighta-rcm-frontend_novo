@@ -53,7 +53,7 @@ function ViewToggle({ mode, onChange }: { mode: ViewMode; onChange: (m: ViewMode
  */
 export function DenialRiskDistributionPanel({ dateFrom, dateTo }: { dateFrom: string; dateTo: string }) {
   const [mode, setMode] = useState<ViewMode>("atendimentos");
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error, dataUpdatedAt } = useQuery({
     queryKey: ["analytics", "denial-risk-distribution", dateFrom, dateTo],
     queryFn: () =>
       apiClient.get<DenialRiskDistribution>(`/api/v1/analytics/denial-risk-distribution?date_from=${dateFrom}&date_to=${dateTo}`),
@@ -74,6 +74,7 @@ export function DenialRiskDistributionPanel({ dateFrom, dateTo }: { dateFrom: st
       title="Distribuição de risco de glosa"
       subtitle="Faturamentos revisados no período"
       action={data && data.total_reviewed > 0 ? <ViewToggle mode={mode} onChange={setMode} /> : undefined}
+      updatedAt={dataUpdatedAt || null}
     >
       {isLoading && <div className="h-[120px] animate-pulse rounded-full bg-canvas-raised" style={{ width: 120, margin: "20px" }} />}
       {error && <p className="p-5 text-xs text-denied">{getApiErrorMessage(error)}</p>}
