@@ -83,6 +83,24 @@ function mockAllEndpoints() {
     if (url.includes("financial-hole-billings")) {
       return Promise.resolve({ period_start: "2026-01-01", period_end: "2026-01-07", total_count: 0, total_hole_value: 0, items: [] } as never);
     }
+    if (url.includes("capital-decision-base-data")) {
+      return Promise.resolve({
+        window_days: 180,
+        period_start: "2026-01-01",
+        period_end: "2026-01-07",
+        available_specialties: [],
+        specialty_requested: null,
+        used_fallback_clinic_wide: false,
+        sample_size: 0,
+        min_sample: 2,
+        avg_revenue_per_hour: null,
+        has_cost_data: false,
+        avg_margin_per_hour: null,
+        belongs_to_organization: false,
+        sibling_units_count: 0,
+        avg_monthly_revenue_per_unit: null,
+      } as never);
+    }
     if (url.includes("/users/me")) {
       return Promise.resolve(null as never);
     }
@@ -114,5 +132,9 @@ describe("ExecutiveOverviewPage", () => {
 
     await user.click(screen.getByRole("tab", { name: /Simulador/ }));
     await waitFor(() => expect(screen.getByText(/Ajuste os cenários/)).toBeInTheDocument());
+
+    // Épico F3.4 do Plano Diretor ("Decisões de capital").
+    await user.click(screen.getByRole("tab", { name: /Capital/ }));
+    await waitFor(() => expect(screen.getByText(/Payback de uma nova contratação/)).toBeInTheDocument());
   });
 });

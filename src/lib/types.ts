@@ -600,6 +600,29 @@ export interface ProductRoi {
   tracking_since: string | null; // null quando a clínica ainda não tem faturamento nenhum
 }
 
+// GET /analytics/capital-decision-base-data (Épico F3.4 do Plano
+// Diretor — "Decisões de capital: contratar/expandir"). Dado-base real
+// pra simulação de payback feita NESTA tela (CapitalDecisionPanel) —
+// nunca a decisão pronta, ver DECISÃO completa no schema do backend.
+export interface CapitalDecisionBaseData {
+  window_days: number;
+  period_start: string;
+  period_end: string;
+
+  available_specialties: string[];
+  specialty_requested: string | null;
+  used_fallback_clinic_wide: boolean;
+  sample_size: number;
+  min_sample: number;
+  avg_revenue_per_hour: number | null;
+  has_cost_data: boolean;
+  avg_margin_per_hour: number | null;
+
+  belongs_to_organization: boolean;
+  sibling_units_count: number;
+  avg_monthly_revenue_per_unit: number | null;
+}
+
 export interface DenialReasonConfirmation {
   baseline_sample_size: number;
   // null quando ainda não há nenhum faturamento "sem motivo sinalizado"
