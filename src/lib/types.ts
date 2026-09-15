@@ -1241,6 +1241,24 @@ export interface AvailabilityBlock {
   end_time: string;
 }
 
+// "Mapa de Dados Insighta" — Domínio Profissional (Onda 1): ausência
+// futura planejada (férias, licença) — intervalo de datas, diferente
+// da grade semanal (recorrente). Ver DECISÃO em
+// 047_professional_planned_absences.sql (backend).
+export interface PlannedAbsence {
+  id: string;
+  start_date: string; // "YYYY-MM-DD"
+  end_date: string;
+  reason: string | null;
+  created_at: string;
+}
+
+export interface PlannedAbsenceCreateRequest {
+  start_date: string;
+  end_date: string;
+  reason?: string | null;
+}
+
 export interface Professional {
   id: string;
   full_name: string;
@@ -1248,6 +1266,7 @@ export interface Professional {
   specialty: string | null;
   is_active: boolean;
   availability: AvailabilityBlock[];
+  planned_absences: PlannedAbsence[];
 }
 
 export interface ProfessionalCreateRequest {

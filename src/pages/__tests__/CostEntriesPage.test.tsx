@@ -49,7 +49,15 @@ describe("CostEntriesPage — épico F3.1 do Plano Diretor", () => {
   it("lança um novo custo associado a um profissional", async () => {
     const entriesPage: PaginatedResponse<CostEntry> = { items: [], total: 0, limit: 20, offset: 0 };
     const professionals: Professional[] = [
-      { id: "prof-1", full_name: "Dr. Custo", professional_registry: null, specialty: null, is_active: true, availability: [] },
+      {
+        id: "prof-1",
+        full_name: "Dr. Custo",
+        professional_registry: null,
+        specialty: null,
+        is_active: true,
+        availability: [],
+        planned_absences: [],
+      },
     ];
     mockGetByPath({ "/api/v1/professionals": professionals, "/api/v1/cost-entries": entriesPage });
     vi.mocked(apiClient.post).mockResolvedValue(makeEntry({ id: "entry-2" }));
