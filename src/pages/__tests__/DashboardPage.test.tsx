@@ -53,6 +53,8 @@ function makeBilling(overrides: Partial<BillingResponse> = {}): BillingResponse 
     coparticipation_received: null,
     coparticipation_confirmed_at: null,
     clinical_documentation_confirmed: null,
+    payment_method: null,
+    installments: null,
     ...overrides,
   };
 }

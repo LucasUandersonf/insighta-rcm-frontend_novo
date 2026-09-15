@@ -12,7 +12,15 @@ import { BillingSearchPicker } from "@/components/billing/BillingSearchPicker";
 import { apiClient, ApiError } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useToast } from "@/context/ToastContext";
-import type { BillingSearchItem, Guia, GuiaCreateRequest, GuiaTipo, InsurancePlan, PaginatedResponse } from "@/lib/types";
+import type {
+  BillingSearchItem,
+  Guia,
+  GuiaCreateRequest,
+  GuiaTipo,
+  InsurancePlan,
+  PaginatedResponse,
+  PaymentMethod,
+} from "@/lib/types";
 
 // Faturamento & Guias — as DUAS pontas do ciclo de vida da fatura que já
 // funcionavam de ponta a ponta no backend sem nenhuma tela: registrar o
@@ -126,18 +134,38 @@ function SettlementTab() {
 // insights de coparticipação já existentes deixavam em aberto.
 // ---------------------------------------------------------------------
 
+// "Mapa de Dados Insighta" — Domínio Financeiro particular (Onda 1).
+const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+  dinheiro: "Dinheiro",
+  pix: "Pix",
+  cartao_debito: "Cartão de débito",
+  cartao_credito: "Cartão de crédito",
+  boleto: "Boleto",
+};
+
 function CoparticipationTab() {
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
   const [selected, setSelected] = useState<BillingSearchItem | null>(null);
+  // "Mapa de Dados Insighta" — confirmar recebimento É o checkout real
+  // do particular (o momento em que a recepção sabe o que aconteceu),
+  // o ponto de captura natural pra COMO foi pago — não só QUANTO.
+  const [paymentMethod, setPaymentMethod] = useState("");
+  const [installments, setInstallments] = useState("");
 
   const mutation = useMutation({
     mutationFn: (received: boolean) =>
-      apiClient.post(`/api/v1/billing/${selected!.id}/confirm-coparticipation`, { received }),
+      apiClient.post(`/api/v1/billing/${selected!.id}/confirm-coparticipation`, {
+        received,
+        payment_method: received ? paymentMethod || null : null,
+        installments: received && installments ? Number(installments) : null,
+      }),
     onSuccess: (_data, received) => {
       queryClient.invalidateQueries({ queryKey: ["analytics"] });
       showSuccess(received ? "Coparticipação confirmada como recebida." : "Registrado: coparticipação NÃO foi recebida.");
       setSelected(null);
+      setPaymentMethod("");
+      setInstallments("");
     },
     onError: (err) => showError(getApiErrorMessage(err)),
   });
@@ -159,9 +187,33 @@ function CoparticipationTab() {
             </p>
             <p className="mt-1 text-2xs text-ink-faint">
               {selected.coparticipation_received === null && "Ainda não confirmado."}
-              {selected.coparticipation_received === true && "Já confirmado como recebido."}
+              {selected.coparticipation_received === true &&
+                `Já confirmado como recebido${selected.payment_method ? ` — ${PAYMENT_METHOD_LABELS[selected.payment_method]}` : ""}.`}
               {selected.coparticipation_received === false && "Já confirmado como NÃO recebido."}
             </p>
+            {selected.coparticipation_received !== true && (
+              <div className="mt-3 grid grid-cols-2 gap-3">
+                <SelectField
+                  label="Forma de pagamento (opcional)"
+                  value={paymentMethod}
+                  onChange={(e) => setPaymentMethod(e.target.value)}
+                >
+                  <option value="">Não informado</option>
+                  {Object.entries(PAYMENT_METHOD_LABELS).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </SelectField>
+                <TextField
+                  label="Parcelas (opcional)"
+                  type="number"
+                  min={1}
+                  value={installments}
+                  onChange={(e) => setInstallments(e.target.value)}
+                />
+              </div>
+            )}
             <div className="mt-3 flex gap-2">
               <Button type="button" onClick={() => mutation.mutate(true)} disabled={mutation.isPending}>
                 {mutation.isPending ? "Salvando..." : "Confirmar recebida"}

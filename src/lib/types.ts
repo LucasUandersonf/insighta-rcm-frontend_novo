@@ -1112,7 +1112,13 @@ export interface BillingResponse {
   // da maioria), nunca um false inventado (ver DECISÃO em
   // 044_opme_documentation_confirmation.sql).
   clinical_documentation_confirmed: boolean | null;
+  // "Mapa de Dados Insighta" — Domínio Financeiro particular (Onda 1).
+  // Ver DECISÃO em 049_billing_payment_method.sql (backend).
+  payment_method: PaymentMethod | null;
+  installments: number | null;
 }
+
+export type PaymentMethod = "dinheiro" | "pix" | "cartao_debito" | "cartao_credito" | "boleto";
 
 export interface BillingSettleRequest {
   received_value: number;
@@ -1138,6 +1144,10 @@ export interface BillingSearchItem {
   coparticipation_received: boolean | null;
   // Épico F2.3 — mesmo motivo de BillingResponse acima.
   clinical_documentation_confirmed: boolean | null;
+  // "Mapa de Dados Insighta" — a tela de confirmação de coparticipação
+  // usa o MESMO BillingSearchPicker das outras; mostra a forma de
+  // pagamento já registrada, quando houver.
+  payment_method: PaymentMethod | null;
 }
 
 // Guia (TISS) — ver app/models/guia.py no backend. Fase 1 do plano de

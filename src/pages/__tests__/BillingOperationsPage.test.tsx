@@ -26,6 +26,7 @@ function makeResult(overrides: Partial<BillingSearchItem> = {}): BillingSearchIt
     coparticipation_value: 25,
     coparticipation_received: null,
     clinical_documentation_confirmed: null,
+    payment_method: null,
     ...overrides,
   };
 }
@@ -66,7 +67,40 @@ describe("BillingOperationsPage — aba Coparticipação", () => {
     await user.click(screen.getByRole("button", { name: "Confirmar recebida" }));
 
     await waitFor(() =>
-      expect(apiClient.post).toHaveBeenCalledWith("/api/v1/billing/b1/confirm-coparticipation", { received: true })
+      expect(apiClient.post).toHaveBeenCalledWith("/api/v1/billing/b1/confirm-coparticipation", {
+        received: true,
+        payment_method: null,
+        installments: null,
+      })
+    );
+  });
+
+  it("captura forma de pagamento e parcelas ao confirmar como recebida", async () => {
+    vi.mocked(apiClient.get).mockImplementation((path: string) => {
+      if (path.startsWith("/api/v1/billing/search")) return Promise.resolve([makeResult({ id: "b4" })] as never);
+      if (path.startsWith("/api/v1/insurance-companies/plans")) return Promise.resolve([] as never);
+      if (path.startsWith("/api/v1/guias")) return Promise.resolve({ items: [], total: 0, limit: 15, offset: 0 } as never);
+      return Promise.reject(new Error(`Sem mock para ${path}`));
+    });
+    vi.mocked(apiClient.post).mockResolvedValue({});
+    const user = userEvent.setup();
+
+    renderWithProviders(<BillingOperationsPage />);
+    await user.click(screen.getByRole("tab", { name: "Coparticipação" }));
+    await user.type(screen.getByLabelText(/Buscar faturamento/), "Maria da Silva");
+    await waitFor(() => expect(screen.getByText("Maria da Silva Santos")).toBeInTheDocument(), { timeout: 2000 });
+    await user.click(screen.getByText("Maria da Silva Santos"));
+
+    await user.selectOptions(await screen.findByLabelText(/Forma de pagamento/), "cartao_credito");
+    await user.type(screen.getByLabelText(/Parcelas/), "2");
+    await user.click(screen.getByRole("button", { name: "Confirmar recebida" }));
+
+    await waitFor(() =>
+      expect(apiClient.post).toHaveBeenCalledWith("/api/v1/billing/b4/confirm-coparticipation", {
+        received: true,
+        payment_method: "cartao_credito",
+        installments: 2,
+      })
     );
   });
 
@@ -89,7 +123,11 @@ describe("BillingOperationsPage — aba Coparticipação", () => {
     await user.click(await screen.findByRole("button", { name: "Confirmar NÃO recebida" }));
 
     await waitFor(() =>
-      expect(apiClient.post).toHaveBeenCalledWith("/api/v1/billing/b2/confirm-coparticipation", { received: false })
+      expect(apiClient.post).toHaveBeenCalledWith("/api/v1/billing/b2/confirm-coparticipation", {
+        received: false,
+        payment_method: null,
+        installments: null,
+      })
     );
   });
 
