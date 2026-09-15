@@ -22,7 +22,7 @@ import type { BillingSearchItem, Guia, GuiaCreateRequest, GuiaTipo, InsurancePla
 // guia_tipo/guia_numero/guia_senha). Achado do Raio-X da Sala de
 // Comando: a lacuna era só de UI, não de lógica de negócio.
 
-type Tab = "pagamento" | "coparticipacao" | "guias";
+type Tab = "pagamento" | "coparticipacao" | "auditoria-opme" | "guias";
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
@@ -168,6 +168,67 @@ function CoparticipationTab() {
               </Button>
               <Button type="button" variant="secondary" onClick={() => mutation.mutate(false)} disabled={mutation.isPending}>
                 Confirmar NÃO recebida
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+    </Panel>
+  );
+}
+
+// ---------------------------------------------------------------------
+// Auditoria documental leve — OPME (Épico F2.3 do Plano Diretor:
+// "Auditoria documental leve: prontuário × conta"). Versão RESTRITA
+// explicitamente pedida no roadmap: "checar presença de registro de
+// prescrição/evolução para procedimentos de alto valor (OPME), sem NLP
+// semântico" — esta tela nunca lê nem interpreta prontuário nenhum, só
+// registra que um HUMANO conferiu (ou não) que o registro existe,
+// mesma mecânica de CoparticipationTab acima.
+// ---------------------------------------------------------------------
+
+function OpmeDocumentationTab() {
+  const queryClient = useQueryClient();
+  const { showSuccess, showError } = useToast();
+  const [selected, setSelected] = useState<BillingSearchItem | null>(null);
+
+  const mutation = useMutation({
+    mutationFn: (found: boolean) =>
+      apiClient.post(`/api/v1/billing/${selected!.id}/confirm-clinical-documentation`, { found }),
+    onSuccess: (_data, found) => {
+      queryClient.invalidateQueries({ queryKey: ["analytics"] });
+      showSuccess(found ? "Documentação clínica confirmada." : "Registrado: documentação clínica NÃO encontrada.");
+      setSelected(null);
+    },
+    onError: (err) => showError(getApiErrorMessage(err)),
+  });
+
+  return (
+    <Panel
+      title="Conferir documentação de OPME"
+      subtitle="Confirme se existe registro de prescrição/evolução no prontuário sustentando este item de órtese/prótese/material especial — antes de enviar a guia ao convênio."
+    >
+      <div className="p-4">
+        <BillingSearchPicker selected={selected} onSelect={setSelected} />
+        {selected && selected.item_type !== "material_opme" && (
+          <p className="mt-3 text-2xs text-pending">Este faturamento não é um item de OPME — nada para conferir.</p>
+        )}
+        {selected && selected.item_type === "material_opme" && (
+          <div className="mt-3 rounded-md border border-border-hairline bg-canvas-raised/40 p-3">
+            <p className="text-sm text-ink">
+              Item OPME cobrado: <span className="font-mono font-medium">{formatCurrency(selected.charged_value)}</span>
+            </p>
+            <p className="mt-1 text-2xs text-ink-faint">
+              {selected.clinical_documentation_confirmed === null && "Ainda não conferido."}
+              {selected.clinical_documentation_confirmed === true && "Já conferido — registro encontrado."}
+              {selected.clinical_documentation_confirmed === false && "Já conferido — registro NÃO encontrado."}
+            </p>
+            <div className="mt-3 flex gap-2">
+              <Button type="button" onClick={() => mutation.mutate(true)} disabled={mutation.isPending}>
+                {mutation.isPending ? "Salvando..." : "Confirmar presente"}
+              </Button>
+              <Button type="button" variant="secondary" onClick={() => mutation.mutate(false)} disabled={mutation.isPending}>
+                Confirmar ausente
               </Button>
             </div>
           </div>
@@ -365,12 +426,14 @@ export function BillingOperationsPage() {
         items={[
           { id: "pagamento", label: "Registrar pagamento" },
           { id: "coparticipacao", label: "Coparticipação" },
+          { id: "auditoria-opme", label: "Auditoria documental (OPME)" },
           { id: "guias", label: "Guias" },
         ]}
       />
 
       {tab === "pagamento" && <SettlementTab />}
       {tab === "coparticipacao" && <CoparticipationTab />}
+      {tab === "auditoria-opme" && <OpmeDocumentationTab />}
       {tab === "guias" && <GuiasTab />}
     </div>
   );

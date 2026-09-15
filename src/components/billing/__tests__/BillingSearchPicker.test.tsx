@@ -25,6 +25,7 @@ const RESULT: BillingSearchItem = {
   member_card_number: null,
   coparticipation_value: null,
   coparticipation_received: null,
+  clinical_documentation_confirmed: null,
 };
 
 function Wrapper() {

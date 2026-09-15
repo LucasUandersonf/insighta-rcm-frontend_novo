@@ -1103,6 +1103,11 @@ export interface BillingResponse {
   // inventado (ver DECISÃO em 043_coparticipation_confirmation.sql).
   coparticipation_received: boolean | null;
   coparticipation_confirmed_at: string | null;
+  // Épico F2.3 do Plano Diretor ("Auditoria documental leve —
+  // prontuário × conta") — NULL = ainda não conferido (estado inicial
+  // da maioria), nunca um false inventado (ver DECISÃO em
+  // 044_opme_documentation_confirmation.sql).
+  clinical_documentation_confirmed: boolean | null;
 }
 
 export interface BillingSettleRequest {
@@ -1127,6 +1132,8 @@ export interface BillingSearchItem {
   // Épico F4.2 — mesmo motivo de BillingResponse acima.
   coparticipation_value: number | null;
   coparticipation_received: boolean | null;
+  // Épico F2.3 — mesmo motivo de BillingResponse acima.
+  clinical_documentation_confirmed: boolean | null;
 }
 
 // Guia (TISS) — ver app/models/guia.py no backend. Fase 1 do plano de
