@@ -52,7 +52,10 @@ export const NAV_ITEMS: NavItem[] = [
   // (organization_id NULL) — a própria página mostra o estado honesto
   // "não faz parte de um grupo", nunca escondida como se fosse um erro.
   { to: "/consolidado", label: "Consolidado", icon: Network, roles: ["owner", "admin", "financeiro", "auditor"] },
-  { to: "/", label: "Painel", icon: LayoutDashboard },
+  // "Junta Técnica Insighta" — não é mais a rota "/" (raiz sempre leva à
+  // Sala de Comando, ver RootRedirect.tsx): o Painel virou destino de
+  // drill-down, não ponto de entrada padrão.
+  { to: "/painel", label: "Painel", icon: LayoutDashboard },
   { to: "/appointments", label: "Consultas", icon: CalendarCheck },
   // Épico F1.3 do Plano Diretor: aberto a QUALQUER papel (sem `roles`
   // aqui, de propósito) — mesmo RBAC de GET /insight-outcomes/mine.
@@ -111,7 +114,6 @@ export function Sidebar() {
       <li key={item.to}>
         <NavLink
           to={item.to}
-          end={item.to === "/"}
           // Âncora do tour de boas-vindas guiado (ver OnboardingTour.tsx) —
           // reaproveita o próprio `to` como chave, não precisa de um id
           // separado por item.

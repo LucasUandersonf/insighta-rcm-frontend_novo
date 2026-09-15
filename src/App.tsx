@@ -6,6 +6,7 @@ import { ModalStackProvider } from "@/context/ModalStackContext";
 import { ProtectedRoute } from "@/routes/ProtectedRoute";
 import { AppShell } from "@/components/layout/AppShell";
 import { RoleProtectedRoute } from "@/routes/ProtectedRoute";
+import { RootRedirect } from "@/routes/RootRedirect";
 import { PlatformProtectedRoute } from "@/routes/PlatformProtectedRoute";
 import { isApiConfigured } from "@/lib/api-client";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -108,7 +109,13 @@ export default function App() {
               </Route>
             <Route element={<ProtectedRoute />}>
               <Route element={<AppShell />}>
-                <Route path="/" element={<DashboardPage />} />
+                {/* "Junta Técnica Insighta" — o Painel (BI tradicional) não
+                    deveria ser "ponto de entrada padrão de quem abre o
+                    sistema de manhã", só destino de drill-down a partir de
+                    um card do feed (ver _high_risk_billing_href, backend,
+                    e RootRedirect.tsx). */}
+                <Route path="/" element={<RootRedirect />} />
+                <Route path="/painel" element={<DashboardPage />} />
                 <Route path="/appointments" element={<AppointmentsPage />} />
                 {/* Épico F1.3 do Plano Diretor: "Meus pendentes" é aberto a
                     QUALQUER papel autenticado (mesmo RBAC de
