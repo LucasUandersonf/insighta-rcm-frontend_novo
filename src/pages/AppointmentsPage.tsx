@@ -13,6 +13,7 @@ import { useToast } from "@/context/ToastContext";
 import type {
   Appointment,
   AppointmentCreateRequest,
+  AppointmentUpdateRequest,
   PaginatedResponse,
   Patient,
   PatientCreateRequest,
@@ -47,6 +48,11 @@ const STATUS_LABELS: Record<string, string> = {
   completed: "Realizada",
   cancelled: "Cancelada",
   no_show: "Faltou",
+};
+
+const ADDON_RESULT_LABELS: Record<"aceito" | "recusado", string> = {
+  aceito: "Aceito",
+  recusado: "Recusado",
 };
 
 /**
@@ -404,11 +410,121 @@ function CreateAppointmentModal({
   );
 }
 
+/**
+ * "Mapa de Dados Insighta" — Domínio Pós-atendimento (Onda 2): fecha DUAS
+ * lacunas de uma vez. (1) PATCH /appointments/{id} já existia no backend
+ * desde a correção do fluxo Agendamento -> Atendimento, mas nenhuma tela
+ * chamava esse endpoint — a recepção não tinha como marcar falta/realizada
+ * nem preencher procedimento/CID depois da consulta. (2) o funil de upsell
+ * (o que foi OFERECIDO no checkout, não só o que virou receita) — pilar
+ * Crescimento ativo/upsell, ver DECISÃO em 050_appointment_addon_upsell.sql.
+ * addon_declined só é enviado se addon_offered_procedure tiver algum valor
+ * (nesta edição ou numa anterior já salva) — mesma regra do backend.
+ */
+function RegisterVisitModal({
+  isOpen,
+  onClose,
+  appointment,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  appointment: Appointment | null;
+}) {
+  const queryClient = useQueryClient();
+  const { showSuccess, showError } = useToast();
+  const [status, setStatus] = useState("");
+  const [procedureCode, setProcedureCode] = useState("");
+  const [cidCode, setCidCode] = useState("");
+  const [addonOfferedProcedure, setAddonOfferedProcedure] = useState("");
+  const [addonResult, setAddonResult] = useState<"" | "aceito" | "recusado">("");
+
+  useEffect(() => {
+    if (!appointment) return;
+    setStatus(appointment.status);
+    setProcedureCode(appointment.procedure_code ?? "");
+    setCidCode(appointment.cid_code ?? "");
+    setAddonOfferedProcedure(appointment.addon_offered_procedure ?? "");
+    setAddonResult(appointment.addon_declined === null ? "" : appointment.addon_declined ? "recusado" : "aceito");
+  }, [appointment]);
+
+  const mutation = useMutation({
+    mutationFn: (payload: AppointmentUpdateRequest) =>
+      apiClient.patch<Appointment>(`/api/v1/appointments/${appointment!.id}`, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["appointments", appointment!.patient_id] });
+      showSuccess("Atendimento atualizado.");
+      onClose();
+    },
+    onError: (err) => showError(getApiErrorMessage(err)),
+  });
+
+  function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    if (!appointment) return;
+    mutation.mutate({
+      status: status || null,
+      procedure_code: procedureCode || null,
+      cid_code: cidCode || null,
+      addon_offered_procedure: addonOfferedProcedure || null,
+      addon_declined: addonResult === "" ? null : addonResult === "recusado",
+    });
+  }
+
+  if (!appointment) return null;
+
+  return (
+    <Modal title="Registrar atendimento" isOpen={isOpen} onClose={onClose}>
+      <form onSubmit={handleSubmit}>
+        <SelectField label="Status" value={status} onChange={(e) => setStatus(e.target.value)}>
+          {Object.entries(STATUS_LABELS).map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </SelectField>
+        <div className="grid grid-cols-2 gap-3">
+          <TextField label="Código do procedimento" value={procedureCode} onChange={(e) => setProcedureCode(e.target.value)} />
+          <TextField label="CID" value={cidCode} onChange={(e) => setCidCode(e.target.value)} />
+        </div>
+        <TextField
+          label="Procedimento/serviço oferecido no checkout (opcional)"
+          placeholder="Ex.: Limpeza de pele, drenagem linfática..."
+          value={addonOfferedProcedure}
+          onChange={(e) => setAddonOfferedProcedure(e.target.value)}
+        />
+        <SelectField
+          label="Resultado da oferta"
+          value={addonResult}
+          onChange={(e) => setAddonResult(e.target.value as "" | "aceito" | "recusado")}
+          disabled={!addonOfferedProcedure}
+        >
+          <option value="">{addonOfferedProcedure ? "Ainda não sei" : "Nada oferecido / não perguntado"}</option>
+          {Object.entries(ADDON_RESULT_LABELS).map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </SelectField>
+
+        <div className="mt-1 flex justify-end gap-2">
+          <Button type="button" variant="secondary" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button type="submit" disabled={mutation.isPending}>
+            {mutation.isPending ? "Salvando..." : "Salvar"}
+          </Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
 export function AppointmentsPage() {
   const [selectedPatientId, setSelectedPatientId] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isNewPatientModalOpen, setIsNewPatientModalOpen] = useState(false);
   const [isEditPatientModalOpen, setIsEditPatientModalOpen] = useState(false);
+  const [registeringAppointment, setRegisteringAppointment] = useState<Appointment | null>(null);
 
   // GET /api/v1/patients devolve o envelope paginado
   // {items, total, limit, offset} (ver app/api/v1/endpoints/patients.py) —
@@ -517,6 +633,7 @@ export function AppointmentsPage() {
                 <th className="px-4 py-2.5 font-medium">Procedimento</th>
                 <th className="px-4 py-2.5 font-medium">CID</th>
                 <th className="px-4 py-2.5 font-medium">Risco de falta</th>
+                <th className="px-4 py-2.5 font-medium">Ações</th>
               </tr>
             </thead>
             <tbody>
@@ -531,6 +648,18 @@ export function AppointmentsPage() {
                     <td className="px-4 py-2.5 text-ink-muted">{a.cid_code ?? "—"}</td>
                     <td className="px-4 py-2.5">
                       <NoShowBadge level={a.no_show_risk_level} />
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="xs"
+                        className="flex items-center gap-1.5"
+                        onClick={() => setRegisteringAppointment(a)}
+                      >
+                        <Pencil size={12} />
+                        Registrar atendimento
+                      </Button>
                     </td>
                   </tr>
                 ))}
@@ -559,6 +688,12 @@ export function AppointmentsPage() {
         onClose={() => setIsEditPatientModalOpen(false)}
         patient={(patients ?? []).find((p) => p.id === selectedPatientId) ?? null}
         patients={patients ?? []}
+      />
+
+      <RegisterVisitModal
+        isOpen={registeringAppointment !== null}
+        onClose={() => setRegisteringAppointment(null)}
+        appointment={registeringAppointment}
       />
     </div>
   );

@@ -1329,6 +1329,11 @@ export interface Appointment {
   // estruturado do agendamento (complementa visit_type). Ver DECISÃO em
   // 046_appointment_visit_intent.sql (backend).
   visit_intent_tag: VisitIntentTag | null;
+  // "Mapa de Dados Insighta" — Domínio Pós-atendimento (Onda 2): funil de
+  // upsell no checkout. Ver DECISÃO em 050_appointment_addon_upsell.sql
+  // (backend).
+  addon_offered_procedure: string | null;
+  addon_declined: boolean | null;
 }
 
 export type VisitIntentTag = "rotina" | "retorno" | "avaliacao" | "urgencia";
@@ -1341,6 +1346,18 @@ export interface AppointmentCreateRequest {
   procedure_code?: string | null;
   cid_code?: string | null;
   visit_intent_tag?: VisitIntentTag | null;
+}
+
+// PATCH /appointments/{id} (app/schemas/appointment.py::AppointmentUpdateRequest)
+// — fecha o ciclo Agendamento -> Atendimento: status/procedimento/CID e o
+// funil de upsell só são conhecidos DEPOIS da consulta.
+export interface AppointmentUpdateRequest {
+  status?: string | null;
+  procedure_code?: string | null;
+  cid_code?: string | null;
+  visit_intent_tag?: VisitIntentTag | null;
+  addon_offered_procedure?: string | null;
+  addon_declined?: boolean | null;
 }
 
 // Item de GET /appointments (listagem paginada por período) — espelha
