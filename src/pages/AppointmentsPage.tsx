@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { CalendarCheck, Pencil, Plus, UserRound, UserPlus } from "lucide-react";
+import { CalendarCheck, Copy, Pencil, Plus, Star, UserRound, UserPlus } from "lucide-react";
 import { Panel, EmptyState, LoadingState, ErrorState } from "@/components/ui/Panel";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
@@ -20,6 +20,7 @@ import type {
   PatientUpdateRequest,
   PreferredTimeWindow,
   Professional,
+  SatisfactionLinkResponse,
   VisitIntentTag,
 } from "@/lib/types";
 
@@ -519,12 +520,79 @@ function RegisterVisitModal({
   );
 }
 
+/**
+ * "Mapa de Dados Insighta" — Domínio Pós-atendimento (Onda 2), pilar
+ * Satisfação/NPS: mostra o link público gerado por POST /appointments/
+ * {id}/satisfaction-link, pronto para a recepção copiar e enviar
+ * manualmente ao paciente (WhatsApp Web, SMS) — ver DECISÃO completa em
+ * 052_appointment_satisfaction.sql (backend) sobre por que não é uma
+ * mensagem automática.
+ */
+function SatisfactionLinkModal({
+  link,
+  onClose,
+}: {
+  link: SatisfactionLinkResponse | null;
+  onClose: () => void;
+}) {
+  const { showSuccess, showError } = useToast();
+
+  async function handleCopy() {
+    if (!link) return;
+    try {
+      await navigator.clipboard.writeText(link.url);
+      showSuccess("Link copiado.");
+    } catch {
+      showError("Não foi possível copiar o link automaticamente — selecione e copie manualmente.");
+    }
+  }
+
+  return (
+    <Modal title="Link de avaliação" isOpen={link !== null} onClose={onClose}>
+      {link && (
+        <div>
+          <p className="mb-3 text-xs leading-relaxed text-ink-muted">
+            Envie este link para o paciente pelo canal que preferir (WhatsApp, SMS). Ele é de uso único e expira em{" "}
+            {formatDateTime(link.expires_at)}.
+          </p>
+          <div className="mb-4 flex items-center gap-2">
+            <input
+              readOnly
+              value={link.url}
+              onFocus={(e) => e.target.select()}
+              className="w-full rounded-md border border-border-default bg-canvas-raised px-3 py-2 text-xs text-ink"
+            />
+            <Button type="button" variant="secondary" size="xs" onClick={handleCopy} className="flex shrink-0 items-center gap-1">
+              <Copy size={12} />
+              Copiar
+            </Button>
+          </div>
+          <div className="flex justify-end">
+            <Button type="button" variant="secondary" onClick={onClose}>
+              Fechar
+            </Button>
+          </div>
+        </div>
+      )}
+    </Modal>
+  );
+}
+
 export function AppointmentsPage() {
   const [selectedPatientId, setSelectedPatientId] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isNewPatientModalOpen, setIsNewPatientModalOpen] = useState(false);
   const [isEditPatientModalOpen, setIsEditPatientModalOpen] = useState(false);
   const [registeringAppointment, setRegisteringAppointment] = useState<Appointment | null>(null);
+  const [satisfactionLink, setSatisfactionLink] = useState<SatisfactionLinkResponse | null>(null);
+  const { showError: showSatisfactionLinkError } = useToast();
+
+  const satisfactionLinkMutation = useMutation({
+    mutationFn: (appointmentId: string) =>
+      apiClient.post<SatisfactionLinkResponse>(`/api/v1/appointments/${appointmentId}/satisfaction-link`),
+    onSuccess: (data) => setSatisfactionLink(data),
+    onError: (err) => showSatisfactionLinkError(getApiErrorMessage(err)),
+  });
 
   // GET /api/v1/patients devolve o envelope paginado
   // {items, total, limit, offset} (ver app/api/v1/endpoints/patients.py) —
@@ -633,6 +701,7 @@ export function AppointmentsPage() {
                 <th className="px-4 py-2.5 font-medium">Procedimento</th>
                 <th className="px-4 py-2.5 font-medium">CID</th>
                 <th className="px-4 py-2.5 font-medium">Risco de falta</th>
+                <th className="px-4 py-2.5 font-medium">Satisfação</th>
                 <th className="px-4 py-2.5 font-medium">Ações</th>
               </tr>
             </thead>
@@ -649,17 +718,42 @@ export function AppointmentsPage() {
                     <td className="px-4 py-2.5">
                       <NoShowBadge level={a.no_show_risk_level} />
                     </td>
+                    <td className="px-4 py-2.5 text-ink-muted">
+                      {a.visit_satisfaction_score !== null ? (
+                        <span className="inline-flex items-center gap-1">
+                          <Star size={12} className="fill-pending text-pending" />
+                          {a.visit_satisfaction_score}/5
+                        </span>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
                     <td className="px-4 py-2.5">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="xs"
-                        className="flex items-center gap-1.5"
-                        onClick={() => setRegisteringAppointment(a)}
-                      >
-                        <Pencil size={12} />
-                        Registrar atendimento
-                      </Button>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="xs"
+                          className="flex items-center gap-1.5"
+                          onClick={() => setRegisteringAppointment(a)}
+                        >
+                          <Pencil size={12} />
+                          Registrar atendimento
+                        </Button>
+                        {a.status === "completed" && a.visit_satisfaction_score === null && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="xs"
+                            className="flex items-center gap-1.5"
+                            disabled={satisfactionLinkMutation.isPending}
+                            onClick={() => satisfactionLinkMutation.mutate(a.id)}
+                          >
+                            <Star size={12} />
+                            Link de avaliação
+                          </Button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -695,6 +789,8 @@ export function AppointmentsPage() {
         onClose={() => setRegisteringAppointment(null)}
         appointment={registeringAppointment}
       />
+
+      <SatisfactionLinkModal link={satisfactionLink} onClose={() => setSatisfactionLink(null)} />
     </div>
   );
 }

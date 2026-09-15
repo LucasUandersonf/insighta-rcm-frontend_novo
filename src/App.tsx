@@ -22,6 +22,9 @@ const LoginPage = lazy(() => import("@/pages/LoginPage").then((m) => ({ default:
 const SignUpPage = lazy(() => import("@/pages/SignUpPage").then((m) => ({ default: m.SignUpPage })));
 const ForgotPasswordPage = lazy(() => import("@/pages/ForgotPasswordPage").then((m) => ({ default: m.ForgotPasswordPage })));
 const ResetPasswordPage = lazy(() => import("@/pages/ResetPasswordPage").then((m) => ({ default: m.ResetPasswordPage })));
+const SatisfactionRatingPage = lazy(() =>
+  import("@/pages/SatisfactionRatingPage").then((m) => ({ default: m.SatisfactionRatingPage }))
+);
 const DashboardPage = lazy(() => import("@/pages/DashboardPage").then((m) => ({ default: m.DashboardPage })));
 const ExecutiveOverviewPage = lazy(() => import("@/pages/ExecutiveOverviewPage").then((m) => ({ default: m.ExecutiveOverviewPage })));
 const OrganizationSummaryPage = lazy(() => import("@/pages/OrganizationSummaryPage").then((m) => ({ default: m.OrganizationSummaryPage })));
@@ -90,6 +93,11 @@ export default function App() {
               <Route path="/signup" element={<SignUpPage />} />
               <Route path="/forgot-password" element={<ForgotPasswordPage />} />
               <Route path="/reset-password" element={<ResetPasswordPage />} />
+              {/* "Mapa de Dados Insighta" — Domínio Pós-atendimento (Onda 2):
+                  link público de avaliação de satisfação, sem autenticação
+                  (o paciente abre no próprio celular) — ver DECISÃO em
+                  052_appointment_satisfaction.sql (backend). */}
+              <Route path="/satisfacao/:token" element={<SatisfactionRatingPage />} />
               {/* Painel interno de Customer Success — NUNCA linkado de
                   dentro do produto, fora do AuthContext/RBAC de clínica
                   de propósito (ver DECISÃO em src/routes/PlatformProtectedRoute.tsx

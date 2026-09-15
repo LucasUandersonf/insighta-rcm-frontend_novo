@@ -46,6 +46,7 @@ function makeAppointment(overrides: Partial<Appointment> = {}): Appointment {
     cancellation_reason: null,
     booking_channel: null,
     visit_intent_tag: null,
+    visit_satisfaction_score: null,
     addon_offered_procedure: null,
     addon_declined: null,
     ...overrides,
@@ -244,5 +245,59 @@ describe("AppointmentsPage — registrar atendimento (checkout + funil de upsell
     expect(screen.getByLabelText(/Código do procedimento/)).toHaveValue("10101012");
     expect(screen.getByLabelText(/oferecido no checkout/)).toHaveValue("Peeling");
     expect(screen.getByLabelText(/Resultado da oferta/)).toHaveValue("recusado");
+  });
+});
+
+// "Mapa de Dados Insighta" — Domínio Pós-atendimento (Onda 2): link
+// público de avaliação de satisfação — ver DECISÃO em
+// 052_appointment_satisfaction.sql (backend).
+describe("AppointmentsPage — link de avaliação de satisfação", () => {
+  it("gera e mostra o link só para consultas já realizadas, com botão de copiar", async () => {
+    mockGet([makePatient()], [makeAppointment({ status: "completed" })]);
+    vi.mocked(apiClient.post).mockResolvedValue({
+      url: "https://app.insighta.com/satisfacao/abc123",
+      expires_at: "2026-06-15T10:00:00Z",
+    });
+    const user = userEvent.setup();
+    // @testing-library/user-event instala seu próprio stub de
+    // navigator.clipboard em userEvent.setup() (para suportar
+    // user.paste()) — substitui QUALQUER mock feito antes disso, então
+    // o spy precisa vir DEPOIS, em cima do stub que ele mesmo instalou.
+    const writeText = vi.spyOn(navigator.clipboard, "writeText").mockResolvedValue(undefined);
+
+    renderWithProviders(<AppointmentsPage />);
+    await waitFor(() => expect(screen.getByLabelText("Ver consultas do paciente")).not.toBeDisabled());
+    await user.selectOptions(screen.getByLabelText("Ver consultas do paciente"), "p1");
+
+    await user.click(await screen.findByRole("button", { name: /Link de avaliação/ }));
+
+    await waitFor(() => expect(apiClient.post).toHaveBeenCalledWith("/api/v1/appointments/a1/satisfaction-link"));
+    expect(await screen.findByDisplayValue("https://app.insighta.com/satisfacao/abc123")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /Copiar/ }));
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith("https://app.insighta.com/satisfacao/abc123"));
+  });
+
+  it("não mostra o botão de link para uma consulta que ainda não foi realizada", async () => {
+    mockGet([makePatient()], [makeAppointment({ status: "scheduled" })]);
+    const user = userEvent.setup();
+
+    renderWithProviders(<AppointmentsPage />);
+    await waitFor(() => expect(screen.getByLabelText("Ver consultas do paciente")).not.toBeDisabled());
+    await user.selectOptions(screen.getByLabelText("Ver consultas do paciente"), "p1");
+
+    expect(await screen.findByText("Registrar atendimento")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Link de avaliação/ })).not.toBeInTheDocument();
+  });
+
+  it("mostra a nota já registrada em vez do botão de gerar link", async () => {
+    mockGet([makePatient()], [makeAppointment({ status: "completed", visit_satisfaction_score: 4 })]);
+    renderWithProviders(<AppointmentsPage />);
+    await waitFor(() => expect(screen.getByLabelText("Ver consultas do paciente")).not.toBeDisabled());
+    const user = userEvent.setup();
+    await user.selectOptions(screen.getByLabelText("Ver consultas do paciente"), "p1");
+
+    expect(await screen.findByText("4/5")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Link de avaliação/ })).not.toBeInTheDocument();
   });
 });

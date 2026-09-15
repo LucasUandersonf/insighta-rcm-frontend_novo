@@ -1345,6 +1345,10 @@ export interface Appointment {
   // (backend).
   addon_offered_procedure: string | null;
   addon_declined: boolean | null;
+  // "Mapa de Dados Insighta" — Domínio Pós-atendimento (Onda 2), pilar
+  // Satisfação/NPS. Ver DECISÃO em 052_appointment_satisfaction.sql
+  // (backend).
+  visit_satisfaction_score: number | null;
 }
 
 export type VisitIntentTag = "rotina" | "retorno" | "avaliacao" | "urgencia";
@@ -1369,6 +1373,18 @@ export interface AppointmentUpdateRequest {
   visit_intent_tag?: VisitIntentTag | null;
   addon_offered_procedure?: string | null;
   addon_declined?: boolean | null;
+}
+
+// POST /appointments/{id}/satisfaction-link (app/schemas/appointment_satisfaction.py)
+export interface SatisfactionLinkResponse {
+  url: string;
+  expires_at: string;
+}
+
+// GET /public/satisfaction/{token} — sem autenticação (o paciente acessa
+// o link direto). Ver DECISÃO em 052_appointment_satisfaction.sql (backend).
+export interface PublicSatisfactionStatusResponse {
+  valid: boolean;
 }
 
 // Item de GET /appointments (listagem paginada por período) — espelha
