@@ -1011,6 +1011,10 @@ export interface NetworkBenchmarkMetric {
   your_sample: number;
   network_median: number | null; // null = amostra de clínicas na base ainda insuficiente
   cohort_size: number;
+  // "Mapa de Dados Insighta" — pilar Comparativo & rede: True quando o
+  // cohort foi filtrado pela MESMA especialidade da clínica. Ver
+  // DECISÃO em 048_network_benchmark_specialty_segment.sql (backend).
+  cohort_is_segmented_by_specialty: boolean;
 }
 
 export interface NetworkBenchmark {
