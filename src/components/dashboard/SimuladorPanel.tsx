@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Sparkles } from "lucide-react";
 import { BentoCard, BentoGrid } from "@/components/ui/BentoGrid";
@@ -75,6 +75,17 @@ function SliderControl({
 export function SimuladorPanel() {
   const [denialReduction, setDenialReduction] = useState(40);
   const [noShowReduction, setNoShowReduction] = useState(20);
+  // "Junta Técnica Insighta" (reavaliação de mercado da Sala de
+  // Comando): "59% dos gestores querem aumentar faturamento, mas só
+  // 24% operam com estratégia estruturada [...] a maioria de quem
+  // abriria o Simulador não tem hipótese pronta pra testar — precisa
+  // de sugestão, não de slider em branco". O cenário recomendado já
+  // existia (botão "Cenário recomendado"), mas exigia o usuário notar
+  // e clicar nele — os sliders abriam com um chute de produto fixo
+  // (40%/20%), não com o dado real. `userAdjusted` só desliga o
+  // auto-preenchimento DEPOIS que a pessoa mexe em algum slider com a
+  // própria mão — a partir daí a escolha dela vale mais que a sugestão.
+  const [userAdjusted, setUserAdjusted] = useState(false);
   const { dateFrom, dateTo } = useDateWindow(30);
 
   const summaryQuery = useQuery({
@@ -90,6 +101,22 @@ export function SimuladorPanel() {
     queryFn: () => apiClient.get<NetworkBenchmark>("/api/v1/analytics/network-benchmark"),
   });
 
+  const denialMetric = benchmarkQuery.data?.metrics.find((m) => m.key === "denial");
+  const noShowMetric = benchmarkQuery.data?.metrics.find((m) => m.key === "no_show");
+  const recommendedDenialPct = recommendedReductionPct(denialMetric?.your_rate ?? null, denialMetric?.network_median ?? null);
+  const recommendedNoShowPct = recommendedReductionPct(noShowMetric?.your_rate ?? null, noShowMetric?.network_median ?? null);
+  const hasRecommendation = recommendedDenialPct !== null || recommendedNoShowPct !== null;
+
+  // Pré-carrega os sliders com o cenário recomendado assim que o dado
+  // chega — só na primeira vez (antes de `userAdjusted`), pra não
+  // sobrescrever um ajuste manual que a pessoa já tenha feito enquanto
+  // o benchmark de rede ainda carregava.
+  useEffect(() => {
+    if (userAdjusted) return;
+    if (recommendedDenialPct !== null) setDenialReduction(recommendedDenialPct);
+    if (recommendedNoShowPct !== null) setNoShowReduction(recommendedNoShowPct);
+  }, [recommendedDenialPct, recommendedNoShowPct, userAdjusted]);
+
   if (summaryQuery.isLoading || agendaQuery.isLoading) return <LoadingState variant="cards" rows={2} />;
   if (summaryQuery.error) return <ErrorState message={getApiErrorMessage(summaryQuery.error)} />;
   if (agendaQuery.error) return <ErrorState message={getApiErrorMessage(agendaQuery.error)} />;
@@ -98,12 +125,6 @@ export function SimuladorPanel() {
   const denialBase = summaryQuery.data.denial_at_risk_value;
   const noShowBase = agendaQuery.data.estimated_revenue_at_risk;
   const projectedTotal = denialBase * (denialReduction / 100) + noShowBase * (noShowReduction / 100);
-
-  const denialMetric = benchmarkQuery.data?.metrics.find((m) => m.key === "denial");
-  const noShowMetric = benchmarkQuery.data?.metrics.find((m) => m.key === "no_show");
-  const recommendedDenialPct = recommendedReductionPct(denialMetric?.your_rate ?? null, denialMetric?.network_median ?? null);
-  const recommendedNoShowPct = recommendedReductionPct(noShowMetric?.your_rate ?? null, noShowMetric?.network_median ?? null);
-  const hasRecommendation = recommendedDenialPct !== null || recommendedNoShowPct !== null;
 
   function applyRecommendedScenario() {
     if (recommendedDenialPct !== null) setDenialReduction(recommendedDenialPct);
@@ -142,13 +163,19 @@ export function SimuladorPanel() {
         <SliderControl
           label="Reduzir valor em risco de glosa"
           value={denialReduction}
-          onChange={setDenialReduction}
+          onChange={(v) => {
+            setDenialReduction(v);
+            setUserAdjusted(true);
+          }}
           baseValue={denialBase}
         />
         <SliderControl
           label="Reduzir valor em risco de falta"
           value={noShowReduction}
-          onChange={setNoShowReduction}
+          onChange={(v) => {
+            setNoShowReduction(v);
+            setUserAdjusted(true);
+          }}
           baseValue={noShowBase}
         />
       </BentoCard>
