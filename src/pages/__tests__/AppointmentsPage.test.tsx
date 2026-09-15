@@ -104,3 +104,30 @@ describe("AppointmentsPage — cadastro e edição de dados do paciente", () => 
     expect(screen.queryByRole("button", { name: /Dados de contato/ })).not.toBeInTheDocument();
   });
 });
+
+// "Mapa de Dados Insighta" — Domínio Pós-atendimento (Onda 1): motivo
+// estruturado do agendamento.
+describe("AppointmentsPage — nova consulta com motivo estruturado", () => {
+  it("envia visit_intent_tag ao agendar uma nova consulta", async () => {
+    mockGet([makePatient()]);
+    vi.mocked(apiClient.post).mockResolvedValue({ id: "a1", patient_id: "p1", no_show_risk_level: null });
+    const user = userEvent.setup();
+
+    renderWithProviders(<AppointmentsPage />);
+    await waitFor(() => expect(screen.getByRole("button", { name: /Nova consulta/ })).not.toBeDisabled());
+    await user.click(screen.getByRole("button", { name: /Nova consulta/ }));
+
+    await user.selectOptions(await screen.findByLabelText(/Paciente/), "p1");
+    await user.type(screen.getByLabelText(/Data e horário/), "2026-06-01T10:00");
+    await user.selectOptions(screen.getByLabelText(/Motivo do agendamento/), "urgencia");
+
+    await user.click(screen.getByRole("button", { name: "Agendar consulta" }));
+
+    await waitFor(() =>
+      expect(apiClient.post).toHaveBeenCalledWith(
+        "/api/v1/appointments",
+        expect.objectContaining({ visit_intent_tag: "urgencia" })
+      )
+    );
+  });
+});

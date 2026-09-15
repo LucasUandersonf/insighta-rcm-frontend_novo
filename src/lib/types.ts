@@ -1292,7 +1292,13 @@ export interface Appointment {
   visit_type: string | null;
   cancellation_reason: string | null;
   booking_channel: string | null;
+  // "Mapa de Dados Insighta" — Domínio Pós-atendimento (Onda 1): motivo
+  // estruturado do agendamento (complementa visit_type). Ver DECISÃO em
+  // 046_appointment_visit_intent.sql (backend).
+  visit_intent_tag: VisitIntentTag | null;
 }
+
+export type VisitIntentTag = "rotina" | "retorno" | "avaliacao" | "urgencia";
 
 export interface AppointmentCreateRequest {
   patient_id: string;
@@ -1301,6 +1307,7 @@ export interface AppointmentCreateRequest {
   duration_minutes?: number | null;
   procedure_code?: string | null;
   cid_code?: string | null;
+  visit_intent_tag?: VisitIntentTag | null;
 }
 
 // Item de GET /appointments (listagem paginada por período) — espelha

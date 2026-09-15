@@ -19,12 +19,21 @@ import type {
   PatientUpdateRequest,
   PreferredTimeWindow,
   Professional,
+  VisitIntentTag,
 } from "@/lib/types";
 
 const PREFERRED_TIME_WINDOW_LABELS: Record<PreferredTimeWindow, string> = {
   manha: "Manhã",
   tarde: "Tarde",
   noite: "Noite",
+};
+
+// "Mapa de Dados Insighta" — Domínio Pós-atendimento (Onda 1).
+const VISIT_INTENT_TAG_LABELS: Record<VisitIntentTag, string> = {
+  rotina: "Rotina",
+  retorno: "Retorno",
+  avaliacao: "Avaliação",
+  urgencia: "Urgência",
 };
 
 function formatDateTime(iso: string): string {
@@ -286,6 +295,7 @@ function CreateAppointmentModal({
   const [durationMinutes, setDurationMinutes] = useState("30");
   const [procedureCode, setProcedureCode] = useState("");
   const [cidCode, setCidCode] = useState("");
+  const [visitIntentTag, setVisitIntentTag] = useState("");
 
   const mutation = useMutation({
     mutationFn: (payload: AppointmentCreateRequest) => apiClient.post<Appointment>("/api/v1/appointments", payload),
@@ -308,6 +318,7 @@ function CreateAppointmentModal({
     setDurationMinutes("30");
     setProcedureCode("");
     setCidCode("");
+    setVisitIntentTag("");
     onClose();
   }
 
@@ -320,6 +331,7 @@ function CreateAppointmentModal({
       duration_minutes: durationMinutes ? Number(durationMinutes) : null,
       procedure_code: procedureCode || null,
       cid_code: cidCode || null,
+      visit_intent_tag: (visitIntentTag || null) as VisitIntentTag | null,
     });
   }
 
@@ -366,6 +378,18 @@ function CreateAppointmentModal({
           <TextField label="Código do procedimento" value={procedureCode} onChange={(e) => setProcedureCode(e.target.value)} />
           <TextField label="CID" value={cidCode} onChange={(e) => setCidCode(e.target.value)} />
         </div>
+        <SelectField
+          label="Motivo do agendamento (opcional)"
+          value={visitIntentTag}
+          onChange={(e) => setVisitIntentTag(e.target.value)}
+        >
+          <option value="">Não informado</option>
+          {Object.entries(VISIT_INTENT_TAG_LABELS).map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </SelectField>
 
         <div className="mt-5 flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={resetAndClose}>
