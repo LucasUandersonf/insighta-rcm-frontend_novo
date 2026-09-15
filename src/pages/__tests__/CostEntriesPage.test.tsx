@@ -57,6 +57,8 @@ describe("CostEntriesPage — épico F3.1 do Plano Diretor", () => {
         is_active: true,
         availability: [],
         planned_absences: [],
+        contract_type: null,
+        commission_rate: null,
       },
     ];
     mockGetByPath({ "/api/v1/professionals": professionals, "/api/v1/cost-entries": entriesPage });

@@ -1273,6 +1273,11 @@ export interface PlannedAbsenceCreateRequest {
   reason?: string | null;
 }
 
+// "Mapa de Dados Insighta" — Domínio Profissional (Onda 2): arranjos de
+// contratação mais comuns entre profissionais de saúde no Brasil. Ver
+// DECISÃO em 051_professional_contract_commission.sql (backend).
+export type ContractType = "clt" | "pj" | "autonomo" | "cooperado";
+
 export interface Professional {
   id: string;
   full_name: string;
@@ -1281,12 +1286,16 @@ export interface Professional {
   is_active: boolean;
   availability: AvailabilityBlock[];
   planned_absences: PlannedAbsence[];
+  contract_type: ContractType | null;
+  commission_rate: number | null;
 }
 
 export interface ProfessionalCreateRequest {
   full_name: string;
   professional_registry?: string | null;
   specialty?: string | null;
+  contract_type?: ContractType | null;
+  commission_rate?: number | null;
   availability: AvailabilityBlock[];
 }
 
@@ -1298,6 +1307,8 @@ export interface ProfessionalUpdateRequest {
   professional_registry?: string | null;
   specialty?: string | null;
   is_active?: boolean;
+  contract_type?: ContractType | null;
+  commission_rate?: number | null;
   availability?: AvailabilityBlock[];
 }
 

@@ -5,7 +5,7 @@ import { CalendarClock, Pencil, Plus, X } from "lucide-react";
 import { Panel, EmptyState, LoadingState, ErrorState } from "@/components/ui/Panel";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
-import { TextField } from "@/components/ui/FormField";
+import { TextField, SelectField } from "@/components/ui/FormField";
 import { FilterBar } from "@/components/ui/FilterBar";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Badge } from "@/components/ui/Badge";
@@ -15,12 +15,21 @@ import { getApiErrorMessage } from "@/lib/query-client";
 import { useToast } from "@/context/ToastContext";
 import type {
   AvailabilityBlock,
+  ContractType,
   PlannedAbsence,
   PlannedAbsenceCreateRequest,
   Professional,
   ProfessionalCreateRequest,
   ProfessionalUpdateRequest,
 } from "@/lib/types";
+
+// "Mapa de Dados Insighta" — Domínio Profissional (Onda 2).
+const CONTRACT_TYPE_LABELS: Record<ContractType, string> = {
+  clt: "CLT",
+  pj: "PJ",
+  autonomo: "Autônomo",
+  cooperado: "Cooperado",
+};
 
 // Módulo trazido de volta especificamente para isto — ver DECISÃO em
 // app/services/normalization_service.py::_get_or_create_professional
@@ -228,10 +237,19 @@ interface FormState {
   full_name: string;
   professional_registry: string;
   specialty: string;
+  contract_type: "" | ContractType;
+  commission_rate: string;
   availability: AvailabilityBlock[];
 }
 
-const EMPTY_FORM: FormState = { full_name: "", professional_registry: "", specialty: "", availability: [] };
+const EMPTY_FORM: FormState = {
+  full_name: "",
+  professional_registry: "",
+  specialty: "",
+  contract_type: "",
+  commission_rate: "",
+  availability: [],
+};
 
 function ProfessionalFormModal({
   isOpen,
@@ -251,6 +269,8 @@ function ProfessionalFormModal({
           full_name: editing.full_name,
           professional_registry: editing.professional_registry ?? "",
           specialty: editing.specialty ?? "",
+          contract_type: editing.contract_type ?? "",
+          commission_rate: editing.commission_rate === null ? "" : String(editing.commission_rate),
           availability: editing.availability,
         }
       : EMPTY_FORM
@@ -289,6 +309,8 @@ function ProfessionalFormModal({
       full_name: form.full_name,
       professional_registry: form.professional_registry || null,
       specialty: form.specialty || null,
+      contract_type: (form.contract_type || null) as ContractType | null,
+      commission_rate: form.commission_rate === "" ? null : Number(form.commission_rate),
       availability: form.availability,
     };
     if (editing) {
@@ -322,6 +344,31 @@ function ProfessionalFormModal({
           onChange={(e) => setForm((f) => ({ ...f, specialty: e.target.value }))}
           placeholder="Ex: Clínico Geral"
         />
+
+        <div className="grid grid-cols-1 gap-x-3 sm:grid-cols-2">
+          <SelectField
+            label="Tipo de contrato (opcional)"
+            value={form.contract_type}
+            onChange={(e) => setForm((f) => ({ ...f, contract_type: e.target.value as "" | ContractType }))}
+          >
+            <option value="">Não informado</option>
+            {Object.entries(CONTRACT_TYPE_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </SelectField>
+          <TextField
+            label="Comissão sobre faturamento (%, opcional)"
+            type="number"
+            min={0}
+            max={100}
+            step="0.01"
+            value={form.commission_rate}
+            onChange={(e) => setForm((f) => ({ ...f, commission_rate: e.target.value }))}
+            placeholder="Ex: 35"
+          />
+        </div>
 
         <AvailabilityEditor
           blocks={form.availability}
@@ -428,6 +475,7 @@ export function ProfessionalsPage() {
                 <th className="px-4 py-2.5 font-medium">Nome</th>
                 <th className="px-4 py-2.5 font-medium">Registro</th>
                 <th className="px-4 py-2.5 font-medium">Especialidade</th>
+                <th className="px-4 py-2.5 font-medium">Contrato</th>
                 <th className="px-4 py-2.5 font-medium">Grade semanal</th>
                 <th className="px-4 py-2.5 font-medium">Status</th>
                 <th className="px-4 py-2.5 font-medium"></th>
@@ -446,6 +494,11 @@ export function ProfessionalsPage() {
                   <td className="px-4 py-2.5 text-ink">{p.full_name}</td>
                   <td className="px-4 py-2.5 text-ink-muted">{p.professional_registry ?? "—"}</td>
                   <td className="px-4 py-2.5 text-ink-muted">{p.specialty ?? "—"}</td>
+                  <td className="px-4 py-2.5 text-ink-muted">
+                    {p.contract_type
+                      ? `${CONTRACT_TYPE_LABELS[p.contract_type]}${p.commission_rate !== null ? ` · ${p.commission_rate}%` : ""}`
+                      : "—"}
+                  </td>
                   <td className="px-4 py-2.5">
                     {p.availability.length === 0 ? (
                       <span className="text-2xs text-pending">Sem grade configurada</span>
