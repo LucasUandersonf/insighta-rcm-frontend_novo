@@ -1085,6 +1085,11 @@ export interface OportunidadeItem {
   gap_value: number;
   gap_pct: number;
   estimated_monthly_opportunity: number;
+  // "Junta Técnica Insighta" — contagem regressiva de preparação para
+  // renovação (120 dias), só presente quando este convênio tem um
+  // contrato vencendo sem sucessor cadastrado.
+  days_until_contract_renewal: number | null;
+  contract_valid_until: string | null;
 }
 
 export interface Oportunidades {
