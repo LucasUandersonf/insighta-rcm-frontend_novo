@@ -1,6 +1,6 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { CalendarCheck, Plus, UserRound } from "lucide-react";
+import { CalendarCheck, Pencil, Plus, UserRound, UserPlus } from "lucide-react";
 import { Panel, EmptyState, LoadingState, ErrorState } from "@/components/ui/Panel";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
@@ -10,7 +10,22 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useToast } from "@/context/ToastContext";
-import type { Appointment, AppointmentCreateRequest, PaginatedResponse, Patient, Professional } from "@/lib/types";
+import type {
+  Appointment,
+  AppointmentCreateRequest,
+  PaginatedResponse,
+  Patient,
+  PatientCreateRequest,
+  PatientUpdateRequest,
+  PreferredTimeWindow,
+  Professional,
+} from "@/lib/types";
+
+const PREFERRED_TIME_WINDOW_LABELS: Record<PreferredTimeWindow, string> = {
+  manha: "Manhã",
+  tarde: "Tarde",
+  noite: "Noite",
+};
 
 function formatDateTime(iso: string): string {
   return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).format(
@@ -24,6 +39,231 @@ const STATUS_LABELS: Record<string, string> = {
   cancelled: "Cancelada",
   no_show: "Faltou",
 };
+
+/**
+ * "Mapa de Dados Insighta" — Domínio Paciente (Onda 1): não existia
+ * NENHUMA tela de cadastro manual de paciente no frontend (o dado hoje
+ * chega só pela ingestão em massa) — sem isso, os 4 campos relacionais
+ * novos (indicação, consentimento, horário preferido, CEP) nunca
+ * teriam onde ser capturados de verdade, mesmo com o backend pronto.
+ * Cabe aqui, ao lado do seletor de paciente já existente, exatamente o
+ * ponto de captura que o mapa de dados recomenda: "cadastro ou primeiro
+ * agendamento".
+ */
+function NewPatientModal({
+  isOpen,
+  onClose,
+  patients,
+  onCreated,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  patients: Patient[];
+  onCreated: (patientId: string) => void;
+}) {
+  const queryClient = useQueryClient();
+  const { showSuccess, showError } = useToast();
+  const [fullName, setFullName] = useState("");
+  const [cpf, setCpf] = useState("");
+  const [referredBy, setReferredBy] = useState("");
+  const [consent, setConsent] = useState(false);
+  const [preferredWindow, setPreferredWindow] = useState("");
+  const [zipCode, setZipCode] = useState("");
+
+  const mutation = useMutation({
+    mutationFn: (payload: PatientCreateRequest) => apiClient.post<Patient>("/api/v1/patients", payload),
+    onSuccess: (created) => {
+      queryClient.invalidateQueries({ queryKey: ["patients"] });
+      showSuccess(`Paciente ${created.full_name} cadastrado.`);
+      onCreated(created.id);
+      resetAndClose();
+    },
+    onError: (err) => showError(getApiErrorMessage(err)),
+  });
+
+  function resetAndClose() {
+    setFullName("");
+    setCpf("");
+    setReferredBy("");
+    setConsent(false);
+    setPreferredWindow("");
+    setZipCode("");
+    onClose();
+  }
+
+  function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    mutation.mutate({
+      full_name: fullName,
+      cpf: cpf || null,
+      referred_by_patient_id: referredBy || null,
+      communication_consent: consent,
+      preferred_time_window: (preferredWindow || null) as PreferredTimeWindow | null,
+      zip_code: zipCode || null,
+    });
+  }
+
+  return (
+    <Modal title="Novo paciente" isOpen={isOpen} onClose={resetAndClose}>
+      <form onSubmit={handleSubmit}>
+        <TextField label="Nome completo" required value={fullName} onChange={(e) => setFullName(e.target.value)} />
+        <TextField label="CPF (opcional)" value={cpf} onChange={(e) => setCpf(e.target.value)} />
+        {patients.length > 0 && (
+          <SelectField label="Quem indicou (opcional)" value={referredBy} onChange={(e) => setReferredBy(e.target.value)}>
+            <option value="">Ninguém indicou / não sei</option>
+            {patients.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.full_name}
+              </option>
+            ))}
+          </SelectField>
+        )}
+        <div className="grid grid-cols-2 gap-3">
+          <SelectField
+            label="Horário preferido (opcional)"
+            value={preferredWindow}
+            onChange={(e) => setPreferredWindow(e.target.value)}
+          >
+            <option value="">Não informado</option>
+            {Object.entries(PREFERRED_TIME_WINDOW_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </SelectField>
+          <TextField label="CEP (opcional)" value={zipCode} onChange={(e) => setZipCode(e.target.value)} placeholder="00000-000" />
+        </div>
+        <label className="mb-4 flex items-start gap-2 text-xs leading-relaxed text-ink-muted">
+          <input
+            type="checkbox"
+            checked={consent}
+            onChange={(e) => setConsent(e.target.checked)}
+            className="mt-0.5 accent-[hsl(var(--accent))]"
+          />
+          Paciente autoriza contato (WhatsApp/e-mail) para campanhas e lembretes — LGPD, base legal de consentimento.
+        </label>
+        <div className="mt-1 flex justify-end gap-2">
+          <Button type="button" variant="secondary" onClick={resetAndClose}>
+            Cancelar
+          </Button>
+          <Button type="submit" disabled={mutation.isPending || !fullName}>
+            {mutation.isPending ? "Cadastrando..." : "Cadastrar paciente"}
+          </Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+/**
+ * "Mapa de Dados Insighta" — Domínio Paciente (Onda 1): os 4 campos
+ * relacionais raramente são conhecidos no primeiro cadastro (um
+ * paciente que veio de uma reimportação em massa nunca teve chance de
+ * informar CEP/horário preferido). Este modal completa depois, via
+ * PATCH /patients/{id} — mesmo contrato parcial de
+ * ProfessionalUpdateRequest: só o que for alterado aqui é de fato
+ * enviado, nunca limpa um campo já preenchido de volta pra vazio.
+ */
+function EditPatientContactModal({
+  isOpen,
+  onClose,
+  patient,
+  patients,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  patient: Patient | null;
+  patients: Patient[];
+}) {
+  const queryClient = useQueryClient();
+  const { showSuccess, showError } = useToast();
+  const [referredBy, setReferredBy] = useState("");
+  const [consent, setConsent] = useState<"" | "true" | "false">("");
+  const [preferredWindow, setPreferredWindow] = useState("");
+  const [zipCode, setZipCode] = useState("");
+
+  useEffect(() => {
+    if (!patient) return;
+    setReferredBy(patient.referred_by_patient_id ?? "");
+    setConsent(patient.communication_consent === null ? "" : patient.communication_consent ? "true" : "false");
+    setPreferredWindow(patient.preferred_time_window ?? "");
+    setZipCode(patient.zip_code ?? "");
+  }, [patient]);
+
+  const mutation = useMutation({
+    mutationFn: (payload: PatientUpdateRequest) => apiClient.patch<Patient>(`/api/v1/patients/${patient!.id}`, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["patients"] });
+      showSuccess("Dados do paciente atualizados.");
+      onClose();
+    },
+    onError: (err) => showError(getApiErrorMessage(err)),
+  });
+
+  function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    if (!patient) return;
+    mutation.mutate({
+      referred_by_patient_id: referredBy || null,
+      communication_consent: consent === "" ? null : consent === "true",
+      preferred_time_window: (preferredWindow || null) as PreferredTimeWindow | null,
+      zip_code: zipCode || null,
+    });
+  }
+
+  if (!patient) return null;
+
+  return (
+    <Modal title={`Dados de contato — ${patient.full_name}`} isOpen={isOpen} onClose={onClose}>
+      <form onSubmit={handleSubmit}>
+        {patients.length > 0 && (
+          <SelectField label="Quem indicou (opcional)" value={referredBy} onChange={(e) => setReferredBy(e.target.value)}>
+            <option value="">Ninguém indicou / não sei</option>
+            {patients
+              .filter((p) => p.id !== patient.id)
+              .map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.full_name}
+                </option>
+              ))}
+          </SelectField>
+        )}
+        <div className="grid grid-cols-2 gap-3">
+          <SelectField
+            label="Horário preferido (opcional)"
+            value={preferredWindow}
+            onChange={(e) => setPreferredWindow(e.target.value)}
+          >
+            <option value="">Não informado</option>
+            {Object.entries(PREFERRED_TIME_WINDOW_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </SelectField>
+          <TextField label="CEP (opcional)" value={zipCode} onChange={(e) => setZipCode(e.target.value)} placeholder="00000-000" />
+        </div>
+        <SelectField
+          label="Autoriza contato (LGPD)"
+          value={consent}
+          onChange={(e) => setConsent(e.target.value as "" | "true" | "false")}
+        >
+          <option value="">Ainda não perguntado</option>
+          <option value="true">Sim, autoriza</option>
+          <option value="false">Não, recusou</option>
+        </SelectField>
+        <div className="mt-1 flex justify-end gap-2">
+          <Button type="button" variant="secondary" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button type="submit" disabled={mutation.isPending}>
+            {mutation.isPending ? "Salvando..." : "Salvar"}
+          </Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
 
 function CreateAppointmentModal({
   isOpen,
@@ -143,6 +383,8 @@ function CreateAppointmentModal({
 export function AppointmentsPage() {
   const [selectedPatientId, setSelectedPatientId] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isNewPatientModalOpen, setIsNewPatientModalOpen] = useState(false);
+  const [isEditPatientModalOpen, setIsEditPatientModalOpen] = useState(false);
 
   // GET /api/v1/patients devolve o envelope paginado
   // {items, total, limit, offset} (ver app/api/v1/endpoints/patients.py) —
@@ -179,27 +421,52 @@ export function AppointmentsPage() {
         title="Consultas"
         subtitle="Agenda de consultas por paciente e risco preditivo de falta."
         action={
-          <Button onClick={() => setIsModalOpen(true)} disabled={patientsLoading || (patients ?? []).length === 0} className="flex items-center gap-1.5">
-            <Plus size={14} />
-            Nova consulta
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              onClick={() => setIsNewPatientModalOpen(true)}
+              disabled={patientsLoading}
+              className="flex items-center gap-1.5"
+            >
+              <UserPlus size={14} />
+              Novo paciente
+            </Button>
+            <Button onClick={() => setIsModalOpen(true)} disabled={patientsLoading || (patients ?? []).length === 0} className="flex items-center gap-1.5">
+              <Plus size={14} />
+              Nova consulta
+            </Button>
+          </div>
         }
       />
 
-      <div className="max-w-xs">
-        <SelectField
-          label="Ver consultas do paciente"
-          value={selectedPatientId}
-          onChange={(e) => setSelectedPatientId(e.target.value)}
-          disabled={patientsLoading}
-        >
-          <option value="">Selecione um paciente</option>
-          {(patients ?? []).map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.full_name}
-            </option>
-          ))}
-        </SelectField>
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="max-w-xs flex-1">
+          <SelectField
+            label="Ver consultas do paciente"
+            value={selectedPatientId}
+            onChange={(e) => setSelectedPatientId(e.target.value)}
+            disabled={patientsLoading}
+          >
+            <option value="">Selecione um paciente</option>
+            {(patients ?? []).map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.full_name}
+              </option>
+            ))}
+          </SelectField>
+        </div>
+        {selectedPatientId && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="xs"
+            className="mb-4 flex items-center gap-1.5"
+            onClick={() => setIsEditPatientModalOpen(true)}
+          >
+            <Pencil size={12} />
+            Dados de contato
+          </Button>
+        )}
       </div>
 
       <Panel
@@ -254,6 +521,20 @@ export function AppointmentsPage() {
         patients={patients ?? []}
         professionals={professionals ?? []}
         preselectedPatientId={selectedPatientId}
+      />
+
+      <NewPatientModal
+        isOpen={isNewPatientModalOpen}
+        onClose={() => setIsNewPatientModalOpen(false)}
+        patients={patients ?? []}
+        onCreated={(patientId) => setSelectedPatientId(patientId)}
+      />
+
+      <EditPatientContactModal
+        isOpen={isEditPatientModalOpen}
+        onClose={() => setIsEditPatientModalOpen(false)}
+        patient={(patients ?? []).find((p) => p.id === selectedPatientId) ?? null}
+        patients={patients ?? []}
       />
     </div>
   );

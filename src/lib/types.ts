@@ -1197,6 +1197,8 @@ export interface ApiErrorBody {
 }
 
 // --- Pacientes (app/schemas/patient.py) ---
+export type PreferredTimeWindow = "manha" | "tarde" | "noite";
+
 export interface Patient {
   id: string;
   full_name: string;
@@ -1204,12 +1206,32 @@ export interface Patient {
   birth_date: string | null;
   acquisition_source: string | null;
   created_at: string;
+  // "Mapa de Dados Insighta" — Domínio Paciente (Onda 1): o paciente
+  // relacional, não só transacional. Ver DECISÃO em
+  // 045_patient_relationship_fields.sql (backend).
+  referred_by_patient_id: string | null;
+  communication_consent: boolean | null;
+  preferred_time_window: PreferredTimeWindow | null;
+  zip_code: string | null;
 }
 
 export interface PatientCreateRequest {
   full_name: string;
   cpf?: string | null;
   birth_date?: string | null;
+  referred_by_patient_id?: string | null;
+  communication_consent?: boolean | null;
+  preferred_time_window?: PreferredTimeWindow | null;
+  zip_code?: string | null;
+}
+
+// PATCH /patients/{id} — completa depois os campos relacionais que
+// raramente são conhecidos no primeiro cadastro.
+export interface PatientUpdateRequest {
+  referred_by_patient_id?: string | null;
+  communication_consent?: boolean | null;
+  preferred_time_window?: PreferredTimeWindow | null;
+  zip_code?: string | null;
 }
 
 // --- Profissionais (app/schemas/professional.py) ---
