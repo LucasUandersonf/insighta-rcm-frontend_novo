@@ -954,6 +954,39 @@ export interface InactivePatients {
   inactive_after_days: number;
 }
 
+// RFM completo (GET /analytics/patient-rfm) — Gaps Dossiê Insighta RCM,
+// item 4. Recência e Frequência já existiam espalhadas (InactivePatients,
+// score VIP); Valor era a dimensão que faltava pra virar RFM de verdade.
+// Ver DECISÃO completa em app/services/rfm_engine.py (backend).
+export type RfmSegment = "campeoes" | "fieis" | "nao_pode_perder" | "em_risco" | "novos" | "hibernando" | "precisa_atencao";
+
+export interface RfmSegmentCount {
+  segment: RfmSegment;
+  patient_count: number;
+}
+
+export interface RfmPatientItem {
+  patient_id: string;
+  full_name: string;
+  days_since_last_appointment: number;
+  visit_count: number;
+  total_revenue: number;
+  recency_score: number;
+  frequency_score: number;
+  monetary_score: number;
+  segment: RfmSegment;
+}
+
+export interface RfmResponse {
+  as_of: string;
+  total_patients: number;
+  // Sempre os 7 segmentos, mesmo com contagem 0 — taxonomia fixa.
+  segment_counts: RfmSegmentCount[];
+  // Só quem precisa de ação agora (nao_pode_perder/em_risco), maior
+  // receita histórica primeiro — nunca a base inteira.
+  action_items: RfmPatientItem[];
+}
+
 // Raio-X da Receita, frente "Prevendo movimentos" — risco de abandono
 // ANTECIPADO (GET /analytics/early-churn-risk), antes do piso fixo de 1
 // ano que vira InactivePatientItem. Diferente dele, o limiar é o

@@ -23,6 +23,7 @@ import { UpsellFunnelPanel } from "@/components/dashboard/UpsellFunnelPanel";
 import { OportunidadesPanel } from "@/components/dashboard/OportunidadesPanel";
 import { PatientDemographicsPanel } from "@/components/dashboard/PatientDemographicsPanel";
 import { PatientRevenueParetoPanel } from "@/components/dashboard/PatientRevenueParetoPanel";
+import { PatientRfmPanel } from "@/components/dashboard/PatientRfmPanel";
 import { ProfitabilityPanel } from "@/components/dashboard/ProfitabilityPanel";
 import { SimuladorPanel } from "@/components/dashboard/SimuladorPanel";
 import { CapitalDecisionPanel } from "@/components/dashboard/CapitalDecisionPanel";
@@ -302,6 +303,12 @@ export function ExecutiveOverviewPage() {
                   está indo embora", em estágios diferentes (ver DECISÃO
                   em smart_insights_engine.py::_early_churn_insight). */}
               <EarlyChurnRiskPanel />
+              {/* Gaps Dossiê Insighta RCM, item 4 — RFM completo. Mesma
+                  âncora das duas listas acima (quem precisa de
+                  reativação), agora com a dimensão de Valor combinada:
+                  não é só "quem sumiu", é "quem sumiu E valia mais a
+                  pena reativar primeiro". */}
+              <PatientRfmPanel />
             </section>
 
             {/* Achado do Dossiê Insighta RCM — mesma seção de
