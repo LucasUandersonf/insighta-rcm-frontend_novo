@@ -1030,6 +1030,35 @@ export interface CostEntryCreateRequest {
   professional_id?: string | null;
 }
 
+// Achado do Dossiê Insighta RCM — Onda 2 do Plano de Ação: fecha o
+// pipeline de escrita de core.marketing_spend (POST /marketing-spend).
+// Mesmo vocabulário fechado do CHECK constraint no backend (a tabela
+// nasceu pensada pra webhook/ETL do Meta/Google Ads; Instagram/Facebook
+// entram como "meta_ads", é o mesmo anunciante).
+export type MarketingSpendSource = "meta_ads" | "google_ads";
+
+export interface MarketingSpend {
+  id: string;
+  source: MarketingSpendSource;
+  campaign_id: string;
+  campaign_name: string | null;
+  spend_date: string;
+  amount_spent: number;
+  impressions: number | null;
+  clicks: number | null;
+  created_at: string;
+}
+
+export interface MarketingSpendCreateRequest {
+  source: MarketingSpendSource;
+  campaign_id: string;
+  campaign_name?: string | null;
+  spend_date: string;
+  amount_spent: number;
+  impressions?: number | null;
+  clicks?: number | null;
+}
+
 // Raio-X da Receita, frente "Gestão eficiente" — CAC e receita média por
 // paciente (proxy de LTV), por campanha/canal de marketing (GET
 // /analytics/marketing-channels). `cac` usa o período do dashboard;

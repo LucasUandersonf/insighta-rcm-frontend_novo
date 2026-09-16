@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   Layers,
   ListChecks,
+  Megaphone,
   Network,
   Plug,
   Receipt,
@@ -86,6 +87,9 @@ export const NAV_ITEMS: NavItem[] = [
   // Épico F3.1 do Plano Diretor ("Módulo de custos e margem real") —
   // mesmo RBAC de /lotes acima.
   { to: "/custos", label: "Custos", icon: Receipt, roles: ["owner", "admin", "financeiro", "auditor"] },
+  // Achado do Dossiê Insighta RCM — Onda 2 do Plano de Ação: mesmo RBAC
+  // de /custos acima.
+  { to: "/marketing-spend", label: "Gasto de marketing", icon: Megaphone, roles: ["owner", "admin", "financeiro", "auditor"] },
 ];
 
 // Administração da plataforma — só owner/admin (mesmo RBAC do backend
