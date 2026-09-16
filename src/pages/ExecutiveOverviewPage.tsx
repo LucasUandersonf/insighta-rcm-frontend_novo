@@ -16,6 +16,7 @@ import { HealthScoreWidget } from "@/components/dashboard/HealthScoreWidget";
 import { SatisfactionSummaryWidget } from "@/components/dashboard/SatisfactionSummaryWidget";
 import { NetworkBenchmarkPanel } from "@/components/dashboard/NetworkBenchmarkPanel";
 import { MarketingChannelsPanel } from "@/components/dashboard/MarketingChannelsPanel";
+import { UpsellFunnelPanel } from "@/components/dashboard/UpsellFunnelPanel";
 import { OportunidadesPanel } from "@/components/dashboard/OportunidadesPanel";
 import { ProfitabilityPanel } from "@/components/dashboard/ProfitabilityPanel";
 import { SimuladorPanel } from "@/components/dashboard/SimuladorPanel";
@@ -313,6 +314,10 @@ export function ExecutiveOverviewPage() {
           <div className="space-y-4">
             <ProfitabilityPanel dateFrom={dateFrom} dateTo={dateTo} />
             <MarketingChannelsPanel dateFrom={dateFrom} dateTo={dateTo} />
+            {/* "Equilíbrio Insighta" (Balanced Scorecard, perna Cliente) —
+                complementa o CAC/LTV acima (aquisição) com expansão de
+                receita em paciente já conquistado. */}
+            <UpsellFunnelPanel dateFrom={dateFrom} dateTo={dateTo} />
           </div>
         </TabPanel>
       )}

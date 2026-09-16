@@ -960,6 +960,25 @@ export interface MarketingChannels {
   items: MarketingChannelItem[]; // ordenado por gasto, maior primeiro
 }
 
+// "Equilíbrio Insighta" (Balanced Scorecard, perna Cliente) — funil de
+// upsell (GET /analytics/upsell-funnel). Complementa MarketingChannels
+// (aquisição) olhando expansão de receita em paciente já conquistado.
+export interface UpsellFunnelItem {
+  procedure_name: string;
+  offered_count: number;
+  accepted_count: number;
+  acceptance_rate: number | null;
+}
+
+export interface UpsellFunnel {
+  period_start: string;
+  period_end: string;
+  total_offered: number;
+  total_accepted: number;
+  overall_acceptance_rate: number | null;
+  items: UpsellFunnelItem[]; // ordenado por offered_count, maior primeiro
+}
+
 // Candidatos a recontato (GET /analytics/recall-candidates) — a lista
 // real por trás dos botões de ação dos insights de agenda que apontam
 // pra um dia da semana ou um profissional específico (ver DECISÃO em
