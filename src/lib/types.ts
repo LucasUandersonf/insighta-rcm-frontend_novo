@@ -467,6 +467,17 @@ export interface WeekdayCancellationRateBucket {
   cancellation_rate: number | null;
 }
 
+// Onda 5 do Plano de Ação, item 15 — em quais dias da semana a agenda
+// mais recebe encaixe (Appointment.is_squeeze_in). Denominador = só
+// agendamentos com is_squeeze_in INFORMADO (não null) — ver DECISÃO em
+// AnalyticsRepository.weekday_squeeze_in_breakdown no backend.
+export interface WeekdaySqueezeInBucket {
+  weekday: number;
+  squeeze_in_count: number;
+  total_informed: number;
+  squeeze_in_rate: number | null;
+}
+
 // "Lista vermelha" — ranking de pacientes por taxa de falta no período
 // (ver AnalyticsRepository.top_no_show_patients no backend). Só entram
 // pacientes com amostra mínima e pelo menos 1 falta.
@@ -501,6 +512,7 @@ export interface AgendaMetrics {
   weekday_histogram: WeekdayBucket[];
   weekday_no_show_rates: WeekdayNoShowRateBucket[];
   weekday_cancellation_rates: WeekdayCancellationRateBucket[];
+  weekday_squeeze_in_rates: WeekdaySqueezeInBucket[];
   no_show_risk_breakdown: NoShowRiskBucket[];
   estimated_revenue_at_risk: number;
   patient_no_show_ranking: PatientNoShowRankingItem[];
@@ -1625,6 +1637,9 @@ export interface Appointment {
   // Satisfação/NPS. Ver DECISÃO em 052_appointment_satisfaction.sql
   // (backend).
   visit_satisfaction_score: number | null;
+  // Onda 5 do Plano de Ação, item 15. Ver DECISÃO em
+  // 056_appointment_squeeze_in.sql (backend).
+  is_squeeze_in: boolean | null;
 }
 
 export type VisitIntentTag = "rotina" | "retorno" | "avaliacao" | "urgencia";
@@ -1637,6 +1652,7 @@ export interface AppointmentCreateRequest {
   procedure_code?: string | null;
   cid_code?: string | null;
   visit_intent_tag?: VisitIntentTag | null;
+  is_squeeze_in?: boolean | null;
 }
 
 // PATCH /appointments/{id} (app/schemas/appointment.py::AppointmentUpdateRequest)
@@ -1649,6 +1665,7 @@ export interface AppointmentUpdateRequest {
   visit_intent_tag?: VisitIntentTag | null;
   addon_offered_procedure?: string | null;
   addon_declined?: boolean | null;
+  is_squeeze_in?: boolean | null;
 }
 
 // POST /appointments/{id}/satisfaction-link (app/schemas/appointment_satisfaction.py)
@@ -1679,6 +1696,35 @@ export interface AppointmentListItem {
   visit_type: string | null;
   booking_channel: string | null;
   cancellation_reason: string | null;
+}
+
+// --- Lista de espera (app/schemas/waitlist_entry.py) — Onda 5 do Plano
+// de Ação, item 16. Ver DECISÃO completa em 057_waitlist_entries.sql
+// (backend): 3 estados só (aguardando/agendado/cancelado), sem canal de
+// notificação automática.
+export type WaitlistStatus = "aguardando" | "agendado" | "cancelado";
+
+export interface WaitlistEntry {
+  id: string;
+  patient_id: string;
+  patient_full_name: string;
+  professional_id: string | null;
+  professional_full_name: string | null;
+  procedure_code: string | null;
+  preferred_time_window: PreferredTimeWindow | null;
+  notes: string | null;
+  status: WaitlistStatus;
+  resolved_appointment_id: string | null;
+  created_at: string;
+  resolved_at: string | null;
+}
+
+export interface WaitlistEntryCreateRequest {
+  patient_id: string;
+  professional_id?: string | null;
+  procedure_code?: string | null;
+  preferred_time_window?: PreferredTimeWindow | null;
+  notes?: string | null;
 }
 
 // --- Parser Inteligente de Contratos: Convênios (app/schemas/insurance_company.py) ---

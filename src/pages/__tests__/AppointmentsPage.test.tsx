@@ -51,6 +51,7 @@ function makeAppointment(overrides: Partial<Appointment> = {}): Appointment {
     visit_satisfaction_score: null,
     addon_offered_procedure: null,
     addon_declined: null,
+    is_squeeze_in: null,
     ...overrides,
   };
 }

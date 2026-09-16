@@ -93,6 +93,28 @@ describe("DashboardPage — deep-link de convênio (item 4 do roadmap)", () => {
     expect(apiClient.get).toHaveBeenCalledWith(expect.stringContaining("insurance_plan_id=plan-123"));
   });
 
+  it("Onda 5 item 17 — escolher um dia específico refaz a busca com date_from == date_to", async () => {
+    vi.mocked(useAuth).mockReturnValue({ user: { tenant_id: "t1", sub: "u1", role: "owner" } } as unknown as ReturnType<
+      typeof useAuth
+    >);
+    vi.mocked(apiClient.get).mockImplementation((url: string) => {
+      if (url.includes("high-risk")) return Promise.resolve(billingPage([makeBilling()]) as never);
+      if (url.includes("executive-summary")) return Promise.resolve(SUMMARY as never);
+      return Promise.reject(new Error(`URL não mockada: ${url}`));
+    });
+
+    renderWithProviders(<DashboardPage />);
+    await waitFor(() => expect(screen.getByText("Faturamentos de alto risco")).toBeInTheDocument());
+
+    const dayInput = screen.getByLabelText("Ver um dia específico");
+    await userEvent.type(dayInput, "2026-03-15");
+
+    await waitFor(() =>
+      expect(apiClient.get).toHaveBeenCalledWith(expect.stringContaining("date_from=2026-03-15&date_to=2026-03-15"))
+    );
+    expect(screen.getByRole("button", { name: "Voltar à janela" })).toBeInTheDocument();
+  });
+
   it("clicar em 'Limpar filtro' refaz a busca sem o parâmetro", async () => {
     vi.mocked(useAuth).mockReturnValue({ user: { tenant_id: "t1", sub: "u1", role: "owner" } } as unknown as ReturnType<
       typeof useAuth

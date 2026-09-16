@@ -7,6 +7,7 @@ import {
   ClipboardList,
   FileText,
   Gauge,
+  Hourglass,
   LayoutDashboard,
   Layers,
   ListChecks,
@@ -58,6 +59,9 @@ export const NAV_ITEMS: NavItem[] = [
   // drill-down, não ponto de entrada padrão.
   { to: "/painel", label: "Painel", icon: LayoutDashboard },
   { to: "/appointments", label: "Consultas", icon: CalendarCheck },
+  // Onda 5 do Plano de Ação, item 16 — mesmo RBAC amplo de /appointments
+  // (rotina de recepção, leitura aberta a financeiro/auditor).
+  { to: "/waitlist", label: "Lista de espera", icon: Hourglass },
   // Épico F1.3 do Plano Diretor: aberto a QUALQUER papel (sem `roles`
   // aqui, de propósito) — mesmo RBAC de GET /insight-outcomes/mine.
   { to: "/meus-insights", label: "Meus insights", icon: ClipboardList },

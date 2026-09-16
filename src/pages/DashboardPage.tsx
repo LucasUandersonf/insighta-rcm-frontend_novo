@@ -94,7 +94,7 @@ export function DashboardPage() {
   const canViewBillingQueue = !!user && CAN_VIEW_BILLING_QUEUE.includes(user.role);
 
   const [offset, setOffset] = useState(0);
-  const { windowDays, setWindowDays, dateFrom, dateTo } = useDateWindow(7);
+  const { windowDays, setWindowDays, singleDay, setSingleDay, dateFrom, dateTo } = useDateWindow(7);
   const [activeTab, setActiveTab] = useState<"faturamento" | "agenda">("faturamento");
 
   // Deep-link do botão de ação da Sala de Comando (ver DECISÃO em
@@ -156,7 +156,34 @@ export function DashboardPage() {
         icon={Gauge}
         title="Painel"
         subtitle="Auditoria de dado primário — todo indicador disponível, sem narrativa em torno dele. Para o diagnóstico em texto, veja a Sala de Comando."
-        action={canViewAnalytics && <PeriodWindowSelect windowDays={windowDays} onChange={setWindowDays} />}
+        action={
+          canViewAnalytics && (
+            <div className="flex items-center gap-2">
+              {/* Onda 5 do Plano de Ação, item 17 — "ver um dia
+                  específico": o backend já aceita date_from == date_to
+                  em qualquer /analytics/*, só faltava a UI. Sobrepõe a
+                  janela de N dias enquanto preenchido. */}
+              <input
+                type="date"
+                aria-label="Ver um dia específico"
+                value={singleDay ?? ""}
+                onChange={(e) => setSingleDay(e.target.value || null)}
+                className="rounded-md border border-border-subtle bg-canvas-surface px-3 py-2 text-sm text-ink shadow-card transition-colors hover:border-border focus:border-accent"
+              />
+              {singleDay ? (
+                <button
+                  type="button"
+                  onClick={() => setSingleDay(null)}
+                  className="rounded-md border border-border-subtle px-3 py-2 text-sm text-ink-muted transition-colors hover:bg-canvas-raised"
+                >
+                  Voltar à janela
+                </button>
+              ) : (
+                <PeriodWindowSelect windowDays={windowDays} onChange={setWindowDays} />
+              )}
+            </div>
+          )
+        }
       />
 
       {!canViewAnalytics && !canViewBillingQueue && (
