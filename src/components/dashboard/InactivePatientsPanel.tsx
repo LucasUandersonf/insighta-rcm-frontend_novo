@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { UserRoundX } from "lucide-react";
 import { BentoCard } from "@/components/ui/BentoGrid";
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/Panel";
+import { RegisterOutreachButton } from "@/components/dashboard/RegisterOutreachButton";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import type { InactivePatients } from "@/lib/types";
@@ -81,13 +82,23 @@ export function InactivePatientsPanel() {
         {data.items.map((patient) => (
           <div
             key={patient.patient_id}
-            className="flex items-center justify-between gap-3 rounded-md border border-border-hairline bg-canvas-raised/40 px-3 py-2"
+            className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border-hairline bg-canvas-raised/40 px-3 py-2"
           >
             <span className="truncate text-sm text-ink">{patient.full_name}</span>
-            <span className="shrink-0 text-right text-xs text-ink-faint">
-              última consulta {formatDate(patient.last_appointment_at)}
-              <span className="ml-1.5 font-medium text-pending">({formatDaysInactive(patient.days_since_last_appointment)})</span>
-            </span>
+            <div className="flex shrink-0 items-center gap-2">
+              <span className="text-right text-xs text-ink-faint">
+                última consulta {formatDate(patient.last_appointment_at)}
+                <span className="ml-1.5 font-medium text-pending">({formatDaysInactive(patient.days_since_last_appointment)})</span>
+                {patient.last_outreach_at && (
+                  <span className="ml-1.5 text-revenue">· já contatado</span>
+                )}
+              </span>
+              <RegisterOutreachButton
+                patientId={patient.patient_id}
+                patientName={patient.full_name}
+                invalidateKeys={[["analytics", "inactive-patients"]]}
+              />
+            </div>
           </div>
         ))}
       </div>

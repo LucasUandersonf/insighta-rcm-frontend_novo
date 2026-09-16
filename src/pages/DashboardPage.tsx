@@ -10,6 +10,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { PeriodWindowSelect } from "@/components/ui/PeriodWindowSelect";
 import { Tabs, TabPanel } from "@/components/ui/Tabs";
 import { AgendaAnalyticsPanel } from "@/components/dashboard/AgendaAnalyticsPanel";
+import { AgendaPlanPriorityPanel } from "@/components/dashboard/AgendaPlanPriorityPanel";
 import { DataFreshnessBanner } from "@/components/dashboard/DataFreshnessBanner";
 import { PlanLossRankingPanel } from "@/components/dashboard/PlanLossRankingPanel";
 import { ContractUtilizationPanel } from "@/components/dashboard/ContractUtilizationPanel";
@@ -424,7 +425,13 @@ export function DashboardPage() {
 
       {canViewAnalytics && activeTab === "agenda" && (
       <TabPanel id="agenda" groupId={TABS_GROUP}>
-        <AgendaAnalyticsPanel dateFrom={dateFrom} dateTo={dateTo} />
+        <div className="space-y-4">
+          <AgendaAnalyticsPanel dateFrom={dateFrom} dateTo={dateTo} />
+          {/* Onda 4 do Plano de Ação, item 14 — evolução do PMR: não só
+              reporta prazo de recebimento por convênio, recomenda qual
+              priorizar ao encaixar um paciente novo. */}
+          <AgendaPlanPriorityPanel dateFrom={dateFrom} dateTo={dateTo} />
+        </div>
       </TabPanel>
       )}
     </div>

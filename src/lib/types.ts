@@ -567,6 +567,25 @@ export interface PaymentLagByPlan {
   items: PaymentLagByPlanItem[]; // ordenado por avg_days_to_receive desc, pior primeiro
 }
 
+// Recomendação de priorização de agenda por convênio (GET
+// /analytics/agenda-plan-priority) — Onda 4 do Plano de Ação, item 14:
+// evolução do PMR acima. Só convênio de verdade entra (nunca
+// particular) — ver DECISÃO em AnalyticsService.get_agenda_plan_priority
+// (backend) sobre a combinação por ranking (não fórmula ponderada).
+export interface AgendaPlanPriorityItem {
+  insurance_plan_id: string;
+  insurance_plan_name: string;
+  avg_days_to_receive: number;
+  total_loss: number;
+  priority_rank: number; // 1 = prioridade máxima pra encaixar
+}
+
+export interface AgendaPlanPriority {
+  period_start: string;
+  period_end: string;
+  items: AgendaPlanPriorityItem[]; // ordenado por priority_rank crescente
+}
+
 // Previsão de receita futura da agenda (GET /analytics/agenda-revenue-forecast)
 // — pedido direto do usuário: "a receita da agenda... conseguimos tirar
 // metade do faturamento futuro da clínica". Período FUTURO por padrão
@@ -946,6 +965,31 @@ export interface InactivePatientItem {
   full_name: string;
   last_appointment_at: string;
   days_since_last_appointment: number;
+  // Onda 4 do Plano de Ação, item 12 ("CRM de verdade") — null =
+  // ninguém tentou reativar este paciente ainda.
+  last_outreach_at: string | null;
+  last_outreach_outcome: PatientOutreachOutcome | null;
+}
+
+// Registro de contato de reativação (POST/GET
+// /patients/{id}/outreach-log) — Onda 4 do Plano de Ação, item 12.
+export type PatientOutreachChannel = "telefone" | "whatsapp" | "sms" | "email" | "presencial";
+export type PatientOutreachOutcome = "contatado" | "sem_resposta" | "agendou" | "recusou";
+
+export interface PatientOutreachLogCreateRequest {
+  channel: PatientOutreachChannel;
+  outcome: PatientOutreachOutcome;
+  notes?: string | null;
+}
+
+export interface PatientOutreachLogEntry {
+  id: string;
+  patient_id: string;
+  channel: PatientOutreachChannel;
+  outcome: PatientOutreachOutcome;
+  notes: string | null;
+  created_by: string;
+  created_at: string;
 }
 
 export interface InactivePatients {
@@ -975,6 +1019,10 @@ export interface RfmPatientItem {
   frequency_score: number;
   monetary_score: number;
   segment: RfmSegment;
+  // Onda 4 do Plano de Ação, item 12 ("CRM de verdade") — null =
+  // ninguém tentou reativar este paciente ainda.
+  last_outreach_at: string | null;
+  last_outreach_outcome: PatientOutreachOutcome | null;
 }
 
 export interface RfmResponse {

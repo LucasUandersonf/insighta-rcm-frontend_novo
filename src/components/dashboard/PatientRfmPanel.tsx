@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Panel } from "@/components/ui/Panel";
 import { Badge, type BadgeTone } from "@/components/ui/Badge";
+import { RegisterOutreachButton } from "@/components/dashboard/RegisterOutreachButton";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import type { RfmResponse, RfmSegment } from "@/lib/types";
@@ -78,16 +79,24 @@ export function PatientRfmPanel() {
               {data.action_items.map((item) => (
                 <div
                   key={item.patient_id}
-                  className="flex items-center justify-between gap-3 rounded-md border border-border-hairline bg-canvas-raised/40 px-3 py-2"
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border-hairline bg-canvas-raised/40 px-3 py-2"
                 >
                   <div className="flex min-w-0 items-center gap-2">
                     <span className="truncate text-sm text-ink">{item.full_name}</span>
                     <Badge tone={SEGMENT_CONFIG[item.segment].tone}>{SEGMENT_CONFIG[item.segment].label}</Badge>
                   </div>
-                  <span className="shrink-0 text-right text-xs text-ink-faint">
-                    {formatCurrencyCompact(item.total_revenue)} históricos
-                    <span className="ml-1.5">· sumiu há {item.days_since_last_appointment}d</span>
-                  </span>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <span className="text-right text-xs text-ink-faint">
+                      {formatCurrencyCompact(item.total_revenue)} históricos
+                      <span className="ml-1.5">· sumiu há {item.days_since_last_appointment}d</span>
+                      {item.last_outreach_at && <span className="ml-1.5 text-revenue">· já contatado</span>}
+                    </span>
+                    <RegisterOutreachButton
+                      patientId={item.patient_id}
+                      patientName={item.full_name}
+                      invalidateKeys={[["analytics", "patient-rfm"]]}
+                    />
+                  </div>
                 </div>
               ))}
             </div>

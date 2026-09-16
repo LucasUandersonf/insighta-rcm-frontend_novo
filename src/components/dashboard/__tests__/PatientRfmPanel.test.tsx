@@ -46,6 +46,8 @@ describe("PatientRfmPanel", () => {
           frequency_score: 1,
           monetary_score: 4,
           segment: "nao_pode_perder",
+          last_outreach_at: null,
+          last_outreach_outcome: null,
         },
         {
           patient_id: "p2",
@@ -57,6 +59,8 @@ describe("PatientRfmPanel", () => {
           frequency_score: 4,
           monetary_score: 3,
           segment: "em_risco",
+          last_outreach_at: "2026-01-05T00:00:00Z",
+          last_outreach_outcome: "agendou",
         },
       ],
     };
@@ -70,5 +74,11 @@ describe("PatientRfmPanel", () => {
 
     const names = screen.getAllByText(/Paciente (Não Pode Perder|Em Risco)/).map((el) => el.textContent);
     expect(names).toEqual(["Paciente Não Pode Perder", "Paciente Em Risco"]);
+
+    // Onda 4 do Plano de Ação, item 12 — botão de registrar contato em
+    // cada linha da fila de ação + selo "já contatado" só pra quem já
+    // recebeu um contato.
+    expect(screen.getAllByRole("button", { name: /Registrar contato/ })).toHaveLength(2);
+    expect(screen.getByText("· já contatado")).toBeInTheDocument();
   });
 });
