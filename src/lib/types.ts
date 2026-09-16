@@ -1241,6 +1241,11 @@ export interface Patient {
   communication_consent: boolean | null;
   preferred_time_window: PreferredTimeWindow | null;
   zip_code: string | null;
+  // "Equilíbrio Insighta" (Balanced Scorecard, perna Cliente) — score de
+  // paciente de alto valor, calculado só em GET /patients (nunca em
+  // create/update, que devolvem o default False/[]).
+  is_vip: boolean;
+  vip_reasons: string[];
 }
 
 export interface PatientCreateRequest {

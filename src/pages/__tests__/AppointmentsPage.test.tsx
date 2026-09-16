@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { AppointmentsPage } from "@/pages/AppointmentsPage";
 import { apiClient } from "@/lib/api-client";
@@ -23,6 +23,8 @@ function makePatient(overrides: Partial<Patient> = {}): Patient {
     communication_consent: null,
     preferred_time_window: null,
     zip_code: null,
+    is_vip: false,
+    vip_reasons: [],
     ...overrides,
   };
 }
@@ -155,6 +157,38 @@ describe("AppointmentsPage — nova consulta com motivo estruturado", () => {
         expect.objectContaining({ visit_intent_tag: "urgencia" })
       )
     );
+  });
+});
+
+// "Equilíbrio Insighta" (Balanced Scorecard, perna Cliente, mecanismo 1)
+// — a recepção precisa ver o selo de paciente de alto valor no exato
+// momento de marcar a consulta, não só depois de criar (ver DECISÃO em
+// PatientService.list_patients_paginated, backend).
+describe("AppointmentsPage — aviso de paciente de alto valor (VIP)", () => {
+  it("marca o paciente VIP na lista e mostra o motivo assim que ele é selecionado", async () => {
+    mockGet([
+      makePatient({ id: "p1", full_name: "Maria VIP", is_vip: true, vip_reasons: ["frequente", "indicou outros pacientes"] }),
+      makePatient({ id: "p2", full_name: "João Comum", is_vip: false, vip_reasons: [] }),
+    ]);
+    const user = userEvent.setup();
+
+    renderWithProviders(<AppointmentsPage />);
+    await waitFor(() => expect(screen.getByRole("button", { name: /Nova consulta/ })).not.toBeDisabled());
+    await user.click(screen.getByRole("button", { name: /Nova consulta/ }));
+
+    const dialog = screen.getByRole("dialog");
+    const patientSelect = await within(dialog).findByLabelText(/^Paciente/);
+    expect(within(dialog).getByRole("option", { name: "Maria VIP ★ VIP" })).toBeInTheDocument();
+    expect(within(dialog).getByRole("option", { name: "João Comum" })).toBeInTheDocument();
+    expect(within(dialog).queryByText(/Paciente de alto valor/)).not.toBeInTheDocument();
+
+    await user.selectOptions(patientSelect, "p1");
+    expect(
+      await within(dialog).findByText(/Paciente de alto valor \(frequente, indicou outros pacientes\)/)
+    ).toBeInTheDocument();
+
+    await user.selectOptions(patientSelect, "p2");
+    await waitFor(() => expect(within(dialog).queryByText(/Paciente de alto valor/)).not.toBeInTheDocument());
   });
 });
 

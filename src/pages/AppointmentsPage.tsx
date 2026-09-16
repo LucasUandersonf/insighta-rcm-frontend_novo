@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { CalendarCheck, Copy, Pencil, Plus, Star, UserRound, UserPlus } from "lucide-react";
+import { CalendarCheck, Copy, Crown, Pencil, Plus, Star, UserRound, UserPlus } from "lucide-react";
 import { Panel, EmptyState, LoadingState, ErrorState } from "@/components/ui/Panel";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
@@ -303,6 +303,7 @@ function CreateAppointmentModal({
   const [procedureCode, setProcedureCode] = useState("");
   const [cidCode, setCidCode] = useState("");
   const [visitIntentTag, setVisitIntentTag] = useState("");
+  const selectedPatient = patients.find((p) => p.id === patientId) ?? null;
 
   const mutation = useMutation({
     mutationFn: (payload: AppointmentCreateRequest) => apiClient.post<Appointment>("/api/v1/appointments", payload),
@@ -352,9 +353,20 @@ function CreateAppointmentModal({
           {patients.map((p) => (
             <option key={p.id} value={p.id}>
               {p.full_name}
+              {p.is_vip ? " ★ VIP" : ""}
             </option>
           ))}
         </SelectField>
+        {/* "Equilíbrio Insighta" (Balanced Scorecard, perna Cliente) — a
+            recepção é avisada em tempo real, no exato momento de marcar,
+            não só depois de criar a consulta (ver DECISÃO em
+            PatientService.list_patients_paginated, backend). */}
+        {selectedPatient?.is_vip && (
+          <p className="mb-4 -mt-2 flex items-center gap-1.5 rounded-md border border-tier1/25 bg-tier1-bg px-3 py-2 text-xs text-ink">
+            <Crown aria-hidden size={13} className="text-tier1" />
+            Paciente de alto valor ({selectedPatient.vip_reasons.join(", ")}) — capricha no atendimento.
+          </p>
+        )}
 
         <SelectField label="Profissional (opcional)" value={professionalId} onChange={(e) => setProfessionalId(e.target.value)}>
           <option value="">Sem profissional definido</option>
