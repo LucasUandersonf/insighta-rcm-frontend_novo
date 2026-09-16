@@ -58,6 +58,15 @@ export function AgendaAnalyticsPanel({ dateFrom, dateTo }: { dateFrom: string; d
     dia: WEEKDAY_SHORT_LABELS[b.weekday],
     taxa: b.total_appointments >= WEEKDAY_RATE_MIN_SAMPLE && b.no_show_rate !== null ? Math.round(b.no_show_rate * 100) : 0,
   }));
+  // Achado do Dossiê Insighta RCM — mesmo espírito de weekdayRateData
+  // acima, agora para cancelamento (dias com mais cancelamento).
+  const weekdayCancellationData = (data?.weekday_cancellation_rates ?? []).map((b) => ({
+    dia: WEEKDAY_SHORT_LABELS[b.weekday],
+    taxa:
+      b.total_appointments >= WEEKDAY_RATE_MIN_SAMPLE && b.cancellation_rate !== null
+        ? Math.round(b.cancellation_rate * 100)
+        : 0,
+  }));
   const professionalData = (data?.professionals ?? []).map((p) => ({
     nome: p.full_name,
     ocupacao: Math.round(p.utilization_rate * 100),
@@ -177,6 +186,40 @@ export function AgendaAnalyticsPanel({ dateFrom, dateTo }: { dateFrom: string; d
                 </BarChart>
               </ResponsiveContainer>
               <p className="mt-1 text-2xs text-ink-faint">Dias com poucos atendimentos resolvidos (menos de 3) aparecem zerados — amostra insuficiente para uma taxa confiável.</p>
+            </div>
+          )}
+        </Panel>
+      </div>
+
+      <div className="lg:col-span-12">
+        <Panel
+          title="Taxa de cancelamento por dia da semana"
+          subtitle="Achado do Dossiê Insighta RCM — mesma leitura do gráfico de falta acima, agora para cancelamento: fração de cancelamentos dentro dos atendimentos com desfecho conhecido (concluído, faltou ou cancelou) de cada dia"
+          updatedAt={dataUpdatedAt || null}
+        >
+          {isLoading && <LoadingState />}
+          {error && <ErrorState message={getApiErrorMessage(error)} />}
+          {!isLoading && !error && weekdayCancellationData.length === 0 && (
+            <EmptyState icon={<CalendarX2 size={17} strokeWidth={1.5} />} message="Sem atendimentos com desfecho conhecido nesta janela para calcular taxa de cancelamento." />
+          )}
+          {!isLoading && weekdayCancellationData.length > 0 && (
+            <div className="p-4">
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={weekdayCancellationData} margin={{ top: 4, right: 8, left: 8, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="barGradientWeekdayCancellation" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={palette.bar} stopOpacity={0.95} />
+                      <stop offset="100%" stopColor={palette.bar} stopOpacity={0.55} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke={palette.grid} vertical={false} />
+                  <XAxis dataKey="dia" {...axisStyle} tickLine={false} axisLine={{ stroke: palette.grid }} />
+                  <YAxis {...axisStyle} tickLine={false} axisLine={false} allowDecimals={false} unit="%" />
+                  <Tooltip content={<ChartTooltip />} cursor={{ fill: palette.grid, opacity: 0.35 }} formatter={(v: number) => `${v}%`} />
+                  <Bar dataKey="taxa" fill="url(#barGradientWeekdayCancellation)" radius={[3, 3, 0, 0]} name="Taxa de cancelamento" animationDuration={700} />
+                </BarChart>
+              </ResponsiveContainer>
+              <p className="mt-1 text-2xs text-ink-faint">Dias com poucos atendimentos (menos de 3) aparecem zerados — amostra insuficiente para uma taxa confiável.</p>
             </div>
           )}
         </Panel>

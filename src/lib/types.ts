@@ -456,6 +456,17 @@ export interface WeekdayNoShowRateBucket {
   no_show_rate: number | null;
 }
 
+// Achado do Dossiê Insighta RCM — mesmo espírito de
+// WeekdayNoShowRateBucket, agora para cancelamento. Denominador =
+// desfecho TERMINAL (completed/no_show/cancelled) — 'scheduled' nunca
+// entra. cancellation_rate é null quando total_appointments é 0.
+export interface WeekdayCancellationRateBucket {
+  weekday: number;
+  cancellation_count: number;
+  total_appointments: number;
+  cancellation_rate: number | null;
+}
+
 // "Lista vermelha" — ranking de pacientes por taxa de falta no período
 // (ver AnalyticsRepository.top_no_show_patients no backend). Só entram
 // pacientes com amostra mínima e pelo menos 1 falta.
@@ -489,6 +500,7 @@ export interface AgendaMetrics {
   // principal da tela.
   weekday_histogram: WeekdayBucket[];
   weekday_no_show_rates: WeekdayNoShowRateBucket[];
+  weekday_cancellation_rates: WeekdayCancellationRateBucket[];
   no_show_risk_breakdown: NoShowRiskBucket[];
   estimated_revenue_at_risk: number;
   patient_no_show_ranking: PatientNoShowRankingItem[];
