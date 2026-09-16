@@ -1302,6 +1302,19 @@ export interface Patient {
   vip_reasons: string[];
 }
 
+// Achado do Dossiê Insighta RCM — aniversariantes do mês (GET /patients/birthdays)
+export interface PatientBirthdayItem {
+  patient_id: string;
+  full_name: string;
+  birth_date: string;
+  communication_consent: boolean | null;
+}
+
+export interface PatientBirthdays {
+  month: number;
+  items: PatientBirthdayItem[]; // ordenado por dia do mês
+}
+
 export interface PatientCreateRequest {
   full_name: string;
   cpf?: string | null;

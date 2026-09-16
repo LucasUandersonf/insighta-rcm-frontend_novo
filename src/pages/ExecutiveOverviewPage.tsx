@@ -6,6 +6,7 @@ import { ErrorState, LoadingState } from "@/components/ui/Panel";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PeriodWindowSelect } from "@/components/ui/PeriodWindowSelect";
 import { Tabs, TabPanel } from "@/components/ui/Tabs";
+import { BirthdaysPanel } from "@/components/dashboard/BirthdaysPanel";
 import { DataFreshnessBanner } from "@/components/dashboard/DataFreshnessBanner";
 import { EarlyChurnRiskPanel } from "@/components/dashboard/EarlyChurnRiskPanel";
 import { ExecutiveAgendaSummary } from "@/components/dashboard/ExecutiveAgendaSummary";
@@ -298,6 +299,15 @@ export function ExecutiveOverviewPage() {
                   está indo embora", em estágios diferentes (ver DECISÃO
                   em smart_insights_engine.py::_early_churn_insight). */}
               <EarlyChurnRiskPanel />
+            </section>
+
+            {/* Achado do Dossiê Insighta RCM — mesma seção de
+                relacionamento com o paciente das duas listas acima,
+                só que olhando pra quem fica (retenção proativa), não
+                pra quem já foi embora. */}
+            <section id="aniversariantes">
+              <h2 className="mb-3 text-sm font-medium text-ink">Aniversariantes do mês</h2>
+              <BirthdaysPanel />
             </section>
           </div>
         </TabPanel>
