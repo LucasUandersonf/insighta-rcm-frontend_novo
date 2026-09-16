@@ -4,6 +4,7 @@ import { AlertOctagon, CalendarX2, Users } from "lucide-react";
 import { Panel, EmptyState, LoadingState, ErrorState } from "@/components/ui/Panel";
 import { NarrativeInsight } from "@/components/ui/NarrativeInsight";
 import { ChartTooltip } from "@/components/dashboard/ChartTooltip";
+import { ReturnRatePanel } from "@/components/dashboard/ReturnRatePanel";
 import { useTheme } from "@/context/ThemeContext";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
@@ -85,6 +86,10 @@ export function AgendaAnalyticsPanel({ dateFrom, dateTo }: { dateFrom: string; d
 
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+      <div className="lg:col-span-12">
+        <ReturnRatePanel dateFrom={dateFrom} dateTo={dateTo} />
+      </div>
+
       <div className="lg:col-span-6">
         <Panel title="Horários de pico" subtitle="Volume de consultas por hora do dia" updatedAt={dataUpdatedAt || null}>
           {isLoading && <LoadingState />}

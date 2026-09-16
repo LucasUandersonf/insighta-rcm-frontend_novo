@@ -849,6 +849,17 @@ export interface DataFreshness {
   stalest_at: string | null;
 }
 
+// Achado do Dossiê Insighta RCM — taxa de retorno de pacientes
+// (GET /analytics/return-rate), a partir de Appointment.visit_type.
+export interface ReturnRate {
+  period_start: string;
+  period_end: string;
+  return_rate: PeriodKpi | null; // null = nenhum atendimento com visit_type informado no período
+  return_count: number;
+  first_visit_count: number;
+  untagged_count: number; // concluídos sem visit_type informado — nunca soma no denominador da taxa
+}
+
 // Carteira de pacientes inativos (GET /analytics/inactive-patients) — Sala de Comando
 export interface InactivePatientItem {
   patient_id: string;
