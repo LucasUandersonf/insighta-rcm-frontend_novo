@@ -48,6 +48,9 @@ function mockAllEndpoints() {
     if (url.includes("smart-insights")) {
       return Promise.resolve({ period_start: "2026-01-01", period_end: "2026-01-07", insights: [] } as never);
     }
+    if (url.includes("daily-summary")) {
+      return Promise.resolve({ date: "2026-01-07", headline: "Nenhum atendimento agendado pra hoje ainda.", sentences: ["Nenhum atendimento agendado pra hoje ainda."] } as never);
+    }
     if (url.includes("priority-queue")) {
       return Promise.resolve({ period_start: "2026-01-01", period_end: "2026-01-07", items: [], total_considered: 0 } as never);
     }

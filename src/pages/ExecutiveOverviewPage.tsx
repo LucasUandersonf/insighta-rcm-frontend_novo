@@ -8,6 +8,7 @@ import { PeriodWindowSelect } from "@/components/ui/PeriodWindowSelect";
 import { Tabs, TabPanel } from "@/components/ui/Tabs";
 import { AverageTicketPanel } from "@/components/dashboard/AverageTicketPanel";
 import { BirthdaysPanel } from "@/components/dashboard/BirthdaysPanel";
+import { DailySummaryPanel } from "@/components/dashboard/DailySummaryPanel";
 import { DataFreshnessBanner } from "@/components/dashboard/DataFreshnessBanner";
 import { EarlyChurnRiskPanel } from "@/components/dashboard/EarlyChurnRiskPanel";
 import { ExecutiveAgendaSummary } from "@/components/dashboard/ExecutiveAgendaSummary";
@@ -136,6 +137,11 @@ export function ExecutiveOverviewPage() {
 
       {activeTab === "hoje" && (
         <TabPanel id="hoje" groupId={TABS_GROUP}>
+          {/* Onda 6 do Plano de Ação, item 18 — primeira coisa que
+              aparece na aba "Hoje", antes da fila de ação. */}
+          <div className="mb-4">
+            <DailySummaryPanel />
+          </div>
           <PriorityQueuePanel
             dateFrom={dateFrom}
             dateTo={dateTo}

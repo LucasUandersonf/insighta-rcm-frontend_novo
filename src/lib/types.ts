@@ -971,6 +971,17 @@ export interface PatientDemographics {
   unknown_age_count: number;
 }
 
+// Resumo diário narrado (GET /analytics/daily-summary) — Onda 6 do
+// Plano de Ação, item 18. Não é uma fonte de dado nova: compõe em texto
+// corrido o que já existe espalhado em telas diferentes, sempre para
+// HOJE. Ver DECISÃO completa em AnalyticsService.get_daily_summary
+// (backend).
+export interface DailySummary {
+  date: string;
+  headline: string;
+  sentences: string[];
+}
+
 // Carteira de pacientes inativos (GET /analytics/inactive-patients) — Sala de Comando
 export interface InactivePatientItem {
   patient_id: string;
