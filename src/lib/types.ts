@@ -825,6 +825,15 @@ export interface HealthScore {
   trend: HealthScoreTrend | null; // null = ainda não há fotografia de referência (base nova)
 }
 
+// "Equilíbrio Insighta" (Balanced Scorecard, perna Cliente) — resumo de
+// NPS/satisfação pós-atendimento (GET /analytics/satisfaction-summary).
+export interface SatisfactionSummary {
+  average_score: PeriodKpi | null; // null = nenhuma avaliação recebida ainda no período
+  response_count: number;
+  distribution: Record<string, number>; // {"1": n, "2": n, "3": n, "4": n, "5": n}
+  window_days: number;
+}
+
 // Carteira de pacientes inativos (GET /analytics/inactive-patients) — Sala de Comando
 export interface InactivePatientItem {
   patient_id: string;

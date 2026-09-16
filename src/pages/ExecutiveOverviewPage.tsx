@@ -13,6 +13,7 @@ import { InactivePatientsPanel } from "@/components/dashboard/InactivePatientsPa
 import { PriorityQueuePanel } from "@/components/dashboard/PriorityQueuePanel";
 import { SmartInsightsFeed } from "@/components/dashboard/SmartInsightsFeed";
 import { HealthScoreWidget } from "@/components/dashboard/HealthScoreWidget";
+import { SatisfactionSummaryWidget } from "@/components/dashboard/SatisfactionSummaryWidget";
 import { NetworkBenchmarkPanel } from "@/components/dashboard/NetworkBenchmarkPanel";
 import { MarketingChannelsPanel } from "@/components/dashboard/MarketingChannelsPanel";
 import { OportunidadesPanel } from "@/components/dashboard/OportunidadesPanel";
@@ -139,6 +140,12 @@ export function ExecutiveOverviewPage() {
                 feed abaixo (que troca de manchete conforme o que dói mais
                 na semana): é um estado que se acompanha ao longo do tempo. */}
             <HealthScoreWidget />
+
+            {/* "Equilíbrio Insighta" (Balanced Scorecard, perna Cliente) —
+                mesmo espírito de widget persistente do HealthScoreWidget
+                acima, só que olhando satisfação do paciente em vez de
+                saúde financeira. */}
+            <SatisfactionSummaryWidget />
 
             {/* Redesenho "menos BI, mais consultor": o diagnóstico em texto
                 vem PRIMEIRO — é a resposta direta à pergunta "onde estamos
