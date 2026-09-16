@@ -21,6 +21,7 @@ function makePlan(overrides: Partial<InsurancePlan> = {}): InsurancePlan {
     normalized_key: "unimed_nacional",
     ans_registry: null,
     is_active: true,
+    plan_type: "convenio",
     created_at: "2026-01-01T00:00:00Z",
     ...overrides,
   };

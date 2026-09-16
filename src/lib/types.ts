@@ -1618,6 +1618,13 @@ export interface InsuranceCompanyUpdateRequest {
 }
 
 // --- Planos (app/schemas/insurance_plan.py) ---
+
+// Plano de Ação Insighta — Onda 3 ("particular como cidadão de primeira
+// classe"): "convenio" (padrão, tem insurance_company_id) ou
+// "particular" (paciente sem operadora, insurance_company_id sempre
+// null) — ver DECISÃO completa em 054_insurance_plan_type.sql, backend.
+export type InsurancePlanType = "convenio" | "particular";
+
 export interface InsurancePlan {
   id: string;
   insurance_company_id: string | null;
@@ -1628,17 +1635,23 @@ export interface InsurancePlan {
   // por plano. Desativar NÃO afeta a resolução automática de convênio
   // durante a ingestão de arquivo (ver backend InsurancePlanRepository.resolve).
   is_active: boolean;
+  plan_type: InsurancePlanType;
   created_at: string;
 }
 
 export interface InsurancePlanCreateRequest {
-  insurance_company_id: string;
+  // Obrigatório para plan_type "convenio" (padrão), proibido para
+  // "particular" — o backend valida essa combinação e devolve 422 se
+  // vier errada.
+  insurance_company_id?: string | null;
   display_name: string;
   ans_registry?: string | null;
+  plan_type?: InsurancePlanType;
 }
 
 export interface InsurancePlanUpdateRequest {
   is_active?: boolean;
+  plan_type?: InsurancePlanType;
 }
 
 // --- Contratos & Itens (app/schemas/contract.py) ---
