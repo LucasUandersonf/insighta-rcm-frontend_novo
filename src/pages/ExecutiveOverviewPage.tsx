@@ -6,6 +6,7 @@ import { ErrorState, LoadingState } from "@/components/ui/Panel";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PeriodWindowSelect } from "@/components/ui/PeriodWindowSelect";
 import { Tabs, TabPanel } from "@/components/ui/Tabs";
+import { AverageTicketPanel } from "@/components/dashboard/AverageTicketPanel";
 import { BirthdaysPanel } from "@/components/dashboard/BirthdaysPanel";
 import { DataFreshnessBanner } from "@/components/dashboard/DataFreshnessBanner";
 import { EarlyChurnRiskPanel } from "@/components/dashboard/EarlyChurnRiskPanel";
@@ -20,6 +21,7 @@ import { NetworkBenchmarkPanel } from "@/components/dashboard/NetworkBenchmarkPa
 import { MarketingChannelsPanel } from "@/components/dashboard/MarketingChannelsPanel";
 import { UpsellFunnelPanel } from "@/components/dashboard/UpsellFunnelPanel";
 import { OportunidadesPanel } from "@/components/dashboard/OportunidadesPanel";
+import { PatientRevenueParetoPanel } from "@/components/dashboard/PatientRevenueParetoPanel";
 import { ProfitabilityPanel } from "@/components/dashboard/ProfitabilityPanel";
 import { SimuladorPanel } from "@/components/dashboard/SimuladorPanel";
 import { CapitalDecisionPanel } from "@/components/dashboard/CapitalDecisionPanel";
@@ -329,11 +331,17 @@ export function ExecutiveOverviewPage() {
         <TabPanel id="rentabilidade" groupId={TABS_GROUP}>
           <div className="space-y-4">
             <ProfitabilityPanel dateFrom={dateFrom} dateTo={dateTo} />
+            {/* Achado do Dossiê Insighta RCM — cálculo simples sobre
+                Billing.charged_value, nenhuma agregação existia. */}
+            <AverageTicketPanel dateFrom={dateFrom} dateTo={dateTo} />
             <MarketingChannelsPanel dateFrom={dateFrom} dateTo={dateTo} />
             {/* "Equilíbrio Insighta" (Balanced Scorecard, perna Cliente) —
                 complementa o CAC/LTV acima (aquisição) com expansão de
                 receita em paciente já conquistado. */}
             <UpsellFunnelPanel dateFrom={dateFrom} dateTo={dateTo} />
+            {/* Achado do Dossiê Insighta RCM — dimensão de concentração
+                de receita diferente da que já existe por convênio. */}
+            <PatientRevenueParetoPanel dateFrom={dateFrom} dateTo={dateTo} />
           </div>
         </TabPanel>
       )}

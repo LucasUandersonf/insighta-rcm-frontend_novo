@@ -860,6 +860,48 @@ export interface ReturnRate {
   untagged_count: number; // concluídos sem visit_type informado — nunca soma no denominador da taxa
 }
 
+// Achado do Dossiê Insighta RCM — ticket médio (GET /analytics/average-ticket)
+export interface AverageTicketChannelItem {
+  channel: string;
+  billing_count: number;
+  average_ticket: number;
+}
+
+export interface AverageTicketProcedureItem {
+  procedure_code: string;
+  procedure_name: string | null;
+  billing_count: number;
+  average_ticket: number;
+}
+
+export interface AverageTicket {
+  period_start: string;
+  period_end: string;
+  overall: PeriodKpi | null; // null = billing_count == 0
+  billing_count: number;
+  by_channel: AverageTicketChannelItem[];
+  by_procedure: AverageTicketProcedureItem[];
+}
+
+// Achado do Dossiê Insighta RCM — Pareto de receita por paciente
+// (GET /analytics/patient-revenue-pareto), dimensão diferente da
+// concentração por convênio que já existe no motor de insights.
+export interface PatientRevenueItem {
+  patient_id: string;
+  full_name: string;
+  revenue: number;
+  share_pct: number;
+  cumulative_share_pct: number;
+}
+
+export interface PatientRevenuePareto {
+  period_start: string;
+  period_end: string;
+  total_billed: number;
+  items: PatientRevenueItem[]; // top N por receita, maior primeiro
+  top_n_share_pct: number | null; // null quando total_billed <= 0
+}
+
 // Carteira de pacientes inativos (GET /analytics/inactive-patients) — Sala de Comando
 export interface InactivePatientItem {
   patient_id: string;
