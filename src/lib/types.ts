@@ -834,6 +834,21 @@ export interface SatisfactionSummary {
   window_days: number;
 }
 
+// Achado do Dossiê Insighta RCM ("Como o dado entra no sistema") —
+// GET /analytics/data-freshness. `items` só lista data_type que já
+// tiveram pelo menos 1 ingestão com sucesso (nunca uma data inventada
+// para um tipo nunca importado); `stalest_at` é o PIOR caso entre os
+// tipos já importados, null quando `items` está vazio.
+export interface DataFreshnessItem {
+  data_type: string;
+  last_ingested_at: string;
+}
+
+export interface DataFreshness {
+  items: DataFreshnessItem[];
+  stalest_at: string | null;
+}
+
 // Carteira de pacientes inativos (GET /analytics/inactive-patients) — Sala de Comando
 export interface InactivePatientItem {
   patient_id: string;

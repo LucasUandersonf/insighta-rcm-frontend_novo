@@ -6,6 +6,7 @@ import { ErrorState, LoadingState } from "@/components/ui/Panel";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PeriodWindowSelect } from "@/components/ui/PeriodWindowSelect";
 import { Tabs, TabPanel } from "@/components/ui/Tabs";
+import { DataFreshnessBanner } from "@/components/dashboard/DataFreshnessBanner";
 import { EarlyChurnRiskPanel } from "@/components/dashboard/EarlyChurnRiskPanel";
 import { ExecutiveAgendaSummary } from "@/components/dashboard/ExecutiveAgendaSummary";
 import { FinancialHoleBillingsPanel } from "@/components/dashboard/FinancialHoleBillingsPanel";
@@ -106,6 +107,11 @@ export function ExecutiveOverviewPage() {
           ) : undefined
         }
       />
+
+      {/* Achado do Dossiê Insighta RCM — sempre visível, fora das abas
+          (a pergunta "esse número é de hoje?" vale para qualquer aba
+          que o gestor esteja olhando, não só Diagnóstico). */}
+      <DataFreshnessBanner />
 
       <Tabs
         groupId={TABS_GROUP}
