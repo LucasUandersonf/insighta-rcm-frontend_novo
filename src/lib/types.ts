@@ -902,6 +902,20 @@ export interface PatientRevenuePareto {
   top_n_share_pct: number | null; // null quando total_billed <= 0
 }
 
+// Achado do Dossiê Insighta RCM — faixa etária/demografia
+// (GET /analytics/patient-demographics), a partir de Patient.birth_date.
+export interface AgeBucketItem {
+  label: string; // "0-17" | "18-30" | "31-45" | "46-60" | "60+"
+  patient_count: number;
+}
+
+export interface PatientDemographics {
+  period_start: string;
+  period_end: string;
+  buckets: AgeBucketItem[]; // sempre as 5 faixas, mesmo com contagem 0
+  unknown_age_count: number;
+}
+
 // Carteira de pacientes inativos (GET /analytics/inactive-patients) — Sala de Comando
 export interface InactivePatientItem {
   patient_id: string;

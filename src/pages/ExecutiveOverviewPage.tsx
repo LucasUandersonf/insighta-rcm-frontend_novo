@@ -21,6 +21,7 @@ import { NetworkBenchmarkPanel } from "@/components/dashboard/NetworkBenchmarkPa
 import { MarketingChannelsPanel } from "@/components/dashboard/MarketingChannelsPanel";
 import { UpsellFunnelPanel } from "@/components/dashboard/UpsellFunnelPanel";
 import { OportunidadesPanel } from "@/components/dashboard/OportunidadesPanel";
+import { PatientDemographicsPanel } from "@/components/dashboard/PatientDemographicsPanel";
 import { PatientRevenueParetoPanel } from "@/components/dashboard/PatientRevenueParetoPanel";
 import { ProfitabilityPanel } from "@/components/dashboard/ProfitabilityPanel";
 import { SimuladorPanel } from "@/components/dashboard/SimuladorPanel";
@@ -307,9 +308,15 @@ export function ExecutiveOverviewPage() {
                 relacionamento com o paciente das duas listas acima,
                 só que olhando pra quem fica (retenção proativa), não
                 pra quem já foi embora. */}
-            <section id="aniversariantes">
-              <h2 className="mb-3 text-sm font-medium text-ink">Aniversariantes do mês</h2>
-              <BirthdaysPanel />
+            <section id="aniversariantes" className="space-y-4">
+              <div>
+                <h2 className="mb-3 text-sm font-medium text-ink">Aniversariantes do mês</h2>
+                <BirthdaysPanel />
+              </div>
+              {/* Achado do Dossiê Insighta RCM — mesma seção de "quem são
+                  nossos pacientes", complementando aniversário com o
+                  perfil etário da carteira ativa. */}
+              <PatientDemographicsPanel dateFrom={dateFrom} dateTo={dateTo} />
             </section>
           </div>
         </TabPanel>
