@@ -10,6 +10,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { PeriodWindowSelect } from "@/components/ui/PeriodWindowSelect";
 import { Tabs, TabPanel } from "@/components/ui/Tabs";
 import { AgendaAnalyticsPanel } from "@/components/dashboard/AgendaAnalyticsPanel";
+import { DataFreshnessBanner } from "@/components/dashboard/DataFreshnessBanner";
 import { PlanLossRankingPanel } from "@/components/dashboard/PlanLossRankingPanel";
 import { ContractUtilizationPanel } from "@/components/dashboard/ContractUtilizationPanel";
 import { DenialRiskDistributionPanel } from "@/components/dashboard/DenialRiskDistributionPanel";
@@ -165,6 +166,8 @@ export function DashboardPage() {
           />
         </Panel>
       )}
+
+      {canViewAnalytics && <DataFreshnessBanner />}
 
       {canViewAnalytics && (
         <Tabs

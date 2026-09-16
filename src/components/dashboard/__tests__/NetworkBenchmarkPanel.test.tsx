@@ -80,4 +80,41 @@ describe("NetworkBenchmarkPanel", () => {
     await waitFor(() => expect(screen.getByText(/ainda não há clínicas suficientes/i)).toBeInTheDocument());
     expect(screen.queryByText(/Mediana/)).not.toBeInTheDocument();
   });
+
+  // "Equilíbrio Insighta" (Balanced Scorecard, perna Cliente, mecanismo
+  // 4) — o painel já é genérico sobre `data.metrics`, então o novo
+  // metric "churn" só precisa aparecer na resposta pra renderizar, sem
+  // nenhuma mudança de componente.
+  it("mostra o comparativo de churn precoce junto dos outros indicadores", async () => {
+    const data: NetworkBenchmark = {
+      window_days: 90,
+      metrics: [
+        {
+          key: "denial",
+          label: "Taxa de glosa",
+          your_rate: 0.09,
+          your_sample: 40,
+          network_median: 0.05,
+          cohort_size: 8,
+          cohort_is_segmented_by_specialty: false,
+        },
+        {
+          key: "churn",
+          label: "Churn precoce",
+          your_rate: 0.2,
+          your_sample: 10,
+          network_median: 0.1,
+          cohort_size: 6,
+          cohort_is_segmented_by_specialty: false,
+        },
+      ],
+    };
+    vi.mocked(apiClient.get).mockResolvedValue(data);
+
+    renderWithProviders(<NetworkBenchmarkPanel />);
+
+    await waitFor(() => expect(screen.getByText("Churn precoce")).toBeInTheDocument());
+    expect(screen.getByText(/Você — 20\.0%/)).toBeInTheDocument();
+    expect(screen.getByText(/Mediana 10\.0%/)).toBeInTheDocument();
+  });
 });

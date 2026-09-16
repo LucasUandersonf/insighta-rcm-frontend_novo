@@ -456,6 +456,17 @@ export interface WeekdayNoShowRateBucket {
   no_show_rate: number | null;
 }
 
+// Achado do Dossiê Insighta RCM — mesmo espírito de
+// WeekdayNoShowRateBucket, agora para cancelamento. Denominador =
+// desfecho TERMINAL (completed/no_show/cancelled) — 'scheduled' nunca
+// entra. cancellation_rate é null quando total_appointments é 0.
+export interface WeekdayCancellationRateBucket {
+  weekday: number;
+  cancellation_count: number;
+  total_appointments: number;
+  cancellation_rate: number | null;
+}
+
 // "Lista vermelha" — ranking de pacientes por taxa de falta no período
 // (ver AnalyticsRepository.top_no_show_patients no backend). Só entram
 // pacientes com amostra mínima e pelo menos 1 falta.
@@ -489,6 +500,7 @@ export interface AgendaMetrics {
   // principal da tela.
   weekday_histogram: WeekdayBucket[];
   weekday_no_show_rates: WeekdayNoShowRateBucket[];
+  weekday_cancellation_rates: WeekdayCancellationRateBucket[];
   no_show_risk_breakdown: NoShowRiskBucket[];
   estimated_revenue_at_risk: number;
   patient_no_show_ranking: PatientNoShowRankingItem[];
@@ -834,6 +846,88 @@ export interface SatisfactionSummary {
   window_days: number;
 }
 
+// Achado do Dossiê Insighta RCM ("Como o dado entra no sistema") —
+// GET /analytics/data-freshness. `items` só lista data_type que já
+// tiveram pelo menos 1 ingestão com sucesso (nunca uma data inventada
+// para um tipo nunca importado); `stalest_at` é o PIOR caso entre os
+// tipos já importados, null quando `items` está vazio.
+export interface DataFreshnessItem {
+  data_type: string;
+  last_ingested_at: string;
+}
+
+export interface DataFreshness {
+  items: DataFreshnessItem[];
+  stalest_at: string | null;
+}
+
+// Achado do Dossiê Insighta RCM — taxa de retorno de pacientes
+// (GET /analytics/return-rate), a partir de Appointment.visit_type.
+export interface ReturnRate {
+  period_start: string;
+  period_end: string;
+  return_rate: PeriodKpi | null; // null = nenhum atendimento com visit_type informado no período
+  return_count: number;
+  first_visit_count: number;
+  untagged_count: number; // concluídos sem visit_type informado — nunca soma no denominador da taxa
+}
+
+// Achado do Dossiê Insighta RCM — ticket médio (GET /analytics/average-ticket)
+export interface AverageTicketChannelItem {
+  channel: string;
+  billing_count: number;
+  average_ticket: number;
+}
+
+export interface AverageTicketProcedureItem {
+  procedure_code: string;
+  procedure_name: string | null;
+  billing_count: number;
+  average_ticket: number;
+}
+
+export interface AverageTicket {
+  period_start: string;
+  period_end: string;
+  overall: PeriodKpi | null; // null = billing_count == 0
+  billing_count: number;
+  by_channel: AverageTicketChannelItem[];
+  by_procedure: AverageTicketProcedureItem[];
+}
+
+// Achado do Dossiê Insighta RCM — Pareto de receita por paciente
+// (GET /analytics/patient-revenue-pareto), dimensão diferente da
+// concentração por convênio que já existe no motor de insights.
+export interface PatientRevenueItem {
+  patient_id: string;
+  full_name: string;
+  revenue: number;
+  share_pct: number;
+  cumulative_share_pct: number;
+}
+
+export interface PatientRevenuePareto {
+  period_start: string;
+  period_end: string;
+  total_billed: number;
+  items: PatientRevenueItem[]; // top N por receita, maior primeiro
+  top_n_share_pct: number | null; // null quando total_billed <= 0
+}
+
+// Achado do Dossiê Insighta RCM — faixa etária/demografia
+// (GET /analytics/patient-demographics), a partir de Patient.birth_date.
+export interface AgeBucketItem {
+  label: string; // "0-17" | "18-30" | "31-45" | "46-60" | "60+"
+  patient_count: number;
+}
+
+export interface PatientDemographics {
+  period_start: string;
+  period_end: string;
+  buckets: AgeBucketItem[]; // sempre as 5 faixas, mesmo com contagem 0
+  unknown_age_count: number;
+}
+
 // Carteira de pacientes inativos (GET /analytics/inactive-patients) — Sala de Comando
 export interface InactivePatientItem {
   patient_id: string;
@@ -936,6 +1030,35 @@ export interface CostEntryCreateRequest {
   professional_id?: string | null;
 }
 
+// Achado do Dossiê Insighta RCM — Onda 2 do Plano de Ação: fecha o
+// pipeline de escrita de core.marketing_spend (POST /marketing-spend).
+// Mesmo vocabulário fechado do CHECK constraint no backend (a tabela
+// nasceu pensada pra webhook/ETL do Meta/Google Ads; Instagram/Facebook
+// entram como "meta_ads", é o mesmo anunciante).
+export type MarketingSpendSource = "meta_ads" | "google_ads";
+
+export interface MarketingSpend {
+  id: string;
+  source: MarketingSpendSource;
+  campaign_id: string;
+  campaign_name: string | null;
+  spend_date: string;
+  amount_spent: number;
+  impressions: number | null;
+  clicks: number | null;
+  created_at: string;
+}
+
+export interface MarketingSpendCreateRequest {
+  source: MarketingSpendSource;
+  campaign_id: string;
+  campaign_name?: string | null;
+  spend_date: string;
+  amount_spent: number;
+  impressions?: number | null;
+  clicks?: number | null;
+}
+
 // Raio-X da Receita, frente "Gestão eficiente" — CAC e receita média por
 // paciente (proxy de LTV), por campanha/canal de marketing (GET
 // /analytics/marketing-channels). `cac` usa o período do dashboard;
@@ -958,6 +1081,25 @@ export interface MarketingChannels {
   period_end: string;
   total_spend: number;
   items: MarketingChannelItem[]; // ordenado por gasto, maior primeiro
+}
+
+// "Equilíbrio Insighta" (Balanced Scorecard, perna Cliente) — funil de
+// upsell (GET /analytics/upsell-funnel). Complementa MarketingChannels
+// (aquisição) olhando expansão de receita em paciente já conquistado.
+export interface UpsellFunnelItem {
+  procedure_name: string;
+  offered_count: number;
+  accepted_count: number;
+  acceptance_rate: number | null;
+}
+
+export interface UpsellFunnel {
+  period_start: string;
+  period_end: string;
+  total_offered: number;
+  total_accepted: number;
+  overall_acceptance_rate: number | null;
+  items: UpsellFunnelItem[]; // ordenado por offered_count, maior primeiro
 }
 
 // Candidatos a recontato (GET /analytics/recall-candidates) — a lista
@@ -1023,7 +1165,7 @@ export type AgendaFocus = { type: "weekday"; weekday: number } | { type: "profes
 
 // Comparativo entre clínicas (GET /analytics/network-benchmark) — Sala de Comando 2.0
 export interface NetworkBenchmarkMetric {
-  key: string; // "denial" | "no_show"
+  key: string; // "denial" | "no_show" | "churn" ("Equilíbrio Insighta" — Balanced Scorecard, perna Cliente)
   label: string;
   your_rate: number | null;
   your_sample: number;
@@ -1255,6 +1397,19 @@ export interface Patient {
   // create/update, que devolvem o default False/[]).
   is_vip: boolean;
   vip_reasons: string[];
+}
+
+// Achado do Dossiê Insighta RCM — aniversariantes do mês (GET /patients/birthdays)
+export interface PatientBirthdayItem {
+  patient_id: string;
+  full_name: string;
+  birth_date: string;
+  communication_consent: boolean | null;
+}
+
+export interface PatientBirthdays {
+  month: number;
+  items: PatientBirthdayItem[]; // ordenado por dia do mês
 }
 
 export interface PatientCreateRequest {
