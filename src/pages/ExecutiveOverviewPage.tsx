@@ -8,6 +8,7 @@ import { PeriodWindowSelect } from "@/components/ui/PeriodWindowSelect";
 import { Tabs, TabPanel } from "@/components/ui/Tabs";
 import { AverageTicketPanel } from "@/components/dashboard/AverageTicketPanel";
 import { BirthdaysPanel } from "@/components/dashboard/BirthdaysPanel";
+import { DailySummaryPanel } from "@/components/dashboard/DailySummaryPanel";
 import { DataFreshnessBanner } from "@/components/dashboard/DataFreshnessBanner";
 import { EarlyChurnRiskPanel } from "@/components/dashboard/EarlyChurnRiskPanel";
 import { ExecutiveAgendaSummary } from "@/components/dashboard/ExecutiveAgendaSummary";
@@ -23,6 +24,7 @@ import { UpsellFunnelPanel } from "@/components/dashboard/UpsellFunnelPanel";
 import { OportunidadesPanel } from "@/components/dashboard/OportunidadesPanel";
 import { PatientDemographicsPanel } from "@/components/dashboard/PatientDemographicsPanel";
 import { PatientRevenueParetoPanel } from "@/components/dashboard/PatientRevenueParetoPanel";
+import { PatientRfmPanel } from "@/components/dashboard/PatientRfmPanel";
 import { ProfitabilityPanel } from "@/components/dashboard/ProfitabilityPanel";
 import { SimuladorPanel } from "@/components/dashboard/SimuladorPanel";
 import { CapitalDecisionPanel } from "@/components/dashboard/CapitalDecisionPanel";
@@ -135,6 +137,11 @@ export function ExecutiveOverviewPage() {
 
       {activeTab === "hoje" && (
         <TabPanel id="hoje" groupId={TABS_GROUP}>
+          {/* Onda 6 do Plano de Ação, item 18 — primeira coisa que
+              aparece na aba "Hoje", antes da fila de ação. */}
+          <div className="mb-4">
+            <DailySummaryPanel />
+          </div>
           <PriorityQueuePanel
             dateFrom={dateFrom}
             dateTo={dateTo}
@@ -302,6 +309,12 @@ export function ExecutiveOverviewPage() {
                   está indo embora", em estágios diferentes (ver DECISÃO
                   em smart_insights_engine.py::_early_churn_insight). */}
               <EarlyChurnRiskPanel />
+              {/* Gaps Dossiê Insighta RCM, item 4 — RFM completo. Mesma
+                  âncora das duas listas acima (quem precisa de
+                  reativação), agora com a dimensão de Valor combinada:
+                  não é só "quem sumiu", é "quem sumiu E valia mais a
+                  pena reativar primeiro". */}
+              <PatientRfmPanel />
             </section>
 
             {/* Achado do Dossiê Insighta RCM — mesma seção de

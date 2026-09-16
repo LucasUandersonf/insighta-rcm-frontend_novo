@@ -37,6 +37,7 @@ const MarketingSpendPage = lazy(() => import("@/pages/MarketingSpendPage").then(
 const MyInsightsPage = lazy(() => import("@/pages/MyInsightsPage").then((m) => ({ default: m.MyInsightsPage })));
 const BillingOperationsPage = lazy(() => import("@/pages/BillingOperationsPage").then((m) => ({ default: m.BillingOperationsPage })));
 const AppointmentsPage = lazy(() => import("@/pages/AppointmentsPage").then((m) => ({ default: m.AppointmentsPage })));
+const WaitlistPage = lazy(() => import("@/pages/WaitlistPage").then((m) => ({ default: m.WaitlistPage })));
 const ProfessionalsPage = lazy(() => import("@/pages/ProfessionalsPage").then((m) => ({ default: m.ProfessionalsPage })));
 const UploadCenterPage = lazy(() => import("@/pages/UploadCenterPage").then((m) => ({ default: m.UploadCenterPage })));
 const SetupPage = lazy(() => import("@/pages/SetupPage").then((m) => ({ default: m.SetupPage })));
@@ -118,6 +119,7 @@ export default function App() {
                 <Route path="/" element={<RootRedirect />} />
                 <Route path="/painel" element={<DashboardPage />} />
                 <Route path="/appointments" element={<AppointmentsPage />} />
+                <Route path="/waitlist" element={<WaitlistPage />} />
                 {/* Épico F1.3 do Plano Diretor: "Meus pendentes" é aberto a
                     QUALQUER papel autenticado (mesmo RBAC de
                     GET /insight-outcomes/mine — quem executa não é sempre

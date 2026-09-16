@@ -467,6 +467,17 @@ export interface WeekdayCancellationRateBucket {
   cancellation_rate: number | null;
 }
 
+// Onda 5 do Plano de Ação, item 15 — em quais dias da semana a agenda
+// mais recebe encaixe (Appointment.is_squeeze_in). Denominador = só
+// agendamentos com is_squeeze_in INFORMADO (não null) — ver DECISÃO em
+// AnalyticsRepository.weekday_squeeze_in_breakdown no backend.
+export interface WeekdaySqueezeInBucket {
+  weekday: number;
+  squeeze_in_count: number;
+  total_informed: number;
+  squeeze_in_rate: number | null;
+}
+
 // "Lista vermelha" — ranking de pacientes por taxa de falta no período
 // (ver AnalyticsRepository.top_no_show_patients no backend). Só entram
 // pacientes com amostra mínima e pelo menos 1 falta.
@@ -501,6 +512,7 @@ export interface AgendaMetrics {
   weekday_histogram: WeekdayBucket[];
   weekday_no_show_rates: WeekdayNoShowRateBucket[];
   weekday_cancellation_rates: WeekdayCancellationRateBucket[];
+  weekday_squeeze_in_rates: WeekdaySqueezeInBucket[];
   no_show_risk_breakdown: NoShowRiskBucket[];
   estimated_revenue_at_risk: number;
   patient_no_show_ranking: PatientNoShowRankingItem[];
@@ -525,6 +537,10 @@ export interface AgendaMetrics {
 // por operadora em vez de somadas no tenant inteiro.
 export interface PlanLossItem {
   plan_name: string;
+  // Achado da Onda 3 do Plano de Ação ("particular como cidadão de
+  // primeira classe") — ver DECISÃO em PaymentLagByPlanItem.plan_type
+  // abaixo.
+  plan_type: InsurancePlanType;
   financial_hole: number;
   payment_gap: number;
   denial_risk_value: number;
@@ -543,6 +559,11 @@ export interface PlanLossRanking {
 export interface PaymentLagByPlanItem {
   insurance_plan_id: string;
   insurance_plan_name: string;
+  // Achado da Onda 3 do Plano de Ação ("particular como cidadão de
+  // primeira classe") — "convenio" ou "particular". PMR só tem o
+  // sentido de "prazo de operadora" pra convênio de verdade; particular
+  // aparece aqui por transparência, nunca escondido.
+  plan_type: InsurancePlanType;
   avg_days_to_receive: number;
   billings_settled_count: number;
 }
@@ -556,6 +577,25 @@ export interface PaymentLagByPlan {
   avg_days_to_receive: number | null;
   billings_settled_count: number;
   items: PaymentLagByPlanItem[]; // ordenado por avg_days_to_receive desc, pior primeiro
+}
+
+// Recomendação de priorização de agenda por convênio (GET
+// /analytics/agenda-plan-priority) — Onda 4 do Plano de Ação, item 14:
+// evolução do PMR acima. Só convênio de verdade entra (nunca
+// particular) — ver DECISÃO em AnalyticsService.get_agenda_plan_priority
+// (backend) sobre a combinação por ranking (não fórmula ponderada).
+export interface AgendaPlanPriorityItem {
+  insurance_plan_id: string;
+  insurance_plan_name: string;
+  avg_days_to_receive: number;
+  total_loss: number;
+  priority_rank: number; // 1 = prioridade máxima pra encaixar
+}
+
+export interface AgendaPlanPriority {
+  period_start: string;
+  period_end: string;
+  items: AgendaPlanPriorityItem[]; // ordenado por priority_rank crescente
 }
 
 // Previsão de receita futura da agenda (GET /analytics/agenda-revenue-forecast)
@@ -652,6 +692,9 @@ export interface DenialReasonConfirmation {
 export interface ContractUtilizationItem {
   contract_id: string;
   plan_name: string;
+  // Achado da Onda 3 do Plano de Ação — ver DECISÃO em
+  // PaymentLagByPlanItem.plan_type acima.
+  plan_type: InsurancePlanType;
   valid_from: string;
   valid_until: string | null;
   total_items: number;
@@ -928,18 +971,91 @@ export interface PatientDemographics {
   unknown_age_count: number;
 }
 
+// Resumo diário narrado (GET /analytics/daily-summary) — Onda 6 do
+// Plano de Ação, item 18. Não é uma fonte de dado nova: compõe em texto
+// corrido o que já existe espalhado em telas diferentes, sempre para
+// HOJE. Ver DECISÃO completa em AnalyticsService.get_daily_summary
+// (backend).
+export interface DailySummary {
+  date: string;
+  headline: string;
+  sentences: string[];
+}
+
 // Carteira de pacientes inativos (GET /analytics/inactive-patients) — Sala de Comando
 export interface InactivePatientItem {
   patient_id: string;
   full_name: string;
   last_appointment_at: string;
   days_since_last_appointment: number;
+  // Onda 4 do Plano de Ação, item 12 ("CRM de verdade") — null =
+  // ninguém tentou reativar este paciente ainda.
+  last_outreach_at: string | null;
+  last_outreach_outcome: PatientOutreachOutcome | null;
+}
+
+// Registro de contato de reativação (POST/GET
+// /patients/{id}/outreach-log) — Onda 4 do Plano de Ação, item 12.
+export type PatientOutreachChannel = "telefone" | "whatsapp" | "sms" | "email" | "presencial";
+export type PatientOutreachOutcome = "contatado" | "sem_resposta" | "agendou" | "recusou";
+
+export interface PatientOutreachLogCreateRequest {
+  channel: PatientOutreachChannel;
+  outcome: PatientOutreachOutcome;
+  notes?: string | null;
+}
+
+export interface PatientOutreachLogEntry {
+  id: string;
+  patient_id: string;
+  channel: PatientOutreachChannel;
+  outcome: PatientOutreachOutcome;
+  notes: string | null;
+  created_by: string;
+  created_at: string;
 }
 
 export interface InactivePatients {
   items: InactivePatientItem[];
   total_count: number; // pode ser maior que items.length — a lista é sempre truncada
   inactive_after_days: number;
+}
+
+// RFM completo (GET /analytics/patient-rfm) — Gaps Dossiê Insighta RCM,
+// item 4. Recência e Frequência já existiam espalhadas (InactivePatients,
+// score VIP); Valor era a dimensão que faltava pra virar RFM de verdade.
+// Ver DECISÃO completa em app/services/rfm_engine.py (backend).
+export type RfmSegment = "campeoes" | "fieis" | "nao_pode_perder" | "em_risco" | "novos" | "hibernando" | "precisa_atencao";
+
+export interface RfmSegmentCount {
+  segment: RfmSegment;
+  patient_count: number;
+}
+
+export interface RfmPatientItem {
+  patient_id: string;
+  full_name: string;
+  days_since_last_appointment: number;
+  visit_count: number;
+  total_revenue: number;
+  recency_score: number;
+  frequency_score: number;
+  monetary_score: number;
+  segment: RfmSegment;
+  // Onda 4 do Plano de Ação, item 12 ("CRM de verdade") — null =
+  // ninguém tentou reativar este paciente ainda.
+  last_outreach_at: string | null;
+  last_outreach_outcome: PatientOutreachOutcome | null;
+}
+
+export interface RfmResponse {
+  as_of: string;
+  total_patients: number;
+  // Sempre os 7 segmentos, mesmo com contagem 0 — taxonomia fixa.
+  segment_counts: RfmSegmentCount[];
+  // Só quem precisa de ação agora (nao_pode_perder/em_risco), maior
+  // receita histórica primeiro — nunca a base inteira.
+  action_items: RfmPatientItem[];
 }
 
 // Raio-X da Receita, frente "Prevendo movimentos" — risco de abandono
@@ -1532,6 +1648,9 @@ export interface Appointment {
   // Satisfação/NPS. Ver DECISÃO em 052_appointment_satisfaction.sql
   // (backend).
   visit_satisfaction_score: number | null;
+  // Onda 5 do Plano de Ação, item 15. Ver DECISÃO em
+  // 056_appointment_squeeze_in.sql (backend).
+  is_squeeze_in: boolean | null;
 }
 
 export type VisitIntentTag = "rotina" | "retorno" | "avaliacao" | "urgencia";
@@ -1544,6 +1663,7 @@ export interface AppointmentCreateRequest {
   procedure_code?: string | null;
   cid_code?: string | null;
   visit_intent_tag?: VisitIntentTag | null;
+  is_squeeze_in?: boolean | null;
 }
 
 // PATCH /appointments/{id} (app/schemas/appointment.py::AppointmentUpdateRequest)
@@ -1556,6 +1676,7 @@ export interface AppointmentUpdateRequest {
   visit_intent_tag?: VisitIntentTag | null;
   addon_offered_procedure?: string | null;
   addon_declined?: boolean | null;
+  is_squeeze_in?: boolean | null;
 }
 
 // POST /appointments/{id}/satisfaction-link (app/schemas/appointment_satisfaction.py)
@@ -1588,6 +1709,35 @@ export interface AppointmentListItem {
   cancellation_reason: string | null;
 }
 
+// --- Lista de espera (app/schemas/waitlist_entry.py) — Onda 5 do Plano
+// de Ação, item 16. Ver DECISÃO completa em 057_waitlist_entries.sql
+// (backend): 3 estados só (aguardando/agendado/cancelado), sem canal de
+// notificação automática.
+export type WaitlistStatus = "aguardando" | "agendado" | "cancelado";
+
+export interface WaitlistEntry {
+  id: string;
+  patient_id: string;
+  patient_full_name: string;
+  professional_id: string | null;
+  professional_full_name: string | null;
+  procedure_code: string | null;
+  preferred_time_window: PreferredTimeWindow | null;
+  notes: string | null;
+  status: WaitlistStatus;
+  resolved_appointment_id: string | null;
+  created_at: string;
+  resolved_at: string | null;
+}
+
+export interface WaitlistEntryCreateRequest {
+  patient_id: string;
+  professional_id?: string | null;
+  procedure_code?: string | null;
+  preferred_time_window?: PreferredTimeWindow | null;
+  notes?: string | null;
+}
+
 // --- Parser Inteligente de Contratos: Convênios (app/schemas/insurance_company.py) ---
 export interface InsuranceCompany {
   id: string;
@@ -1618,6 +1768,13 @@ export interface InsuranceCompanyUpdateRequest {
 }
 
 // --- Planos (app/schemas/insurance_plan.py) ---
+
+// Plano de Ação Insighta — Onda 3 ("particular como cidadão de primeira
+// classe"): "convenio" (padrão, tem insurance_company_id) ou
+// "particular" (paciente sem operadora, insurance_company_id sempre
+// null) — ver DECISÃO completa em 054_insurance_plan_type.sql, backend.
+export type InsurancePlanType = "convenio" | "particular";
+
 export interface InsurancePlan {
   id: string;
   insurance_company_id: string | null;
@@ -1628,17 +1785,23 @@ export interface InsurancePlan {
   // por plano. Desativar NÃO afeta a resolução automática de convênio
   // durante a ingestão de arquivo (ver backend InsurancePlanRepository.resolve).
   is_active: boolean;
+  plan_type: InsurancePlanType;
   created_at: string;
 }
 
 export interface InsurancePlanCreateRequest {
-  insurance_company_id: string;
+  // Obrigatório para plan_type "convenio" (padrão), proibido para
+  // "particular" — o backend valida essa combinação e devolve 422 se
+  // vier errada.
+  insurance_company_id?: string | null;
   display_name: string;
   ans_registry?: string | null;
+  plan_type?: InsurancePlanType;
 }
 
 export interface InsurancePlanUpdateRequest {
   is_active?: boolean;
+  plan_type?: InsurancePlanType;
 }
 
 // --- Contratos & Itens (app/schemas/contract.py) ---

@@ -33,6 +33,7 @@ const BASE_METRICS: AgendaMetrics = {
   weekday_histogram: [],
   weekday_no_show_rates: [],
   weekday_cancellation_rates: [],
+  weekday_squeeze_in_rates: [],
   no_show_risk_breakdown: [],
   estimated_revenue_at_risk: 0,
   patient_no_show_ranking: [],
@@ -55,6 +56,18 @@ describe("AgendaAnalyticsPanel", () => {
     renderWithProviders(<AgendaAnalyticsPanel dateFrom="2026-09-01" dateTo="2026-09-07" />);
 
     await waitFor(() => expect(screen.getByText("Taxa de cancelamento por dia da semana")).toBeInTheDocument());
+  });
+
+  it("mostra o gráfico de taxa de encaixe por dia da semana quando há dado", async () => {
+    const data: AgendaMetrics = {
+      ...BASE_METRICS,
+      weekday_squeeze_in_rates: [{ weekday: 2, squeeze_in_count: 1, total_informed: 4, squeeze_in_rate: 0.25 }],
+    };
+    mockAgendaMetrics(data);
+
+    renderWithProviders(<AgendaAnalyticsPanel dateFrom="2026-09-01" dateTo="2026-09-07" />);
+
+    await waitFor(() => expect(screen.getByText("Taxa de encaixe por dia da semana")).toBeInTheDocument());
   });
 
   it("mensagem honesta quando não há atendimento com desfecho conhecido", async () => {

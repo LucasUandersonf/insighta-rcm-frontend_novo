@@ -303,6 +303,9 @@ function CreateAppointmentModal({
   const [procedureCode, setProcedureCode] = useState("");
   const [cidCode, setCidCode] = useState("");
   const [visitIntentTag, setVisitIntentTag] = useState("");
+  // Onda 5 do Plano de Ação, item 15 — já conhecido na hora de marcar
+  // quando é um encaixe explícito fora da grade normal.
+  const [isSqueezeIn, setIsSqueezeIn] = useState(false);
   const selectedPatient = patients.find((p) => p.id === patientId) ?? null;
 
   const mutation = useMutation({
@@ -327,6 +330,7 @@ function CreateAppointmentModal({
     setProcedureCode("");
     setCidCode("");
     setVisitIntentTag("");
+    setIsSqueezeIn(false);
     onClose();
   }
 
@@ -340,6 +344,7 @@ function CreateAppointmentModal({
       procedure_code: procedureCode || null,
       cid_code: cidCode || null,
       visit_intent_tag: (visitIntentTag || null) as VisitIntentTag | null,
+      is_squeeze_in: isSqueezeIn,
     });
   }
 
@@ -409,6 +414,17 @@ function CreateAppointmentModal({
             </option>
           ))}
         </SelectField>
+        {/* Onda 5 do Plano de Ação, item 15 — alimenta o gráfico "Taxa de
+            encaixe por dia da semana" (Agenda & Capacidade). */}
+        <label className="mb-4 flex items-center gap-2 text-xs text-ink-muted">
+          <input
+            type="checkbox"
+            checked={isSqueezeIn}
+            onChange={(e) => setIsSqueezeIn(e.target.checked)}
+            className="accent-[hsl(var(--accent))]"
+          />
+          Este agendamento é um encaixe (fora da grade normal)
+        </label>
 
         <div className="mt-5 flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={resetAndClose}>

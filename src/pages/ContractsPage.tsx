@@ -23,6 +23,7 @@ import type {
   InsuranceCompanyCreateRequest,
   InsurancePlan,
   InsurancePlanCreateRequest,
+  InsurancePlanType,
   PaginatedResponse,
 } from "@/lib/types";
 
@@ -158,6 +159,7 @@ function CreatePlanModal({
 }) {
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
+  const [planType, setPlanType] = useState<InsurancePlanType>("convenio");
   const [companyId, setCompanyId] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [ansRegistry, setAnsRegistry] = useState("");
@@ -183,6 +185,7 @@ function CreatePlanModal({
   });
 
   function resetAndClose() {
+    setPlanType("convenio");
     setCompanyId("");
     setDisplayName("");
     setAnsRegistry("");
@@ -193,30 +196,49 @@ function CreatePlanModal({
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setFieldErrors({});
-    if (!companyId) {
+    if (planType === "convenio" && !companyId) {
       setFieldErrors({ insurance_company_id: "Selecione uma operadora." });
       return;
     }
-    mutation.mutate({ insurance_company_id: companyId, display_name: displayName, ans_registry: ansRegistry || null });
+    mutation.mutate({
+      insurance_company_id: planType === "convenio" ? companyId : null,
+      display_name: displayName,
+      ans_registry: ansRegistry || null,
+      plan_type: planType,
+    });
   }
 
   return (
     <Modal title="Novo plano" isOpen={isOpen} onClose={resetAndClose}>
       <form onSubmit={handleSubmit}>
         <SelectField
-          label="Operadora"
+          label="Tipo"
           required
-          value={companyId}
-          onChange={(e) => setCompanyId(e.target.value)}
-          error={fieldErrors["insurance_company_id"]}
+          value={planType}
+          onChange={(e) => {
+            setPlanType(e.target.value as InsurancePlanType);
+            setCompanyId("");
+          }}
         >
-          <option value="">Selecione...</option>
-          {companies.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
+          <option value="convenio">Convênio</option>
+          <option value="particular">Particular (sem operadora)</option>
         </SelectField>
+        {planType === "convenio" && (
+          <SelectField
+            label="Operadora"
+            required
+            value={companyId}
+            onChange={(e) => setCompanyId(e.target.value)}
+            error={fieldErrors["insurance_company_id"]}
+          >
+            <option value="">Selecione...</option>
+            {companies.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </SelectField>
+        )}
         <TextField
           label="Nome do plano"
           placeholder="Ex: Unimed Nacional Empresarial"
@@ -842,6 +864,11 @@ export function ContractsPage() {
                   >
                     <span className={p.is_active ? undefined : "text-ink-faint"}>{p.display_name}</span>
                     <div className="flex items-center gap-2">
+                      {/* Achado do Plano de Ação Insighta (Onda 3) —
+                          "particular" é o vocabulário fechado que
+                          segrega paciente sem operadora do resto da
+                          analytics. */}
+                      {p.plan_type === "particular" && <Badge tone="accent">Particular</Badge>}
                       {!p.is_active && <Badge tone="neutral">Inativo</Badge>}
                       <Button
                         variant="ghost"

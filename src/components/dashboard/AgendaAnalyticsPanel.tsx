@@ -67,6 +67,14 @@ export function AgendaAnalyticsPanel({ dateFrom, dateTo }: { dateFrom: string; d
         ? Math.round(b.cancellation_rate * 100)
         : 0,
   }));
+  // Onda 5 do Plano de Ação, item 15 — em quais dias da semana a
+  // agenda mais recebe encaixe. Denominador = só is_squeeze_in
+  // INFORMADO (mesmo raciocínio do backend), não desfecho terminal.
+  const weekdaySqueezeInData = (data?.weekday_squeeze_in_rates ?? []).map((b) => ({
+    dia: WEEKDAY_SHORT_LABELS[b.weekday],
+    taxa:
+      b.total_informed >= WEEKDAY_RATE_MIN_SAMPLE && b.squeeze_in_rate !== null ? Math.round(b.squeeze_in_rate * 100) : 0,
+  }));
   const professionalData = (data?.professionals ?? []).map((p) => ({
     nome: p.full_name,
     ocupacao: Math.round(p.utilization_rate * 100),
@@ -220,6 +228,40 @@ export function AgendaAnalyticsPanel({ dateFrom, dateTo }: { dateFrom: string; d
                 </BarChart>
               </ResponsiveContainer>
               <p className="mt-1 text-2xs text-ink-faint">Dias com poucos atendimentos (menos de 3) aparecem zerados — amostra insuficiente para uma taxa confiável.</p>
+            </div>
+          )}
+        </Panel>
+      </div>
+
+      <div className="lg:col-span-12">
+        <Panel
+          title="Taxa de encaixe por dia da semana"
+          subtitle="Onda 5 do Plano de Ação — em quais dias a agenda mais recebe paciente fora da grade normal (só agendamentos com essa informação preenchida)"
+          updatedAt={dataUpdatedAt || null}
+        >
+          {isLoading && <LoadingState />}
+          {error && <ErrorState message={getApiErrorMessage(error)} />}
+          {!isLoading && !error && weekdaySqueezeInData.length === 0 && (
+            <EmptyState icon={<CalendarX2 size={17} strokeWidth={1.5} />} message="Nenhum agendamento com informação de encaixe preenchida nesta janela." />
+          )}
+          {!isLoading && weekdaySqueezeInData.length > 0 && (
+            <div className="p-4">
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={weekdaySqueezeInData} margin={{ top: 4, right: 8, left: 8, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="barGradientWeekdaySqueezeIn" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={palette.bar} stopOpacity={0.95} />
+                      <stop offset="100%" stopColor={palette.bar} stopOpacity={0.55} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke={palette.grid} vertical={false} />
+                  <XAxis dataKey="dia" {...axisStyle} tickLine={false} axisLine={{ stroke: palette.grid }} />
+                  <YAxis {...axisStyle} tickLine={false} axisLine={false} allowDecimals={false} unit="%" />
+                  <Tooltip content={<ChartTooltip />} cursor={{ fill: palette.grid, opacity: 0.35 }} formatter={(v: number) => `${v}%`} />
+                  <Bar dataKey="taxa" fill="url(#barGradientWeekdaySqueezeIn)" radius={[3, 3, 0, 0]} name="Taxa de encaixe" animationDuration={700} />
+                </BarChart>
+              </ResponsiveContainer>
+              <p className="mt-1 text-2xs text-ink-faint">Dias com poucos agendamentos informados (menos de 3) aparecem zerados — amostra insuficiente para uma taxa confiável.</p>
             </div>
           )}
         </Panel>
