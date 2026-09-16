@@ -1042,7 +1042,7 @@ export type AgendaFocus = { type: "weekday"; weekday: number } | { type: "profes
 
 // Comparativo entre clínicas (GET /analytics/network-benchmark) — Sala de Comando 2.0
 export interface NetworkBenchmarkMetric {
-  key: string; // "denial" | "no_show"
+  key: string; // "denial" | "no_show" | "churn" ("Equilíbrio Insighta" — Balanced Scorecard, perna Cliente)
   label: string;
   your_rate: number | null;
   your_sample: number;
