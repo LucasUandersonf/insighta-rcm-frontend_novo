@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Panel } from "@/components/ui/Panel";
+import { Badge } from "@/components/ui/Badge";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import type { PaymentLagByPlan } from "@/lib/types";
@@ -55,7 +56,10 @@ export function PaymentLagPanel({ dateFrom, dateTo }: { dateFrom: string; dateTo
         <div className="space-y-3 p-5">
           {plans.map((plan) => (
             <div key={plan.insurance_plan_id} className="flex items-center gap-3">
-              <span className="w-[168px] shrink-0 truncate text-[12.5px] text-ink-muted">{plan.insurance_plan_name}</span>
+              <span className="flex w-[168px] shrink-0 items-center gap-1.5 truncate text-[12.5px] text-ink-muted">
+                <span className="truncate">{plan.insurance_plan_name}</span>
+                {plan.plan_type === "particular" && <Badge tone="accent">Particular</Badge>}
+              </span>
               <div className="h-[7px] flex-1 overflow-hidden rounded-full bg-canvas-raised">
                 <div
                   className={`h-full rounded-full ${barToneClass(plan.avg_days_to_receive)}`}

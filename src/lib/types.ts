@@ -525,6 +525,10 @@ export interface AgendaMetrics {
 // por operadora em vez de somadas no tenant inteiro.
 export interface PlanLossItem {
   plan_name: string;
+  // Achado da Onda 3 do Plano de Ação ("particular como cidadão de
+  // primeira classe") — ver DECISÃO em PaymentLagByPlanItem.plan_type
+  // abaixo.
+  plan_type: InsurancePlanType;
   financial_hole: number;
   payment_gap: number;
   denial_risk_value: number;
@@ -543,6 +547,11 @@ export interface PlanLossRanking {
 export interface PaymentLagByPlanItem {
   insurance_plan_id: string;
   insurance_plan_name: string;
+  // Achado da Onda 3 do Plano de Ação ("particular como cidadão de
+  // primeira classe") — "convenio" ou "particular". PMR só tem o
+  // sentido de "prazo de operadora" pra convênio de verdade; particular
+  // aparece aqui por transparência, nunca escondido.
+  plan_type: InsurancePlanType;
   avg_days_to_receive: number;
   billings_settled_count: number;
 }
@@ -652,6 +661,9 @@ export interface DenialReasonConfirmation {
 export interface ContractUtilizationItem {
   contract_id: string;
   plan_name: string;
+  // Achado da Onda 3 do Plano de Ação — ver DECISÃO em
+  // PaymentLagByPlanItem.plan_type acima.
+  plan_type: InsurancePlanType;
   valid_from: string;
   valid_until: string | null;
   total_items: number;

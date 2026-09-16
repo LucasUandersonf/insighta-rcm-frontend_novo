@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Panel } from "@/components/ui/Panel";
+import { Badge } from "@/components/ui/Badge";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import type { ContractUtilization } from "@/lib/types";
@@ -40,7 +41,10 @@ export function ContractUtilizationPanel({ dateFrom, dateTo }: { dateFrom: strin
         <div className="space-y-3 p-5">
           {contracts.map((contract) => (
             <div key={contract.contract_id} className="flex items-center gap-3">
-              <span className="w-[168px] shrink-0 truncate text-[12.5px] text-ink-muted">{contract.plan_name}</span>
+              <span className="flex w-[168px] shrink-0 items-center gap-1.5 truncate text-[12.5px] text-ink-muted">
+                <span className="truncate">{contract.plan_name}</span>
+                {contract.plan_type === "particular" && <Badge tone="accent">Particular</Badge>}
+              </span>
               <div className="h-[7px] flex-1 overflow-hidden rounded-full bg-canvas-raised">
                 <div className="h-full rounded-full bg-aura-line" style={{ width: `${Math.min(contract.utilization_pct, 100)}%` }} />
               </div>

@@ -21,8 +21,20 @@ describe("PaymentLagPanel", () => {
       avg_days_to_receive: 55,
       billings_settled_count: 2,
       items: [
-        { insurance_plan_id: "p1", insurance_plan_name: "Convênio Lento", avg_days_to_receive: 100, billings_settled_count: 1 },
-        { insurance_plan_id: "p2", insurance_plan_name: "Convênio Rápido", avg_days_to_receive: 10, billings_settled_count: 1 },
+        {
+          insurance_plan_id: "p1",
+          insurance_plan_name: "Convênio Lento",
+          plan_type: "convenio",
+          avg_days_to_receive: 100,
+          billings_settled_count: 1,
+        },
+        {
+          insurance_plan_id: "p2",
+          insurance_plan_name: "Convênio Rápido",
+          plan_type: "convenio",
+          avg_days_to_receive: 10,
+          billings_settled_count: 1,
+        },
       ],
     };
     vi.mocked(apiClient.get).mockResolvedValue(data);
@@ -33,6 +45,31 @@ describe("PaymentLagPanel", () => {
     expect(screen.getByText("Convênio Rápido")).toBeInTheDocument();
     expect(screen.getByText("100 dias")).toBeInTheDocument();
     expect(screen.getByText("10 dias")).toBeInTheDocument();
+    expect(screen.queryByText("Particular")).not.toBeInTheDocument();
+  });
+
+  it("mostra o selo 'Particular' pra plano sem operadora (Onda 3 do Plano de Ação)", async () => {
+    const data: PaymentLagByPlan = {
+      period_start: "2026-01-01",
+      period_end: "2026-01-07",
+      avg_days_to_receive: 5,
+      billings_settled_count: 1,
+      items: [
+        {
+          insurance_plan_id: "p3",
+          insurance_plan_name: "Atendimento Particular",
+          plan_type: "particular",
+          avg_days_to_receive: 5,
+          billings_settled_count: 1,
+        },
+      ],
+    };
+    vi.mocked(apiClient.get).mockResolvedValue(data);
+
+    renderWithProviders(<PaymentLagPanel dateFrom="2026-01-01" dateTo="2026-01-07" />);
+
+    await waitFor(() => expect(screen.getByText("Atendimento Particular")).toBeInTheDocument());
+    expect(screen.getByText("Particular")).toBeInTheDocument();
   });
 
   it("mensagem honesta quando nenhum billing foi conciliado no período", async () => {
