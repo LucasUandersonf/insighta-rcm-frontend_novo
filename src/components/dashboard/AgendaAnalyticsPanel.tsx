@@ -35,10 +35,12 @@ export function AgendaAnalyticsPanel({ dateFrom, dateTo }: { dateFrom: string; d
   const palette = CHART_PALETTE[resolvedTheme];
   const axisStyle = { stroke: palette.axis, fontSize: 11 };
 
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error, dataUpdatedAt } = useQuery({
     queryKey: ["analytics", "agenda-metrics", dateFrom, dateTo],
     queryFn: () => apiClient.get<AgendaMetrics>(`/api/v1/analytics/agenda-metrics?date_from=${dateFrom}&date_to=${dateTo}`),
   });
+  // Épico F4.3: um único useQuery alimenta todos os Panels desta tela —
+  // o mesmo dataUpdatedAt é passado pra cada um deles abaixo.
 
   const peakHoursData = (data?.peak_hours ?? []).map((b) => ({ hora: `${String(b.hour).padStart(2, "0")}h`, consultas: b.appointment_count }));
   const weekdayData = (data?.weekday_histogram ?? []).map((b) => ({ dia: WEEKDAY_SHORT_LABELS[b.weekday], consultas: b.appointment_count }));
@@ -84,7 +86,7 @@ export function AgendaAnalyticsPanel({ dateFrom, dateTo }: { dateFrom: string; d
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
       <div className="lg:col-span-6">
-        <Panel title="Horários de pico" subtitle="Volume de consultas por hora do dia">
+        <Panel title="Horários de pico" subtitle="Volume de consultas por hora do dia" updatedAt={dataUpdatedAt || null}>
           {isLoading && <LoadingState />}
           {error && <ErrorState message={getApiErrorMessage(error)} />}
           {!isLoading && !error && peakHoursData.length === 0 && <EmptyState icon={<CalendarX2 size={17} strokeWidth={1.5} />} message="Sem agendamentos nesta janela." />}
@@ -111,7 +113,11 @@ export function AgendaAnalyticsPanel({ dateFrom, dateTo }: { dateFrom: string; d
       </div>
 
       <div className="lg:col-span-6">
-        <Panel title="Agenda por dia da semana" subtitle="Evidência do insight de queda de agenda, ao lado — volume de consultas por dia">
+        <Panel
+          title="Agenda por dia da semana"
+          subtitle="Evidência do insight de queda de agenda, ao lado — volume de consultas por dia"
+          updatedAt={dataUpdatedAt || null}
+        >
           {isLoading && <LoadingState />}
           {error && <ErrorState message={getApiErrorMessage(error)} />}
           {!isLoading && !error && weekdayData.length === 0 && <EmptyState icon={<CalendarX2 size={17} strokeWidth={1.5} />} message="Sem agendamentos nesta janela." />}
@@ -141,6 +147,7 @@ export function AgendaAnalyticsPanel({ dateFrom, dateTo }: { dateFrom: string; d
         <Panel
           title="Taxa de falta por dia da semana"
           subtitle="Diferente do gráfico de volume acima — aqui é a FRAÇÃO de faltas dentro dos atendimentos já resolvidos (concluído ou faltou) de cada dia, não a contagem de agendamentos"
+          updatedAt={dataUpdatedAt || null}
         >
           {isLoading && <LoadingState />}
           {error && <ErrorState message={getApiErrorMessage(error)} />}
@@ -171,7 +178,7 @@ export function AgendaAnalyticsPanel({ dateFrom, dateTo }: { dateFrom: string; d
       </div>
 
       <div className="lg:col-span-6">
-        <Panel title="Ocupação por profissional" subtitle="Ocupação vs. ociosidade da agenda no período">
+        <Panel title="Ocupação por profissional" subtitle="Ocupação vs. ociosidade da agenda no período" updatedAt={dataUpdatedAt || null}>
           {isLoading && <LoadingState />}
           {!isLoading && !error && professionalData.length === 0 && <EmptyState icon={<Users size={17} strokeWidth={1.5} />} message="Nenhum profissional com grade cadastrada." />}
           {!isLoading && professionalData.length > 0 && (
@@ -215,7 +222,11 @@ export function AgendaAnalyticsPanel({ dateFrom, dateTo }: { dateFrom: string; d
       </div>
 
       <div className="lg:col-span-6">
-        <Panel title="Detalhe por profissional" action={data && <span className="text-2xs text-ink-faint">{data.professionals.length} ativo(s)</span>}>
+        <Panel
+          title="Detalhe por profissional"
+          action={data && <span className="text-2xs text-ink-faint">{data.professionals.length} ativo(s)</span>}
+          updatedAt={dataUpdatedAt || null}
+        >
           {noShowNarrative && (
             <div className="border-b border-border-hairline px-4 py-3">
               <NarrativeInsight text={noShowNarrative} tone={avgNoShowRate !== null && avgNoShowRate > 0.2 ? "warning" : "positive"} />
@@ -247,7 +258,11 @@ export function AgendaAnalyticsPanel({ dateFrom, dateTo }: { dateFrom: string; d
       </div>
 
       <div className="lg:col-span-12">
-        <Panel title="Risco preditivo de falta (no-show)" subtitle="Agendamentos futuros, por nível de risco">
+        <Panel
+          title="Risco preditivo de falta (no-show)"
+          subtitle="Agendamentos futuros, por nível de risco"
+          updatedAt={dataUpdatedAt || null}
+        >
           {!isLoading && data && (
             <div className="grid grid-cols-1 gap-6 p-4 sm:grid-cols-[1fr_auto]">
               <ul className="space-y-1.5 text-sm">
@@ -272,6 +287,7 @@ export function AgendaAnalyticsPanel({ dateFrom, dateTo }: { dateFrom: string; d
         <Panel
           title="Lista vermelha de pacientes"
           subtitle="Ranking por taxa de falta no período — mínimo de 3 atendimentos para entrar na lista"
+          updatedAt={dataUpdatedAt || null}
         >
           {isLoading && <LoadingState variant="table" rows={4} />}
           {!isLoading && !error && (data?.patient_no_show_ranking ?? []).length === 0 && (

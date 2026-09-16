@@ -15,7 +15,7 @@ const MAX_ROWS = 5;
  * backend do pior para o melhor (ver AnalyticsRepository.contract_utilization).
  */
 export function ContractUtilizationPanel({ dateFrom, dateTo }: { dateFrom: string; dateTo: string }) {
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error, dataUpdatedAt } = useQuery({
     queryKey: ["analytics", "contract-utilization", dateFrom, dateTo],
     queryFn: () =>
       apiClient.get<ContractUtilization>(`/api/v1/analytics/contract-utilization?date_from=${dateFrom}&date_to=${dateTo}`),
@@ -24,7 +24,7 @@ export function ContractUtilizationPanel({ dateFrom, dateTo }: { dateFrom: strin
   const contracts = (data?.contracts ?? []).slice(0, MAX_ROWS);
 
   return (
-    <Panel title="Utilização de contrato" subtitle="% já coberto por tabela homologada">
+    <Panel title="Utilização de contrato" subtitle="% já coberto por tabela homologada" updatedAt={dataUpdatedAt || null}>
       {isLoading && (
         <div className="space-y-3 p-5">
           {Array.from({ length: 4 }).map((_, i) => (

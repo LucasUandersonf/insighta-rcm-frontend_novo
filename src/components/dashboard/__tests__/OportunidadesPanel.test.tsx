@@ -27,6 +27,8 @@ describe("OportunidadesPanel", () => {
           gap_value: 50,
           gap_pct: 0.5,
           estimated_monthly_opportunity: 1000,
+          days_until_contract_renewal: null,
+          contract_valid_until: null,
         },
       ],
     };
@@ -64,6 +66,8 @@ describe("OportunidadesPanel", () => {
           gap_value: 20,
           gap_pct: 0.25,
           estimated_monthly_opportunity: 0,
+          days_until_contract_renewal: null,
+          contract_valid_until: null,
         },
       ],
     };
@@ -74,5 +78,64 @@ describe("OportunidadesPanel", () => {
     await waitFor(() => expect(screen.getByText("Bradesco Saúde")).toBeInTheDocument());
     expect(screen.getByText("sem volume recente")).toBeInTheDocument();
     expect(screen.getByText("Código TUSS 20202020")).toBeInTheDocument();
+  });
+
+  // "Junta Técnica Insighta" — a contagem regressiva de renovação de
+  // contrato junto ao ranking de oportunidade.
+  it("mostra contagem regressiva de renovação quando o contrato está vencendo dentro da janela de preparação", async () => {
+    const data: Oportunidades = {
+      window_days: 90,
+      items: [
+        {
+          insurance_plan_id: "p1",
+          plan_display_name: "Unimed Regional",
+          tuss_code: "10101012",
+          procedure_name: "Consulta em consultório",
+          your_price: 100,
+          network_median_price: 150,
+          network_cohort_size: 4,
+          monthly_volume: 20,
+          gap_value: 50,
+          gap_pct: 0.5,
+          estimated_monthly_opportunity: 1000,
+          days_until_contract_renewal: 90,
+          contract_valid_until: "2026-12-14",
+        },
+      ],
+    };
+    vi.mocked(apiClient.get).mockResolvedValue(data);
+
+    renderWithProviders(<OportunidadesPanel />);
+
+    await waitFor(() => expect(screen.getByText(/Contrato vence em 90 dias/)).toBeInTheDocument());
+  });
+
+  it("não mostra contagem regressiva quando o contrato não está vencendo", async () => {
+    const data: Oportunidades = {
+      window_days: 90,
+      items: [
+        {
+          insurance_plan_id: "p1",
+          plan_display_name: "Unimed Regional",
+          tuss_code: "10101012",
+          procedure_name: "Consulta em consultório",
+          your_price: 100,
+          network_median_price: 150,
+          network_cohort_size: 4,
+          monthly_volume: 20,
+          gap_value: 50,
+          gap_pct: 0.5,
+          estimated_monthly_opportunity: 1000,
+          days_until_contract_renewal: null,
+          contract_valid_until: null,
+        },
+      ],
+    };
+    vi.mocked(apiClient.get).mockResolvedValue(data);
+
+    renderWithProviders(<OportunidadesPanel />);
+
+    await waitFor(() => expect(screen.getByText("Unimed Regional")).toBeInTheDocument());
+    expect(screen.queryByText(/Contrato vence em/)).not.toBeInTheDocument();
   });
 });

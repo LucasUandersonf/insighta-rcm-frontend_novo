@@ -24,6 +24,25 @@ function formatCurrencyCompact(value: number): string {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(value);
 }
 
+function RenewalCountdownBadge({ item }: { item: OportunidadeItem }) {
+  if (item.days_until_contract_renewal === null) return null;
+  // "Junta Técnica Insighta" — dentro da janela de preparação de 120
+  // dias; abaixo de 30 dias é o mesmo limiar "urgente" do alerta de
+  // contrato vencendo no Diagnóstico (ver CONTRACT_EXPIRING_ALERT_HORIZON_DAYS).
+  const urgent = item.days_until_contract_renewal <= 30;
+  return (
+    <span
+      className={
+        urgent
+          ? "mt-1 inline-flex items-center rounded-full border border-denied/25 bg-denied-bg px-2 py-0.5 text-2xs font-medium text-denied"
+          : "mt-1 inline-flex items-center rounded-full border border-border-subtle px-2 py-0.5 text-2xs text-ink-faint"
+      }
+    >
+      Contrato vence em {item.days_until_contract_renewal} dia{item.days_until_contract_renewal === 1 ? "" : "s"} — comece a se preparar
+    </span>
+  );
+}
+
 function OportunidadeRow({ item, rank }: { item: OportunidadeItem; rank: number }) {
   return (
     <tr className="border-b border-border-hairline last:border-0">
@@ -31,6 +50,7 @@ function OportunidadeRow({ item, rank }: { item: OportunidadeItem; rank: number 
       <td className="py-3 pr-3">
         <p className="text-sm font-medium text-ink">{item.plan_display_name}</p>
         <p className="mt-0.5 text-xs text-ink-muted">{item.procedure_name ?? `Código TUSS ${item.tuss_code}`}</p>
+        <RenewalCountdownBadge item={item} />
       </td>
       <td className="tabular whitespace-nowrap py-3 pr-3 text-right text-sm text-ink-muted">{formatCurrency(item.your_price)}</td>
       <td className="tabular whitespace-nowrap py-3 pr-3 text-right text-sm text-ink">{formatCurrency(item.network_median_price)}</td>

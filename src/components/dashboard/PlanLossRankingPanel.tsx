@@ -25,7 +25,7 @@ const MAX_ROWS = 5;
  * ExecutiveSummary, ver DECISÃO anterior).
  */
 export function PlanLossRankingPanel({ dateFrom, dateTo }: { dateFrom: string; dateTo: string }) {
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error, dataUpdatedAt } = useQuery({
     queryKey: ["analytics", "plan-loss-ranking", dateFrom, dateTo],
     queryFn: () =>
       apiClient.get<PlanLossRanking>(`/api/v1/analytics/plan-loss-ranking?date_from=${dateFrom}&date_to=${dateTo}`),
@@ -35,7 +35,7 @@ export function PlanLossRankingPanel({ dateFrom, dateTo }: { dateFrom: string; d
   const maxLoss = Math.max(...plans.map((p) => p.total_loss), 1);
 
   return (
-    <Panel title="Ranking de perda por convênio" subtitle="Maior perda primeiro">
+    <Panel title="Ranking de perda por convênio" subtitle="Maior perda primeiro" updatedAt={dataUpdatedAt || null}>
       {isLoading && (
         <div className="space-y-3 p-5">
           {Array.from({ length: 4 }).map((_, i) => (

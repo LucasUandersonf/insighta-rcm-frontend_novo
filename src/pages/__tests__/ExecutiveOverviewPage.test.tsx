@@ -3,11 +3,22 @@ import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ExecutiveOverviewPage } from "@/pages/ExecutiveOverviewPage";
 import { apiClient } from "@/lib/api-client";
+import { useAuth } from "@/context/AuthContext";
 import { renderWithProviders } from "@/test/utils";
+import type { CurrentUser } from "@/lib/types";
 
 vi.mock("@/lib/api-client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api-client")>();
   return { ...actual, apiClient: { ...actual.apiClient, get: vi.fn() } };
+});
+
+// PriorityQueuePanel (aba "Hoje", agora a padrão) usa useAuth() pra
+// decidir se mostra os botões de gestão (F1.2/F1.3) — mockado aqui
+// pelo mesmo motivo de Sidebar.test.tsx: AuthContext não é montado de
+// verdade nos testes de página (ver DECISÃO em test/utils.tsx).
+vi.mock("@/context/AuthContext", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/context/AuthContext")>();
+  return { ...actual, useAuth: vi.fn() };
 });
 
 /**
@@ -36,6 +47,9 @@ function mockAllEndpoints() {
     }
     if (url.includes("smart-insights")) {
       return Promise.resolve({ period_start: "2026-01-01", period_end: "2026-01-07", insights: [] } as never);
+    }
+    if (url.includes("priority-queue")) {
+      return Promise.resolve({ period_start: "2026-01-01", period_end: "2026-01-07", items: [], total_considered: 0 } as never);
     }
     if (url.includes("health-score")) {
       return Promise.resolve({ score: null, window_days: 90, components: [] } as never);
@@ -69,6 +83,24 @@ function mockAllEndpoints() {
     if (url.includes("financial-hole-billings")) {
       return Promise.resolve({ period_start: "2026-01-01", period_end: "2026-01-07", total_count: 0, total_hole_value: 0, items: [] } as never);
     }
+    if (url.includes("capital-decision-base-data")) {
+      return Promise.resolve({
+        window_days: 180,
+        period_start: "2026-01-01",
+        period_end: "2026-01-07",
+        available_specialties: [],
+        specialty_requested: null,
+        used_fallback_clinic_wide: false,
+        sample_size: 0,
+        min_sample: 2,
+        avg_revenue_per_hour: null,
+        has_cost_data: false,
+        avg_margin_per_hour: null,
+        belongs_to_organization: false,
+        sibling_units_count: 0,
+        avg_monthly_revenue_per_unit: null,
+      } as never);
+    }
     if (url.includes("/users/me")) {
       return Promise.resolve(null as never);
     }
@@ -77,11 +109,19 @@ function mockAllEndpoints() {
 }
 
 describe("ExecutiveOverviewPage", () => {
-  it("abre na aba Diagnóstico e troca para Oportunidades/Comparativo/Simulador ao clicar", async () => {
+  it("abre na aba Hoje (fila priorizada) e troca para Diagnóstico/Oportunidades/Comparativo/Simulador ao clicar", async () => {
+    vi.mocked(useAuth).mockReturnValue({
+      user: { tenant_id: "t1", id: "u1", role: "owner" } as unknown as CurrentUser,
+    } as unknown as ReturnType<typeof useAuth>);
     mockAllEndpoints();
     const user = userEvent.setup();
     renderWithProviders(<ExecutiveOverviewPage />);
 
+    // Épico F1.1 do Plano Diretor: "Hoje" é a página inicial agora — o
+    // gestor não escolhe mais aba antes de saber o que fazer.
+    expect(await screen.findByText(/Nenhuma ação prioritária agora/)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("tab", { name: /Diagnóstico/ }));
     expect(await screen.findByText("Agenda & Capacidade Operacional")).toBeInTheDocument();
 
     await user.click(screen.getByRole("tab", { name: /Oportunidades/ }));
@@ -92,5 +132,9 @@ describe("ExecutiveOverviewPage", () => {
 
     await user.click(screen.getByRole("tab", { name: /Simulador/ }));
     await waitFor(() => expect(screen.getByText(/Ajuste os cenários/)).toBeInTheDocument());
+
+    // Épico F3.4 do Plano Diretor ("Decisões de capital").
+    await user.click(screen.getByRole("tab", { name: /Capital/ }));
+    await waitFor(() => expect(screen.getByText(/Payback de uma nova contratação/)).toBeInTheDocument());
   });
 });

@@ -221,6 +221,17 @@ export interface Tenant {
   // cortes do MVP eram um chute de partida, não uma calibração validada.
   no_show_low_threshold: number | null;
   no_show_medium_threshold: number | null;
+  // Épico F2.1 do Plano Diretor ("Calibração por especialidade/porte") —
+  // mesmo padrão acima. `specialty` é texto livre curto e descritivo
+  // (usado hoje só para contexto, não seleciona uma tabela de benchmark
+  // por especialidade que não existe). Limiares de risco de glosa são
+  // PERCENTUAIS (0-100, não frações); tetos da Nota de Saúde Financeira
+  // são frações 0-1 (mesma escala de no_show_*_threshold).
+  specialty: string | null;
+  denial_risk_warning_threshold: number | null;
+  denial_risk_critical_threshold: number | null;
+  health_score_denial_ceiling: number | null;
+  health_score_no_show_ceiling: number | null;
 }
 
 export interface TenantUpdateRequest {
@@ -229,6 +240,11 @@ export interface TenantUpdateRequest {
   annual_revenue_goal?: number;
   no_show_low_threshold?: number;
   no_show_medium_threshold?: number;
+  specialty?: string;
+  denial_risk_warning_threshold?: number;
+  denial_risk_critical_threshold?: number;
+  health_score_denial_ceiling?: number;
+  health_score_no_show_ceiling?: number;
 }
 
 // GET /tenant/no-show-thresholds/suggested — calculado a partir do
@@ -239,6 +255,26 @@ export interface NoShowThresholdSuggestion {
   low_threshold: number | null;
   medium_threshold: number | null;
   sample_size: number;
+}
+
+// GET /tenant/denial-risk-thresholds/suggested — mesmo raciocínio acima,
+// aplicado ao histórico MENSAL de risco de glosa desta clínica (Épico
+// F2.1 do Plano Diretor). Campos null = menos de 6 meses fechados de
+// histórico.
+export interface DenialRiskThresholdSuggestion {
+  warning_threshold: number | null;
+  critical_threshold: number | null;
+  sample_size: number;
+}
+
+// GET /tenant/health-score-ceilings/suggested — mesmo raciocínio, para os
+// DOIS tetos da Nota de Saúde Financeira. Cada teto tem sua própria
+// amostra (podem divergir).
+export interface HealthScoreCeilingSuggestion {
+  denial_ceiling: number | null;
+  denial_ceiling_sample_size: number;
+  no_show_ceiling: number | null;
+  no_show_ceiling_sample_size: number;
 }
 
 // --- Mapeador Automático de Coluna (app/schemas/ingestion.py) — escopo:
@@ -550,6 +586,43 @@ export interface DenialReasonConfirmationItem {
   confirmed_denial_rate: number; // fração 0.0-1.0
 }
 
+// GET /analytics/product-roi (Épico F4.4 do Plano Diretor — "Prova de
+// ROI do próprio produto") — três componentes independentes e
+// CUMULATIVOS desde que a clínica começou a usar o produto (nunca uma
+// janela de período).
+export interface ProductRoi {
+  protected_from_denial_value: number;
+  recovered_appeals_value: number;
+  recovered_appeals_count: number;
+  realized_insight_outcomes_value: number;
+  realized_insight_outcomes_count: number;
+  total_roi_value: number;
+  tracking_since: string | null; // null quando a clínica ainda não tem faturamento nenhum
+}
+
+// GET /analytics/capital-decision-base-data (Épico F3.4 do Plano
+// Diretor — "Decisões de capital: contratar/expandir"). Dado-base real
+// pra simulação de payback feita NESTA tela (CapitalDecisionPanel) —
+// nunca a decisão pronta, ver DECISÃO completa no schema do backend.
+export interface CapitalDecisionBaseData {
+  window_days: number;
+  period_start: string;
+  period_end: string;
+
+  available_specialties: string[];
+  specialty_requested: string | null;
+  used_fallback_clinic_wide: boolean;
+  sample_size: number;
+  min_sample: number;
+  avg_revenue_per_hour: number | null;
+  has_cost_data: boolean;
+  avg_margin_per_hour: number | null;
+
+  belongs_to_organization: boolean;
+  sibling_units_count: number;
+  avg_monthly_revenue_per_unit: number | null;
+}
+
 export interface DenialReasonConfirmation {
   baseline_sample_size: number;
   // null quando ainda não há nenhum faturamento "sem motivo sinalizado"
@@ -582,9 +655,13 @@ export interface ContractUtilization {
 }
 
 // Donut "Distribuição de risco de glosa" (GET /analytics/denial-risk-distribution)
+// — carrega contagem E valor em R$ por nível (achado do Parecer Técnico
+// "Boletim Insighta": eliminou a tela duplicada que só mostrava valor
+// agregado, sem abrir por nível de risco).
 export interface DenialRiskDistributionItem {
   level: "low" | "medium" | "high";
   count: number;
+  value: number;
 }
 
 export interface DenialRiskDistribution {
@@ -592,6 +669,26 @@ export interface DenialRiskDistribution {
   period_end: string;
   items: DenialRiskDistributionItem[];
   total_reviewed: number;
+  total_value_reviewed: number;
+}
+
+// GET /analytics/data-quality (Épico F2.2 do Plano Diretor — "Qualidade
+// de dado na origem") — taxa de atendimento lançado já completo (CID +
+// procedimento) por atendente, ordenado do pior pro melhor. `items` só
+// traz atendente com amostra >= min_sample.
+export interface DataQualityByUserItem {
+  user_id: string;
+  full_name: string;
+  complete_count: number;
+  total_count: number;
+  completion_rate: number; // fração 0.0-1.0
+}
+
+export interface DataQuality {
+  items: DataQualityByUserItem[];
+  overall_completion_rate: number | null; // null sem nenhum atendente com amostra suficiente
+  total_considered: number;
+  min_sample: number;
 }
 
 // "comparativo" — Comparativo entre clínicas como manchete do feed (Sala
@@ -604,8 +701,11 @@ export type InsightSeverity = "critical" | "warning" | "positive" | "comparativo
 // "faturamento" | "agenda" — área do card, usada por SmartInsightsFeed.tsx
 // pra agrupar o feed em seções em vez de uma lista única misturando
 // cobrança/glosa com ocupação de agenda (ver DECISÃO em
-// smart_insights_engine.Insight.category, backend).
-export type InsightCategory = "faturamento" | "agenda";
+// smart_insights_engine.Insight.category, backend). "estrategia" só
+// aparece em itens sintéticos da fila (PriorityQueueItem, ver abaixo) —
+// nunca emitido por generate_insights(), então SmartInsightsFeed.tsx
+// nunca precisa saber desse terceiro valor.
+export type InsightCategory = "faturamento" | "agenda" | "estrategia";
 
 export interface SmartInsight {
   severity: InsightSeverity;
@@ -633,6 +733,76 @@ export interface SmartInsights {
   insights: SmartInsight[];
 }
 
+// GET /analytics/priority-queue — épico F1.1 do Plano Diretor ("Fila
+// única de ação priorizada"). Mesmo shape de SmartInsight + `source`:
+// "insight" (veio do feed que já existe) ou "raiox" (extraído na hora
+// de um painel do Raio-X que nunca virou card de feed sozinho — ver
+// DECISÃO em AnalyticsService.get_priority_queue, backend). Nunca
+// esconde a proveniência — o mesmo motivo de `category` nunca ser
+// escondido no feed normal.
+export interface PriorityQueueItem extends SmartInsight {
+  source: "insight" | "raiox";
+}
+
+export interface PriorityQueue {
+  period_start: string;
+  period_end: string;
+  items: PriorityQueueItem[];
+  // Quantos itens existiam ANTES do corte por limit — mostra "3 de 14"
+  // em vez de fingir que a fila é só o que coube.
+  total_considered: number;
+}
+
+// Épicos F1.2 (ciclo fechado de insight) + F1.3 (atribuição/workflow)
+// do Plano Diretor — ver DECISÃO completa em
+// app/sql/038_insight_outcomes.sql no backend.
+export type InsightOutcomeStatus = "pendente" | "em_andamento" | "resolvido" | "ignorado";
+
+export interface InsightOutcome {
+  id: string;
+  insight_key: string;
+  source: "insight" | "raiox";
+  category: string;
+  severity: InsightSeverity;
+  title: string;
+  message: string;
+  financial_impact_snapshot: number | null;
+  status: InsightOutcomeStatus;
+  assigned_to: string | null;
+  due_date: string | null;
+  resolution_note: string | null;
+  resolved_at: string | null;
+  resolved_metric_value: number | null;
+  reevaluated_at: string | null;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface InsightOutcomeCreateRequest {
+  source: "insight" | "raiox";
+  category: string;
+  severity: InsightSeverity;
+  title: string;
+  message: string;
+  financial_impact?: number | null;
+  assigned_to?: string | null;
+  due_date?: string | null;
+}
+
+export interface InsightOutcomeUpdateRequest {
+  status?: InsightOutcomeStatus;
+  assigned_to?: string | null;
+  due_date?: string | null;
+  resolution_note?: string | null;
+}
+
+export interface InsightOutcomesRealizedSummary {
+  total_resolved_and_reevaluated: number;
+  total_delta_realized: number;
+  items: InsightOutcome[];
+}
+
 // Nota de Saúde Financeira (GET /analytics/health-score) — Sala de Comando 2.0
 export interface HealthScoreComponent {
   key: string; // "denial" | "no_show" | "appeal"
@@ -653,6 +823,15 @@ export interface HealthScore {
   components: HealthScoreComponent[];
   window_days: number;
   trend: HealthScoreTrend | null; // null = ainda não há fotografia de referência (base nova)
+}
+
+// "Equilíbrio Insighta" (Balanced Scorecard, perna Cliente) — resumo de
+// NPS/satisfação pós-atendimento (GET /analytics/satisfaction-summary).
+export interface SatisfactionSummary {
+  average_score: PeriodKpi | null; // null = nenhuma avaliação recebida ainda no período
+  response_count: number;
+  distribution: Record<string, number>; // {"1": n, "2": n, "3": n, "4": n, "5": n}
+  window_days: number;
 }
 
 // Carteira de pacientes inativos (GET /analytics/inactive-patients) — Sala de Comando
@@ -698,6 +877,12 @@ export interface ProfessionalProfitabilityItem {
   revenue: number;
   booked_minutes: number;
   revenue_per_hour: number | null; // null quando não há agenda ocupada no período
+  // Épico F3.1 do Plano Diretor ("Módulo de custos e margem real") —
+  // todos null quando Profitability.has_cost_data é false (nenhum
+  // custo lançado ainda), nunca 0.
+  allocated_cost: number | null;
+  net_margin: number | null;
+  margin_per_hour: number | null;
 }
 
 export interface ProcedureProfitabilityItem {
@@ -714,6 +899,41 @@ export interface Profitability {
   total_billed: number;
   by_professional: ProfessionalProfitabilityItem[]; // ordenado por receita/hora, maior primeiro
   by_procedure: ProcedureProfitabilityItem[]; // ordenado por receita, maior primeiro
+  has_cost_data: boolean;
+  total_costs: number | null;
+  net_margin: number | null;
+  // "Junta Técnica Insighta" — 2 referências externas de mercado (ver
+  // DECISÃO em AnalyticsService.get_profitability, backend): margem
+  // líquida saudável 15-30%; custo fixo saudável até 60% da receita.
+  // Ambos null sem dado/amostra suficiente. Um terceiro benchmark do
+  // relatório (convênio × particular) ficou de fora — o produto não
+  // modela uma cobrança genuinamente sem convênio hoje (ver DECISÃO
+  // completa no schema do backend).
+  net_margin_pct: number | null;
+  fixed_cost_pct: number | null;
+}
+
+// Épico F3.1 do Plano Diretor — ver DECISÃO completa em
+// app/sql/039_cost_entries.sql no backend.
+export type CostEntryCategory = "folha_fixa" | "comissao_repasse" | "aluguel" | "insumo" | "outros";
+
+export interface CostEntry {
+  id: string;
+  category: CostEntryCategory;
+  description: string | null;
+  amount: number;
+  period_month: string;
+  professional_id: string | null;
+  created_by: string;
+  created_at: string;
+}
+
+export interface CostEntryCreateRequest {
+  category: CostEntryCategory;
+  description?: string | null;
+  amount: number;
+  period_month: string;
+  professional_id?: string | null;
 }
 
 // Raio-X da Receita, frente "Gestão eficiente" — CAC e receita média por
@@ -809,11 +1029,56 @@ export interface NetworkBenchmarkMetric {
   your_sample: number;
   network_median: number | null; // null = amostra de clínicas na base ainda insuficiente
   cohort_size: number;
+  // "Mapa de Dados Insighta" — pilar Comparativo & rede: True quando o
+  // cohort foi filtrado pela MESMA especialidade da clínica. Ver
+  // DECISÃO em 048_network_benchmark_specialty_segment.sql (backend).
+  cohort_is_segmented_by_specialty: boolean;
 }
 
 export interface NetworkBenchmark {
   metrics: NetworkBenchmarkMetric[];
   window_days: number;
+}
+
+// GET /analytics/organization-summary (Épico F3.2 do Plano Diretor —
+// "Consolidação multi-unidade") — dashboard consolidado comparando as
+// unidades do MESMO grupo lado a lado. AO CONTRÁRIO do Comparativo
+// entre Clínicas, NÃO é anonimizado (unidades do mesmo dono).
+// `belongs_to_organization: false` é o estado NORMAL da maioria das
+// clínicas (avulsas), nunca um erro.
+export interface OrganizationUnitSummary {
+  tenant_id: string;
+  trade_name: string;
+  is_requesting_tenant: boolean;
+  total_billed: number;
+  denial_risk_pct: number | null; // null = sem faturamento no período
+  appointment_count: number;
+  no_show_rate: number | null; // null = sem atendimento resolvido no período
+}
+
+export interface OrganizationSummary {
+  belongs_to_organization: boolean;
+  organization_name: string | null;
+  window_days: number;
+  units: OrganizationUnitSummary[];
+  consolidated_total_billed: number;
+  consolidated_denial_risk_pct: number | null;
+  consolidated_no_show_rate: number | null;
+}
+
+// GET /tenant/annual-goal/suggested (Épico F3.3 do Plano Diretor —
+// "Metas e cenários orientados a dados") — duas sugestões
+// independentes (crescimento histórico próprio vs. ritmo/percentil de
+// rede), nunca uma média escondida entre elas. Campos de sugestão são
+// null quando a base necessária (período anterior próprio / cohort de
+// rede) ainda não existe.
+export interface AnnualGoalSuggestion {
+  trailing_12_months_total: number;
+  own_growth_rate: number | null;
+  own_trend_suggested_goal: number | null;
+  network_growth_median: number | null;
+  network_pace_suggested_goal: number | null;
+  network_cohort_size: number;
 }
 
 // Oportunidades (GET /analytics/oportunidades) — Sala de Comando 2.0
@@ -829,6 +1094,11 @@ export interface OportunidadeItem {
   gap_value: number;
   gap_pct: number;
   estimated_monthly_opportunity: number;
+  // "Junta Técnica Insighta" — contagem regressiva de preparação para
+  // renovação (120 dias), só presente quando este convênio tem um
+  // contrato vencendo sem sucessor cadastrado.
+  days_until_contract_renewal: number | null;
+  contract_valid_until: string | null;
 }
 
 export interface Oportunidades {
@@ -855,7 +1125,23 @@ export interface BillingResponse {
   member_card_number: string | null;
   item_type: string | null;
   coparticipation_value: number | null;
+  // Épico F4.2 do Plano Diretor ("Fechar lacunas operacionais") — NULL
+  // = ainda não confirmado (estado inicial da maioria), nunca um false
+  // inventado (ver DECISÃO em 043_coparticipation_confirmation.sql).
+  coparticipation_received: boolean | null;
+  coparticipation_confirmed_at: string | null;
+  // Épico F2.3 do Plano Diretor ("Auditoria documental leve —
+  // prontuário × conta") — NULL = ainda não conferido (estado inicial
+  // da maioria), nunca um false inventado (ver DECISÃO em
+  // 044_opme_documentation_confirmation.sql).
+  clinical_documentation_confirmed: boolean | null;
+  // "Mapa de Dados Insighta" — Domínio Financeiro particular (Onda 1).
+  // Ver DECISÃO em 049_billing_payment_method.sql (backend).
+  payment_method: PaymentMethod | null;
+  installments: number | null;
 }
+
+export type PaymentMethod = "dinheiro" | "pix" | "cartao_debito" | "cartao_credito" | "boleto";
 
 export interface BillingSettleRequest {
   received_value: number;
@@ -876,6 +1162,15 @@ export interface BillingSearchItem {
   // Achado 12 da Auditoria (médio) — mesmo motivo de BillingResponse.
   item_type: string | null;
   member_card_number: string | null;
+  // Épico F4.2 — mesmo motivo de BillingResponse acima.
+  coparticipation_value: number | null;
+  coparticipation_received: boolean | null;
+  // Épico F2.3 — mesmo motivo de BillingResponse acima.
+  clinical_documentation_confirmed: boolean | null;
+  // "Mapa de Dados Insighta" — a tela de confirmação de coparticipação
+  // usa o MESMO BillingSearchPicker das outras; mostra a forma de
+  // pagamento já registrada, quando houver.
+  payment_method: PaymentMethod | null;
 }
 
 // Guia (TISS) — ver app/models/guia.py no backend. Fase 1 do plano de
@@ -905,6 +1200,28 @@ export interface GuiaCreateRequest {
   tabela_procedimento?: string | null;
 }
 
+// Lote — ver app/models/lote.py e app/schemas/lote.py no backend. Fase 2
+// do plano de adequação ao fluxo real de mercado: agrupa Guias do MESMO
+// convênio + tipo (aberto -> fechado -> faturado, este último setado
+// por FaturaService.create_from_lotes, fora do alcance desta tela).
+export type LoteStatus = "aberto" | "fechado" | "faturado";
+
+export interface Lote {
+  id: string;
+  insurance_plan_id: string;
+  tipo: GuiaTipo;
+  status: LoteStatus;
+  fatura_id: string | null;
+  closed_at: string | null;
+  created_at: string;
+  guias_count: number;
+}
+
+export interface LoteCreateRequest {
+  insurance_plan_id: string;
+  tipo: GuiaTipo;
+}
+
 // Formato de erro único que app/main.py devolve para TODO erro da API
 // (ver DECISÃO em app/main.py — o mesmo mecanismo serve o frontend e o
 // usuário final).
@@ -917,6 +1234,8 @@ export interface ApiErrorBody {
 }
 
 // --- Pacientes (app/schemas/patient.py) ---
+export type PreferredTimeWindow = "manha" | "tarde" | "noite";
+
 export interface Patient {
   id: string;
   full_name: string;
@@ -924,12 +1243,37 @@ export interface Patient {
   birth_date: string | null;
   acquisition_source: string | null;
   created_at: string;
+  // "Mapa de Dados Insighta" — Domínio Paciente (Onda 1): o paciente
+  // relacional, não só transacional. Ver DECISÃO em
+  // 045_patient_relationship_fields.sql (backend).
+  referred_by_patient_id: string | null;
+  communication_consent: boolean | null;
+  preferred_time_window: PreferredTimeWindow | null;
+  zip_code: string | null;
+  // "Equilíbrio Insighta" (Balanced Scorecard, perna Cliente) — score de
+  // paciente de alto valor, calculado só em GET /patients (nunca em
+  // create/update, que devolvem o default False/[]).
+  is_vip: boolean;
+  vip_reasons: string[];
 }
 
 export interface PatientCreateRequest {
   full_name: string;
   cpf?: string | null;
   birth_date?: string | null;
+  referred_by_patient_id?: string | null;
+  communication_consent?: boolean | null;
+  preferred_time_window?: PreferredTimeWindow | null;
+  zip_code?: string | null;
+}
+
+// PATCH /patients/{id} — completa depois os campos relacionais que
+// raramente são conhecidos no primeiro cadastro.
+export interface PatientUpdateRequest {
+  referred_by_patient_id?: string | null;
+  communication_consent?: boolean | null;
+  preferred_time_window?: PreferredTimeWindow | null;
+  zip_code?: string | null;
 }
 
 // --- Profissionais (app/schemas/professional.py) ---
@@ -939,6 +1283,29 @@ export interface AvailabilityBlock {
   end_time: string;
 }
 
+// "Mapa de Dados Insighta" — Domínio Profissional (Onda 1): ausência
+// futura planejada (férias, licença) — intervalo de datas, diferente
+// da grade semanal (recorrente). Ver DECISÃO em
+// 047_professional_planned_absences.sql (backend).
+export interface PlannedAbsence {
+  id: string;
+  start_date: string; // "YYYY-MM-DD"
+  end_date: string;
+  reason: string | null;
+  created_at: string;
+}
+
+export interface PlannedAbsenceCreateRequest {
+  start_date: string;
+  end_date: string;
+  reason?: string | null;
+}
+
+// "Mapa de Dados Insighta" — Domínio Profissional (Onda 2): arranjos de
+// contratação mais comuns entre profissionais de saúde no Brasil. Ver
+// DECISÃO em 051_professional_contract_commission.sql (backend).
+export type ContractType = "clt" | "pj" | "autonomo" | "cooperado";
+
 export interface Professional {
   id: string;
   full_name: string;
@@ -946,12 +1313,17 @@ export interface Professional {
   specialty: string | null;
   is_active: boolean;
   availability: AvailabilityBlock[];
+  planned_absences: PlannedAbsence[];
+  contract_type: ContractType | null;
+  commission_rate: number | null;
 }
 
 export interface ProfessionalCreateRequest {
   full_name: string;
   professional_registry?: string | null;
   specialty?: string | null;
+  contract_type?: ContractType | null;
+  commission_rate?: number | null;
   availability: AvailabilityBlock[];
 }
 
@@ -963,6 +1335,8 @@ export interface ProfessionalUpdateRequest {
   professional_registry?: string | null;
   specialty?: string | null;
   is_active?: boolean;
+  contract_type?: ContractType | null;
+  commission_rate?: number | null;
   availability?: AvailabilityBlock[];
 }
 
@@ -990,7 +1364,22 @@ export interface Appointment {
   visit_type: string | null;
   cancellation_reason: string | null;
   booking_channel: string | null;
+  // "Mapa de Dados Insighta" — Domínio Pós-atendimento (Onda 1): motivo
+  // estruturado do agendamento (complementa visit_type). Ver DECISÃO em
+  // 046_appointment_visit_intent.sql (backend).
+  visit_intent_tag: VisitIntentTag | null;
+  // "Mapa de Dados Insighta" — Domínio Pós-atendimento (Onda 2): funil de
+  // upsell no checkout. Ver DECISÃO em 050_appointment_addon_upsell.sql
+  // (backend).
+  addon_offered_procedure: string | null;
+  addon_declined: boolean | null;
+  // "Mapa de Dados Insighta" — Domínio Pós-atendimento (Onda 2), pilar
+  // Satisfação/NPS. Ver DECISÃO em 052_appointment_satisfaction.sql
+  // (backend).
+  visit_satisfaction_score: number | null;
 }
+
+export type VisitIntentTag = "rotina" | "retorno" | "avaliacao" | "urgencia";
 
 export interface AppointmentCreateRequest {
   patient_id: string;
@@ -999,6 +1388,31 @@ export interface AppointmentCreateRequest {
   duration_minutes?: number | null;
   procedure_code?: string | null;
   cid_code?: string | null;
+  visit_intent_tag?: VisitIntentTag | null;
+}
+
+// PATCH /appointments/{id} (app/schemas/appointment.py::AppointmentUpdateRequest)
+// — fecha o ciclo Agendamento -> Atendimento: status/procedimento/CID e o
+// funil de upsell só são conhecidos DEPOIS da consulta.
+export interface AppointmentUpdateRequest {
+  status?: string | null;
+  procedure_code?: string | null;
+  cid_code?: string | null;
+  visit_intent_tag?: VisitIntentTag | null;
+  addon_offered_procedure?: string | null;
+  addon_declined?: boolean | null;
+}
+
+// POST /appointments/{id}/satisfaction-link (app/schemas/appointment_satisfaction.py)
+export interface SatisfactionLinkResponse {
+  url: string;
+  expires_at: string;
+}
+
+// GET /public/satisfaction/{token} — sem autenticação (o paciente acessa
+// o link direto). Ver DECISÃO em 052_appointment_satisfaction.sql (backend).
+export interface PublicSatisfactionStatusResponse {
+  valid: boolean;
 }
 
 // Item de GET /appointments (listagem paginada por período) — espelha
@@ -1166,6 +1580,14 @@ export interface DenialAppealFileRequest {
 export interface DenialAppealResolveRequest {
   status: "deferido" | "indeferido" | "nip_aberta";
   resolution_notes?: string | null;
+}
+
+// POST /denial-appeals/{id}/draft-justification — rascunho via IA, SEMPRE
+// grounded nos fatos do caso (ver DECISÃO em
+// app/services/denial_appeal_draft_service.py no backend). Volta como
+// texto editável, nunca gravado sozinho.
+export interface DenialAppealDraftJustificationResponse {
+  draft: string;
 }
 
 // Central de Notificações (sino) — GET /announcements. Sem endpoint de

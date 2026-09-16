@@ -23,6 +23,10 @@ const RESULT: BillingSearchItem = {
   created_at: "2026-08-20T00:00:00Z",
   item_type: null,
   member_card_number: null,
+  coparticipation_value: null,
+  coparticipation_received: null,
+  clinical_documentation_confirmed: null,
+  payment_method: null,
 };
 
 function Wrapper() {

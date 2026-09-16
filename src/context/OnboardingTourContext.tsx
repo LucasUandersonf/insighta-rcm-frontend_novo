@@ -14,9 +14,13 @@ import type { UserRole } from "@/lib/types";
  * do tour sem precisar de um flag "incluirNoTour" espalhado por NAV_ITEMS.
  */
 const STEP_CONTENT: Partial<Record<string, { title: string; description: string }>> = {
-  "/": {
+  // "Junta Técnica Insighta": NAV_ITEMS mudou de "/" para "/painel" (ver
+  // Sidebar.tsx) — a chave aqui precisa acompanhar, senão este passo some
+  // do tour sem nenhum erro de build (STEP_CONTENT[item.to] vira
+  // undefined silenciosamente).
+  "/painel": {
     title: "Painel",
-    description: "Visão do dia: consultas de hoje, faturamento pendente de conferência e o que precisa da sua atenção agora.",
+    description: "KPIs e tabelas detalhadas para quem já sabe o que está procurando — acessível a qualquer momento pelo menu, sem precisar ser o ponto de partida do seu dia.",
   },
   "/decisao": {
     title: "Sala de Comando",

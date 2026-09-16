@@ -32,7 +32,20 @@ function BenchmarkBar({ metric }: { metric: NetworkBenchmarkMetric }) {
   return (
     <BentoCard colSpan={12} glow="comparativo" className="mb-3">
       <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-        <span className="text-sm font-medium text-ink">{metric.label}</span>
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-ink">{metric.label}</span>
+          {/* "Mapa de Dados Insighta" — pilar Comparativo & rede: nunca
+              esconde se a mediana veio de clínicas da MESMA especialidade
+              ou do cohort geral — comparação mais justa quando marcada. */}
+          {hasNetwork && metric.cohort_is_segmented_by_specialty && (
+            <span
+              className="rounded-full border border-tier1/30 bg-tier1/10 px-2 py-0.5 text-2xs font-medium text-tier1"
+              title="A mediana usa só clínicas da sua mesma especialidade, não a base inteira."
+            >
+              Sua especialidade
+            </span>
+          )}
+        </div>
         {diffLabel && (
           <span className={diff !== null && diff > 0 ? "text-xs font-medium text-pending" : "text-xs font-medium text-revenue"}>
             {diffLabel}

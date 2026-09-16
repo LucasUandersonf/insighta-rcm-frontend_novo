@@ -33,13 +33,17 @@ function rateToneClass(rate: number, baseline: number): string {
  * (backend). Sem seletor de período: usa todo o histórico já resolvido.
  */
 export function DenialReasonConfirmationPanel() {
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error, dataUpdatedAt } = useQuery({
     queryKey: ["analytics", "denial-reason-confirmation"],
     queryFn: () => apiClient.get<DenialReasonConfirmation>("/api/v1/analytics/denial-reason-confirmation"),
   });
 
   return (
-    <Panel title="Precisão do motor de risco de glosa" subtitle="Taxa real de confirmação por motivo">
+    <Panel
+      title="Precisão do motor de risco de glosa"
+      subtitle="Taxa real de confirmação por motivo"
+      updatedAt={dataUpdatedAt || null}
+    >
       {isLoading && (
         <div className="space-y-3 p-5">
           {Array.from({ length: 3 }).map((_, i) => (

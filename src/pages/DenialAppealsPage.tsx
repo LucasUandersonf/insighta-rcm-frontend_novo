@@ -1,11 +1,11 @@
 import { useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { FileText, Paperclip, Plus, ShieldAlert } from "lucide-react";
+import { FileText, Paperclip, Plus, ShieldAlert, Sparkles } from "lucide-react";
 import { Panel, EmptyState, LoadingState, ErrorState } from "@/components/ui/Panel";
 import { Button } from "@/components/ui/Button";
 import { Badge, type BadgeTone } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
-import { TextField, SelectField } from "@/components/ui/FormField";
+import { TextField, TextareaField, SelectField } from "@/components/ui/FormField";
 import { Pagination } from "@/components/ui/Pagination";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { BillingSearchPicker } from "@/components/billing/BillingSearchPicker";
@@ -19,6 +19,7 @@ import type {
   BillingSearchItem,
   DenialAppeal,
   DenialAppealCreateRequest,
+  DenialAppealDraftJustificationResponse,
   DenialAppealResolveRequest,
   PaginatedResponse,
 } from "@/lib/types";
@@ -291,7 +292,7 @@ function AttachmentsModal({ appeal, onClose }: { appeal: DenialAppeal | null; on
 }
 
 // ---------------------------------------------------------------------
-// Página
+// Justificativa + geração do documento
 // ---------------------------------------------------------------------
 
 /**
@@ -302,8 +303,9 @@ function AttachmentsModal({ appeal, onClose }: { appeal: DenialAppeal | null; on
  * forçar download direto — o usuário normalmente quer LER/editar antes
  * de protocolar, não só guardar o arquivo.
  */
-async function downloadAppealDocument(appealId: string): Promise<void> {
-  const blob = await apiClient.getBlob(`/api/v1/denial-appeals/${appealId}/document`);
+async function downloadAppealDocument(appealId: string, justification?: string): Promise<void> {
+  const params = justification?.trim() ? `?${new URLSearchParams({ justification: justification.trim() })}` : "";
+  const blob = await apiClient.getBlob(`/api/v1/denial-appeals/${appealId}/document${params}`);
   const url = URL.createObjectURL(blob);
   window.open(url, "_blank", "noopener,noreferrer");
   // Revoga depois de um tempo generoso para dar chance da aba nova
@@ -311,26 +313,97 @@ async function downloadAppealDocument(appealId: string): Promise<void> {
   setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
+/**
+ * Achado do Parecer Técnico "Boletim Insighta" (revisão 2): antes desta
+ * tela, gerar o documento nunca oferecia lugar nenhum pra digitar a
+ * justificativa — sempre saía com o placeholder padrão. Agora o botão
+ * "Documento" abre este modal: o campo é sempre editável na mão, e
+ * "Gerar rascunho com IA" (POST /draft-justification) só PREENCHE o
+ * ponto de partida — grounded nos fatos do caso (ver DECISÃO completa
+ * em app/services/denial_appeal_draft_service.py no backend, que NUNCA
+ * inventa mérito clínico). O usuário revisa/edita antes de baixar.
+ */
+function JustificationModal({ appeal, onClose }: { appeal: DenialAppeal | null; onClose: () => void }) {
+  const { showError } = useToast();
+  const [justification, setJustification] = useState("");
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const draftMutation = useMutation({
+    mutationFn: (appealId: string) =>
+      apiClient.post<DenialAppealDraftJustificationResponse>(`/api/v1/denial-appeals/${appealId}/draft-justification`),
+    onSuccess: (data) => setJustification(data.draft),
+    onError: (err) => showError(getApiErrorMessage(err)),
+  });
+
+  function handleClose() {
+    setJustification("");
+    onClose();
+  }
+
+  if (!appeal) return null;
+
+  async function handleDownload() {
+    if (!appeal) return;
+    setIsDownloading(true);
+    try {
+      await downloadAppealDocument(appeal.id, justification);
+    } catch (err) {
+      showError(getApiErrorMessage(err));
+    } finally {
+      setIsDownloading(false);
+    }
+  }
+
+  return (
+    <Modal title="Justificativa do recurso" isOpen={Boolean(appeal)} onClose={handleClose}>
+      <p className="mb-4 text-xs text-ink-faint">
+        A IA rascunha um ponto de partida usando SÓ os dados factuais deste caso (motivo da negativa, guia,
+        procedimento, convênio) — nunca inventa mérito clínico ou jurídico. Revise e complete antes de protocolar.
+      </p>
+      <Button
+        type="button"
+        variant="secondary"
+        size="sm"
+        className="mb-4 flex items-center gap-1.5"
+        onClick={() => draftMutation.mutate(appeal.id)}
+        disabled={draftMutation.isPending}
+      >
+        <Sparkles size={14} />
+        {draftMutation.isPending ? "Gerando rascunho..." : "Gerar rascunho com IA"}
+      </Button>
+      <TextareaField
+        label="Justificativa"
+        rows={8}
+        value={justification}
+        onChange={(e) => setJustification(e.target.value)}
+        placeholder="Descreva por que a glosa deve ser revertida — ou gere um rascunho acima e edite."
+      />
+      <div className="mt-5 flex justify-end gap-2">
+        <Button type="button" variant="secondary" onClick={handleClose}>
+          Cancelar
+        </Button>
+        <Button onClick={handleDownload} disabled={isDownloading} className="flex items-center gap-1.5">
+          <FileText size={14} />
+          {isDownloading ? "Gerando PDF..." : "Baixar documento (PDF)"}
+        </Button>
+      </div>
+    </Modal>
+  );
+}
+
+// ---------------------------------------------------------------------
+// Página
+// ---------------------------------------------------------------------
+
 export function DenialAppealsPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [resolvingAppealId, setResolvingAppealId] = useState<string | null>(null);
   const [attachmentsAppealId, setAttachmentsAppealId] = useState<string | null>(null);
-  const [downloadingAppealId, setDownloadingAppealId] = useState<string | null>(null);
+  const [justificationAppealId, setJustificationAppealId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [appealsOffset, setAppealsOffset] = useState(0);
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
-
-  async function handleDownloadDocument(appealId: string) {
-    setDownloadingAppealId(appealId);
-    try {
-      await downloadAppealDocument(appealId);
-    } catch (err) {
-      showError(getApiErrorMessage(err));
-    } finally {
-      setDownloadingAppealId(null);
-    }
-  }
 
   const {
     data: appealsPage,
@@ -349,6 +422,7 @@ export function DenialAppealsPage() {
 
   const resolvingAppeal = (appeals ?? []).find((a) => a.id === resolvingAppealId) ?? null;
   const attachmentsAppeal = (appeals ?? []).find((a) => a.id === attachmentsAppealId) ?? null;
+  const justificationAppeal = (appeals ?? []).find((a) => a.id === justificationAppealId) ?? null;
 
   // Mesmo critério de deadlineClass() acima, resumido a nível de painel
   // (glow, não só a cor da célula) — vencido é crítico de verdade, "vence
@@ -458,11 +532,10 @@ export function DenialAppealsPage() {
                       variant="ghost"
                       size="xs"
                       className="flex items-center gap-1"
-                      onClick={() => handleDownloadDocument(a.id)}
-                      disabled={downloadingAppealId === a.id}
+                      onClick={() => setJustificationAppealId(a.id)}
                     >
                       <FileText size={13} />
-                      {downloadingAppealId === a.id ? "Gerando..." : "Documento"}
+                      Documento
                     </Button>
                   </td>
                 </tr>
@@ -483,6 +556,7 @@ export function DenialAppealsPage() {
       <CreateAppealModal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} />
       <ResolveAppealModal appeal={resolvingAppeal} onClose={() => setResolvingAppealId(null)} />
       <AttachmentsModal appeal={attachmentsAppeal} onClose={() => setAttachmentsAppealId(null)} />
+      <JustificationModal appeal={justificationAppeal} onClose={() => setJustificationAppealId(null)} />
     </div>
   );
 }

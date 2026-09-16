@@ -14,6 +14,7 @@ import { PlanLossRankingPanel } from "@/components/dashboard/PlanLossRankingPane
 import { ContractUtilizationPanel } from "@/components/dashboard/ContractUtilizationPanel";
 import { DenialRiskDistributionPanel } from "@/components/dashboard/DenialRiskDistributionPanel";
 import { DenialReasonConfirmationPanel } from "@/components/dashboard/DenialReasonConfirmationPanel";
+import { DataQualityPanel } from "@/components/dashboard/DataQualityPanel";
 import { PaymentLagPanel } from "@/components/dashboard/PaymentLagPanel";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
@@ -56,7 +57,11 @@ const PAGE_SIZE = 20;
 // operacional para recepcionistas"), então "atendimento" nunca teve —
 // e continua sem ter — acesso a este dado financeiro/estratégico. Sem
 // esse filtro no cliente, esse papel bateria de frente com um 403 do
-// backend logo ao entrar (esta é a rota "/" pós-login, para todo papel).
+// backend logo ao entrar. "Junta Técnica Insighta": esta rota deixou de
+// ser "/" (pós-login, para todo papel) — agora é "/painel", só destino
+// de drill-down a partir de um card do feed (ver RootRedirect.tsx); o
+// papel sem acesso à Sala de Comando ainda cai aqui, como fallback (ver
+// RootRedirect.tsx), e continua vendo o mesmo aviso de acesso abaixo.
 const CAN_VIEW_ANALYTICS: UserRole[] = ["owner", "admin", "financeiro", "auditor"];
 const CAN_VIEW_BILLING_QUEUE: UserRole[] = ["owner", "admin", "financeiro"];
 
@@ -296,6 +301,7 @@ export function DashboardPage() {
           <DenialRiskDistributionPanel dateFrom={dateFrom} dateTo={dateTo} />
           <PaymentLagPanel dateFrom={dateFrom} dateTo={dateTo} />
           <DenialReasonConfirmationPanel />
+          <DataQualityPanel dateFrom={dateFrom} dateTo={dateTo} />
         </section>
       )}
 
