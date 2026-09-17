@@ -565,6 +565,10 @@ export interface ExecutiveNarrative {
   narrative: string | null;
   generated_at: string | null;
   top_priorities: SmartInsight[];
+  // Memória contínua dia-a-dia (Fase 3) — títulos resolvidos HOJE,
+  // presentes mesmo quando `narrative` é null (Avaliação Home/Sala de
+  // Comando, Achado 3): não depende do texto da IA mencionar.
+  recently_resolved: string[];
 }
 
 // Taxa de confirmação real do motor de risco de glosa (GET

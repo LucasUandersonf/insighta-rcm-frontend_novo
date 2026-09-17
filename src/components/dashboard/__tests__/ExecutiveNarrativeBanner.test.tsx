@@ -21,6 +21,7 @@ describe("ExecutiveNarrativeBanner", () => {
       narrative: "A clínica faturou bem esta semana, mas o prazo de recebimento merece atenção.",
       generated_at: "2026-09-13T08:00:00Z",
       top_priorities: [],
+      recently_resolved: [],
     };
     vi.mocked(apiClient.get).mockResolvedValue(data);
 
@@ -40,6 +41,7 @@ describe("ExecutiveNarrativeBanner", () => {
       narrative: null,
       generated_at: null,
       top_priorities: [],
+      recently_resolved: [],
     };
     vi.mocked(apiClient.get).mockResolvedValue(data);
 

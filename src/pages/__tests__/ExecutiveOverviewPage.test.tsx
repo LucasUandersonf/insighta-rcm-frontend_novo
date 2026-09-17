@@ -100,4 +100,26 @@ describe("ExecutiveOverviewPage", () => {
     await user.click(screen.getByRole("tab", { name: /Simulador/ }));
     await waitFor(() => expect(screen.getByText(/Ajuste os cenários/)).toBeInTheDocument());
   });
+
+  it("com ?tab=crm na URL, já abre direto na aba CRM (Achado 2 da Avaliação Home/Sala de Comando)", async () => {
+    mockAllEndpoints();
+    renderWithProviders(<ExecutiveOverviewPage />, { route: "/decisao?tab=crm" });
+
+    await waitFor(() => expect(screen.getByText("Nenhum paciente parado há mais de 1 ano — sua carteira está ativa.")).toBeInTheDocument());
+    expect(screen.queryByText("Agenda & Capacidade Operacional")).not.toBeInTheDocument();
+  });
+
+  it("com ?tab= inválido ou ausente, abre no Diagnóstico (fallback seguro)", async () => {
+    mockAllEndpoints();
+    renderWithProviders(<ExecutiveOverviewPage />, { route: "/decisao?tab=algo-que-nao-existe" });
+
+    expect(await screen.findByText("Agenda & Capacidade Operacional")).toBeInTheDocument();
+  });
+
+  it("com ?weekday=/?professional=/?scrollTo= na URL, carrega sem quebrar e permanece no Diagnóstico", async () => {
+    mockAllEndpoints();
+    renderWithProviders(<ExecutiveOverviewPage />, { route: "/decisao?weekday=3&scrollTo=agenda-resumo" });
+
+    expect(await screen.findByText("Agenda & Capacidade Operacional")).toBeInTheDocument();
+  });
 });

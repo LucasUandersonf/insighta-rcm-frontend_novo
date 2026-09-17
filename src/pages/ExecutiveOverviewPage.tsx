@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useSearchParams } from "react-router-dom";
 import { HeartHandshake, LayoutDashboard, SlidersHorizontal, Target, Users } from "lucide-react";
 import { KpiCard } from "@/components/ui/KpiCard";
 import { ErrorState, LoadingState } from "@/components/ui/Panel";
@@ -45,6 +46,11 @@ function formatPct(value: number): string {
 
 const TABS_GROUP = "sala-de-comando";
 type TabId = "diagnostico" | "crm" | "oportunidades" | "comparativo" | "simulador";
+const TAB_IDS: TabId[] = ["diagnostico", "crm", "oportunidades", "comparativo", "simulador"];
+
+function isTabId(value: string | null): value is TabId {
+  return !!value && (TAB_IDS as string[]).includes(value);
+}
 
 /**
  * Sala de Comando 2.0 (ver Roadmap "Sala de Comando 2.0") — a mesma
@@ -58,13 +64,42 @@ type TabId = "diagnostico" | "crm" | "oportunidades" | "comparativo" | "simulado
 export function ExecutiveOverviewPage() {
   const { windowDays, setWindowDays, dateFrom, dateTo } = useDateWindow(7);
   const { data: profile } = useCurrentUserProfile();
-  const [activeTab, setActiveTab] = useState<TabId>("diagnostico");
+  // Deep-link de aba/foco a partir de fora da Sala de Comando (Avaliação
+  // Home/Sala de Comando, Achado 2) — antes, qualquer destino "#tab:"/
+  // "#weekday:"/"#professional:" clicado na Home caía sempre em "/decisao"
+  // genérico, sempre abrindo no Diagnóstico: o clique nunca terminava
+  // onde prometia. Lidos uma única vez, na inicialização do estado (não
+  // um useEffect que ficaria reagindo a toda mudança de URL) — depois
+  // disso a navegação de aba/foco volta a ser 100% local, como sempre foi.
+  const [searchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState<TabId>(() => {
+    const tab = searchParams.get("tab");
+    return isTabId(tab) ? tab : "diagnostico";
+  });
   // Foco de agenda (ver AgendaFocus, lib/types.ts) — disparado pelos
   // botões de ação dos insights de queda de agenda/agenda ociosa (ver
   // DECISÃO em SmartInsightsFeed.tsx::InsightActionButton). Mora aqui
   // (não dentro de ExecutiveAgendaSummary) porque quem dispara é um
   // componente IRMÃO (SmartInsightsFeed), mais acima na árvore.
-  const [agendaFocus, setAgendaFocus] = useState<AgendaFocus | null>(null);
+  const [agendaFocus, setAgendaFocus] = useState<AgendaFocus | null>(() => {
+    const weekday = searchParams.get("weekday");
+    const professionalId = searchParams.get("professional");
+    if (weekday !== null) return { type: "weekday", weekday: Number(weekday) };
+    if (professionalId !== null) return { type: "professional", professionalId };
+    return null;
+  });
+
+  // Mesmo achado do Achado 2 — rola até a seção certa quando a Home
+  // manda pra cá com `?scrollTo=` (ex: "#agenda-resumo"/"#buraco-financeiro",
+  // os mesmos anchors que o InsightActionButton já resolve localmente
+  // dentro da própria Sala de Comando). Só na montagem, uma vez.
+  useEffect(() => {
+    const scrollTo = searchParams.get("scrollTo");
+    if (scrollTo) {
+      document.getElementById(scrollTo)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const { data: summary, isLoading, error } = useQuery({
     queryKey: ["analytics", "executive-summary", dateFrom, dateTo],

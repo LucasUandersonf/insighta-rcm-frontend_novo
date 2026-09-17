@@ -6,6 +6,7 @@ import { LoadingState } from "@/components/ui/Panel";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { SEVERITY_CONFIG, formatCurrency } from "@/components/dashboard/SmartInsightsFeed";
+import { RecentlyResolvedList } from "@/components/dashboard/RecentlyResolvedList";
 import { apiClient } from "@/lib/api-client";
 import { firstNameFrom, useCurrentUserProfile } from "@/lib/useCurrentUserProfile";
 import { cn } from "@/lib/cn";
@@ -39,16 +40,23 @@ function timeOfDayGreeting(): string {
 }
 
 /**
- * DECISÃO — destino de ação simplificado: a Home não tem abas nem seções
- * locais como a Sala de Comando (ver InsightActionButton em
- * SmartInsightsFeed.tsx, que interpreta "#tab:"/"#weekday:"/"#professional:").
- * Uma rota real ("/...") navega direto; qualquer destino "#..." aponta
- * pra Sala de Comando, onde o card completo — e a navegação de aba/seção
- * de verdade — já existe. Nunca inventa um destino que a Home não tem
- * como cumprir sozinha.
+ * DECISÃO — a Home não tem abas nem seções locais como a Sala de Comando
+ * (ver InsightActionButton em SmartInsightsFeed.tsx, que interpreta
+ * "#tab:"/"#weekday:"/"#professional:"/"#id" DENTRO da própria tela). Uma
+ * rota real ("/...") navega direto; qualquer destino "#..." vira uma
+ * query string que a Sala de Comando lê na montagem (ver DECISÃO em
+ * ExecutiveOverviewPage.tsx) e resolve pro mesmo lugar que resolveria se
+ * o clique tivesse acontecido lá dentro — corrige o Achado 2 da
+ * Avaliação Home/Sala de Comando (antes, todo "#..." caía no Diagnóstico
+ * genérico, mesmo quando o destino real era outra aba).
  */
 function resolveHref(href: string): string {
-  return href.startsWith("/") ? href : "/decisao";
+  if (href.startsWith("/")) return href;
+  if (href.startsWith("#tab:")) return `/decisao?tab=${href.slice("#tab:".length)}`;
+  if (href.startsWith("#weekday:")) return `/decisao?weekday=${href.slice("#weekday:".length)}&scrollTo=agenda-resumo`;
+  if (href.startsWith("#professional:")) return `/decisao?professional=${href.slice("#professional:".length)}&scrollTo=agenda-resumo`;
+  if (href.startsWith("#")) return `/decisao?scrollTo=${href.slice(1)}`;
+  return "/decisao";
 }
 
 function PriorityCard({ insight, index }: { insight: SmartInsight; index: number }) {
@@ -101,6 +109,7 @@ export function HomePage() {
   });
 
   const priorities = data?.top_priorities ?? [];
+  const recentlyResolved = data?.recently_resolved ?? [];
   const greeting = profile ? `${timeOfDayGreeting()}, ${firstNameFrom(profile.full_name)}.` : null;
 
   return (
@@ -125,9 +134,12 @@ export function HomePage() {
           <p className="mt-3 font-serif text-2xl font-medium tracking-tightest text-ink">
             {error
               ? "Bem-vindo de volta. Os números de hoje já estão prontos na Sala de Comando."
-              : "Tudo tranquilo por aqui — nada precisou da sua atenção nesta janela."}
+              : priorities.length === 0
+                ? "Tudo tranquilo por aqui — nada precisou da sua atenção nesta janela."
+                : "Aqui está o resumo de hoje — confira as prioridades abaixo."}
           </p>
         )}
+        {!isLoading && <div className="mt-3"><RecentlyResolvedList titles={recentlyResolved} /></div>}
       </div>
 
       {priorities.length > 0 ? (
