@@ -65,11 +65,6 @@ export const NAV_ITEMS: NavItem[] = [
   // (organization_id NULL) — a própria página mostra o estado honesto
   // "não faz parte de um grupo", nunca escondida como se fosse um erro.
   { to: "/consolidado", label: "Consolidado", icon: Network, roles: ["owner", "admin", "financeiro", "auditor"] },
-  // "Junta Técnica Insighta" — não é mais a rota "/" (raiz sempre leva à
-  // Sala de Comando, ver RootRedirect.tsx): o Painel virou destino de
-  // drill-down, não ponto de entrada padrão.
-  { to: "/painel", label: "Painel", icon: LayoutDashboard },
-  { to: "/appointments", label: "Consultas", icon: CalendarCheck },
   // Onda 5 do Plano de Ação, item 16 — mesmo RBAC amplo de /appointments
   // (rotina de recepção, leitura aberta a financeiro/auditor).
   { to: "/waitlist", label: "Lista de espera", icon: Hourglass },
