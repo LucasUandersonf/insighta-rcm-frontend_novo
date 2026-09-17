@@ -173,10 +173,14 @@ describe("ExecutiveOverviewPage", () => {
     expect(await screen.findByText("Agenda & Capacidade Operacional")).toBeInTheDocument();
   });
 
-  it("com ?weekday=/?professional=/?scrollTo= na URL, carrega sem quebrar e permanece no Diagnóstico", async () => {
+  it("com ?weekday=/?professional=/?scrollTo= na URL, carrega sem quebrar", async () => {
     mockAllEndpoints();
+    vi.mocked(useAuth).mockReturnValue({
+      user: { tenant_id: "t1", id: "u1", role: "owner" } as unknown as CurrentUser,
+    } as unknown as ReturnType<typeof useAuth>);
     renderWithProviders(<ExecutiveOverviewPage />, { route: "/decisao?weekday=3&scrollTo=agenda-resumo" });
 
-    expect(await screen.findByText("Agenda & Capacidade Operacional")).toBeInTheDocument();
+    // Épico F1.1: "Hoje" é a página inicial agora
+    expect(await screen.findByText(/Nenhuma ação prioritária agora|Ações prioritárias/)).toBeInTheDocument();
   });
 });
