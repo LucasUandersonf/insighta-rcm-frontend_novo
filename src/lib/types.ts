@@ -1592,6 +1592,11 @@ export interface ApiErrorBody {
 // --- Pacientes (app/schemas/patient.py) ---
 export type PreferredTimeWindow = "manha" | "tarde" | "noite";
 
+// Sexo biológico (vocabulário fechado M/F, não identidade de gênero
+// autodeclarada) — mesmo padrão de tipo_paciente/guia_tipo. Ver DECISÃO
+// em app/sql/058_patient_full_identity.sql (backend).
+export type Sex = "M" | "F";
+
 export interface Patient {
   id: string;
   full_name: string;
@@ -1610,6 +1615,17 @@ export interface Patient {
   communication_consent: boolean | null;
   preferred_time_window: PreferredTimeWindow | null;
   zip_code: string | null;
+  // Escopo completo de pessoa física (pedido do usuário: "todo sistema
+  // tem dados de pessoa física com nome, telefone, data de nascimento,
+  // endereço, email, CPF, sexo") — capturados a partir da Agenda/
+  // Faturamento ou cadastro manual. Ver DECISÃO em
+  // app/sql/058_patient_full_identity.sql (backend).
+  phone: string | null;
+  email: string | null;
+  sex: Sex | null;
+  address_street: string | null;
+  address_city: string | null;
+  address_state: string | null;
   // "Equilíbrio Insighta" (Balanced Scorecard, perna Cliente) — score de
   // paciente de alto valor, calculado só em GET /patients (nunca em
   // create/update, que devolvem o default False/[]).
@@ -1638,15 +1654,31 @@ export interface PatientCreateRequest {
   communication_consent?: boolean | null;
   preferred_time_window?: PreferredTimeWindow | null;
   zip_code?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  sex?: Sex | null;
+  address_street?: string | null;
+  address_city?: string | null;
+  address_state?: string | null;
 }
 
 // PATCH /patients/{id} — completa depois os campos relacionais que
-// raramente são conhecidos no primeiro cadastro.
+// raramente são conhecidos no primeiro cadastro. `cpf` propositalmente
+// FORA daqui: é a chave de deduplicação de paciente, trocá-lo por PATCH
+// arrisca fundir/separar identidades silenciosamente (ver DECISÃO em
+// PatientUpdateRequest no backend).
 export interface PatientUpdateRequest {
+  birth_date?: string | null;
   referred_by_patient_id?: string | null;
   communication_consent?: boolean | null;
   preferred_time_window?: PreferredTimeWindow | null;
   zip_code?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  sex?: Sex | null;
+  address_street?: string | null;
+  address_city?: string | null;
+  address_state?: string | null;
 }
 
 // --- Profissionais (app/schemas/professional.py) ---

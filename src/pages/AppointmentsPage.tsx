@@ -23,6 +23,7 @@ import type {
   PreferredTimeWindow,
   Professional,
   SatisfactionLinkResponse,
+  Sex,
   TipoPaciente,
   VisitIntentTag,
 } from "@/lib/types";
@@ -31,6 +32,15 @@ const PREFERRED_TIME_WINDOW_LABELS: Record<PreferredTimeWindow, string> = {
   manha: "Manhã",
   tarde: "Tarde",
   noite: "Noite",
+};
+
+// Escopo completo de pessoa física (pedido do usuário: "todo sistema tem
+// dados de pessoa física com nome, telefone, data de nascimento,
+// endereço, email, CPF, sexo") — ver DECISÃO em
+// app/sql/058_patient_full_identity.sql (backend).
+const SEX_LABELS: Record<Sex, string> = {
+  M: "Masculino",
+  F: "Feminino",
 };
 
 // Fase 4 do plano de adequação ao fluxo real de mercado — vocabulário
@@ -93,6 +103,13 @@ function NewPatientModal({
   const { showSuccess, showError } = useToast();
   const [fullName, setFullName] = useState("");
   const [cpf, setCpf] = useState("");
+  const [birthDate, setBirthDate] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [sex, setSex] = useState("");
+  const [addressStreet, setAddressStreet] = useState("");
+  const [addressCity, setAddressCity] = useState("");
+  const [addressState, setAddressState] = useState("");
   const [referredBy, setReferredBy] = useState("");
   const [consent, setConsent] = useState(false);
   const [preferredWindow, setPreferredWindow] = useState("");
@@ -112,6 +129,13 @@ function NewPatientModal({
   function resetAndClose() {
     setFullName("");
     setCpf("");
+    setBirthDate("");
+    setPhone("");
+    setEmail("");
+    setSex("");
+    setAddressStreet("");
+    setAddressCity("");
+    setAddressState("");
     setReferredBy("");
     setConsent(false);
     setPreferredWindow("");
@@ -124,6 +148,13 @@ function NewPatientModal({
     mutation.mutate({
       full_name: fullName,
       cpf: cpf || null,
+      birth_date: birthDate || null,
+      phone: phone || null,
+      email: email || null,
+      sex: (sex || null) as Sex | null,
+      address_street: addressStreet || null,
+      address_city: addressCity || null,
+      address_state: addressState || null,
       referred_by_patient_id: referredBy || null,
       communication_consent: consent,
       preferred_time_window: (preferredWindow || null) as PreferredTimeWindow | null,
@@ -135,7 +166,32 @@ function NewPatientModal({
     <Modal title="Novo paciente" isOpen={isOpen} onClose={resetAndClose}>
       <form onSubmit={handleSubmit}>
         <TextField label="Nome completo" required value={fullName} onChange={(e) => setFullName(e.target.value)} />
-        <TextField label="CPF (opcional)" value={cpf} onChange={(e) => setCpf(e.target.value)} />
+        <div className="grid grid-cols-2 gap-3">
+          <TextField label="CPF (opcional)" value={cpf} onChange={(e) => setCpf(e.target.value)} />
+          <TextField
+            label="Data de nascimento (opcional)"
+            type="date"
+            value={birthDate}
+            onChange={(e) => setBirthDate(e.target.value)}
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <TextField label="Telefone (opcional)" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(11) 98888-7777" />
+          <TextField label="E-mail (opcional)" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+        </div>
+        <SelectField label="Sexo (opcional)" value={sex} onChange={(e) => setSex(e.target.value)}>
+          <option value="">Não informado</option>
+          {Object.entries(SEX_LABELS).map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </SelectField>
+        <TextField label="Endereço (opcional)" value={addressStreet} onChange={(e) => setAddressStreet(e.target.value)} placeholder="Rua, número, complemento" />
+        <div className="grid grid-cols-2 gap-3">
+          <TextField label="Cidade (opcional)" value={addressCity} onChange={(e) => setAddressCity(e.target.value)} />
+          <TextField label="UF (opcional)" value={addressState} onChange={(e) => setAddressState(e.target.value)} placeholder="SP" maxLength={2} />
+        </div>
         {patients.length > 0 && (
           <SelectField label="Quem indicou (opcional)" value={referredBy} onChange={(e) => setReferredBy(e.target.value)}>
             <option value="">Ninguém indicou / não sei</option>
@@ -205,6 +261,13 @@ function EditPatientContactModal({
 }) {
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
+  const [birthDate, setBirthDate] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [sex, setSex] = useState("");
+  const [addressStreet, setAddressStreet] = useState("");
+  const [addressCity, setAddressCity] = useState("");
+  const [addressState, setAddressState] = useState("");
   const [referredBy, setReferredBy] = useState("");
   const [consent, setConsent] = useState<"" | "true" | "false">("");
   const [preferredWindow, setPreferredWindow] = useState("");
@@ -212,6 +275,13 @@ function EditPatientContactModal({
 
   useEffect(() => {
     if (!patient) return;
+    setBirthDate(patient.birth_date ?? "");
+    setPhone(patient.phone ?? "");
+    setEmail(patient.email ?? "");
+    setSex(patient.sex ?? "");
+    setAddressStreet(patient.address_street ?? "");
+    setAddressCity(patient.address_city ?? "");
+    setAddressState(patient.address_state ?? "");
     setReferredBy(patient.referred_by_patient_id ?? "");
     setConsent(patient.communication_consent === null ? "" : patient.communication_consent ? "true" : "false");
     setPreferredWindow(patient.preferred_time_window ?? "");
@@ -232,6 +302,13 @@ function EditPatientContactModal({
     e.preventDefault();
     if (!patient) return;
     mutation.mutate({
+      birth_date: birthDate || null,
+      phone: phone || null,
+      email: email || null,
+      sex: (sex || null) as Sex | null,
+      address_street: addressStreet || null,
+      address_city: addressCity || null,
+      address_state: addressState || null,
       referred_by_patient_id: referredBy || null,
       communication_consent: consent === "" ? null : consent === "true",
       preferred_time_window: (preferredWindow || null) as PreferredTimeWindow | null,
@@ -244,6 +321,31 @@ function EditPatientContactModal({
   return (
     <Modal title={`Dados de contato — ${patient.full_name}`} isOpen={isOpen} onClose={onClose}>
       <form onSubmit={handleSubmit}>
+        <div className="grid grid-cols-2 gap-3">
+          <TextField
+            label="Data de nascimento (opcional)"
+            type="date"
+            value={birthDate}
+            onChange={(e) => setBirthDate(e.target.value)}
+          />
+          <SelectField label="Sexo (opcional)" value={sex} onChange={(e) => setSex(e.target.value)}>
+            <option value="">Não informado</option>
+            {Object.entries(SEX_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </SelectField>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <TextField label="Telefone (opcional)" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(11) 98888-7777" />
+          <TextField label="E-mail (opcional)" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+        </div>
+        <TextField label="Endereço (opcional)" value={addressStreet} onChange={(e) => setAddressStreet(e.target.value)} placeholder="Rua, número, complemento" />
+        <div className="grid grid-cols-2 gap-3">
+          <TextField label="Cidade (opcional)" value={addressCity} onChange={(e) => setAddressCity(e.target.value)} />
+          <TextField label="UF (opcional)" value={addressState} onChange={(e) => setAddressState(e.target.value)} placeholder="SP" maxLength={2} />
+        </div>
         {patients.length > 0 && (
           <SelectField label="Quem indicou (opcional)" value={referredBy} onChange={(e) => setReferredBy(e.target.value)}>
             <option value="">Ninguém indicou / não sei</option>
