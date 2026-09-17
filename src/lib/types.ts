@@ -545,11 +545,18 @@ export interface AgendaRevenueForecast {
 // AnalyticsService.get_executive_narrative, backend). Sem
 // period_start/period_end no filtro: a janela é sempre fixa (últimos 7
 // dias fechados), independente do seletor de período da tela.
+//
+// `top_priorities` — Home estilo Jarvis (Roadmap "Rumo à Nota 9", Fase 1):
+// até 3 insights já ranqueados por prioridade (ver generate_insights,
+// backend), presentes mesmo quando `narrative` é null. É o que alimenta
+// os cards de prioridade da Home — nunca a lista completa (isso continua
+// vivendo na Sala de Comando, via SmartInsightsFeed).
 export interface ExecutiveNarrative {
   period_start: string;
   period_end: string;
   narrative: string | null;
   generated_at: string | null;
+  top_priorities: SmartInsight[];
 }
 
 // Taxa de confirmação real do motor de risco de glosa (GET

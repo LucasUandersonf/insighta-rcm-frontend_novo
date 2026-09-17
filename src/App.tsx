@@ -22,6 +22,7 @@ const LoginPage = lazy(() => import("@/pages/LoginPage").then((m) => ({ default:
 const SignUpPage = lazy(() => import("@/pages/SignUpPage").then((m) => ({ default: m.SignUpPage })));
 const ForgotPasswordPage = lazy(() => import("@/pages/ForgotPasswordPage").then((m) => ({ default: m.ForgotPasswordPage })));
 const ResetPasswordPage = lazy(() => import("@/pages/ResetPasswordPage").then((m) => ({ default: m.ResetPasswordPage })));
+const HomePage = lazy(() => import("@/pages/HomePage").then((m) => ({ default: m.HomePage })));
 const DashboardPage = lazy(() => import("@/pages/DashboardPage").then((m) => ({ default: m.DashboardPage })));
 const ExecutiveOverviewPage = lazy(() => import("@/pages/ExecutiveOverviewPage").then((m) => ({ default: m.ExecutiveOverviewPage })));
 const ContractsPage = lazy(() => import("@/pages/ContractsPage").then((m) => ({ default: m.ContractsPage })));
@@ -96,7 +97,13 @@ export default function App() {
               </Route>
             <Route element={<ProtectedRoute />}>
               <Route element={<AppShell />}>
-                <Route path="/" element={<DashboardPage />} />
+                {/* Home estilo Jarvis (Roadmap "Rumo à Nota 9", Fase 1) — nova
+                    primeira tela: texto dinâmico gerado por IA + até 3
+                    prioridades, nunca o feed/KPIs inteiros (isso migrou pra
+                    /painel). Sem RoleProtectedRoute de propósito: mesma
+                    visibilidade que "/" sempre teve. */}
+                <Route path="/" element={<HomePage />} />
+                <Route path="/painel" element={<DashboardPage />} />
                 <Route path="/appointments" element={<AppointmentsPage />} />
                 {/* O CRUD operacional de Pacientes foi removido por decisão de produto
                     — o SaaS opera exclusivamente sobre dados consolidados do ERP

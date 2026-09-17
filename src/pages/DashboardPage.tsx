@@ -56,7 +56,8 @@ const PAGE_SIZE = 20;
 // operacional para recepcionistas"), então "atendimento" nunca teve —
 // e continua sem ter — acesso a este dado financeiro/estratégico. Sem
 // esse filtro no cliente, esse papel bateria de frente com um 403 do
-// backend logo ao entrar (esta é a rota "/" pós-login, para todo papel).
+// backend logo ao entrar (esta é a rota "/painel", sem RoleProtectedRoute
+// no roteador — ver App.tsx —, acessível a todo papel autenticado).
 const CAN_VIEW_ANALYTICS: UserRole[] = ["owner", "admin", "financeiro", "auditor"];
 const CAN_VIEW_BILLING_QUEUE: UserRole[] = ["owner", "admin", "financeiro"];
 

@@ -6,6 +6,7 @@ import {
   CalendarClock,
   FileText,
   Gauge,
+  Home,
   LayoutDashboard,
   ListChecks,
   Plug,
@@ -41,8 +42,11 @@ export const NAV_ITEMS: NavItem[] = [
   // Sala de Comando (Dashboards de Decisão) — dado estratégico/financeiro
   // agregado, mesmo critério de RBAC do backend em analytics.py: fora do
   // alcance de "atendimento" (recepção).
+  // Home estilo Jarvis (Roadmap "Rumo à Nota 9", Fase 1) — nova primeira
+  // tela, sem RBAC de propósito: mesma visibilidade que "/" sempre teve.
+  { to: "/", label: "Início", icon: Home },
   { to: "/decisao", label: "Sala de Comando", icon: Gauge, roles: ["owner", "admin", "financeiro", "auditor"] },
-  { to: "/", label: "Painel", icon: LayoutDashboard },
+  { to: "/painel", label: "Painel", icon: LayoutDashboard },
   { to: "/appointments", label: "Consultas", icon: CalendarCheck },
   // Configuração da grade semanal que alimenta Agenda & Capacidade — não
   // é o CRUD operacional de Profissionais removido no reposicionamento

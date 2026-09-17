@@ -1,7 +1,8 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowRight, CalendarClock, CheckCircle2, TrendingDown, TrendingUp, TriangleAlert, Users, Wallet } from "lucide-react";
+import { ArrowRight, CalendarClock, ChevronDown, CheckCircle2, TrendingDown, TrendingUp, TriangleAlert, Users, Wallet } from "lucide-react";
 import { LoadingState, ErrorState } from "@/components/ui/Panel";
 import { BentoCard } from "@/components/ui/BentoGrid";
 import { Badge, type BadgeTone } from "@/components/ui/Badge";
@@ -22,7 +23,11 @@ import type { AgendaFocus, InsightSeverity, SmartInsight, SmartInsights } from "
  * principal da tela.
  */
 
-const SEVERITY_CONFIG: Record<
+// Exportado — reaproveitado pela Home (HomePage.tsx) pros cards de
+// prioridade usarem o MESMO mapeamento de ícone/cor/badge do feed
+// completo da Sala de Comando, em vez de duplicar (e arriscar
+// divergir) a paleta severidade -> aparência em dois lugares.
+export const SEVERITY_CONFIG: Record<
   InsightSeverity,
   {
     label: string;
@@ -58,7 +63,7 @@ const IMPACT_GRADIENT_CLASSES: Record<InsightSeverity, string> = {
   comparativo: "bg-grad-tier1 bg-clip-text text-transparent drop-shadow-[0_0_24px_hsl(var(--tier1)/0.35)]",
 };
 
-function formatCurrency(value: number): string {
+export function formatCurrency(value: number): string {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
 }
 
@@ -290,6 +295,13 @@ function AllClearHero() {
   );
 }
 
+// DECISÃO — cap no feed (auditoria de UX): antes `rest` renderizava por
+// inteiro, sem limite. Em clínicas com muito dado ativo isso vira uma
+// parede de cards que compete pela atenção do gestor logo na entrada da
+// Sala de Comando. Mostra as primeiras N (já vêm ordenadas por prioridade
+// pelo backend) e deixa o resto atrás de um "ver mais" explícito.
+const MAX_VISIBLE_SECONDARY_INSIGHTS = 4;
+
 export function SmartInsightsFeed({
   dateFrom,
   dateTo,
@@ -310,6 +322,7 @@ export function SmartInsightsFeed({
     queryKey: ["analytics", "smart-insights", dateFrom, dateTo],
     queryFn: () => apiClient.get<SmartInsights>(`/api/v1/analytics/smart-insights?date_from=${dateFrom}&date_to=${dateTo}`),
   });
+  const [expanded, setExpanded] = useState(false);
 
   const insights = data?.insights ?? [];
 
@@ -326,8 +339,10 @@ export function SmartInsightsFeed({
   if (insights.length === 0) return <AllClearHero />;
 
   const [topInsight, ...rest] = insights;
-  const faturamentoInsights = rest.filter((insight) => insight.category === "faturamento");
-  const agendaInsights = rest.filter((insight) => insight.category === "agenda");
+  const visibleRest = expanded ? rest : rest.slice(0, MAX_VISIBLE_SECONDARY_INSIGHTS);
+  const hiddenCount = rest.length - visibleRest.length;
+  const faturamentoInsights = visibleRest.filter((insight) => insight.category === "faturamento");
+  const agendaInsights = visibleRest.filter((insight) => insight.category === "agenda");
 
   return (
     <motion.div
@@ -341,6 +356,14 @@ export function SmartInsightsFeed({
       </div>
       <CategorySection category="faturamento" insights={faturamentoInsights} onNavigateTab={onNavigateTab} onFocusAgenda={onFocusAgenda} />
       <CategorySection category="agenda" insights={agendaInsights} onNavigateTab={onNavigateTab} onFocusAgenda={onFocusAgenda} />
+      {hiddenCount > 0 && (
+        <div className="flex justify-center">
+          <Button type="button" variant="secondary" size="sm" onClick={() => setExpanded(true)} className="inline-flex items-center gap-1.5">
+            Ver mais {hiddenCount} {hiddenCount === 1 ? "insight" : "insights"}
+            <ChevronDown aria-hidden size={13} />
+          </Button>
+        </div>
+      )}
     </motion.div>
   );
 }

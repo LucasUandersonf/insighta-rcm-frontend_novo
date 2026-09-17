@@ -15,12 +15,16 @@ import type { UserRole } from "@/lib/types";
  */
 const STEP_CONTENT: Partial<Record<string, { title: string; description: string }>> = {
   "/": {
-    title: "Painel",
-    description: "Visão do dia: consultas de hoje, faturamento pendente de conferência e o que precisa da sua atenção agora.",
+    title: "Início",
+    description: "Um resumo escrito por IA do que importa hoje, com até 3 prioridades — por onde começar, sem precisar ler o painel inteiro.",
   },
   "/decisao": {
     title: "Sala de Comando",
     description: "Indicadores financeiros e operacionais consolidados — para decisão da liderança, não para a operação do dia a dia.",
+  },
+  "/painel": {
+    title: "Painel",
+    description: "Visão do dia: consultas de hoje, faturamento pendente de conferência e o que precisa da sua atenção agora.",
   },
   "/upload": {
     title: "Central de upload",
