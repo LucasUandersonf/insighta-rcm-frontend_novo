@@ -499,6 +499,14 @@ export interface UpcomingRiskAppointment {
   patient_full_name: string;
   scheduled_at: string;
   risk_level: "medio" | "alto";
+  // Tela "Agenda de risco" (GET /analytics/upcoming-risk-appointments) —
+  // null no card resumido de agenda-metrics (que não busca isso), sempre
+  // presente (podendo ser null) na versão paginada.
+  professional_name?: string | null;
+  // Ficha do Paciente (Fase 4) — idem professional_name: null no card
+  // resumido, presente na versão paginada, pra linkar cada linha pra
+  // /pacientes?patient_id=....
+  patient_id?: string | null;
 }
 
 export interface AgendaMetrics {
@@ -624,6 +632,31 @@ export interface AgendaRevenueForecast {
   // Sem convênio/procedimento definido ainda, ou sem contrato vigente —
   // nem entra em total_scheduled_value.
   unpriced_count: number;
+}
+
+// Resumo executivo narrado por IA (GET /analytics/executive-narrative)
+// — "o Jarvis pegando os cálculos e transformando em texto explicativo"
+// (pedido direto do usuário). `narrative` é null quando a IA não está
+// configurada ou a geração falhou (degradação graciosa — ver DECISÃO em
+// AnalyticsService.get_executive_narrative, backend). Sem
+// period_start/period_end no filtro: a janela é sempre fixa (últimos 7
+// dias fechados), independente do seletor de período da tela.
+//
+// `top_priorities` — Home estilo Jarvis (Roadmap "Rumo à Nota 9", Fase 1):
+// até 3 insights já ranqueados por prioridade (ver generate_insights,
+// backend), presentes mesmo quando `narrative` é null. É o que alimenta
+// os cards de prioridade da Home — nunca a lista completa (isso continua
+// vivendo na Sala de Comando, via SmartInsightsFeed).
+export interface ExecutiveNarrative {
+  period_start: string;
+  period_end: string;
+  narrative: string | null;
+  generated_at: string | null;
+  top_priorities: SmartInsight[];
+  // Memória contínua dia-a-dia (Fase 3) — títulos resolvidos HOJE,
+  // presentes mesmo quando `narrative` é null (Avaliação Home/Sala de
+  // Comando, Achado 3): não depende do texto da IA mencionar.
+  recently_resolved: string[];
 }
 
 // Taxa de confirmação real do motor de risco de glosa (GET
@@ -1019,6 +1052,14 @@ export interface InactivePatients {
   items: InactivePatientItem[];
   total_count: number; // pode ser maior que items.length — a lista é sempre truncada
   inactive_after_days: number;
+}
+
+// Aba CRM (GET /analytics/crm-summary) — Roadmap "Rumo à Nota 9", Fase 5.
+export interface CrmSummary {
+  avg_patient_age_years: number | null;
+  avg_days_since_last_visit: number | null;
+  return_rate: number | null;
+  return_rate_sample_size: number;
 }
 
 // RFM completo (GET /analytics/patient-rfm) — Gaps Dossiê Insighta RCM,
@@ -1545,6 +1586,47 @@ export interface PatientUpdateRequest {
   communication_consent?: boolean | null;
   preferred_time_window?: PreferredTimeWindow | null;
   zip_code?: string | null;
+}
+
+// Ficha do Paciente (Roadmap "Rumo à Nota 9", Fase 4) — GET /patients/search
+// e GET /patients/{id}/ficha, ver app/schemas/patient.py.
+export interface PatientSearchItem {
+  id: string;
+  full_name: string;
+  cpf: string | null;
+}
+
+export interface PatientFichaBilling {
+  id: string;
+  charged_value: number;
+  status: string;
+  denial_risk_level: "low" | "medium" | "high";
+  created_at: string;
+}
+
+export interface PatientFichaAppointment {
+  id: string;
+  scheduled_at: string;
+  status: string;
+  professional_name: string | null;
+  insurance_plan_name: string | null;
+  no_show_risk_level: NoShowRiskLevel | null;
+  billings: PatientFichaBilling[];
+}
+
+export interface PatientFichaSummary {
+  total_appointments: number;
+  no_show_count: number;
+  no_show_rate: number | null;
+  total_billed: number;
+  total_value_saved: number;
+  last_visit_at: string | null;
+}
+
+export interface PatientFicha {
+  patient: Patient;
+  summary: PatientFichaSummary;
+  appointments: PatientFichaAppointment[];
 }
 
 // --- Profissionais (app/schemas/professional.py) ---

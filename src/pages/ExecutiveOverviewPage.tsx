@@ -1,17 +1,20 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Award, BadgeDollarSign, Landmark, LayoutDashboard, ListChecks, SlidersHorizontal, Target, Users } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
+import { Award, BadgeDollarSign, HeartHandshake, Landmark, LayoutDashboard, ListChecks, SlidersHorizontal, Target, Users } from "lucide-react";
 import { KpiCard } from "@/components/ui/KpiCard";
 import { ErrorState, LoadingState } from "@/components/ui/Panel";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PeriodWindowSelect } from "@/components/ui/PeriodWindowSelect";
 import { Tabs, TabPanel } from "@/components/ui/Tabs";
+import { CrmPanel } from "@/components/dashboard/CrmPanel";
 import { AverageTicketPanel } from "@/components/dashboard/AverageTicketPanel";
 import { BirthdaysPanel } from "@/components/dashboard/BirthdaysPanel";
 import { DailySummaryPanel } from "@/components/dashboard/DailySummaryPanel";
 import { DataFreshnessBanner } from "@/components/dashboard/DataFreshnessBanner";
 import { EarlyChurnRiskPanel } from "@/components/dashboard/EarlyChurnRiskPanel";
 import { ExecutiveAgendaSummary } from "@/components/dashboard/ExecutiveAgendaSummary";
+import { ExecutiveNarrativeBanner } from "@/components/dashboard/ExecutiveNarrativeBanner";
 import { FinancialHoleBillingsPanel } from "@/components/dashboard/FinancialHoleBillingsPanel";
 import { InactivePatientsPanel } from "@/components/dashboard/InactivePatientsPanel";
 import { PriorityQueuePanel } from "@/components/dashboard/PriorityQueuePanel";
@@ -58,7 +61,7 @@ function formatPct(value: number): string {
 }
 
 const TABS_GROUP = "sala-de-comando";
-type TabId = "hoje" | "diagnostico" | "oportunidades" | "comparativo" | "simulador" | "capital" | "rentabilidade" | "roi";
+type TabId = "hoje" | "diagnostico" | "crm" | "oportunidades" | "comparativo" | "simulador" | "capital" | "rentabilidade" | "roi";
 
 /**
  * Sala de Comando 2.0 (ver Roadmap "Sala de Comando 2.0") — a mesma
@@ -72,16 +75,37 @@ type TabId = "hoje" | "diagnostico" | "oportunidades" | "comparativo" | "simulad
 export function ExecutiveOverviewPage() {
   const { windowDays, setWindowDays, dateFrom, dateTo } = useDateWindow(7);
   const { data: profile } = useCurrentUserProfile();
+  // Deep-link de aba/foco a partir de fora da Sala de Comando (Avaliação
+  // Home/Sala de Comando, Achado 2) — antes, qualquer destino "#tab:"/
   // Épico F1.1 do Plano Diretor: "Hoje" é a página inicial da Sala de
   // Comando agora — o gestor não escolhe mais aba antes de saber o que
   // fazer (a fila única já chega ordenada por impacto).
+  const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<TabId>("hoje");
   // Foco de agenda (ver AgendaFocus, lib/types.ts) — disparado pelos
   // botões de ação dos insights de queda de agenda/agenda ociosa (ver
   // DECISÃO em SmartInsightsFeed.tsx::InsightActionButton). Mora aqui
   // (não dentro de ExecutiveAgendaSummary) porque quem dispara é um
   // componente IRMÃO (SmartInsightsFeed), mais acima na árvore.
-  const [agendaFocus, setAgendaFocus] = useState<AgendaFocus | null>(null);
+  const [agendaFocus, setAgendaFocus] = useState<AgendaFocus | null>(() => {
+    const weekday = searchParams.get("weekday");
+    const professionalId = searchParams.get("professional");
+    if (weekday !== null) return { type: "weekday", weekday: Number(weekday) };
+    if (professionalId !== null) return { type: "professional", professionalId };
+    return null;
+  });
+
+  // Mesmo achado do Achado 2 — rola até a seção certa quando a Home
+  // manda pra cá com `?scrollTo=` (ex: "#agenda-resumo"/"#buraco-financeiro",
+  // os mesmos anchors que o InsightActionButton já resolve localmente
+  // dentro da própria Sala de Comando). Só na montagem, uma vez.
+  useEffect(() => {
+    const scrollTo = searchParams.get("scrollTo");
+    if (scrollTo) {
+      document.getElementById(scrollTo)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // A fila "Hoje" pode disparar um foco de agenda (#weekday:/#professional:)
   // de FORA da aba Diagnóstico, onde a seção agenda-resumo (destino do
@@ -114,6 +138,7 @@ export function ExecutiveOverviewPage() {
         }
       />
 
+      <ExecutiveNarrativeBanner />
       {/* Achado do Dossiê Insighta RCM — sempre visível, fora das abas
           (a pergunta "esse número é de hoje?" vale para qualquer aba
           que o gestor esteja olhando, não só Diagnóstico). */}
@@ -126,6 +151,7 @@ export function ExecutiveOverviewPage() {
         items={[
           { id: "hoje", label: "Hoje", icon: ListChecks },
           { id: "diagnostico", label: "Diagnóstico", icon: LayoutDashboard },
+          { id: "crm", label: "CRM", icon: HeartHandshake },
           { id: "oportunidades", label: "Oportunidades", icon: Target },
           { id: "comparativo", label: "Comparativo", icon: Users },
           { id: "rentabilidade", label: "Rentabilidade", icon: BadgeDollarSign },
@@ -332,6 +358,12 @@ export function ExecutiveOverviewPage() {
               <PatientDemographicsPanel dateFrom={dateFrom} dateTo={dateTo} />
             </section>
           </div>
+        </TabPanel>
+      )}
+
+      {activeTab === "crm" && (
+        <TabPanel id="crm" groupId={TABS_GROUP}>
+          <CrmPanel />
         </TabPanel>
       )}
 

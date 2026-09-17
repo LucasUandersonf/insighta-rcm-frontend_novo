@@ -10,6 +10,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { PeriodWindowSelect } from "@/components/ui/PeriodWindowSelect";
 import { Tabs, TabPanel } from "@/components/ui/Tabs";
 import { AgendaAnalyticsPanel } from "@/components/dashboard/AgendaAnalyticsPanel";
+import { MediumRiskBillingsPanel } from "@/components/dashboard/MediumRiskBillingsPanel";
 import { AgendaPlanPriorityPanel } from "@/components/dashboard/AgendaPlanPriorityPanel";
 import { DataFreshnessBanner } from "@/components/dashboard/DataFreshnessBanner";
 import { PlanLossRankingPanel } from "@/components/dashboard/PlanLossRankingPanel";
@@ -59,6 +60,8 @@ const PAGE_SIZE = 20;
 // operacional para recepcionistas"), então "atendimento" nunca teve —
 // e continua sem ter — acesso a este dado financeiro/estratégico. Sem
 // esse filtro no cliente, esse papel bateria de frente com um 403 do
+// backend logo ao entrar (esta é a rota "/painel", sem RoleProtectedRoute
+// no roteador — ver App.tsx —, acessível a todo papel autenticado).
 // backend logo ao entrar. "Junta Técnica Insighta": esta rota deixou de
 // ser "/" (pós-login, para todo papel) — agora é "/painel", só destino
 // de drill-down a partir de um card do feed (ver RootRedirect.tsx); o
@@ -446,6 +449,8 @@ export function DashboardPage() {
         </Panel>
       </section>
       )}
+
+      {canViewBillingQueue && <MediumRiskBillingsPanel />}
       </div>
       </TabPanel>
       )}

@@ -85,6 +85,9 @@ function mockAllEndpoints() {
     if (url.includes("inactive-patients")) {
       return Promise.resolve({ total_count: 0, inactive_after_days: 365, items: [] } as never);
     }
+    if (url.includes("crm-summary")) {
+      return Promise.resolve({ avg_patient_age_years: null, avg_days_since_last_visit: null, return_rate: null, return_rate_sample_size: 0 } as never);
+    }
     if (url.includes("patient-rfm")) {
       return Promise.resolve({
         as_of: "2026-01-07",
@@ -137,6 +140,10 @@ describe("ExecutiveOverviewPage", () => {
     await user.click(screen.getByRole("tab", { name: /Diagnóstico/ }));
     expect(await screen.findByText("Agenda & Capacidade Operacional")).toBeInTheDocument();
 
+    await user.click(screen.getByRole("tab", { name: "CRM" }));
+    await waitFor(() => expect(screen.getByText("Nenhum paciente parado há mais de 1 ano — sua carteira está ativa.")).toBeInTheDocument());
+    expect(screen.queryByText("Agenda & Capacidade Operacional")).not.toBeInTheDocument();
+
     await user.click(screen.getByRole("tab", { name: /Oportunidades/ }));
     await waitFor(() => expect(screen.getByText(/Nenhuma oportunidade de renegociação/)).toBeInTheDocument());
 
@@ -149,5 +156,31 @@ describe("ExecutiveOverviewPage", () => {
     // Épico F3.4 do Plano Diretor ("Decisões de capital").
     await user.click(screen.getByRole("tab", { name: /Capital/ }));
     await waitFor(() => expect(screen.getByText(/Payback de uma nova contratação/)).toBeInTheDocument());
+  });
+
+  it("com ?tab=crm na URL, já abre direto na aba CRM (Achado 2 da Avaliação Home/Sala de Comando)", async () => {
+    mockAllEndpoints();
+    renderWithProviders(<ExecutiveOverviewPage />, { route: "/decisao?tab=crm" });
+
+    await waitFor(() => expect(screen.getByText("Nenhum paciente parado há mais de 1 ano — sua carteira está ativa.")).toBeInTheDocument());
+    expect(screen.queryByText("Agenda & Capacidade Operacional")).not.toBeInTheDocument();
+  });
+
+  it("com ?tab= inválido ou ausente, abre no Diagnóstico (fallback seguro)", async () => {
+    mockAllEndpoints();
+    renderWithProviders(<ExecutiveOverviewPage />, { route: "/decisao?tab=algo-que-nao-existe" });
+
+    expect(await screen.findByText("Agenda & Capacidade Operacional")).toBeInTheDocument();
+  });
+
+  it("com ?weekday=/?professional=/?scrollTo= na URL, carrega sem quebrar", async () => {
+    mockAllEndpoints();
+    vi.mocked(useAuth).mockReturnValue({
+      user: { tenant_id: "t1", id: "u1", role: "owner" } as unknown as CurrentUser,
+    } as unknown as ReturnType<typeof useAuth>);
+    renderWithProviders(<ExecutiveOverviewPage />, { route: "/decisao?weekday=3&scrollTo=agenda-resumo" });
+
+    // Épico F1.1: "Hoje" é a página inicial agora
+    expect(await screen.findByText(/Nenhuma ação prioritária agora|Ações prioritárias/)).toBeInTheDocument();
   });
 });

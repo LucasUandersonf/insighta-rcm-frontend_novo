@@ -7,6 +7,7 @@ import {
   ClipboardList,
   FileText,
   Gauge,
+  Home,
   Hourglass,
   LayoutDashboard,
   Layers,
@@ -19,6 +20,7 @@ import {
   Send,
   ShieldAlert,
   UploadCloud,
+  UserRound,
   Users,
   Wallet,
   type LucideIcon,
@@ -47,18 +49,22 @@ export const NAV_ITEMS: NavItem[] = [
   // Sala de Comando (Dashboards de Decisão) — dado estratégico/financeiro
   // agregado, mesmo critério de RBAC do backend em analytics.py: fora do
   // alcance de "atendimento" (recepção).
+  // Home estilo Jarvis (Roadmap "Rumo à Nota 9", Fase 1) — nova primeira
+  // tela, sem RBAC de propósito: mesma visibilidade que "/" sempre teve.
+  { to: "/", label: "Início", icon: Home },
   { to: "/decisao", label: "Sala de Comando", icon: Gauge, roles: ["owner", "admin", "financeiro", "auditor"] },
+  { to: "/painel", label: "Painel", icon: LayoutDashboard },
+  { to: "/appointments", label: "Consultas", icon: CalendarCheck },
+  // Ficha do Paciente (Roadmap "Rumo à Nota 9", Fase 4) — mesmo RBAC de
+  // GET /patients/search (todo papel, sem "atendimento" de fora — é o
+  // papel que mais precisa disto no dia a dia da recepção).
+  { to: "/pacientes", label: "Ficha do paciente", icon: UserRound },
   // Épico F3.2 do Plano Diretor ("Consolidação multi-unidade") — mesmo
   // RBAC de Sala de Comando acima (dado financeiro/estratégico
   // agregado). Sempre visível a esses papéis, mesmo pra clínica avulsa
   // (organization_id NULL) — a própria página mostra o estado honesto
   // "não faz parte de um grupo", nunca escondida como se fosse um erro.
   { to: "/consolidado", label: "Consolidado", icon: Network, roles: ["owner", "admin", "financeiro", "auditor"] },
-  // "Junta Técnica Insighta" — não é mais a rota "/" (raiz sempre leva à
-  // Sala de Comando, ver RootRedirect.tsx): o Painel virou destino de
-  // drill-down, não ponto de entrada padrão.
-  { to: "/painel", label: "Painel", icon: LayoutDashboard },
-  { to: "/appointments", label: "Consultas", icon: CalendarCheck },
   // Onda 5 do Plano de Ação, item 16 — mesmo RBAC amplo de /appointments
   // (rotina de recepção, leitura aberta a financeiro/auditor).
   { to: "/waitlist", label: "Lista de espera", icon: Hourglass },

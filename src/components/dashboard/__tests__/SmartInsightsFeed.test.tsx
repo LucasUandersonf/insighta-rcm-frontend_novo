@@ -235,6 +235,37 @@ describe("SmartInsightsFeed", () => {
     expect(screen.getByText("Quarta-feira com menos consultas")).toBeInTheDocument();
   });
 
+  it("mostra no máximo 4 insights secundários e revela o resto com 'ver mais'", async () => {
+    const data: SmartInsights = {
+      period_start: "2026-01-01",
+      period_end: "2026-01-07",
+      insights: [
+        { severity: "critical", category: "faturamento", title: "Manchete", message: "...", financial_impact: 9000 },
+        { severity: "critical", category: "faturamento", title: "Secundário 1", message: "...", financial_impact: 1 },
+        { severity: "critical", category: "faturamento", title: "Secundário 2", message: "...", financial_impact: 1 },
+        { severity: "critical", category: "faturamento", title: "Secundário 3", message: "...", financial_impact: 1 },
+        { severity: "critical", category: "faturamento", title: "Secundário 4", message: "...", financial_impact: 1 },
+        { severity: "critical", category: "faturamento", title: "Secundário 5 (escondido)", message: "...", financial_impact: 1 },
+        { severity: "warning", category: "agenda", title: "Secundário 6 (escondido)", message: "...", financial_impact: 1 },
+      ],
+    };
+    vi.mocked(apiClient.get).mockResolvedValue(data);
+    const user = userEvent.setup();
+
+    renderWithProviders(<SmartInsightsFeed dateFrom="2026-01-01" dateTo="2026-01-07" />);
+
+    await screen.findByText("Secundário 4");
+    expect(screen.queryByText("Secundário 5 (escondido)")).not.toBeInTheDocument();
+    expect(screen.queryByText("Secundário 6 (escondido)")).not.toBeInTheDocument();
+
+    const verMais = screen.getByRole("button", { name: /Ver mais 2 insights/ });
+    await user.click(verMais);
+
+    expect(await screen.findByText("Secundário 5 (escondido)")).toBeInTheDocument();
+    expect(screen.getByText("Secundário 6 (escondido)")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Ver mais/ })).not.toBeInTheDocument();
+  });
+
   it("não mostra o título de uma seção sem nenhum card nela", async () => {
     const data: SmartInsights = {
       period_start: "2026-01-01",

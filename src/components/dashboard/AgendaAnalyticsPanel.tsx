@@ -1,7 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { AlertOctagon, CalendarX2, Users } from "lucide-react";
+import { AlertOctagon, ArrowUpRight, CalendarX2, Users } from "lucide-react";
 import { Panel, EmptyState, LoadingState, ErrorState } from "@/components/ui/Panel";
+import { Button } from "@/components/ui/Button";
 import { NarrativeInsight } from "@/components/ui/NarrativeInsight";
 import { ChartTooltip } from "@/components/dashboard/ChartTooltip";
 import { ReturnRatePanel } from "@/components/dashboard/ReturnRatePanel";
@@ -32,6 +34,7 @@ function formatHoursAndMinutes(totalMinutes: number): string {
 const WEEKDAY_SHORT_LABELS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
 export function AgendaAnalyticsPanel({ dateFrom, dateTo }: { dateFrom: string; dateTo: string }) {
+  const navigate = useNavigate();
   const { resolvedTheme } = useTheme();
   const palette = CHART_PALETTE[resolvedTheme];
   const axisStyle = { stroke: palette.axis, fontSize: 11 };
@@ -351,6 +354,16 @@ export function AgendaAnalyticsPanel({ dateFrom, dateTo }: { dateFrom: string; d
         <Panel
           title="Risco preditivo de falta (no-show)"
           subtitle="Agendamentos futuros, por nível de risco"
+          action={
+            // Roadmap "Rumo à Nota 9" (Fase 2, Auditoria UX) — antes só
+            // dava pra ver a CONTAGEM agregada aqui; agora existe uma
+            // tela com a lista nominal completa (paciente/dia/horário/
+            // risco), paginada, pra quem quer agir em vez de só olhar.
+            <Button type="button" variant="secondary" size="xs" onClick={() => navigate("/agenda-risco")} className="inline-flex items-center gap-1">
+              Ver agenda de risco completa
+              <ArrowUpRight aria-hidden size={12} />
+            </Button>
+          }
           updatedAt={dataUpdatedAt || null}
         >
           {!isLoading && data && (

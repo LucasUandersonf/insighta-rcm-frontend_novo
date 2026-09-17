@@ -23,10 +23,13 @@ const LoginPage = lazy(() => import("@/pages/LoginPage").then((m) => ({ default:
 const SignUpPage = lazy(() => import("@/pages/SignUpPage").then((m) => ({ default: m.SignUpPage })));
 const ForgotPasswordPage = lazy(() => import("@/pages/ForgotPasswordPage").then((m) => ({ default: m.ForgotPasswordPage })));
 const ResetPasswordPage = lazy(() => import("@/pages/ResetPasswordPage").then((m) => ({ default: m.ResetPasswordPage })));
+const HomePage = lazy(() => import("@/pages/HomePage").then((m) => ({ default: m.HomePage })));
 const SatisfactionRatingPage = lazy(() =>
   import("@/pages/SatisfactionRatingPage").then((m) => ({ default: m.SatisfactionRatingPage }))
 );
 const DashboardPage = lazy(() => import("@/pages/DashboardPage").then((m) => ({ default: m.DashboardPage })));
+const AgendaRiscoPage = lazy(() => import("@/pages/AgendaRiscoPage").then((m) => ({ default: m.AgendaRiscoPage })));
+const PatientFichaPage = lazy(() => import("@/pages/PatientFichaPage").then((m) => ({ default: m.PatientFichaPage })));
 const ExecutiveOverviewPage = lazy(() => import("@/pages/ExecutiveOverviewPage").then((m) => ({ default: m.ExecutiveOverviewPage })));
 const OrganizationSummaryPage = lazy(() => import("@/pages/OrganizationSummaryPage").then((m) => ({ default: m.OrganizationSummaryPage })));
 const ContractsPage = lazy(() => import("@/pages/ContractsPage").then((m) => ({ default: m.ContractsPage })));
@@ -111,6 +114,19 @@ export default function App() {
               </Route>
             <Route element={<ProtectedRoute />}>
               <Route element={<AppShell />}>
+                {/* Home estilo Jarvis (Roadmap "Rumo à Nota 9", Fase 1) — nova
+                    primeira tela: texto dinâmico gerado por IA + até 3
+                    prioridades, nunca o feed/KPIs inteiros (isso migrou pra
+                    /painel). Sem RoleProtectedRoute de propósito: mesma
+                    visibilidade que "/" sempre teve. */}
+                <Route path="/" element={<HomePage />} />
+                <Route path="/painel" element={<DashboardPage />} />
+                <Route path="/appointments" element={<AppointmentsPage />} />
+                {/* Ficha do Paciente (Roadmap "Rumo à Nota 9", Fase 4) — mesmo
+                    RBAC de GET /patients/search e /patients/{id}/ficha
+                    (atendimento/admin/owner/financeiro/auditor = todo papel),
+                    por isso sem RoleProtectedRoute. */}
+                <Route path="/pacientes" element={<PatientFichaPage />} />
                 {/* "Junta Técnica Insighta" — o Painel (BI tradicional) não
                     deveria ser "ponto de entrada padrão de quem abre o
                     sistema de manhã", só destino de drill-down a partir de
@@ -143,6 +159,9 @@ export default function App() {
                 </Route>
                 <Route element={<RoleProtectedRoute allowedRoles={["owner", "admin", "financeiro", "auditor"]} />}>
                   <Route path="/decisao" element={<ExecutiveOverviewPage />} />
+                  {/* Roadmap "Rumo à Nota 9" (Fase 2) — mesmo RBAC de /decisao
+                      (o endpoint que alimenta esta tela usa o mesmo _CAN_VIEW). */}
+                  <Route path="/agenda-risco" element={<AgendaRiscoPage />} />
                   {/* Épico F3.2 do Plano Diretor — mesmo RBAC de /decisao acima. */}
                   <Route path="/consolidado" element={<OrganizationSummaryPage />} />
                   <Route path="/contracts" element={<ContractsPage />} />
