@@ -1,15 +1,15 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { LayoutDashboard, SlidersHorizontal, Target, Users } from "lucide-react";
+import { HeartHandshake, LayoutDashboard, SlidersHorizontal, Target, Users } from "lucide-react";
 import { KpiCard } from "@/components/ui/KpiCard";
 import { ErrorState, LoadingState } from "@/components/ui/Panel";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PeriodWindowSelect } from "@/components/ui/PeriodWindowSelect";
 import { Tabs, TabPanel } from "@/components/ui/Tabs";
+import { CrmPanel } from "@/components/dashboard/CrmPanel";
 import { ExecutiveAgendaSummary } from "@/components/dashboard/ExecutiveAgendaSummary";
 import { ExecutiveNarrativeBanner } from "@/components/dashboard/ExecutiveNarrativeBanner";
 import { FinancialHoleBillingsPanel } from "@/components/dashboard/FinancialHoleBillingsPanel";
-import { InactivePatientsPanel } from "@/components/dashboard/InactivePatientsPanel";
 import { SmartInsightsFeed } from "@/components/dashboard/SmartInsightsFeed";
 import { HealthScoreWidget } from "@/components/dashboard/HealthScoreWidget";
 import { NetworkBenchmarkPanel } from "@/components/dashboard/NetworkBenchmarkPanel";
@@ -44,7 +44,7 @@ function formatPct(value: number): string {
 }
 
 const TABS_GROUP = "sala-de-comando";
-type TabId = "diagnostico" | "oportunidades" | "comparativo" | "simulador";
+type TabId = "diagnostico" | "crm" | "oportunidades" | "comparativo" | "simulador";
 
 /**
  * Sala de Comando 2.0 (ver Roadmap "Sala de Comando 2.0") — a mesma
@@ -88,6 +88,7 @@ export function ExecutiveOverviewPage() {
         onChange={(id) => setActiveTab(id as TabId)}
         items={[
           { id: "diagnostico", label: "Diagnóstico", icon: LayoutDashboard },
+          { id: "crm", label: "CRM", icon: HeartHandshake },
           { id: "oportunidades", label: "Oportunidades", icon: Target },
           { id: "comparativo", label: "Comparativo", icon: Users },
           { id: "simulador", label: "Simulador", icon: SlidersHorizontal },
@@ -233,16 +234,13 @@ export function ExecutiveOverviewPage() {
               />
             </section>
 
-            {/* id="carteira-inativa" — destino do botão "Ver quem não
-                voltou" do insight de meta anual atrasada (ver DECISÃO em
-                smart_insights_engine.py::_annual_goal_insight). Sem
-                janela de período (mesmo espírito da Nota de Saúde): é
-                sempre "quem não volta há mais de 1 ano a partir de
-                hoje", não um recorte dos últimos 7 dias. */}
-            <section id="carteira-inativa">
-              <InactivePatientsPanel />
-            </section>
           </div>
+        </TabPanel>
+      )}
+
+      {activeTab === "crm" && (
+        <TabPanel id="crm" groupId={TABS_GROUP}>
+          <CrmPanel />
         </TabPanel>
       )}
 

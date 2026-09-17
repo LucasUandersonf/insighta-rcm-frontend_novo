@@ -698,6 +698,14 @@ export interface InactivePatients {
   inactive_after_days: number;
 }
 
+// Aba CRM (GET /analytics/crm-summary) — Roadmap "Rumo à Nota 9", Fase 5.
+export interface CrmSummary {
+  avg_patient_age_years: number | null;
+  avg_days_since_last_visit: number | null;
+  return_rate: number | null;
+  return_rate_sample_size: number;
+}
+
 // Candidatos a recontato (GET /analytics/recall-candidates) — a lista
 // real por trás dos botões de ação dos insights de agenda que apontam
 // pra um dia da semana ou um profissional específico (ver DECISÃO em
