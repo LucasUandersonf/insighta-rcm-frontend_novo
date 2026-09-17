@@ -6,6 +6,7 @@ import { Panel, EmptyState, LoadingState, ErrorState } from "@/components/ui/Pan
 import { Button } from "@/components/ui/Button";
 import { NarrativeInsight } from "@/components/ui/NarrativeInsight";
 import { ChartTooltip } from "@/components/dashboard/ChartTooltip";
+import { ReturnRatePanel } from "@/components/dashboard/ReturnRatePanel";
 import { useTheme } from "@/context/ThemeContext";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
@@ -38,10 +39,12 @@ export function AgendaAnalyticsPanel({ dateFrom, dateTo }: { dateFrom: string; d
   const palette = CHART_PALETTE[resolvedTheme];
   const axisStyle = { stroke: palette.axis, fontSize: 11 };
 
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error, dataUpdatedAt } = useQuery({
     queryKey: ["analytics", "agenda-metrics", dateFrom, dateTo],
     queryFn: () => apiClient.get<AgendaMetrics>(`/api/v1/analytics/agenda-metrics?date_from=${dateFrom}&date_to=${dateTo}`),
   });
+  // Épico F4.3: um único useQuery alimenta todos os Panels desta tela —
+  // o mesmo dataUpdatedAt é passado pra cada um deles abaixo.
 
   const peakHoursData = (data?.peak_hours ?? []).map((b) => ({ hora: `${String(b.hour).padStart(2, "0")}h`, consultas: b.appointment_count }));
   const weekdayData = (data?.weekday_histogram ?? []).map((b) => ({ dia: WEEKDAY_SHORT_LABELS[b.weekday], consultas: b.appointment_count }));
@@ -57,6 +60,23 @@ export function AgendaAnalyticsPanel({ dateFrom, dateTo }: { dateFrom: string; d
   const weekdayRateData = (data?.weekday_no_show_rates ?? []).map((b) => ({
     dia: WEEKDAY_SHORT_LABELS[b.weekday],
     taxa: b.total_appointments >= WEEKDAY_RATE_MIN_SAMPLE && b.no_show_rate !== null ? Math.round(b.no_show_rate * 100) : 0,
+  }));
+  // Achado do Dossiê Insighta RCM — mesmo espírito de weekdayRateData
+  // acima, agora para cancelamento (dias com mais cancelamento).
+  const weekdayCancellationData = (data?.weekday_cancellation_rates ?? []).map((b) => ({
+    dia: WEEKDAY_SHORT_LABELS[b.weekday],
+    taxa:
+      b.total_appointments >= WEEKDAY_RATE_MIN_SAMPLE && b.cancellation_rate !== null
+        ? Math.round(b.cancellation_rate * 100)
+        : 0,
+  }));
+  // Onda 5 do Plano de Ação, item 15 — em quais dias da semana a
+  // agenda mais recebe encaixe. Denominador = só is_squeeze_in
+  // INFORMADO (mesmo raciocínio do backend), não desfecho terminal.
+  const weekdaySqueezeInData = (data?.weekday_squeeze_in_rates ?? []).map((b) => ({
+    dia: WEEKDAY_SHORT_LABELS[b.weekday],
+    taxa:
+      b.total_informed >= WEEKDAY_RATE_MIN_SAMPLE && b.squeeze_in_rate !== null ? Math.round(b.squeeze_in_rate * 100) : 0,
   }));
   const professionalData = (data?.professionals ?? []).map((p) => ({
     nome: p.full_name,
@@ -86,8 +106,12 @@ export function AgendaAnalyticsPanel({ dateFrom, dateTo }: { dateFrom: string; d
 
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+      <div className="lg:col-span-12">
+        <ReturnRatePanel dateFrom={dateFrom} dateTo={dateTo} />
+      </div>
+
       <div className="lg:col-span-6">
-        <Panel title="Horários de pico" subtitle="Volume de consultas por hora do dia">
+        <Panel title="Horários de pico" subtitle="Volume de consultas por hora do dia" updatedAt={dataUpdatedAt || null}>
           {isLoading && <LoadingState />}
           {error && <ErrorState message={getApiErrorMessage(error)} />}
           {!isLoading && !error && peakHoursData.length === 0 && <EmptyState icon={<CalendarX2 size={17} strokeWidth={1.5} />} message="Sem agendamentos nesta janela." />}
@@ -114,7 +138,11 @@ export function AgendaAnalyticsPanel({ dateFrom, dateTo }: { dateFrom: string; d
       </div>
 
       <div className="lg:col-span-6">
-        <Panel title="Agenda por dia da semana" subtitle="Evidência do insight de queda de agenda, ao lado — volume de consultas por dia">
+        <Panel
+          title="Agenda por dia da semana"
+          subtitle="Evidência do insight de queda de agenda, ao lado — volume de consultas por dia"
+          updatedAt={dataUpdatedAt || null}
+        >
           {isLoading && <LoadingState />}
           {error && <ErrorState message={getApiErrorMessage(error)} />}
           {!isLoading && !error && weekdayData.length === 0 && <EmptyState icon={<CalendarX2 size={17} strokeWidth={1.5} />} message="Sem agendamentos nesta janela." />}
@@ -144,6 +172,7 @@ export function AgendaAnalyticsPanel({ dateFrom, dateTo }: { dateFrom: string; d
         <Panel
           title="Taxa de falta por dia da semana"
           subtitle="Diferente do gráfico de volume acima — aqui é a FRAÇÃO de faltas dentro dos atendimentos já resolvidos (concluído ou faltou) de cada dia, não a contagem de agendamentos"
+          updatedAt={dataUpdatedAt || null}
         >
           {isLoading && <LoadingState />}
           {error && <ErrorState message={getApiErrorMessage(error)} />}
@@ -173,8 +202,76 @@ export function AgendaAnalyticsPanel({ dateFrom, dateTo }: { dateFrom: string; d
         </Panel>
       </div>
 
+      <div className="lg:col-span-12">
+        <Panel
+          title="Taxa de cancelamento por dia da semana"
+          subtitle="Achado do Dossiê Insighta RCM — mesma leitura do gráfico de falta acima, agora para cancelamento: fração de cancelamentos dentro dos atendimentos com desfecho conhecido (concluído, faltou ou cancelou) de cada dia"
+          updatedAt={dataUpdatedAt || null}
+        >
+          {isLoading && <LoadingState />}
+          {error && <ErrorState message={getApiErrorMessage(error)} />}
+          {!isLoading && !error && weekdayCancellationData.length === 0 && (
+            <EmptyState icon={<CalendarX2 size={17} strokeWidth={1.5} />} message="Sem atendimentos com desfecho conhecido nesta janela para calcular taxa de cancelamento." />
+          )}
+          {!isLoading && weekdayCancellationData.length > 0 && (
+            <div className="p-4">
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={weekdayCancellationData} margin={{ top: 4, right: 8, left: 8, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="barGradientWeekdayCancellation" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={palette.bar} stopOpacity={0.95} />
+                      <stop offset="100%" stopColor={palette.bar} stopOpacity={0.55} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke={palette.grid} vertical={false} />
+                  <XAxis dataKey="dia" {...axisStyle} tickLine={false} axisLine={{ stroke: palette.grid }} />
+                  <YAxis {...axisStyle} tickLine={false} axisLine={false} allowDecimals={false} unit="%" />
+                  <Tooltip content={<ChartTooltip />} cursor={{ fill: palette.grid, opacity: 0.35 }} formatter={(v: number) => `${v}%`} />
+                  <Bar dataKey="taxa" fill="url(#barGradientWeekdayCancellation)" radius={[3, 3, 0, 0]} name="Taxa de cancelamento" animationDuration={700} />
+                </BarChart>
+              </ResponsiveContainer>
+              <p className="mt-1 text-2xs text-ink-faint">Dias com poucos atendimentos (menos de 3) aparecem zerados — amostra insuficiente para uma taxa confiável.</p>
+            </div>
+          )}
+        </Panel>
+      </div>
+
+      <div className="lg:col-span-12">
+        <Panel
+          title="Taxa de encaixe por dia da semana"
+          subtitle="Onda 5 do Plano de Ação — em quais dias a agenda mais recebe paciente fora da grade normal (só agendamentos com essa informação preenchida)"
+          updatedAt={dataUpdatedAt || null}
+        >
+          {isLoading && <LoadingState />}
+          {error && <ErrorState message={getApiErrorMessage(error)} />}
+          {!isLoading && !error && weekdaySqueezeInData.length === 0 && (
+            <EmptyState icon={<CalendarX2 size={17} strokeWidth={1.5} />} message="Nenhum agendamento com informação de encaixe preenchida nesta janela." />
+          )}
+          {!isLoading && weekdaySqueezeInData.length > 0 && (
+            <div className="p-4">
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={weekdaySqueezeInData} margin={{ top: 4, right: 8, left: 8, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="barGradientWeekdaySqueezeIn" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={palette.bar} stopOpacity={0.95} />
+                      <stop offset="100%" stopColor={palette.bar} stopOpacity={0.55} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke={palette.grid} vertical={false} />
+                  <XAxis dataKey="dia" {...axisStyle} tickLine={false} axisLine={{ stroke: palette.grid }} />
+                  <YAxis {...axisStyle} tickLine={false} axisLine={false} allowDecimals={false} unit="%" />
+                  <Tooltip content={<ChartTooltip />} cursor={{ fill: palette.grid, opacity: 0.35 }} formatter={(v: number) => `${v}%`} />
+                  <Bar dataKey="taxa" fill="url(#barGradientWeekdaySqueezeIn)" radius={[3, 3, 0, 0]} name="Taxa de encaixe" animationDuration={700} />
+                </BarChart>
+              </ResponsiveContainer>
+              <p className="mt-1 text-2xs text-ink-faint">Dias com poucos agendamentos informados (menos de 3) aparecem zerados — amostra insuficiente para uma taxa confiável.</p>
+            </div>
+          )}
+        </Panel>
+      </div>
+
       <div className="lg:col-span-6">
-        <Panel title="Ocupação por profissional" subtitle="Ocupação vs. ociosidade da agenda no período">
+        <Panel title="Ocupação por profissional" subtitle="Ocupação vs. ociosidade da agenda no período" updatedAt={dataUpdatedAt || null}>
           {isLoading && <LoadingState />}
           {!isLoading && !error && professionalData.length === 0 && <EmptyState icon={<Users size={17} strokeWidth={1.5} />} message="Nenhum profissional com grade cadastrada." />}
           {!isLoading && professionalData.length > 0 && (
@@ -218,7 +315,11 @@ export function AgendaAnalyticsPanel({ dateFrom, dateTo }: { dateFrom: string; d
       </div>
 
       <div className="lg:col-span-6">
-        <Panel title="Detalhe por profissional" action={data && <span className="text-2xs text-ink-faint">{data.professionals.length} ativo(s)</span>}>
+        <Panel
+          title="Detalhe por profissional"
+          action={data && <span className="text-2xs text-ink-faint">{data.professionals.length} ativo(s)</span>}
+          updatedAt={dataUpdatedAt || null}
+        >
           {noShowNarrative && (
             <div className="border-b border-border-hairline px-4 py-3">
               <NarrativeInsight text={noShowNarrative} tone={avgNoShowRate !== null && avgNoShowRate > 0.2 ? "warning" : "positive"} />
@@ -263,6 +364,7 @@ export function AgendaAnalyticsPanel({ dateFrom, dateTo }: { dateFrom: string; d
               <ArrowUpRight aria-hidden size={12} />
             </Button>
           }
+          updatedAt={dataUpdatedAt || null}
         >
           {!isLoading && data && (
             <div className="grid grid-cols-1 gap-6 p-4 sm:grid-cols-[1fr_auto]">
@@ -288,6 +390,7 @@ export function AgendaAnalyticsPanel({ dateFrom, dateTo }: { dateFrom: string; d
         <Panel
           title="Lista vermelha de pacientes"
           subtitle="Ranking por taxa de falta no período — mínimo de 3 atendimentos para entrar na lista"
+          updatedAt={dataUpdatedAt || null}
         >
           {isLoading && <LoadingState variant="table" rows={4} />}
           {!isLoading && !error && (data?.patient_no_show_ranking ?? []).length === 0 && (

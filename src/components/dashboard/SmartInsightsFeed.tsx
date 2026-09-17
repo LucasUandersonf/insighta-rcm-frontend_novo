@@ -8,6 +8,14 @@ import { BentoCard } from "@/components/ui/BentoGrid";
 import { Badge, type BadgeTone } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
+import {
+  ActionedBadge,
+  AssignModal,
+  InsightWorkflowButtons,
+  insightItemKey,
+  toQueueItem,
+  useInsightWorkflow,
+} from "@/components/dashboard/InsightWorkflowActions";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { cn } from "@/lib/cn";
@@ -67,6 +75,16 @@ export function formatCurrency(value: number): string {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
 }
 
+/** Fatia do retorno de useInsightWorkflow() (ver InsightWorkflowActions.tsx)
+ * que HeroInsight/SecondaryInsightCard precisam pra desenhar seus próprios
+ * botões de atribuir/resolver — cada card resolve o `actioned`/`queueItem`
+ * do SEU insight sozinho, então só passamos a fatia compartilhada
+ * (estado + mutation), não o item já resolvido. */
+type InsightWorkflowSlice = Pick<
+  ReturnType<typeof useInsightWorkflow>,
+  "canManage" | "actionedKeys" | "resolveMutation" | "setAssigningItem"
+>;
+
 const MESH_CSS_VAR: Record<InsightSeverity, string> = {
   critical: "--denied",
   warning: "--pending",
@@ -96,7 +114,11 @@ const MESH_CSS_VAR: Record<InsightSeverity, string> = {
  *                _capacity_drop_insight).
  * Nunca inventa destino: só aponta pra telas/seções que já existem.
  */
-function InsightActionButton({
+// Exportado para PriorityQueuePanel.tsx (épico F1.1 do Plano Diretor)
+// reaproveitar a MESMA leitura de action_href (4 formatos) em vez de
+// duplicar o parser — a fila de hoje mistura insights normais com
+// itens sintéticos do Raio-X, mas o botão de ação é idêntico nos dois.
+export function InsightActionButton({
   insight,
   onNavigateTab,
   onFocusAgenda,
@@ -151,14 +173,18 @@ function HeroInsight({
   insight,
   onNavigateTab,
   onFocusAgenda,
+  workflow,
 }: {
   insight: SmartInsight;
   onNavigateTab?: (tabId: string) => void;
   onFocusAgenda?: (focus: AgendaFocus) => void;
+  workflow: InsightWorkflowSlice;
 }) {
   const cfg = SEVERITY_CONFIG[insight.severity];
   const Icon = cfg.icon;
   const meshVar = MESH_CSS_VAR[insight.severity];
+  const queueItem = toQueueItem(insight);
+  const actioned = workflow.actionedKeys[insightItemKey(insight)];
   return (
     <BentoCard colSpan={8} glow={cfg.glow} className={cn("border", cfg.border, cfg.bg)}>
       {/* Malha de gradiente decorativa — respira suavemente ao fundo do
@@ -181,6 +207,7 @@ function HeroInsight({
             <Badge tone={cfg.badgeTone}>{cfg.label}</Badge>
             {insight.is_new && <Badge tone="novo">Novo</Badge>}
             <h2 className="font-serif text-lg font-medium tracking-premium text-ink sm:text-xl">{insight.title}</h2>
+            <ActionedBadge actioned={actioned} />
           </div>
           <p className="mt-2.5 max-w-2xl text-sm leading-relaxed text-ink-muted sm:text-[0.95rem]">{insight.message}</p>
           {insight.financial_impact !== null && (
@@ -191,7 +218,18 @@ function HeroInsight({
               </div>
             </div>
           )}
-          <InsightActionButton insight={insight} onNavigateTab={onNavigateTab} onFocusAgenda={onFocusAgenda} toneClass={cfg.text} />
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <InsightActionButton insight={insight} onNavigateTab={onNavigateTab} onFocusAgenda={onFocusAgenda} toneClass={cfg.text} />
+            <InsightWorkflowButtons
+              item={queueItem}
+              canManage={workflow.canManage}
+              actioned={actioned}
+              onResolve={(i) => workflow.resolveMutation.mutate(i)}
+              onAssign={workflow.setAssigningItem}
+              resolvePending={workflow.resolveMutation.isPending}
+              toneClass={cfg.text}
+            />
+          </div>
         </div>
       </div>
     </BentoCard>
@@ -202,12 +240,16 @@ function SecondaryInsightCard({
   insight,
   onNavigateTab,
   onFocusAgenda,
+  workflow,
 }: {
   insight: SmartInsight;
   onNavigateTab?: (tabId: string) => void;
   onFocusAgenda?: (focus: AgendaFocus) => void;
+  workflow: InsightWorkflowSlice;
 }) {
   const cfg = SEVERITY_CONFIG[insight.severity];
+  const queueItem = toQueueItem(insight);
+  const actioned = workflow.actionedKeys[insightItemKey(insight)];
   return (
     <BentoCard colSpan={4} glow={cfg.glow} className="p-4">
       <div className="flex items-start gap-2.5">
@@ -224,14 +266,30 @@ function SecondaryInsightCard({
           {insight.financial_impact !== null && (
             <p className="mt-1.5 font-mono text-2xs text-ink-faint">Impacto estimado: {formatCurrency(insight.financial_impact)}</p>
           )}
-          <InsightActionButton insight={insight} onNavigateTab={onNavigateTab} onFocusAgenda={onFocusAgenda} toneClass={cfg.text} />
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <InsightActionButton insight={insight} onNavigateTab={onNavigateTab} onFocusAgenda={onFocusAgenda} toneClass={cfg.text} />
+            <ActionedBadge actioned={actioned} />
+            <InsightWorkflowButtons
+              item={queueItem}
+              canManage={workflow.canManage}
+              actioned={actioned}
+              onResolve={(i) => workflow.resolveMutation.mutate(i)}
+              onAssign={workflow.setAssigningItem}
+              resolvePending={workflow.resolveMutation.isPending}
+              toneClass={cfg.text}
+            />
+          </div>
         </div>
       </div>
     </BentoCard>
   );
 }
 
-const CATEGORY_CONFIG: Record<SmartInsight["category"], { label: string; icon: typeof Wallet }> = {
+// "estrategia" fica fora deste config de propósito: generate_insights()
+// nunca emite essa categoria (só PriorityQueuePanel.tsx a usa, pra um
+// terceiro badge da fila "Hoje") — CategorySection abaixo só agrupa as
+// duas categorias reais do feed.
+const CATEGORY_CONFIG: Record<"faturamento" | "agenda", { label: string; icon: typeof Wallet }> = {
   faturamento: { label: "Faturamento & Convênios", icon: Wallet },
   agenda: { label: "Agenda & Ocupação", icon: CalendarClock },
 };
@@ -253,11 +311,13 @@ function CategorySection({
   insights,
   onNavigateTab,
   onFocusAgenda,
+  workflow,
 }: {
-  category: SmartInsight["category"];
+  category: "faturamento" | "agenda";
   insights: SmartInsight[];
   onNavigateTab?: (tabId: string) => void;
   onFocusAgenda?: (focus: AgendaFocus) => void;
+  workflow: InsightWorkflowSlice;
 }) {
   if (insights.length === 0) return null;
   const { label, icon: Icon } = CATEGORY_CONFIG[category];
@@ -269,7 +329,7 @@ function CategorySection({
       </h3>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
         {insights.map((insight, idx) => (
-          <SecondaryInsightCard key={idx} insight={insight} onNavigateTab={onNavigateTab} onFocusAgenda={onFocusAgenda} />
+          <SecondaryInsightCard key={idx} insight={insight} onNavigateTab={onNavigateTab} onFocusAgenda={onFocusAgenda} workflow={workflow} />
         ))}
       </div>
     </div>
@@ -323,6 +383,7 @@ export function SmartInsightsFeed({
     queryFn: () => apiClient.get<SmartInsights>(`/api/v1/analytics/smart-insights?date_from=${dateFrom}&date_to=${dateTo}`),
   });
   const [expanded, setExpanded] = useState(false);
+  const workflow = useInsightWorkflow();
 
   const insights = data?.insights ?? [];
 
@@ -352,7 +413,7 @@ export function SmartInsightsFeed({
       variants={{ hidden: {}, show: { transition: { staggerChildren: 0.06 } } }}
     >
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
-        <HeroInsight insight={topInsight} onNavigateTab={onNavigateTab} onFocusAgenda={onFocusAgenda} />
+        <HeroInsight insight={topInsight} onNavigateTab={onNavigateTab} onFocusAgenda={onFocusAgenda} workflow={workflow} />
       </div>
       <CategorySection category="faturamento" insights={faturamentoInsights} onNavigateTab={onNavigateTab} onFocusAgenda={onFocusAgenda} />
       <CategorySection category="agenda" insights={agendaInsights} onNavigateTab={onNavigateTab} onFocusAgenda={onFocusAgenda} />
@@ -364,6 +425,13 @@ export function SmartInsightsFeed({
           </Button>
         </div>
       )}
+      <CategorySection category="faturamento" insights={faturamentoInsights} onNavigateTab={onNavigateTab} onFocusAgenda={onFocusAgenda} workflow={workflow} />
+      <CategorySection category="agenda" insights={agendaInsights} onNavigateTab={onNavigateTab} onFocusAgenda={onFocusAgenda} workflow={workflow} />
+      <AssignModal
+        item={workflow.assigningItem}
+        onClose={() => workflow.setAssigningItem(null)}
+        onAssigned={(item) => workflow.setActionedKeys((prev) => ({ ...prev, [insightItemKey(item)]: "atribuido" }))}
+      />
     </motion.div>
   );
 }

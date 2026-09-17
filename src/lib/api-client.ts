@@ -1,4 +1,11 @@
-import type { ApiErrorBody, GoogleAuthResponse, RegisterRequest, RegisterResponse, TokenResponse } from "./types";
+import type {
+  ApiErrorBody,
+  GoogleAuthResponse,
+  PublicSatisfactionStatusResponse,
+  RegisterRequest,
+  RegisterResponse,
+  TokenResponse,
+} from "./types";
 import { reportError } from "./monitoring";
 
 // Exportado para src/lib/platform-api-client.ts reaproveitar a mesma
@@ -118,7 +125,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 }
 
 export const apiClient = {
-  get: <T>(path: string) => request<T>(path, { method: "GET" }),
+  get: <T>(path: string, options?: { skipAuth?: boolean }) => request<T>(path, { method: "GET", skipAuth: options?.skipAuth }),
   post: <T>(path: string, body?: unknown, options?: { skipAuth?: boolean }) =>
     request<T>(path, { method: "POST", body, skipAuth: options?.skipAuth }),
   patch: <T>(path: string, body?: unknown) => request<T>(path, { method: "PATCH", body }),
@@ -253,4 +260,17 @@ export async function confirmPasswordReset(token: string, newPassword: string): 
     { token, new_password: newPassword },
     { skipAuth: true }
   );
+}
+
+/** Lado público (sem autenticação) do link de avaliação de satisfação
+ * pós-atendimento — ver DECISÃO em 052_appointment_satisfaction.sql
+ * (backend). O paciente abre `/satisfacao/:token` sem estar logado. */
+export async function getSatisfactionStatus(token: string): Promise<PublicSatisfactionStatusResponse> {
+  return apiClient.get<PublicSatisfactionStatusResponse>(`/api/v1/public/satisfaction/${encodeURIComponent(token)}`, {
+    skipAuth: true,
+  });
+}
+
+export async function submitSatisfactionScore(token: string, score: number): Promise<void> {
+  return apiClient.post<void>(`/api/v1/public/satisfaction/${encodeURIComponent(token)}`, { score }, { skipAuth: true });
 }

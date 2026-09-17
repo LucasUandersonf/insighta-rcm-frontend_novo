@@ -5,7 +5,7 @@ import { CalendarClock, Pencil, Plus, X } from "lucide-react";
 import { Panel, EmptyState, LoadingState, ErrorState } from "@/components/ui/Panel";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
-import { TextField } from "@/components/ui/FormField";
+import { TextField, SelectField } from "@/components/ui/FormField";
 import { FilterBar } from "@/components/ui/FilterBar";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Badge } from "@/components/ui/Badge";
@@ -13,7 +13,23 @@ import { apiClient } from "@/lib/api-client";
 import { cn } from "@/lib/cn";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useToast } from "@/context/ToastContext";
-import type { AvailabilityBlock, Professional, ProfessionalCreateRequest, ProfessionalUpdateRequest } from "@/lib/types";
+import type {
+  AvailabilityBlock,
+  ContractType,
+  PlannedAbsence,
+  PlannedAbsenceCreateRequest,
+  Professional,
+  ProfessionalCreateRequest,
+  ProfessionalUpdateRequest,
+} from "@/lib/types";
+
+// "Mapa de Dados Insighta" — Domínio Profissional (Onda 2).
+const CONTRACT_TYPE_LABELS: Record<ContractType, string> = {
+  clt: "CLT",
+  pj: "PJ",
+  autonomo: "Autônomo",
+  cooperado: "Cooperado",
+};
 
 // Módulo trazido de volta especificamente para isto — ver DECISÃO em
 // app/services/normalization_service.py::_get_or_create_professional
@@ -28,6 +44,12 @@ import type { AvailabilityBlock, Professional, ProfessionalCreateRequest, Profes
 // não tem (nem pode ter) outra fonte de dado.
 const WEEKDAY_LABELS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 const WEEKDAY_SHORT = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+
+function formatDateBR(iso: string): string {
+  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "UTC" }).format(
+    new Date(`${iso}T00:00:00Z`)
+  );
+}
 
 function displayTime(apiTime: string): string {
   return apiTime.slice(0, 5); // "08:00:00" -> "08:00"
@@ -111,14 +133,123 @@ function AvailabilityEditor({ blocks, onChange }: { blocks: AvailabilityBlock[];
   );
 }
 
+/**
+ * "Mapa de Dados Insighta" — Domínio Profissional (Onda 1): ausência
+ * futura planejada (férias, licença) — DIFERENTE de AvailabilityEditor
+ * acima: cada ausência é lançada/removida com uma chamada própria
+ * (POST/DELETE imediatos), não acumulada em estado local até o submit
+ * do formulário inteiro — mesmo raciocínio do backend
+ * (add_planned_absence/remove_planned_absence, nunca um "substituir
+ * tudo"): uma nova ausência nunca deveria apagar uma já cadastrada.
+ * Por isso só aparece editando um profissional que JÁ EXISTE (precisa
+ * de um id pra anexar a ausência).
+ */
+function PlannedAbsencesEditor({
+  professionalId,
+  absences,
+  onChange,
+}: {
+  professionalId: string;
+  absences: PlannedAbsence[];
+  onChange: (absences: PlannedAbsence[]) => void;
+}) {
+  const { showSuccess, showError } = useToast();
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [reason, setReason] = useState("");
+
+  const addMutation = useMutation({
+    mutationFn: (payload: PlannedAbsenceCreateRequest) =>
+      apiClient.post<PlannedAbsence>(`/api/v1/professionals/${professionalId}/planned-absences`, payload),
+    onSuccess: (created) => {
+      onChange([...absences, created].sort((a, b) => a.start_date.localeCompare(b.start_date)));
+      setStartDate("");
+      setEndDate("");
+      setReason("");
+      showSuccess("Ausência registrada.");
+    },
+    onError: (err) => showError(getApiErrorMessage(err)),
+  });
+
+  const removeMutation = useMutation({
+    mutationFn: (absenceId: string) =>
+      apiClient.delete(`/api/v1/professionals/${professionalId}/planned-absences/${absenceId}`),
+    onSuccess: (_data, absenceId) => onChange(absences.filter((a) => a.id !== absenceId)),
+    onError: (err) => showError(getApiErrorMessage(err)),
+  });
+
+  function handleAdd() {
+    if (!startDate || !endDate) return;
+    addMutation.mutate({ start_date: startDate, end_date: endDate, reason: reason || null });
+  }
+
+  return (
+    <div className="mb-4">
+      <label className="mb-1.5 block text-xs font-medium text-ink-muted">Ausências planejadas (férias, licença)</label>
+      {absences.length === 0 && (
+        <p className="mb-2 rounded-md border border-dashed border-border-default bg-canvas-raised/40 px-3 py-2.5 text-2xs text-ink-faint">
+          Nenhuma ausência futura cadastrada — sem isso, a previsão de capacidade só enxerga o passado.
+        </p>
+      )}
+      {absences.length > 0 && (
+        <div className="mb-2 space-y-1.5">
+          {absences.map((a) => (
+            <div
+              key={a.id}
+              className="flex items-center justify-between gap-2 rounded-md border border-border-default bg-canvas-raised px-2.5 py-1.5 text-xs text-ink-muted"
+            >
+              <span>
+                {formatDateBR(a.start_date)}–{formatDateBR(a.end_date)}
+                {a.reason ? ` — ${a.reason}` : ""}
+              </span>
+              <button
+                type="button"
+                onClick={() => removeMutation.mutate(a.id)}
+                disabled={removeMutation.isPending}
+                aria-label={`Remover ausência de ${formatDateBR(a.start_date)} a ${formatDateBR(a.end_date)}`}
+                className="shrink-0 text-denied transition-colors hover:text-denied/70"
+              >
+                <X size={13} strokeWidth={2} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="grid grid-cols-1 items-end gap-2 sm:grid-cols-[1fr_1fr_1fr_auto]">
+        <TextField label="Início" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+        <TextField label="Fim" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+        <TextField label="Motivo (opcional)" value={reason} onChange={(e) => setReason(e.target.value)} />
+        <Button
+          type="button"
+          variant="ghost"
+          size="xs"
+          onClick={handleAdd}
+          disabled={addMutation.isPending || !startDate || !endDate}
+        >
+          + Adicionar
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 interface FormState {
   full_name: string;
   professional_registry: string;
   specialty: string;
+  contract_type: "" | ContractType;
+  commission_rate: string;
   availability: AvailabilityBlock[];
 }
 
-const EMPTY_FORM: FormState = { full_name: "", professional_registry: "", specialty: "", availability: [] };
+const EMPTY_FORM: FormState = {
+  full_name: "",
+  professional_registry: "",
+  specialty: "",
+  contract_type: "",
+  commission_rate: "",
+  availability: [],
+};
 
 function ProfessionalFormModal({
   isOpen,
@@ -138,10 +269,16 @@ function ProfessionalFormModal({
           full_name: editing.full_name,
           professional_registry: editing.professional_registry ?? "",
           specialty: editing.specialty ?? "",
+          contract_type: editing.contract_type ?? "",
+          commission_rate: editing.commission_rate === null ? "" : String(editing.commission_rate),
           availability: editing.availability,
         }
       : EMPTY_FORM
   );
+  // Estado à parte de `form` — ausências planejadas são gravadas
+  // imediatamente (POST/DELETE próprios), não no submit do formulário
+  // inteiro. Ver DECISÃO em PlannedAbsencesEditor acima.
+  const [absences, setAbsences] = useState<PlannedAbsence[]>(editing?.planned_absences ?? []);
 
   const createMutation = useMutation({
     mutationFn: (payload: ProfessionalCreateRequest) => apiClient.post<Professional>("/api/v1/professionals", payload),
@@ -172,6 +309,8 @@ function ProfessionalFormModal({
       full_name: form.full_name,
       professional_registry: form.professional_registry || null,
       specialty: form.specialty || null,
+      contract_type: (form.contract_type || null) as ContractType | null,
+      commission_rate: form.commission_rate === "" ? null : Number(form.commission_rate),
       availability: form.availability,
     };
     if (editing) {
@@ -206,10 +345,37 @@ function ProfessionalFormModal({
           placeholder="Ex: Clínico Geral"
         />
 
+        <div className="grid grid-cols-1 gap-x-3 sm:grid-cols-2">
+          <SelectField
+            label="Tipo de contrato (opcional)"
+            value={form.contract_type}
+            onChange={(e) => setForm((f) => ({ ...f, contract_type: e.target.value as "" | ContractType }))}
+          >
+            <option value="">Não informado</option>
+            {Object.entries(CONTRACT_TYPE_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </SelectField>
+          <TextField
+            label="Comissão sobre faturamento (%, opcional)"
+            type="number"
+            min={0}
+            max={100}
+            step="0.01"
+            value={form.commission_rate}
+            onChange={(e) => setForm((f) => ({ ...f, commission_rate: e.target.value }))}
+            placeholder="Ex: 35"
+          />
+        </div>
+
         <AvailabilityEditor
           blocks={form.availability}
           onChange={(availability) => setForm((f) => ({ ...f, availability }))}
         />
+
+        {editing && <PlannedAbsencesEditor professionalId={editing.id} absences={absences} onChange={setAbsences} />}
 
         <div className="mt-5 flex justify-end gap-2 border-t border-border-hairline pt-4">
           <Button type="button" variant="secondary" onClick={onClose}>
@@ -309,6 +475,7 @@ export function ProfessionalsPage() {
                 <th className="px-4 py-2.5 font-medium">Nome</th>
                 <th className="px-4 py-2.5 font-medium">Registro</th>
                 <th className="px-4 py-2.5 font-medium">Especialidade</th>
+                <th className="px-4 py-2.5 font-medium">Contrato</th>
                 <th className="px-4 py-2.5 font-medium">Grade semanal</th>
                 <th className="px-4 py-2.5 font-medium">Status</th>
                 <th className="px-4 py-2.5 font-medium"></th>
@@ -327,6 +494,11 @@ export function ProfessionalsPage() {
                   <td className="px-4 py-2.5 text-ink">{p.full_name}</td>
                   <td className="px-4 py-2.5 text-ink-muted">{p.professional_registry ?? "—"}</td>
                   <td className="px-4 py-2.5 text-ink-muted">{p.specialty ?? "—"}</td>
+                  <td className="px-4 py-2.5 text-ink-muted">
+                    {p.contract_type
+                      ? `${CONTRACT_TYPE_LABELS[p.contract_type]}${p.commission_rate !== null ? ` · ${p.commission_rate}%` : ""}`
+                      : "—"}
+                  </td>
                   <td className="px-4 py-2.5">
                     {p.availability.length === 0 ? (
                       <span className="text-2xs text-pending">Sem grade configurada</span>

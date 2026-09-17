@@ -17,6 +17,13 @@ const STEP_CONTENT: Partial<Record<string, { title: string; description: string 
   "/": {
     title: "Início",
     description: "Um resumo escrito por IA do que importa hoje, com até 3 prioridades — por onde começar, sem precisar ler o painel inteiro.",
+  // "Junta Técnica Insighta": NAV_ITEMS mudou de "/" para "/painel" (ver
+  // Sidebar.tsx) — a chave aqui precisa acompanhar, senão este passo some
+  // do tour sem nenhum erro de build (STEP_CONTENT[item.to] vira
+  // undefined silenciosamente).
+  "/painel": {
+    title: "Painel",
+    description: "KPIs e tabelas detalhadas para quem já sabe o que está procurando — acessível a qualquer momento pelo menu, sem precisar ser o ponto de partida do seu dia.",
   },
   "/decisao": {
     title: "Sala de Comando",

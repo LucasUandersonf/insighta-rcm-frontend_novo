@@ -2,20 +2,39 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import { HeartHandshake, LayoutDashboard, SlidersHorizontal, Target, Users } from "lucide-react";
+import { Award, BadgeDollarSign, Landmark, LayoutDashboard, ListChecks, SlidersHorizontal, Target, Users } from "lucide-react";
 import { KpiCard } from "@/components/ui/KpiCard";
 import { ErrorState, LoadingState } from "@/components/ui/Panel";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PeriodWindowSelect } from "@/components/ui/PeriodWindowSelect";
 import { Tabs, TabPanel } from "@/components/ui/Tabs";
 import { CrmPanel } from "@/components/dashboard/CrmPanel";
+import { AverageTicketPanel } from "@/components/dashboard/AverageTicketPanel";
+import { BirthdaysPanel } from "@/components/dashboard/BirthdaysPanel";
+import { DailySummaryPanel } from "@/components/dashboard/DailySummaryPanel";
+import { DataFreshnessBanner } from "@/components/dashboard/DataFreshnessBanner";
+import { EarlyChurnRiskPanel } from "@/components/dashboard/EarlyChurnRiskPanel";
 import { ExecutiveAgendaSummary } from "@/components/dashboard/ExecutiveAgendaSummary";
 import { ExecutiveNarrativeBanner } from "@/components/dashboard/ExecutiveNarrativeBanner";
 import { FinancialHoleBillingsPanel } from "@/components/dashboard/FinancialHoleBillingsPanel";
+=======
+import { InactivePatientsPanel } from "@/components/dashboard/InactivePatientsPanel";
+import { PriorityQueuePanel } from "@/components/dashboard/PriorityQueuePanel";
+>>>>>>> origin/main
 import { SmartInsightsFeed } from "@/components/dashboard/SmartInsightsFeed";
 import { HealthScoreWidget } from "@/components/dashboard/HealthScoreWidget";
+import { SatisfactionSummaryWidget } from "@/components/dashboard/SatisfactionSummaryWidget";
 import { NetworkBenchmarkPanel } from "@/components/dashboard/NetworkBenchmarkPanel";
+import { MarketingChannelsPanel } from "@/components/dashboard/MarketingChannelsPanel";
+import { UpsellFunnelPanel } from "@/components/dashboard/UpsellFunnelPanel";
 import { OportunidadesPanel } from "@/components/dashboard/OportunidadesPanel";
+import { PatientDemographicsPanel } from "@/components/dashboard/PatientDemographicsPanel";
+import { PatientRevenueParetoPanel } from "@/components/dashboard/PatientRevenueParetoPanel";
+import { PatientRfmPanel } from "@/components/dashboard/PatientRfmPanel";
+import { ProfitabilityPanel } from "@/components/dashboard/ProfitabilityPanel";
 import { SimuladorPanel } from "@/components/dashboard/SimuladorPanel";
+import { CapitalDecisionPanel } from "@/components/dashboard/CapitalDecisionPanel";
+import { ProductRoiPanel } from "@/components/dashboard/ProductRoiPanel";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useDateWindow } from "@/lib/useDateWindow";
@@ -45,12 +64,14 @@ function formatPct(value: number): string {
 }
 
 const TABS_GROUP = "sala-de-comando";
+<<<<<<< HEAD
 type TabId = "diagnostico" | "crm" | "oportunidades" | "comparativo" | "simulador";
 const TAB_IDS: TabId[] = ["diagnostico", "crm", "oportunidades", "comparativo", "simulador"];
 
 function isTabId(value: string | null): value is TabId {
   return !!value && (TAB_IDS as string[]).includes(value);
 }
+type TabId = "hoje" | "diagnostico" | "oportunidades" | "comparativo" | "simulador" | "capital" | "rentabilidade" | "roi";
 
 /**
  * Sala de Comando 2.0 (ver Roadmap "Sala de Comando 2.0") — a mesma
@@ -76,6 +97,10 @@ export function ExecutiveOverviewPage() {
     const tab = searchParams.get("tab");
     return isTabId(tab) ? tab : "diagnostico";
   });
+  // Épico F1.1 do Plano Diretor: "Hoje" é a página inicial da Sala de
+  // Comando agora — o gestor não escolhe mais aba antes de saber o que
+  // fazer (a fila única já chega ordenada por impacto).
+  const [activeTab, setActiveTab] = useState<TabId>("hoje");
   // Foco de agenda (ver AgendaFocus, lib/types.ts) — disparado pelos
   // botões de ação dos insights de queda de agenda/agenda ociosa (ver
   // DECISÃO em SmartInsightsFeed.tsx::InsightActionButton). Mora aqui
@@ -101,6 +126,19 @@ export function ExecutiveOverviewPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // A fila "Hoje" pode disparar um foco de agenda (#weekday:/#professional:)
+  // de FORA da aba Diagnóstico, onde a seção agenda-resumo (destino do
+  // scroll em InsightActionButton) só existe no DOM depois da troca de
+  // aba — sem isso, o clique de dentro de "Hoje" focava o paciente certo
+  // mas nunca rolava a tela, porque o elemento ainda não tinha montado.
+  function handleFocusAgendaFromQueue(focus: AgendaFocus) {
+    setActiveTab("diagnostico");
+    setAgendaFocus(focus);
+    requestAnimationFrame(() => {
+      document.getElementById("agenda-resumo")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
+
   const { data: summary, isLoading, error } = useQuery({
     queryKey: ["analytics", "executive-summary", dateFrom, dateTo],
     queryFn: () => apiClient.get<ExecutiveSummary>(`/api/v1/analytics/executive-summary?date_from=${dateFrom}&date_to=${dateTo}`),
@@ -112,23 +150,51 @@ export function ExecutiveOverviewPage() {
         title="Sala de Comando"
         subtitle="Onde estamos perdendo dinheiro hoje?"
         greeting={profile ? `${timeOfDayGreeting()}, ${firstNameFrom(profile.full_name)}.` : undefined}
-        action={activeTab === "diagnostico" ? <PeriodWindowSelect windowDays={windowDays} onChange={setWindowDays} /> : undefined}
+        action={
+          activeTab === "hoje" || activeTab === "diagnostico" || activeTab === "rentabilidade" ? (
+            <PeriodWindowSelect windowDays={windowDays} onChange={setWindowDays} />
+          ) : undefined
+        }
       />
 
       <ExecutiveNarrativeBanner />
+      {/* Achado do Dossiê Insighta RCM — sempre visível, fora das abas
+          (a pergunta "esse número é de hoje?" vale para qualquer aba
+          que o gestor esteja olhando, não só Diagnóstico). */}
+      <DataFreshnessBanner />
 
       <Tabs
         groupId={TABS_GROUP}
         active={activeTab}
         onChange={(id) => setActiveTab(id as TabId)}
         items={[
+          { id: "hoje", label: "Hoje", icon: ListChecks },
           { id: "diagnostico", label: "Diagnóstico", icon: LayoutDashboard },
           { id: "crm", label: "CRM", icon: HeartHandshake },
           { id: "oportunidades", label: "Oportunidades", icon: Target },
           { id: "comparativo", label: "Comparativo", icon: Users },
+          { id: "rentabilidade", label: "Rentabilidade", icon: BadgeDollarSign },
           { id: "simulador", label: "Simulador", icon: SlidersHorizontal },
+          { id: "capital", label: "Capital", icon: Landmark },
+          { id: "roi", label: "ROI", icon: Award },
         ]}
       />
+
+      {activeTab === "hoje" && (
+        <TabPanel id="hoje" groupId={TABS_GROUP}>
+          {/* Onda 6 do Plano de Ação, item 18 — primeira coisa que
+              aparece na aba "Hoje", antes da fila de ação. */}
+          <div className="mb-4">
+            <DailySummaryPanel />
+          </div>
+          <PriorityQueuePanel
+            dateFrom={dateFrom}
+            dateTo={dateTo}
+            onNavigateTab={(id) => setActiveTab(id as TabId)}
+            onFocusAgenda={handleFocusAgendaFromQueue}
+          />
+        </TabPanel>
+      )}
 
       {activeTab === "diagnostico" && (
         <TabPanel id="diagnostico" groupId={TABS_GROUP}>
@@ -137,6 +203,12 @@ export function ExecutiveOverviewPage() {
                 feed abaixo (que troca de manchete conforme o que dói mais
                 na semana): é um estado que se acompanha ao longo do tempo. */}
             <HealthScoreWidget />
+
+            {/* "Equilíbrio Insighta" (Balanced Scorecard, perna Cliente) —
+                mesmo espírito de widget persistente do HealthScoreWidget
+                acima, só que olhando satisfação do paciente em vez de
+                saúde financeira. */}
+            <SatisfactionSummaryWidget />
 
             {/* Redesenho "menos BI, mais consultor": o diagnóstico em texto
                 vem PRIMEIRO — é a resposta direta à pergunta "onde estamos
@@ -269,6 +341,44 @@ export function ExecutiveOverviewPage() {
               />
             </section>
 
+<<<<<<< HEAD
+=======
+            {/* id="carteira-inativa" — destino do botão "Ver quem não
+                voltou" do insight de meta anual atrasada (ver DECISÃO em
+                smart_insights_engine.py::_annual_goal_insight). Sem
+                janela de período (mesmo espírito da Nota de Saúde): é
+                sempre "quem não volta há mais de 1 ano a partir de
+                hoje", não um recorte dos últimos 7 dias. */}
+            <section id="carteira-inativa" className="space-y-4">
+              <InactivePatientsPanel />
+              {/* Raio-X da Receita, frente "Prevendo movimentos" — alerta
+                  ANTECIPADO, mesma âncora: as duas listas respondem "quem
+                  está indo embora", em estágios diferentes (ver DECISÃO
+                  em smart_insights_engine.py::_early_churn_insight). */}
+              <EarlyChurnRiskPanel />
+              {/* Gaps Dossiê Insighta RCM, item 4 — RFM completo. Mesma
+                  âncora das duas listas acima (quem precisa de
+                  reativação), agora com a dimensão de Valor combinada:
+                  não é só "quem sumiu", é "quem sumiu E valia mais a
+                  pena reativar primeiro". */}
+              <PatientRfmPanel />
+            </section>
+
+            {/* Achado do Dossiê Insighta RCM — mesma seção de
+                relacionamento com o paciente das duas listas acima,
+                só que olhando pra quem fica (retenção proativa), não
+                pra quem já foi embora. */}
+            <section id="aniversariantes" className="space-y-4">
+              <div>
+                <h2 className="mb-3 text-sm font-medium text-ink">Aniversariantes do mês</h2>
+                <BirthdaysPanel />
+              </div>
+              {/* Achado do Dossiê Insighta RCM — mesma seção de "quem são
+                  nossos pacientes", complementando aniversário com o
+                  perfil etário da carteira ativa. */}
+              <PatientDemographicsPanel dateFrom={dateFrom} dateTo={dateTo} />
+            </section>
+>>>>>>> origin/main
           </div>
         </TabPanel>
       )}
@@ -291,9 +401,40 @@ export function ExecutiveOverviewPage() {
         </TabPanel>
       )}
 
+      {activeTab === "rentabilidade" && (
+        <TabPanel id="rentabilidade" groupId={TABS_GROUP}>
+          <div className="space-y-4">
+            <ProfitabilityPanel dateFrom={dateFrom} dateTo={dateTo} />
+            {/* Achado do Dossiê Insighta RCM — cálculo simples sobre
+                Billing.charged_value, nenhuma agregação existia. */}
+            <AverageTicketPanel dateFrom={dateFrom} dateTo={dateTo} />
+            <MarketingChannelsPanel dateFrom={dateFrom} dateTo={dateTo} />
+            {/* "Equilíbrio Insighta" (Balanced Scorecard, perna Cliente) —
+                complementa o CAC/LTV acima (aquisição) com expansão de
+                receita em paciente já conquistado. */}
+            <UpsellFunnelPanel dateFrom={dateFrom} dateTo={dateTo} />
+            {/* Achado do Dossiê Insighta RCM — dimensão de concentração
+                de receita diferente da que já existe por convênio. */}
+            <PatientRevenueParetoPanel dateFrom={dateFrom} dateTo={dateTo} />
+          </div>
+        </TabPanel>
+      )}
+
       {activeTab === "simulador" && (
         <TabPanel id="simulador" groupId={TABS_GROUP}>
           <SimuladorPanel />
+        </TabPanel>
+      )}
+
+      {activeTab === "capital" && (
+        <TabPanel id="capital" groupId={TABS_GROUP}>
+          <CapitalDecisionPanel />
+        </TabPanel>
+      )}
+
+      {activeTab === "roi" && (
+        <TabPanel id="roi" groupId={TABS_GROUP}>
+          <ProductRoiPanel />
         </TabPanel>
       )}
     </div>

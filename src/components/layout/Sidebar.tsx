@@ -4,12 +4,18 @@ import {
   Building2,
   CalendarCheck,
   CalendarClock,
+  ClipboardList,
   FileText,
   Gauge,
   Home,
+  Hourglass,
   LayoutDashboard,
+  Layers,
   ListChecks,
+  Megaphone,
+  Network,
   Plug,
+  Receipt,
   ScrollText,
   Send,
   ShieldAlert,
@@ -53,6 +59,23 @@ export const NAV_ITEMS: NavItem[] = [
   // GET /patients/search (todo papel, sem "atendimento" de fora — é o
   // papel que mais precisa disto no dia a dia da recepção).
   { to: "/pacientes", label: "Ficha do paciente", icon: UserRound },
+  // Épico F3.2 do Plano Diretor ("Consolidação multi-unidade") — mesmo
+  // RBAC de Sala de Comando acima (dado financeiro/estratégico
+  // agregado). Sempre visível a esses papéis, mesmo pra clínica avulsa
+  // (organization_id NULL) — a própria página mostra o estado honesto
+  // "não faz parte de um grupo", nunca escondida como se fosse um erro.
+  { to: "/consolidado", label: "Consolidado", icon: Network, roles: ["owner", "admin", "financeiro", "auditor"] },
+  // "Junta Técnica Insighta" — não é mais a rota "/" (raiz sempre leva à
+  // Sala de Comando, ver RootRedirect.tsx): o Painel virou destino de
+  // drill-down, não ponto de entrada padrão.
+  { to: "/painel", label: "Painel", icon: LayoutDashboard },
+  { to: "/appointments", label: "Consultas", icon: CalendarCheck },
+  // Onda 5 do Plano de Ação, item 16 — mesmo RBAC amplo de /appointments
+  // (rotina de recepção, leitura aberta a financeiro/auditor).
+  { to: "/waitlist", label: "Lista de espera", icon: Hourglass },
+  // Épico F1.3 do Plano Diretor: aberto a QUALQUER papel (sem `roles`
+  // aqui, de propósito) — mesmo RBAC de GET /insight-outcomes/mine.
+  { to: "/meus-insights", label: "Meus insights", icon: ClipboardList },
   // Configuração da grade semanal que alimenta Agenda & Capacidade — não
   // é o CRUD operacional de Profissionais removido no reposicionamento
   // de produto (ver App.tsx); mesmo RBAC de ação administrativa restrita
@@ -73,6 +96,15 @@ export const NAV_ITEMS: NavItem[] = [
   // Registrar pagamento recebido + Guias TISS — mesmo RBAC de /upload
   // (ação de escrita financeira, sem auditor).
   { to: "/faturamento", label: "Faturamento & guias", icon: Wallet, roles: ["owner", "admin", "financeiro"] },
+  // Gestão de Lotes (agrupa guias antes de virar fatura) — mesmo RBAC
+  // do backend em lotes.py/_CAN_READ, igual a /denial-appeals acima.
+  { to: "/lotes", label: "Lotes de faturamento", icon: Layers, roles: ["owner", "admin", "financeiro", "auditor"] },
+  // Épico F3.1 do Plano Diretor ("Módulo de custos e margem real") —
+  // mesmo RBAC de /lotes acima.
+  { to: "/custos", label: "Custos", icon: Receipt, roles: ["owner", "admin", "financeiro", "auditor"] },
+  // Achado do Dossiê Insighta RCM — Onda 2 do Plano de Ação: mesmo RBAC
+  // de /custos acima.
+  { to: "/marketing-spend", label: "Gasto de marketing", icon: Megaphone, roles: ["owner", "admin", "financeiro", "auditor"] },
 ];
 
 // Administração da plataforma — só owner/admin (mesmo RBAC do backend
@@ -101,7 +133,6 @@ export function Sidebar() {
       <li key={item.to}>
         <NavLink
           to={item.to}
-          end={item.to === "/"}
           // Âncora do tour de boas-vindas guiado (ver OnboardingTour.tsx) —
           // reaproveita o próprio `to` como chave, não precisa de um id
           // separado por item.

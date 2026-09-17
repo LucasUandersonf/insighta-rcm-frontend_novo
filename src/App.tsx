@@ -6,6 +6,7 @@ import { ModalStackProvider } from "@/context/ModalStackContext";
 import { ProtectedRoute } from "@/routes/ProtectedRoute";
 import { AppShell } from "@/components/layout/AppShell";
 import { RoleProtectedRoute } from "@/routes/ProtectedRoute";
+import { RootRedirect } from "@/routes/RootRedirect";
 import { PlatformProtectedRoute } from "@/routes/PlatformProtectedRoute";
 import { isApiConfigured } from "@/lib/api-client";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -23,14 +24,23 @@ const SignUpPage = lazy(() => import("@/pages/SignUpPage").then((m) => ({ defaul
 const ForgotPasswordPage = lazy(() => import("@/pages/ForgotPasswordPage").then((m) => ({ default: m.ForgotPasswordPage })));
 const ResetPasswordPage = lazy(() => import("@/pages/ResetPasswordPage").then((m) => ({ default: m.ResetPasswordPage })));
 const HomePage = lazy(() => import("@/pages/HomePage").then((m) => ({ default: m.HomePage })));
+const SatisfactionRatingPage = lazy(() =>
+  import("@/pages/SatisfactionRatingPage").then((m) => ({ default: m.SatisfactionRatingPage }))
+);
 const DashboardPage = lazy(() => import("@/pages/DashboardPage").then((m) => ({ default: m.DashboardPage })));
 const AgendaRiscoPage = lazy(() => import("@/pages/AgendaRiscoPage").then((m) => ({ default: m.AgendaRiscoPage })));
 const PatientFichaPage = lazy(() => import("@/pages/PatientFichaPage").then((m) => ({ default: m.PatientFichaPage })));
 const ExecutiveOverviewPage = lazy(() => import("@/pages/ExecutiveOverviewPage").then((m) => ({ default: m.ExecutiveOverviewPage })));
+const OrganizationSummaryPage = lazy(() => import("@/pages/OrganizationSummaryPage").then((m) => ({ default: m.OrganizationSummaryPage })));
 const ContractsPage = lazy(() => import("@/pages/ContractsPage").then((m) => ({ default: m.ContractsPage })));
 const DenialAppealsPage = lazy(() => import("@/pages/DenialAppealsPage").then((m) => ({ default: m.DenialAppealsPage })));
+const LotesPage = lazy(() => import("@/pages/LotesPage").then((m) => ({ default: m.LotesPage })));
+const CostEntriesPage = lazy(() => import("@/pages/CostEntriesPage").then((m) => ({ default: m.CostEntriesPage })));
+const MarketingSpendPage = lazy(() => import("@/pages/MarketingSpendPage").then((m) => ({ default: m.MarketingSpendPage })));
+const MyInsightsPage = lazy(() => import("@/pages/MyInsightsPage").then((m) => ({ default: m.MyInsightsPage })));
 const BillingOperationsPage = lazy(() => import("@/pages/BillingOperationsPage").then((m) => ({ default: m.BillingOperationsPage })));
 const AppointmentsPage = lazy(() => import("@/pages/AppointmentsPage").then((m) => ({ default: m.AppointmentsPage })));
+const WaitlistPage = lazy(() => import("@/pages/WaitlistPage").then((m) => ({ default: m.WaitlistPage })));
 const ProfessionalsPage = lazy(() => import("@/pages/ProfessionalsPage").then((m) => ({ default: m.ProfessionalsPage })));
 const UploadCenterPage = lazy(() => import("@/pages/UploadCenterPage").then((m) => ({ default: m.UploadCenterPage })));
 const SetupPage = lazy(() => import("@/pages/SetupPage").then((m) => ({ default: m.SetupPage })));
@@ -89,6 +99,11 @@ export default function App() {
               <Route path="/signup" element={<SignUpPage />} />
               <Route path="/forgot-password" element={<ForgotPasswordPage />} />
               <Route path="/reset-password" element={<ResetPasswordPage />} />
+              {/* "Mapa de Dados Insighta" — Domínio Pós-atendimento (Onda 2):
+                  link público de avaliação de satisfação, sem autenticação
+                  (o paciente abre no próprio celular) — ver DECISÃO em
+                  052_appointment_satisfaction.sql (backend). */}
+              <Route path="/satisfacao/:token" element={<SatisfactionRatingPage />} />
               {/* Painel interno de Customer Success — NUNCA linkado de
                   dentro do produto, fora do AuthContext/RBAC de clínica
                   de propósito (ver DECISÃO em src/routes/PlatformProtectedRoute.tsx
@@ -112,6 +127,20 @@ export default function App() {
                     (atendimento/admin/owner/financeiro/auditor = todo papel),
                     por isso sem RoleProtectedRoute. */}
                 <Route path="/pacientes" element={<PatientFichaPage />} />
+                {/* "Junta Técnica Insighta" — o Painel (BI tradicional) não
+                    deveria ser "ponto de entrada padrão de quem abre o
+                    sistema de manhã", só destino de drill-down a partir de
+                    um card do feed (ver _high_risk_billing_href, backend,
+                    e RootRedirect.tsx). */}
+                <Route path="/" element={<RootRedirect />} />
+                <Route path="/painel" element={<DashboardPage />} />
+                <Route path="/appointments" element={<AppointmentsPage />} />
+                <Route path="/waitlist" element={<WaitlistPage />} />
+                {/* Épico F1.3 do Plano Diretor: "Meus pendentes" é aberto a
+                    QUALQUER papel autenticado (mesmo RBAC de
+                    GET /insight-outcomes/mine — quem executa não é sempre
+                    quem gerencia) — sem RoleProtectedRoute de propósito. */}
+                <Route path="/meus-insights" element={<MyInsightsPage />} />
                 {/* O CRUD operacional de Pacientes foi removido por decisão de produto
                     — o SaaS opera exclusivamente sobre dados consolidados do ERP
                     externo (ver auditoria Go-Live). /professionals é diferente:
@@ -133,8 +162,26 @@ export default function App() {
                   {/* Roadmap "Rumo à Nota 9" (Fase 2) — mesmo RBAC de /decisao
                       (o endpoint que alimenta esta tela usa o mesmo _CAN_VIEW). */}
                   <Route path="/agenda-risco" element={<AgendaRiscoPage />} />
+                  {/* Épico F3.2 do Plano Diretor — mesmo RBAC de /decisao acima. */}
+                  <Route path="/consolidado" element={<OrganizationSummaryPage />} />
                   <Route path="/contracts" element={<ContractsPage />} />
                   <Route path="/denial-appeals" element={<DenialAppealsPage />} />
+                  {/* Mesmo RBAC do backend em lotes.py/_CAN_READ (owner/admin/
+                      financeiro/auditor) — as ações de escrita (criar, fechar,
+                      atribuir/remover guia) usam _CAN_WRITE (sem auditor) e o
+                      backend barra sozinho, mesmo critério já usado em
+                      /denial-appeals acima. */}
+                  <Route path="/lotes" element={<LotesPage />} />
+                  {/* Épico F3.1 do Plano Diretor — mesmo RBAC de /lotes
+                      acima (lotes.py/_CAN_READ: owner/admin/financeiro/
+                      auditor; escrita via cost_entries.py/_CAN_WRITE,
+                      sem auditor, barrado pelo próprio backend). */}
+                  <Route path="/custos" element={<CostEntriesPage />} />
+                  {/* Achado do Dossiê Insighta RCM — Onda 2 do Plano de
+                      Ação: mesmo RBAC de /custos acima (leitura via
+                      marketing_spend.py/_CAN_READ, escrita via
+                      _CAN_WRITE, sem auditor, barrado pelo backend). */}
+                  <Route path="/marketing-spend" element={<MarketingSpendPage />} />
                 </Route>
                 {/* Upload é ação de escrita — mesmo RBAC do backend em
                     ingestion.py/_CAN_MANAGE e contracts.py/_CAN_WRITE

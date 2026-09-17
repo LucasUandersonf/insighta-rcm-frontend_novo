@@ -12,7 +12,15 @@ import { BillingSearchPicker } from "@/components/billing/BillingSearchPicker";
 import { apiClient, ApiError } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useToast } from "@/context/ToastContext";
-import type { BillingSearchItem, Guia, GuiaCreateRequest, GuiaTipo, InsurancePlan, PaginatedResponse } from "@/lib/types";
+import type {
+  BillingSearchItem,
+  Guia,
+  GuiaCreateRequest,
+  GuiaTipo,
+  InsurancePlan,
+  PaginatedResponse,
+  PaymentMethod,
+} from "@/lib/types";
 
 // Faturamento & Guias — as DUAS pontas do ciclo de vida da fatura que já
 // funcionavam de ponta a ponta no backend sem nenhuma tela: registrar o
@@ -22,7 +30,7 @@ import type { BillingSearchItem, Guia, GuiaCreateRequest, GuiaTipo, InsurancePla
 // guia_tipo/guia_numero/guia_senha). Achado do Raio-X da Sala de
 // Comando: a lacuna era só de UI, não de lógica de negócio.
 
-type Tab = "pagamento" | "guias";
+type Tab = "pagamento" | "coparticipacao" | "auditoria-opme" | "guias";
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
@@ -114,6 +122,170 @@ function SettlementTab() {
           </Button>
         </div>
       </form>
+    </Panel>
+  );
+}
+
+// ---------------------------------------------------------------------
+// Confirmação de recebimento de coparticipação (Épico F4.2 do Plano
+// Diretor — "Fechar lacunas operacionais"). O sistema já sabia QUANTO
+// foi cobrado de coparticipação; faltava confirmar se esse valor de
+// fato entrou no caixa no momento do atendimento — a lacuna que os
+// insights de coparticipação já existentes deixavam em aberto.
+// ---------------------------------------------------------------------
+
+// "Mapa de Dados Insighta" — Domínio Financeiro particular (Onda 1).
+const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+  dinheiro: "Dinheiro",
+  pix: "Pix",
+  cartao_debito: "Cartão de débito",
+  cartao_credito: "Cartão de crédito",
+  boleto: "Boleto",
+};
+
+function CoparticipationTab() {
+  const queryClient = useQueryClient();
+  const { showSuccess, showError } = useToast();
+  const [selected, setSelected] = useState<BillingSearchItem | null>(null);
+  // "Mapa de Dados Insighta" — confirmar recebimento É o checkout real
+  // do particular (o momento em que a recepção sabe o que aconteceu),
+  // o ponto de captura natural pra COMO foi pago — não só QUANTO.
+  const [paymentMethod, setPaymentMethod] = useState("");
+  const [installments, setInstallments] = useState("");
+
+  const mutation = useMutation({
+    mutationFn: (received: boolean) =>
+      apiClient.post(`/api/v1/billing/${selected!.id}/confirm-coparticipation`, {
+        received,
+        payment_method: received ? paymentMethod || null : null,
+        installments: received && installments ? Number(installments) : null,
+      }),
+    onSuccess: (_data, received) => {
+      queryClient.invalidateQueries({ queryKey: ["analytics"] });
+      showSuccess(received ? "Coparticipação confirmada como recebida." : "Registrado: coparticipação NÃO foi recebida.");
+      setSelected(null);
+      setPaymentMethod("");
+      setInstallments("");
+    },
+    onError: (err) => showError(getApiErrorMessage(err)),
+  });
+
+  return (
+    <Panel
+      title="Confirmar recebimento de coparticipação"
+      subtitle="A parte que o próprio paciente paga, à parte do que o convênio cobre — confirme se ela de fato entrou no caixa."
+    >
+      <div className="p-4">
+        <BillingSearchPicker selected={selected} onSelect={setSelected} />
+        {selected && selected.coparticipation_value === null && (
+          <p className="mt-3 text-2xs text-pending">Este faturamento não tem coparticipação cobrada — nada para confirmar.</p>
+        )}
+        {selected && selected.coparticipation_value !== null && (
+          <div className="mt-3 rounded-md border border-border-hairline bg-canvas-raised/40 p-3">
+            <p className="text-sm text-ink">
+              Coparticipação cobrada: <span className="font-mono font-medium">{formatCurrency(selected.coparticipation_value)}</span>
+            </p>
+            <p className="mt-1 text-2xs text-ink-faint">
+              {selected.coparticipation_received === null && "Ainda não confirmado."}
+              {selected.coparticipation_received === true &&
+                `Já confirmado como recebido${selected.payment_method ? ` — ${PAYMENT_METHOD_LABELS[selected.payment_method]}` : ""}.`}
+              {selected.coparticipation_received === false && "Já confirmado como NÃO recebido."}
+            </p>
+            {selected.coparticipation_received !== true && (
+              <div className="mt-3 grid grid-cols-2 gap-3">
+                <SelectField
+                  label="Forma de pagamento (opcional)"
+                  value={paymentMethod}
+                  onChange={(e) => setPaymentMethod(e.target.value)}
+                >
+                  <option value="">Não informado</option>
+                  {Object.entries(PAYMENT_METHOD_LABELS).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </SelectField>
+                <TextField
+                  label="Parcelas (opcional)"
+                  type="number"
+                  min={1}
+                  value={installments}
+                  onChange={(e) => setInstallments(e.target.value)}
+                />
+              </div>
+            )}
+            <div className="mt-3 flex gap-2">
+              <Button type="button" onClick={() => mutation.mutate(true)} disabled={mutation.isPending}>
+                {mutation.isPending ? "Salvando..." : "Confirmar recebida"}
+              </Button>
+              <Button type="button" variant="secondary" onClick={() => mutation.mutate(false)} disabled={mutation.isPending}>
+                Confirmar NÃO recebida
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+    </Panel>
+  );
+}
+
+// ---------------------------------------------------------------------
+// Auditoria documental leve — OPME (Épico F2.3 do Plano Diretor:
+// "Auditoria documental leve: prontuário × conta"). Versão RESTRITA
+// explicitamente pedida no roadmap: "checar presença de registro de
+// prescrição/evolução para procedimentos de alto valor (OPME), sem NLP
+// semântico" — esta tela nunca lê nem interpreta prontuário nenhum, só
+// registra que um HUMANO conferiu (ou não) que o registro existe,
+// mesma mecânica de CoparticipationTab acima.
+// ---------------------------------------------------------------------
+
+function OpmeDocumentationTab() {
+  const queryClient = useQueryClient();
+  const { showSuccess, showError } = useToast();
+  const [selected, setSelected] = useState<BillingSearchItem | null>(null);
+
+  const mutation = useMutation({
+    mutationFn: (found: boolean) =>
+      apiClient.post(`/api/v1/billing/${selected!.id}/confirm-clinical-documentation`, { found }),
+    onSuccess: (_data, found) => {
+      queryClient.invalidateQueries({ queryKey: ["analytics"] });
+      showSuccess(found ? "Documentação clínica confirmada." : "Registrado: documentação clínica NÃO encontrada.");
+      setSelected(null);
+    },
+    onError: (err) => showError(getApiErrorMessage(err)),
+  });
+
+  return (
+    <Panel
+      title="Conferir documentação de OPME"
+      subtitle="Confirme se existe registro de prescrição/evolução no prontuário sustentando este item de órtese/prótese/material especial — antes de enviar a guia ao convênio."
+    >
+      <div className="p-4">
+        <BillingSearchPicker selected={selected} onSelect={setSelected} />
+        {selected && selected.item_type !== "material_opme" && (
+          <p className="mt-3 text-2xs text-pending">Este faturamento não é um item de OPME — nada para conferir.</p>
+        )}
+        {selected && selected.item_type === "material_opme" && (
+          <div className="mt-3 rounded-md border border-border-hairline bg-canvas-raised/40 p-3">
+            <p className="text-sm text-ink">
+              Item OPME cobrado: <span className="font-mono font-medium">{formatCurrency(selected.charged_value)}</span>
+            </p>
+            <p className="mt-1 text-2xs text-ink-faint">
+              {selected.clinical_documentation_confirmed === null && "Ainda não conferido."}
+              {selected.clinical_documentation_confirmed === true && "Já conferido — registro encontrado."}
+              {selected.clinical_documentation_confirmed === false && "Já conferido — registro NÃO encontrado."}
+            </p>
+            <div className="mt-3 flex gap-2">
+              <Button type="button" onClick={() => mutation.mutate(true)} disabled={mutation.isPending}>
+                {mutation.isPending ? "Salvando..." : "Confirmar presente"}
+              </Button>
+              <Button type="button" variant="secondary" onClick={() => mutation.mutate(false)} disabled={mutation.isPending}>
+                Confirmar ausente
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
     </Panel>
   );
 }
@@ -305,11 +477,16 @@ export function BillingOperationsPage() {
         onChange={(id) => setTab(id as Tab)}
         items={[
           { id: "pagamento", label: "Registrar pagamento" },
+          { id: "coparticipacao", label: "Coparticipação" },
+          { id: "auditoria-opme", label: "Auditoria documental (OPME)" },
           { id: "guias", label: "Guias" },
         ]}
       />
 
-      {tab === "pagamento" ? <SettlementTab /> : <GuiasTab />}
+      {tab === "pagamento" && <SettlementTab />}
+      {tab === "coparticipacao" && <CoparticipationTab />}
+      {tab === "auditoria-opme" && <OpmeDocumentationTab />}
+      {tab === "guias" && <GuiasTab />}
     </div>
   );
 }

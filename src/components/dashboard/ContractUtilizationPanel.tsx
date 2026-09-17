@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Panel } from "@/components/ui/Panel";
+import { Badge } from "@/components/ui/Badge";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import type { ContractUtilization } from "@/lib/types";
@@ -15,7 +16,7 @@ const MAX_ROWS = 5;
  * backend do pior para o melhor (ver AnalyticsRepository.contract_utilization).
  */
 export function ContractUtilizationPanel({ dateFrom, dateTo }: { dateFrom: string; dateTo: string }) {
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error, dataUpdatedAt } = useQuery({
     queryKey: ["analytics", "contract-utilization", dateFrom, dateTo],
     queryFn: () =>
       apiClient.get<ContractUtilization>(`/api/v1/analytics/contract-utilization?date_from=${dateFrom}&date_to=${dateTo}`),
@@ -24,7 +25,7 @@ export function ContractUtilizationPanel({ dateFrom, dateTo }: { dateFrom: strin
   const contracts = (data?.contracts ?? []).slice(0, MAX_ROWS);
 
   return (
-    <Panel title="Utilização de contrato" subtitle="% já coberto por tabela homologada">
+    <Panel title="Utilização de contrato" subtitle="% já coberto por tabela homologada" updatedAt={dataUpdatedAt || null}>
       {isLoading && (
         <div className="space-y-3 p-5">
           {Array.from({ length: 4 }).map((_, i) => (
@@ -40,7 +41,10 @@ export function ContractUtilizationPanel({ dateFrom, dateTo }: { dateFrom: strin
         <div className="space-y-3 p-5">
           {contracts.map((contract) => (
             <div key={contract.contract_id} className="flex items-center gap-3">
-              <span className="w-[168px] shrink-0 truncate text-[12.5px] text-ink-muted">{contract.plan_name}</span>
+              <span className="flex w-[168px] shrink-0 items-center gap-1.5 truncate text-[12.5px] text-ink-muted">
+                <span className="truncate">{contract.plan_name}</span>
+                {contract.plan_type === "particular" && <Badge tone="accent">Particular</Badge>}
+              </span>
               <div className="h-[7px] flex-1 overflow-hidden rounded-full bg-canvas-raised">
                 <div className="h-full rounded-full bg-aura-line" style={{ width: `${Math.min(contract.utilization_pct, 100)}%` }} />
               </div>

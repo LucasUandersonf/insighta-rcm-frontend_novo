@@ -18,4 +18,29 @@ describe("Panel", () => {
     const card = screen.getByText("Fila de correção").closest("div.group");
     expect(card?.className).toMatch(/hover:border-pending\/40/);
   });
+
+  // Épico F4.3 do Plano Diretor ("Frescor de dado / SLA de atualização").
+  it("sem `updatedAt`, não mostra nenhum selo de frescor", () => {
+    render(<Panel title="Sem selo">conteúdo</Panel>);
+    expect(screen.queryByText(/atualizado/)).not.toBeInTheDocument();
+  });
+
+  it("com `updatedAt` recente, mostra 'atualizado agora'", () => {
+    render(
+      <Panel title="Com selo" updatedAt={Date.now()}>
+        conteúdo
+      </Panel>
+    );
+    expect(screen.getByText("atualizado agora")).toBeInTheDocument();
+  });
+
+  it("com `updatedAt` de alguns minutos atrás, mostra a contagem em minutos", () => {
+    const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
+    render(
+      <Panel title="Com selo antigo" updatedAt={fiveMinutesAgo}>
+        conteúdo
+      </Panel>
+    );
+    expect(screen.getByText("atualizado há 5 min")).toBeInTheDocument();
+  });
 });

@@ -10,7 +10,13 @@ import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useToast } from "@/context/ToastContext";
 import { useAuth } from "@/context/AuthContext";
-import type { NoShowThresholdSuggestion, Tenant } from "@/lib/types";
+import type {
+  AnnualGoalSuggestion,
+  DenialRiskThresholdSuggestion,
+  HealthScoreCeilingSuggestion,
+  NoShowThresholdSuggestion,
+  Tenant,
+} from "@/lib/types";
 
 const PLAN_LABELS: Record<string, string> = {
   starter: "Starter",
@@ -39,6 +45,16 @@ function AnnualGoalPanel({ tenant, isOwner }: { tenant: Tenant; isOwner: boolean
   useEffect(() => {
     setGoalInput(tenant.annual_revenue_goal !== null ? String(tenant.annual_revenue_goal) : "");
   }, [tenant.annual_revenue_goal]);
+
+  // Épico F3.3 do Plano Diretor ("Metas e cenários orientados a dados")
+  // — "meta anual sugerida (crescimento histórico + percentil de
+  // rede)". Buscada só quando o usuário pede (mesmo padrão de
+  // NoShowThresholdsPanel), não em toda visita à página.
+  const suggestionQuery = useQuery({
+    queryKey: ["tenant", "annual-goal", "suggested"],
+    queryFn: () => apiClient.get<AnnualGoalSuggestion>("/api/v1/tenant/annual-goal/suggested"),
+    enabled: false,
+  });
 
   const mutation = useMutation({
     mutationFn: (annual_revenue_goal: number) => apiClient.patch<Tenant>("/api/v1/tenant", { annual_revenue_goal }),
@@ -95,6 +111,80 @@ function AnnualGoalPanel({ tenant, isOwner }: { tenant: Tenant; isOwner: boolean
           </p>
         )}
         {!isOwner && <p className="mt-2 text-2xs text-ink-faint">Só o papel "owner" pode editar a meta de faturamento.</p>}
+
+        {isOwner && (
+          <div className="mt-3 rounded-md border border-border-hairline bg-canvas-raised/40 p-3">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-2xs text-ink-faint">
+                Duas sugestões independentes: seu próprio crescimento e o ritmo de outras clínicas da base — nunca
+                aplicadas sozinhas.
+              </p>
+              <Button
+                type="button"
+                variant="secondary"
+                size="xs"
+                className="flex shrink-0 items-center gap-1.5"
+                onClick={() => suggestionQuery.refetch()}
+                disabled={suggestionQuery.isFetching}
+              >
+                <Sparkles size={12} />
+                {suggestionQuery.isFetching ? "Calculando..." : "Sugerir com base no histórico"}
+              </Button>
+            </div>
+            {suggestionQuery.data && (
+              <div className="mt-2 space-y-1.5">
+                <div className="flex items-center justify-between gap-3 text-2xs">
+                  <span className="text-ink-muted">
+                    Pelo seu crescimento{suggestionQuery.data.own_growth_rate !== null && (
+                      <> ({(suggestionQuery.data.own_growth_rate * 100).toFixed(0)}%)</>
+                    )}
+                    :
+                  </span>
+                  {suggestionQuery.data.own_trend_suggested_goal !== null ? (
+                    <span className="flex items-center gap-2">
+                      <span className="font-mono text-ink">{formatCurrency(suggestionQuery.data.own_trend_suggested_goal)}</span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="xs"
+                        onClick={() => setGoalInput(String(suggestionQuery.data!.own_trend_suggested_goal))}
+                      >
+                        Usar
+                      </Button>
+                    </span>
+                  ) : (
+                    <span className="text-pending">sem histórico do período anterior suficiente</span>
+                  )}
+                </div>
+                <div className="flex items-center justify-between gap-3 text-2xs">
+                  <span className="text-ink-muted">
+                    Pelo ritmo da rede{suggestionQuery.data.network_growth_median !== null && (
+                      <> ({(suggestionQuery.data.network_growth_median * 100).toFixed(0)}%, {suggestionQuery.data.network_cohort_size} clínicas)</>
+                    )}
+                    :
+                  </span>
+                  {suggestionQuery.data.network_pace_suggested_goal !== null ? (
+                    <span className="flex items-center gap-2">
+                      <span className="font-mono text-ink">
+                        {formatCurrency(suggestionQuery.data.network_pace_suggested_goal)}
+                      </span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="xs"
+                        onClick={() => setGoalInput(String(suggestionQuery.data!.network_pace_suggested_goal))}
+                      >
+                        Usar
+                      </Button>
+                    </span>
+                  ) : (
+                    <span className="text-pending">sem clínicas suficientes na base ainda</span>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </form>
     </Panel>
   );
@@ -255,6 +345,308 @@ function NoShowThresholdsPanel({ tenant, isOwner }: { tenant: Tenant; isOwner: b
   );
 }
 
+/**
+ * Épico F2.1 do Plano Diretor ("Calibração por especialidade/porte") —
+ * mesmo padrão de NoShowThresholdsPanel acima, aplicado ao limiar de
+ * risco de glosa (denial_risk_pct, ver smart_insights_engine.py). Campos
+ * PERCENTUAIS (0-100), não frações.
+ */
+function DenialRiskThresholdsPanel({ tenant, isOwner }: { tenant: Tenant; isOwner: boolean }) {
+  const queryClient = useQueryClient();
+  const { showSuccess, showError } = useToast();
+  const [warningInput, setWarningInput] = useState("");
+  const [criticalInput, setCriticalInput] = useState("");
+
+  useEffect(() => {
+    setWarningInput(tenant.denial_risk_warning_threshold !== null ? String(tenant.denial_risk_warning_threshold) : "");
+    setCriticalInput(tenant.denial_risk_critical_threshold !== null ? String(tenant.denial_risk_critical_threshold) : "");
+  }, [tenant.denial_risk_warning_threshold, tenant.denial_risk_critical_threshold]);
+
+  const suggestionQuery = useQuery({
+    queryKey: ["tenant", "denial-risk-thresholds", "suggested"],
+    queryFn: () => apiClient.get<DenialRiskThresholdSuggestion>("/api/v1/tenant/denial-risk-thresholds/suggested"),
+    enabled: false,
+  });
+
+  function applySuggestion() {
+    const suggestion = suggestionQuery.data;
+    if (!suggestion || suggestion.warning_threshold === null || suggestion.critical_threshold === null) return;
+    setWarningInput(suggestion.warning_threshold.toFixed(1));
+    setCriticalInput(suggestion.critical_threshold.toFixed(1));
+  }
+
+  const mutation = useMutation({
+    mutationFn: (payload: { denial_risk_warning_threshold: number; denial_risk_critical_threshold: number }) =>
+      apiClient.patch<Tenant>("/api/v1/tenant", payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tenant"] });
+      showSuccess("Limiares de risco de glosa atualizados.");
+    },
+    onError: (err) => showError(getApiErrorMessage(err)),
+  });
+
+  function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    const warning = Number(warningInput.replace(",", "."));
+    const critical = Number(criticalInput.replace(",", "."));
+    if (!Number.isFinite(warning) || !Number.isFinite(critical) || warning <= 0 || critical <= 0 || warning >= 100 || critical >= 100) {
+      showError("Informe valores entre 0 e 100.");
+      return;
+    }
+    if (warning >= critical) {
+      showError("O limiar de atenção precisa ser menor que o de crítico.");
+      return;
+    }
+    mutation.mutate({ denial_risk_warning_threshold: warning, denial_risk_critical_threshold: critical });
+  }
+
+  const usingDefaults = tenant.denial_risk_warning_threshold === null && tenant.denial_risk_critical_threshold === null;
+
+  return (
+    <Panel title="Limiares de risco de glosa">
+      <form onSubmit={handleSubmit} className="p-4">
+        <p className="mb-3.5 max-w-xl text-xs leading-relaxed text-ink-faint">
+          Define a partir de qual percentual do faturamento em risco médio/alto o insight de risco de glosa vira
+          "atenção" ou "crítico" na Sala de Comando.
+        </p>
+        {usingDefaults && (
+          <p className="-mt-1.5 mb-3.5 text-2xs text-ink-faint">
+            Nenhum limiar configurado ainda — usando o padrão do sistema (acima de 15% = atenção, acima de 40% =
+            crítico).
+          </p>
+        )}
+        <div className="grid max-w-md grid-cols-2 gap-3">
+          <TextField
+            label="Atenção a partir de (%)"
+            type="number"
+            min={0.1}
+            max={99}
+            step="0.1"
+            value={warningInput}
+            onChange={(e) => setWarningInput(e.target.value)}
+            disabled={!isOwner}
+            placeholder="Ex: 15"
+            className="mb-0"
+          />
+          <TextField
+            label="Crítico a partir de (%)"
+            type="number"
+            min={0.1}
+            max={99}
+            step="0.1"
+            value={criticalInput}
+            onChange={(e) => setCriticalInput(e.target.value)}
+            disabled={!isOwner}
+            placeholder="Ex: 40"
+            className="mb-0"
+          />
+        </div>
+
+        {isOwner && (
+          <div className="mt-3 rounded-md border border-border-hairline bg-canvas-raised/40 p-3">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-2xs text-ink-faint">
+                Calculado a partir do histórico mensal real de risco de glosa desta clínica, não um valor genérico.
+              </p>
+              <Button
+                type="button"
+                variant="secondary"
+                size="xs"
+                className="flex shrink-0 items-center gap-1.5"
+                onClick={() => suggestionQuery.refetch()}
+                disabled={suggestionQuery.isFetching}
+              >
+                <Sparkles size={12} />
+                {suggestionQuery.isFetching ? "Calculando..." : "Sugerir com base no histórico"}
+              </Button>
+            </div>
+            {suggestionQuery.data && suggestionQuery.data.warning_threshold === null && (
+              <p className="mt-2 text-2xs text-pending">
+                Ainda não há histórico suficiente ({suggestionQuery.data.sample_size} mês(es) fechado(s) — são
+                necessários pelo menos 6) para uma sugestão confiável.
+              </p>
+            )}
+            {suggestionQuery.data && suggestionQuery.data.warning_threshold !== null && suggestionQuery.data.critical_threshold !== null && (
+              <div className="mt-2 flex items-center justify-between gap-3">
+                <p className="text-2xs text-ink-muted">
+                  Sugestão (baseada em {suggestionQuery.data.sample_size} meses): atenção a partir de{" "}
+                  <span className="font-mono">{suggestionQuery.data.warning_threshold.toFixed(1)}%</span>, crítico a
+                  partir de <span className="font-mono">{suggestionQuery.data.critical_threshold.toFixed(1)}%</span>.
+                </p>
+                <Button type="button" variant="ghost" size="xs" onClick={applySuggestion}>
+                  Preencher campos
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {isOwner && (
+          <div className="mt-3 flex justify-end">
+            <Button type="submit" disabled={mutation.isPending || !warningInput || !criticalInput}>
+              {mutation.isPending ? "Salvando..." : "Salvar limiares"}
+            </Button>
+          </div>
+        )}
+        {!isOwner && <p className="mt-2 text-2xs text-ink-faint">Só o papel "owner" pode editar os limiares de risco.</p>}
+      </form>
+    </Panel>
+  );
+}
+
+/**
+ * Épico F2.1 do Plano Diretor — mesmo padrão, para os DOIS tetos da Nota
+ * de Saúde Financeira (ver health_score_engine.py). Campos são FRAÇÕES
+ * 0-1 exibidas como percentual, mesma convenção de NoShowThresholdsPanel.
+ */
+function HealthScoreCeilingsPanel({ tenant, isOwner }: { tenant: Tenant; isOwner: boolean }) {
+  const queryClient = useQueryClient();
+  const { showSuccess, showError } = useToast();
+  const [denialInput, setDenialInput] = useState("");
+  const [noShowInput, setNoShowInput] = useState("");
+
+  useEffect(() => {
+    setDenialInput(tenant.health_score_denial_ceiling !== null ? String(tenant.health_score_denial_ceiling * 100) : "");
+    setNoShowInput(tenant.health_score_no_show_ceiling !== null ? String(tenant.health_score_no_show_ceiling * 100) : "");
+  }, [tenant.health_score_denial_ceiling, tenant.health_score_no_show_ceiling]);
+
+  const suggestionQuery = useQuery({
+    queryKey: ["tenant", "health-score-ceilings", "suggested"],
+    queryFn: () => apiClient.get<HealthScoreCeilingSuggestion>("/api/v1/tenant/health-score-ceilings/suggested"),
+    enabled: false,
+  });
+
+  function applySuggestion() {
+    const suggestion = suggestionQuery.data;
+    if (!suggestion) return;
+    if (suggestion.denial_ceiling !== null) setDenialInput((suggestion.denial_ceiling * 100).toFixed(1));
+    if (suggestion.no_show_ceiling !== null) setNoShowInput((suggestion.no_show_ceiling * 100).toFixed(1));
+  }
+
+  const mutation = useMutation({
+    mutationFn: (payload: { health_score_denial_ceiling: number; health_score_no_show_ceiling: number }) =>
+      apiClient.patch<Tenant>("/api/v1/tenant", payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tenant"] });
+      showSuccess("Tetos da Nota de Saúde Financeira atualizados.");
+    },
+    onError: (err) => showError(getApiErrorMessage(err)),
+  });
+
+  function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    const denial = Number(denialInput.replace(",", "."));
+    const noShow = Number(noShowInput.replace(",", "."));
+    if (!Number.isFinite(denial) || !Number.isFinite(noShow) || denial <= 0 || noShow <= 0 || denial >= 100 || noShow >= 100) {
+      showError("Informe valores entre 0 e 100.");
+      return;
+    }
+    mutation.mutate({ health_score_denial_ceiling: denial / 100, health_score_no_show_ceiling: noShow / 100 });
+  }
+
+  const usingDefaults = tenant.health_score_denial_ceiling === null && tenant.health_score_no_show_ceiling === null;
+
+  return (
+    <Panel title="Tetos da Nota de Saúde Financeira">
+      <form onSubmit={handleSubmit} className="p-4">
+        <p className="mb-3.5 max-w-xl text-xs leading-relaxed text-ink-faint">
+          A partir de qual taxa de glosa e de falta os componentes correspondentes da Nota de Saúde Financeira já
+          valem a pior nota possível (0).
+        </p>
+        {usingDefaults && (
+          <p className="-mt-1.5 mb-3.5 text-2xs text-ink-faint">
+            Nenhum teto configurado ainda — usando o padrão do sistema (25% de glosa, 40% de falta).
+          </p>
+        )}
+        <div className="grid max-w-md grid-cols-2 gap-3">
+          <TextField
+            label="Teto de glosa (%)"
+            type="number"
+            min={0.1}
+            max={99}
+            step="0.1"
+            value={denialInput}
+            onChange={(e) => setDenialInput(e.target.value)}
+            disabled={!isOwner}
+            placeholder="Ex: 25"
+            className="mb-0"
+          />
+          <TextField
+            label="Teto de falta (%)"
+            type="number"
+            min={0.1}
+            max={99}
+            step="0.1"
+            value={noShowInput}
+            onChange={(e) => setNoShowInput(e.target.value)}
+            disabled={!isOwner}
+            placeholder="Ex: 40"
+            className="mb-0"
+          />
+        </div>
+
+        {isOwner && (
+          <div className="mt-3 rounded-md border border-border-hairline bg-canvas-raised/40 p-3">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-2xs text-ink-faint">
+                Calculado a partir do histórico mensal real desta clínica (percentil 90), não um valor genérico.
+              </p>
+              <Button
+                type="button"
+                variant="secondary"
+                size="xs"
+                className="flex shrink-0 items-center gap-1.5"
+                onClick={() => suggestionQuery.refetch()}
+                disabled={suggestionQuery.isFetching}
+              >
+                <Sparkles size={12} />
+                {suggestionQuery.isFetching ? "Calculando..." : "Sugerir com base no histórico"}
+              </Button>
+            </div>
+            {suggestionQuery.data && (
+              <div className="mt-2 space-y-1 text-2xs">
+                <p className="text-ink-muted">
+                  Glosa:{" "}
+                  {suggestionQuery.data.denial_ceiling !== null ? (
+                    <span className="font-mono">{(suggestionQuery.data.denial_ceiling * 100).toFixed(1)}%</span>
+                  ) : (
+                    <span className="text-pending">
+                      sem histórico suficiente ({suggestionQuery.data.denial_ceiling_sample_size}/6 meses)
+                    </span>
+                  )}
+                  {" · "}
+                  Falta:{" "}
+                  {suggestionQuery.data.no_show_ceiling !== null ? (
+                    <span className="font-mono">{(suggestionQuery.data.no_show_ceiling * 100).toFixed(1)}%</span>
+                  ) : (
+                    <span className="text-pending">
+                      sem histórico suficiente ({suggestionQuery.data.no_show_ceiling_sample_size}/6 meses)
+                    </span>
+                  )}
+                </p>
+                {(suggestionQuery.data.denial_ceiling !== null || suggestionQuery.data.no_show_ceiling !== null) && (
+                  <Button type="button" variant="ghost" size="xs" onClick={applySuggestion}>
+                    Preencher campos
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {isOwner && (
+          <div className="mt-3 flex justify-end">
+            <Button type="submit" disabled={mutation.isPending || !denialInput || !noShowInput}>
+              {mutation.isPending ? "Salvando..." : "Salvar tetos"}
+            </Button>
+          </div>
+        )}
+        {!isOwner && <p className="mt-2 text-2xs text-ink-faint">Só o papel "owner" pode editar os tetos.</p>}
+      </form>
+    </Panel>
+  );
+}
+
 export function TenantPage() {
   const { user } = useAuth();
   const isOwner = user?.role === "owner";
@@ -273,16 +665,19 @@ export function TenantPage() {
 
   const [legalName, setLegalName] = useState("");
   const [tradeName, setTradeName] = useState("");
+  const [specialty, setSpecialty] = useState("");
 
   useEffect(() => {
     if (tenant) {
       setLegalName(tenant.legal_name);
       setTradeName(tenant.trade_name);
+      setSpecialty(tenant.specialty ?? "");
     }
   }, [tenant]);
 
   const mutation = useMutation({
-    mutationFn: () => apiClient.patch<Tenant>("/api/v1/tenant", { legal_name: legalName, trade_name: tradeName }),
+    mutationFn: () =>
+      apiClient.patch<Tenant>("/api/v1/tenant", { legal_name: legalName, trade_name: tradeName, specialty }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tenant"] });
       showSuccess("Dados da clínica atualizados.");
@@ -318,7 +713,20 @@ export function TenantPage() {
                   <label className="mb-1.5 block text-xs font-medium text-ink-muted">Plano</label>
                   <Badge tone="accent">{PLAN_LABELS[tenant.plan_tier] ?? tenant.plan_tier}</Badge>
                 </div>
+                <TextField
+                  label="Especialidade predominante"
+                  value={specialty}
+                  onChange={(e) => setSpecialty(e.target.value)}
+                  disabled={!isOwner}
+                  placeholder="Ex: odontologia, psicologia, clínica geral"
+                  className="mb-0"
+                />
               </div>
+              <p className="mt-1.5 text-2xs text-ink-faint">
+                Contexto descritivo — hoje não seleciona nenhum benchmark automático de mercado (a Insighta ainda não
+                tem esse dado real e validado por especialidade). Os limiares abaixo continuam calibrados pelo
+                histórico da sua própria clínica.
+              </p>
               <p className="mt-4 text-2xs text-ink-faint">
                 CNPJ não pode ser alterado por aqui — fale com o suporte. Para alterar de plano
                 {(availablePlans ?? []).length > 0 && <> (disponíveis: {(availablePlans ?? []).map((t) => PLAN_LABELS[t] ?? t).join(", ")})</>},
@@ -337,6 +745,8 @@ export function TenantPage() {
 
           <AnnualGoalPanel tenant={tenant} isOwner={isOwner} />
           <NoShowThresholdsPanel tenant={tenant} isOwner={isOwner} />
+          <DenialRiskThresholdsPanel tenant={tenant} isOwner={isOwner} />
+          <HealthScoreCeilingsPanel tenant={tenant} isOwner={isOwner} />
         </div>
       )}
     </div>

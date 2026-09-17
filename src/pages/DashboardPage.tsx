@@ -11,10 +11,13 @@ import { PeriodWindowSelect } from "@/components/ui/PeriodWindowSelect";
 import { Tabs, TabPanel } from "@/components/ui/Tabs";
 import { AgendaAnalyticsPanel } from "@/components/dashboard/AgendaAnalyticsPanel";
 import { MediumRiskBillingsPanel } from "@/components/dashboard/MediumRiskBillingsPanel";
+import { AgendaPlanPriorityPanel } from "@/components/dashboard/AgendaPlanPriorityPanel";
+import { DataFreshnessBanner } from "@/components/dashboard/DataFreshnessBanner";
 import { PlanLossRankingPanel } from "@/components/dashboard/PlanLossRankingPanel";
 import { ContractUtilizationPanel } from "@/components/dashboard/ContractUtilizationPanel";
 import { DenialRiskDistributionPanel } from "@/components/dashboard/DenialRiskDistributionPanel";
 import { DenialReasonConfirmationPanel } from "@/components/dashboard/DenialReasonConfirmationPanel";
+import { DataQualityPanel } from "@/components/dashboard/DataQualityPanel";
 import { PaymentLagPanel } from "@/components/dashboard/PaymentLagPanel";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
@@ -59,6 +62,11 @@ const PAGE_SIZE = 20;
 // esse filtro no cliente, esse papel bateria de frente com um 403 do
 // backend logo ao entrar (esta é a rota "/painel", sem RoleProtectedRoute
 // no roteador — ver App.tsx —, acessível a todo papel autenticado).
+// backend logo ao entrar. "Junta Técnica Insighta": esta rota deixou de
+// ser "/" (pós-login, para todo papel) — agora é "/painel", só destino
+// de drill-down a partir de um card do feed (ver RootRedirect.tsx); o
+// papel sem acesso à Sala de Comando ainda cai aqui, como fallback (ver
+// RootRedirect.tsx), e continua vendo o mesmo aviso de acesso abaixo.
 const CAN_VIEW_ANALYTICS: UserRole[] = ["owner", "admin", "financeiro", "auditor"];
 const CAN_VIEW_BILLING_QUEUE: UserRole[] = ["owner", "admin", "financeiro"];
 
@@ -89,7 +97,7 @@ export function DashboardPage() {
   const canViewBillingQueue = !!user && CAN_VIEW_BILLING_QUEUE.includes(user.role);
 
   const [offset, setOffset] = useState(0);
-  const { windowDays, setWindowDays, dateFrom, dateTo } = useDateWindow(7);
+  const { windowDays, setWindowDays, singleDay, setSingleDay, dateFrom, dateTo } = useDateWindow(7);
   const [activeTab, setActiveTab] = useState<"faturamento" | "agenda">("faturamento");
 
   // Deep-link do botão de ação da Sala de Comando (ver DECISÃO em
@@ -151,7 +159,34 @@ export function DashboardPage() {
         icon={Gauge}
         title="Painel"
         subtitle="Auditoria de dado primário — todo indicador disponível, sem narrativa em torno dele. Para o diagnóstico em texto, veja a Sala de Comando."
-        action={canViewAnalytics && <PeriodWindowSelect windowDays={windowDays} onChange={setWindowDays} />}
+        action={
+          canViewAnalytics && (
+            <div className="flex items-center gap-2">
+              {/* Onda 5 do Plano de Ação, item 17 — "ver um dia
+                  específico": o backend já aceita date_from == date_to
+                  em qualquer /analytics/*, só faltava a UI. Sobrepõe a
+                  janela de N dias enquanto preenchido. */}
+              <input
+                type="date"
+                aria-label="Ver um dia específico"
+                value={singleDay ?? ""}
+                onChange={(e) => setSingleDay(e.target.value || null)}
+                className="rounded-md border border-border-subtle bg-canvas-surface px-3 py-2 text-sm text-ink shadow-card transition-colors hover:border-border focus:border-accent"
+              />
+              {singleDay ? (
+                <button
+                  type="button"
+                  onClick={() => setSingleDay(null)}
+                  className="rounded-md border border-border-subtle px-3 py-2 text-sm text-ink-muted transition-colors hover:bg-canvas-raised"
+                >
+                  Voltar à janela
+                </button>
+              ) : (
+                <PeriodWindowSelect windowDays={windowDays} onChange={setWindowDays} />
+              )}
+            </div>
+          )
+        }
       />
 
       {!canViewAnalytics && !canViewBillingQueue && (
@@ -162,6 +197,8 @@ export function DashboardPage() {
           />
         </Panel>
       )}
+
+      {canViewAnalytics && <DataFreshnessBanner />}
 
       {canViewAnalytics && (
         <Tabs
@@ -298,6 +335,7 @@ export function DashboardPage() {
           <DenialRiskDistributionPanel dateFrom={dateFrom} dateTo={dateTo} />
           <PaymentLagPanel dateFrom={dateFrom} dateTo={dateTo} />
           <DenialReasonConfirmationPanel />
+          <DataQualityPanel dateFrom={dateFrom} dateTo={dateTo} />
         </section>
       )}
 
@@ -419,7 +457,13 @@ export function DashboardPage() {
 
       {canViewAnalytics && activeTab === "agenda" && (
       <TabPanel id="agenda" groupId={TABS_GROUP}>
-        <AgendaAnalyticsPanel dateFrom={dateFrom} dateTo={dateTo} />
+        <div className="space-y-4">
+          <AgendaAnalyticsPanel dateFrom={dateFrom} dateTo={dateTo} />
+          {/* Onda 4 do Plano de Ação, item 14 — evolução do PMR: não só
+              reporta prazo de recebimento por convênio, recomenda qual
+              priorizar ao encaixar um paciente novo. */}
+          <AgendaPlanPriorityPanel dateFrom={dateFrom} dateTo={dateTo} />
+        </div>
       </TabPanel>
       )}
     </div>

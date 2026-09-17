@@ -19,6 +19,8 @@ function baseMetrics(overrides: Partial<AgendaMetrics> = {}): AgendaMetrics {
     peak_hours: [],
     weekday_histogram: [],
     weekday_no_show_rates: [],
+    weekday_cancellation_rates: [],
+    weekday_squeeze_in_rates: [],
     no_show_risk_breakdown: [],
     estimated_revenue_at_risk: 0,
     patient_no_show_ranking: [],

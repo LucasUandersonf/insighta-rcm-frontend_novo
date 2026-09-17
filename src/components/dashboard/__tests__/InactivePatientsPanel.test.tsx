@@ -16,8 +16,22 @@ describe("InactivePatientsPanel", () => {
       total_count: 2,
       inactive_after_days: 365,
       items: [
-        { patient_id: "p1", full_name: "Paciente Sumido", last_appointment_at: "2024-01-10T00:00:00Z", days_since_last_appointment: 800 },
-        { patient_id: "p2", full_name: "Paciente Distante", last_appointment_at: "2024-11-01T00:00:00Z", days_since_last_appointment: 400 },
+        {
+          patient_id: "p1",
+          full_name: "Paciente Sumido",
+          last_appointment_at: "2024-01-10T00:00:00Z",
+          days_since_last_appointment: 800,
+          last_outreach_at: null,
+          last_outreach_outcome: null,
+        },
+        {
+          patient_id: "p2",
+          full_name: "Paciente Distante",
+          last_appointment_at: "2024-11-01T00:00:00Z",
+          days_since_last_appointment: 400,
+          last_outreach_at: "2026-01-05T00:00:00Z",
+          last_outreach_outcome: "sem_resposta",
+        },
       ],
     };
     vi.mocked(apiClient.get).mockResolvedValue(data);
@@ -27,6 +41,10 @@ describe("InactivePatientsPanel", () => {
     await waitFor(() => expect(screen.getByText("Paciente Sumido")).toBeInTheDocument());
     expect(screen.getByText("Paciente Distante")).toBeInTheDocument();
     expect(screen.getByText(/2 pacientes não voltam há mais de 1 ano/)).toBeInTheDocument();
+    // Onda 4 do Plano de Ação, item 12 — botão de registrar contato em
+    // cada linha + selo "já contatado" só pra quem já foi contatado.
+    expect(screen.getAllByRole("button", { name: /Registrar contato/ })).toHaveLength(2);
+    expect(screen.getByText("· já contatado")).toBeInTheDocument();
   });
 
   it("mensagem honesta quando não há ninguém inativo", async () => {
@@ -42,7 +60,16 @@ describe("InactivePatientsPanel", () => {
     const data: InactivePatients = {
       total_count: 30,
       inactive_after_days: 365,
-      items: [{ patient_id: "p1", full_name: "Paciente Sumido", last_appointment_at: "2024-01-10T00:00:00Z", days_since_last_appointment: 800 }],
+      items: [
+        {
+          patient_id: "p1",
+          full_name: "Paciente Sumido",
+          last_appointment_at: "2024-01-10T00:00:00Z",
+          days_since_last_appointment: 800,
+          last_outreach_at: null,
+          last_outreach_outcome: null,
+        },
+      ],
     };
     vi.mocked(apiClient.get).mockResolvedValue(data);
 

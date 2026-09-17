@@ -25,13 +25,20 @@ function toIsoDate(d: Date): string {
  */
 export function useDateWindow(initialDays = 7) {
   const [windowDays, setWindowDays] = useState(initialDays);
+  // Onda 5 do Plano de Ação, item 17 — "ver um dia específico": o
+  // backend já aceita date_from == date_to (qualquer endpoint de
+  // /analytics/*), só faltava a UI. Quando preenchido, sobrepõe a
+  // janela de N dias — não os dois ao mesmo tempo (senão qual dos dois
+  // manda vira ambíguo pro usuário).
+  const [singleDay, setSingleDay] = useState<string | null>(null);
 
   const { dateFrom, dateTo } = useMemo(() => {
+    if (singleDay) return { dateFrom: singleDay, dateTo: singleDay };
     const end = new Date();
     const start = new Date();
     start.setDate(end.getDate() - (windowDays - 1));
     return { dateFrom: toIsoDate(start), dateTo: toIsoDate(end) };
-  }, [windowDays]);
+  }, [windowDays, singleDay]);
 
-  return { windowDays, setWindowDays, dateFrom, dateTo };
+  return { windowDays, setWindowDays, singleDay, setSingleDay, dateFrom, dateTo };
 }

@@ -1,8 +1,41 @@
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { motion } from "framer-motion";
 import { AlertTriangle, Circle, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { BentoCard, type BentoCardProps } from "@/components/ui/BentoGrid";
+
+// Épico F4.3 do Plano Diretor ("Frescor de dado / SLA de atualização")
+// — selo "atualizado há X min" no header de qualquer Panel que passe
+// `updatedAt` (tipicamente `dataUpdatedAt` de um useQuery do React
+// Query). Recalcula a cada 30s via um tick local, não uma nova
+// requisição — é só o TEXTO relativo envelhecendo, o dado em si só
+// muda quando a query real refizer o fetch.
+function formatFreshness(updatedAtMs: number, nowMs: number): string {
+  const diffSeconds = Math.max(0, Math.floor((nowMs - updatedAtMs) / 1000));
+  if (diffSeconds < 45) return "atualizado agora";
+  const diffMinutes = Math.round(diffSeconds / 60);
+  if (diffMinutes < 60) return `atualizado há ${diffMinutes} min`;
+  const diffHours = Math.round(diffMinutes / 60);
+  if (diffHours < 24) return `atualizado há ${diffHours}h`;
+  const diffDays = Math.round(diffHours / 24);
+  return `atualizado há ${diffDays}d`;
+}
+
+function FreshnessBadge({ updatedAt }: { updatedAt: number }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(interval);
+  }, []);
+  return (
+    <span
+      className="shrink-0 whitespace-nowrap text-2xs text-ink-faint"
+      title={new Date(updatedAt).toLocaleString("pt-BR")}
+    >
+      {formatFreshness(updatedAt, now)}
+    </span>
+  );
+}
 
 /** Card de conteúdo padrão — mesma casca visual do BentoCard (borda
  * fio de cabelo + sombra rasa + leve levitação no hover), com um
@@ -22,6 +55,7 @@ export function Panel({
   subtitle,
   action,
   actions,
+  updatedAt,
   colSpan,
   rowSpan,
   glow,
@@ -33,6 +67,13 @@ export function Panel({
   action?: ReactNode;
   /** Slot adicional no header, ao lado de `action` (ex: barra de filtros, ações em lote). */
   actions?: ReactNode;
+  /** Épico F4.3 do Plano Diretor ("Frescor de dado / SLA de
+   * atualização") — timestamp (ms epoch) de quando os dados deste
+   * painel foram buscados pela última vez, normalmente
+   * `dataUpdatedAt` do useQuery correspondente. Omitido/0/null = sem
+   * selo (painel ainda sem dado carregado, ou que ainda não adotou
+   * isso). */
+  updatedAt?: number | null;
   colSpan?: number;
   rowSpan?: number;
   glow?: BentoCardProps["glow"];
@@ -41,16 +82,21 @@ export function Panel({
 }) {
   return (
     <BentoCard colSpan={colSpan ?? 12} rowSpan={rowSpan} glow={glow} noPadding className={cn("w-full", className)}>
-      {(title || subtitle || action || actions) && (
+      {(title || subtitle || action || actions || updatedAt) && (
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-hairline px-5 py-4">
           <div>
             {title && <h2 className="font-serif text-base font-medium tracking-premium text-ink">{title}</h2>}
             {subtitle && <p className="mt-0.5 text-2xs text-ink-faint">{subtitle}</p>}
           </div>
-          {(action || actions) && (
-            <div className="flex items-center gap-2">
-              {actions}
-              {action}
+          {(action || actions || updatedAt) && (
+            <div className="flex items-center gap-3">
+              {!!updatedAt && <FreshnessBadge updatedAt={updatedAt} />}
+              {(action || actions) && (
+                <div className="flex items-center gap-2">
+                  {actions}
+                  {action}
+                </div>
+              )}
             </div>
           )}
         </div>
