@@ -1060,6 +1060,8 @@ export interface CrmSummary {
   avg_days_since_last_visit: number | null;
   return_rate: number | null;
   return_rate_sample_size: number;
+}
+
 // RFM completo (GET /analytics/patient-rfm) — Gaps Dossiê Insighta RCM,
 // item 4. Recência e Frequência já existiam espalhadas (InactivePatients,
 // score VIP); Valor era a dimensão que faltava pra virar RFM de verdade.

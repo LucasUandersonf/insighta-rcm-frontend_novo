@@ -415,8 +415,8 @@ export function SmartInsightsFeed({
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
         <HeroInsight insight={topInsight} onNavigateTab={onNavigateTab} onFocusAgenda={onFocusAgenda} workflow={workflow} />
       </div>
-      <CategorySection category="faturamento" insights={faturamentoInsights} onNavigateTab={onNavigateTab} onFocusAgenda={onFocusAgenda} />
-      <CategorySection category="agenda" insights={agendaInsights} onNavigateTab={onNavigateTab} onFocusAgenda={onFocusAgenda} />
+      <CategorySection category="faturamento" insights={faturamentoInsights} onNavigateTab={onNavigateTab} onFocusAgenda={onFocusAgenda} workflow={workflow} />
+      <CategorySection category="agenda" insights={agendaInsights} onNavigateTab={onNavigateTab} onFocusAgenda={onFocusAgenda} workflow={workflow} />
       {hiddenCount > 0 && (
         <div className="flex justify-center">
           <Button type="button" variant="secondary" size="sm" onClick={() => setExpanded(true)} className="inline-flex items-center gap-1.5">
@@ -425,8 +425,6 @@ export function SmartInsightsFeed({
           </Button>
         </div>
       )}
-      <CategorySection category="faturamento" insights={faturamentoInsights} onNavigateTab={onNavigateTab} onFocusAgenda={onFocusAgenda} workflow={workflow} />
-      <CategorySection category="agenda" insights={agendaInsights} onNavigateTab={onNavigateTab} onFocusAgenda={onFocusAgenda} workflow={workflow} />
       <AssignModal
         item={workflow.assigningItem}
         onClose={() => workflow.setAssigningItem(null)}

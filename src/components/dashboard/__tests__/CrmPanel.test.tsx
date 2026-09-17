@@ -50,7 +50,7 @@ describe("CrmPanel", () => {
       {
         total_count: 1,
         inactive_after_days: 365,
-        items: [{ patient_id: "p1", full_name: "Paciente Sumido", last_appointment_at: "2024-01-01T00:00:00Z", days_since_last_appointment: 600 }],
+        items: [{ patient_id: "p1", full_name: "Paciente Sumido", last_appointment_at: "2024-01-01T00:00:00Z", days_since_last_appointment: 600, last_outreach_at: null, last_outreach_outcome: null }],
       }
     );
 

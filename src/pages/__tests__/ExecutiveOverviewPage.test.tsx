@@ -87,6 +87,7 @@ function mockAllEndpoints() {
     }
     if (url.includes("crm-summary")) {
       return Promise.resolve({ avg_patient_age_years: null, avg_days_since_last_visit: null, return_rate: null, return_rate_sample_size: 0 } as never);
+    }
     if (url.includes("patient-rfm")) {
       return Promise.resolve({
         as_of: "2026-01-07",

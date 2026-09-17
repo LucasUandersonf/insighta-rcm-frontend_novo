@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
-import { Award, BadgeDollarSign, Landmark, LayoutDashboard, ListChecks, SlidersHorizontal, Target, Users } from "lucide-react";
+import { Award, BadgeDollarSign, HeartHandshake, Landmark, LayoutDashboard, ListChecks, SlidersHorizontal, Target, Users } from "lucide-react";
 import { KpiCard } from "@/components/ui/KpiCard";
 import { ErrorState, LoadingState } from "@/components/ui/Panel";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -62,11 +62,6 @@ function formatPct(value: number): string {
 
 const TABS_GROUP = "sala-de-comando";
 type TabId = "hoje" | "diagnostico" | "crm" | "oportunidades" | "comparativo" | "simulador" | "capital" | "rentabilidade" | "roi";
-const TAB_IDS: TabId[] = ["hoje", "diagnostico", "crm", "oportunidades", "comparativo", "simulador", "capital", "rentabilidade", "roi"];
-
-function isTabId(value: string | null): value is TabId {
-  return !!value && (TAB_IDS as string[]).includes(value);
-}
 
 /**
  * Sala de Comando 2.0 (ver Roadmap "Sala de Comando 2.0") — a mesma
@@ -82,19 +77,10 @@ export function ExecutiveOverviewPage() {
   const { data: profile } = useCurrentUserProfile();
   // Deep-link de aba/foco a partir de fora da Sala de Comando (Avaliação
   // Home/Sala de Comando, Achado 2) — antes, qualquer destino "#tab:"/
-  // "#weekday:"/"#professional:" clicado na Home caía sempre em "/decisao"
-  // genérico, sempre abrindo no Diagnóstico: o clique nunca terminava
-  // onde prometia. Lidos uma única vez, na inicialização do estado (não
-  // um useEffect que ficaria reagindo a toda mudança de URL) — depois
-  // disso a navegação de aba/foco volta a ser 100% local, como sempre foi.
-  const [searchParams] = useSearchParams();
-  const [activeTab, setActiveTab] = useState<TabId>(() => {
-    const tab = searchParams.get("tab");
-    return isTabId(tab) ? tab : "diagnostico";
-  });
   // Épico F1.1 do Plano Diretor: "Hoje" é a página inicial da Sala de
   // Comando agora — o gestor não escolhe mais aba antes de saber o que
   // fazer (a fila única já chega ordenada por impacto).
+  const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<TabId>("hoje");
   // Foco de agenda (ver AgendaFocus, lib/types.ts) — disparado pelos
   // botões de ação dos insights de queda de agenda/agenda ociosa (ver

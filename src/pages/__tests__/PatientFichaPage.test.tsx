@@ -13,7 +13,7 @@ vi.mock("@/lib/api-client", async (importOriginal) => {
 
 function ficha(overrides: Partial<PatientFicha> = {}): PatientFicha {
   return {
-    patient: { id: "p1", full_name: "Carlos Andrade", cpf: "98765432100", birth_date: null, acquisition_source: null, created_at: "2026-01-01T00:00:00Z" },
+    patient: { id: "p1", full_name: "Carlos Andrade", cpf: "98765432100", birth_date: null, acquisition_source: null, created_at: "2026-01-01T00:00:00Z", referred_by_patient_id: null, communication_consent: null, preferred_time_window: null, zip_code: null, is_vip: false, vip_reasons: [] },
     summary: {
       total_appointments: 1,
       no_show_count: 0,
