@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
-import { HeartHandshake, LayoutDashboard, SlidersHorizontal, Target, Users } from "lucide-react";
 import { Award, BadgeDollarSign, Landmark, LayoutDashboard, ListChecks, SlidersHorizontal, Target, Users } from "lucide-react";
 import { KpiCard } from "@/components/ui/KpiCard";
 import { ErrorState, LoadingState } from "@/components/ui/Panel";
@@ -17,10 +16,8 @@ import { EarlyChurnRiskPanel } from "@/components/dashboard/EarlyChurnRiskPanel"
 import { ExecutiveAgendaSummary } from "@/components/dashboard/ExecutiveAgendaSummary";
 import { ExecutiveNarrativeBanner } from "@/components/dashboard/ExecutiveNarrativeBanner";
 import { FinancialHoleBillingsPanel } from "@/components/dashboard/FinancialHoleBillingsPanel";
-=======
 import { InactivePatientsPanel } from "@/components/dashboard/InactivePatientsPanel";
 import { PriorityQueuePanel } from "@/components/dashboard/PriorityQueuePanel";
->>>>>>> origin/main
 import { SmartInsightsFeed } from "@/components/dashboard/SmartInsightsFeed";
 import { HealthScoreWidget } from "@/components/dashboard/HealthScoreWidget";
 import { SatisfactionSummaryWidget } from "@/components/dashboard/SatisfactionSummaryWidget";
@@ -64,14 +61,12 @@ function formatPct(value: number): string {
 }
 
 const TABS_GROUP = "sala-de-comando";
-<<<<<<< HEAD
-type TabId = "diagnostico" | "crm" | "oportunidades" | "comparativo" | "simulador";
-const TAB_IDS: TabId[] = ["diagnostico", "crm", "oportunidades", "comparativo", "simulador"];
+type TabId = "hoje" | "diagnostico" | "crm" | "oportunidades" | "comparativo" | "simulador" | "capital" | "rentabilidade" | "roi";
+const TAB_IDS: TabId[] = ["hoje", "diagnostico", "crm", "oportunidades", "comparativo", "simulador", "capital", "rentabilidade", "roi"];
 
 function isTabId(value: string | null): value is TabId {
   return !!value && (TAB_IDS as string[]).includes(value);
 }
-type TabId = "hoje" | "diagnostico" | "oportunidades" | "comparativo" | "simulador" | "capital" | "rentabilidade" | "roi";
 
 /**
  * Sala de Comando 2.0 (ver Roadmap "Sala de Comando 2.0") — a mesma
@@ -341,8 +336,6 @@ export function ExecutiveOverviewPage() {
               />
             </section>
 
-<<<<<<< HEAD
-=======
             {/* id="carteira-inativa" — destino do botão "Ver quem não
                 voltou" do insight de meta anual atrasada (ver DECISÃO em
                 smart_insights_engine.py::_annual_goal_insight). Sem
@@ -378,7 +371,6 @@ export function ExecutiveOverviewPage() {
                   perfil etário da carteira ativa. */}
               <PatientDemographicsPanel dateFrom={dateFrom} dateTo={dateTo} />
             </section>
->>>>>>> origin/main
           </div>
         </TabPanel>
       )}
