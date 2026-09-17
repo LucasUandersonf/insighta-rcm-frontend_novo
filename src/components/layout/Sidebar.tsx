@@ -5,12 +5,15 @@ import {
   CalendarCheck,
   CalendarClock,
   ClipboardList,
+  FileStack,
   FileText,
+  FileWarning,
   Gauge,
   Hourglass,
   LayoutDashboard,
   Layers,
   ListChecks,
+  MapPin,
   Megaphone,
   Network,
   Plug,
@@ -70,6 +73,9 @@ export const NAV_ITEMS: NavItem[] = [
   // de produto (ver App.tsx); mesmo RBAC de ação administrativa restrita
   // usado em /upload e /contracts.
   { to: "/professionals", label: "Profissionais & Agenda", icon: CalendarClock, roles: ["owner", "admin"] },
+  // Fase 4 do plano de adequação ao fluxo real de mercado — mesmo RBAC
+  // de escrita de /professionals (cadastro é decisão administrativa).
+  { to: "/locais", label: "Locais de atendimento", icon: MapPin, roles: ["owner", "admin"] },
   // Ação de escrita — mesmo RBAC do backend em ingestion.py/_CAN_MANAGE
   // e contracts.py/_CAN_WRITE (owner/admin/financeiro); sem auditor.
   { to: "/upload", label: "Central de upload", icon: UploadCloud, roles: ["owner", "admin", "financeiro"] },
@@ -88,6 +94,14 @@ export const NAV_ITEMS: NavItem[] = [
   // Gestão de Lotes (agrupa guias antes de virar fatura) — mesmo RBAC
   // do backend em lotes.py/_CAN_READ, igual a /denial-appeals acima.
   { to: "/lotes", label: "Lotes de faturamento", icon: Layers, roles: ["owner", "admin", "financeiro", "auditor"] },
+  // Fase 2 do plano de adequação ao fluxo real de mercado — gera
+  // fatura a partir de lotes FECHADOS e registra a baixa (recebimento).
+  // Mesmo RBAC de /lotes acima.
+  { to: "/faturas", label: "Faturas", icon: FileStack, roles: ["owner", "admin", "financeiro", "auditor"] },
+  // Fase 3 do plano de adequação ao fluxo real de mercado — registra a
+  // glosa REAL recebida da operadora e a reconciliação Previsto x
+  // Realizado do motor de risco. Mesmo RBAC de /lotes acima.
+  { to: "/glosas", label: "Glosas", icon: FileWarning, roles: ["owner", "admin", "financeiro", "auditor"] },
   // Épico F3.1 do Plano Diretor ("Módulo de custos e margem real") —
   // mesmo RBAC de /lotes acima.
   { to: "/custos", label: "Custos", icon: Receipt, roles: ["owner", "admin", "financeiro", "auditor"] },

@@ -32,6 +32,9 @@ const OrganizationSummaryPage = lazy(() => import("@/pages/OrganizationSummaryPa
 const ContractsPage = lazy(() => import("@/pages/ContractsPage").then((m) => ({ default: m.ContractsPage })));
 const DenialAppealsPage = lazy(() => import("@/pages/DenialAppealsPage").then((m) => ({ default: m.DenialAppealsPage })));
 const LotesPage = lazy(() => import("@/pages/LotesPage").then((m) => ({ default: m.LotesPage })));
+const FaturasPage = lazy(() => import("@/pages/FaturasPage").then((m) => ({ default: m.FaturasPage })));
+const GlosasPage = lazy(() => import("@/pages/GlosasPage").then((m) => ({ default: m.GlosasPage })));
+const LocaisPage = lazy(() => import("@/pages/LocaisPage").then((m) => ({ default: m.LocaisPage })));
 const CostEntriesPage = lazy(() => import("@/pages/CostEntriesPage").then((m) => ({ default: m.CostEntriesPage })));
 const MarketingSpendPage = lazy(() => import("@/pages/MarketingSpendPage").then((m) => ({ default: m.MarketingSpendPage })));
 const MyInsightsPage = lazy(() => import("@/pages/MyInsightsPage").then((m) => ({ default: m.MyInsightsPage })));
@@ -140,6 +143,12 @@ export default function App() {
                     editar grade é ação administrativa, fora do alcance de atendimento. */}
                 <Route element={<RoleProtectedRoute allowedRoles={["owner", "admin"]} />}>
                   <Route path="/professionals" element={<ProfessionalsPage />} />
+                  {/* Fase 4 do plano de adequação ao fluxo real de mercado —
+                      mesmo RBAC de /professionals: cadastro é decisão
+                      administrativa (locais.py/_CAN_WRITE), a LEITURA é mais
+                      ampla (também atendimento/financeiro/auditor, que usam
+                      Local como filtro/seletor), mas esta tela é só gestão. */}
+                  <Route path="/locais" element={<LocaisPage />} />
                 </Route>
                 <Route element={<RoleProtectedRoute allowedRoles={["owner", "admin", "financeiro", "auditor"]} />}>
                   <Route path="/decisao" element={<ExecutiveOverviewPage />} />
@@ -153,6 +162,15 @@ export default function App() {
                       backend barra sozinho, mesmo critério já usado em
                       /denial-appeals acima. */}
                   <Route path="/lotes" element={<LotesPage />} />
+                  {/* Fase 2 do plano de adequação ao fluxo real de mercado —
+                      mesmo RBAC de /lotes acima (faturas.py/_CAN_READ:
+                      owner/admin/financeiro/auditor; escrita via
+                      _CAN_WRITE, sem auditor, barrado pelo backend). */}
+                  <Route path="/faturas" element={<FaturasPage />} />
+                  {/* Fase 3 do plano de adequação ao fluxo real de mercado —
+                      mesmo RBAC de /lotes acima (glosas.py/_CAN_READ/
+                      _CAN_WRITE, idêntico). */}
+                  <Route path="/glosas" element={<GlosasPage />} />
                   {/* Épico F3.1 do Plano Diretor — mesmo RBAC de /lotes
                       acima (lotes.py/_CAN_READ: owner/admin/financeiro/
                       auditor; escrita via cost_entries.py/_CAN_WRITE,

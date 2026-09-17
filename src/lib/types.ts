@@ -1480,6 +1480,104 @@ export interface LoteCreateRequest {
   tipo: GuiaTipo;
 }
 
+// Local de Atendimento (Unidade/Setor) — ver app/models/local.py no
+// backend. Fase 4 do plano de adequação ao fluxo real de mercado:
+// catálogo próprio por tenant, mesmo padrão de desativação (não
+// exclusão) de Professional/InsuranceCompany/InsurancePlan.
+export interface Local {
+  id: string;
+  nome: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface LocalCreateRequest {
+  nome: string;
+}
+
+export interface LocalUpdateRequest {
+  nome?: string;
+  is_active?: boolean;
+}
+
+// Fatura — ver app/models/fatura.py e app/schemas/fatura.py no backend.
+// Fase 2 do plano de adequação ao fluxo real de mercado: agrupa um ou
+// mais Lotes FECHADOS do MESMO convênio (equivale a "Gera Arquivo -
+// TISS"/"Faturamento Emitido" de um ERP real); a baixa (recebimento)
+// acontece no nível da fatura, não do lote.
+export type FaturaStatus = "emitida" | "paga" | "parcialmente_paga" | "cancelada";
+
+export interface Fatura {
+  id: string;
+  insurance_plan_id: string;
+  serie: string | null;
+  numero: string | null;
+  status: FaturaStatus;
+  data_emissao: string;
+  valor_recebido: number | null;
+  data_recebimento: string | null;
+  created_at: string;
+}
+
+export interface FaturaCreateRequest {
+  lote_ids: string[];
+  serie?: string | null;
+  numero?: string | null;
+}
+
+export interface FaturaSettleRequest {
+  valor_recebido: number;
+  is_partial?: boolean;
+}
+
+// Glosa REAL — ver app/models/glosa.py e app/schemas/glosa.py no
+// backend. Fase 3 do plano de adequação ao fluxo real de mercado:
+// registra o FATO de uma glosa recebida da operadora (diferente do
+// risco PREVISTO de denial_risk_engine.py, que já alimenta
+// DenialRiskDistributionPanel/RiskBadge).
+export interface Glosa {
+  id: string;
+  billing_id: string;
+  codigo_motivo: string | null;
+  descricao_motivo: string | null;
+  valor_glosado: number;
+  data_recebimento: string;
+  created_at: string;
+}
+
+export interface GlosaCreateRequest {
+  billing_id: string;
+  codigo_motivo?: string | null;
+  descricao_motivo?: string | null;
+  valor_glosado: number;
+  data_recebimento?: string | null;
+}
+
+// GET /glosas/reconciliacao — Previsto (denial_risk_engine.py) x
+// Realizado (glosas registradas), a métrica que prova se o motor de
+// risco de glosa funciona de verdade. Vocabulário de classificador
+// binário (medium/high previsto = "o motor previu risco").
+export interface RiskLevelReconciliation {
+  level: string;
+  billing_count: number;
+  glosado_count: number;
+  valor_glosado_total: number;
+}
+
+export interface GlosaReconciliationResponse {
+  period_start: string;
+  period_end: string;
+  by_risk_level: RiskLevelReconciliation[];
+  true_positive_count: number;
+  false_positive_count: number;
+  false_negative_count: number;
+  true_negative_count: number;
+  precision_pct: number | null;
+  recall_pct: number | null;
+  valor_glosado_previsto: number;
+  valor_glosado_nao_previsto: number;
+}
+
 // Formato de erro único que app/main.py devolve para TODO erro da API
 // (ver DECISÃO em app/main.py — o mesmo mecanismo serve o frontend e o
 // usuário final).
@@ -1501,6 +1599,10 @@ export interface Patient {
   birth_date: string | null;
   acquisition_source: string | null;
   created_at: string;
+  // Direito de eliminação do titular (LGPD art. 18, VI) — None = dado
+  // pessoal intacto; preenchido = paciente já anonimizado a pedido do
+  // titular. Ver DECISÃO em app/sql/022_patient_lgpd_erasure.sql (backend).
+  anonymized_at: string | null;
   // "Mapa de Dados Insighta" — Domínio Paciente (Onda 1): o paciente
   // relacional, não só transacional. Ver DECISÃO em
   // 045_patient_relationship_fields.sql (backend).
@@ -1614,11 +1716,21 @@ export interface ProfessionalUpdateRequest {
 // --- Consultas (app/schemas/appointment.py) ---
 export type NoShowRiskLevel = "indeterminado" | "baixo" | "medio" | "alto";
 
+// Fase 4 do plano de adequação ao fluxo real de mercado (Agendamento ->
+// Atendimento -> Faturamento) — vocabulário FECHADO e universal entre
+// clínicas. Ver DECISÃO em app/models/appointment.py e
+// app/sql/018_locais_tipo_paciente.sql (backend).
+export type TipoPaciente = "ambulatorial" | "internacao" | "pronto_socorro";
+
 export interface Appointment {
   id: string;
   patient_id: string;
   insurance_plan_id: string | null;
   professional_id: string | null;
+  // Fase 4 do plano de adequação ao fluxo real de mercado — ver
+  // DECISÃO em app/sql/018_locais_tipo_paciente.sql (backend).
+  local_id: string | null;
+  tipo_paciente: TipoPaciente | null;
   scheduled_at: string;
   duration_minutes: number | null;
   status: string;
@@ -1658,6 +1770,8 @@ export type VisitIntentTag = "rotina" | "retorno" | "avaliacao" | "urgencia";
 export interface AppointmentCreateRequest {
   patient_id: string;
   professional_id?: string | null;
+  local_id?: string | null;
+  tipo_paciente?: TipoPaciente | null;
   scheduled_at: string; // ISO 8601
   duration_minutes?: number | null;
   procedure_code?: string | null;
@@ -1673,6 +1787,8 @@ export interface AppointmentUpdateRequest {
   status?: string | null;
   procedure_code?: string | null;
   cid_code?: string | null;
+  local_id?: string | null;
+  tipo_paciente?: TipoPaciente | null;
   visit_intent_tag?: VisitIntentTag | null;
   addon_offered_procedure?: string | null;
   addon_declined?: boolean | null;

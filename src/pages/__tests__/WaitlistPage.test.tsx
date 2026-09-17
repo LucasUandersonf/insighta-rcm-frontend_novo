@@ -128,6 +128,8 @@ describe("WaitlistPage", () => {
       patient_id: "p1",
       insurance_plan_id: null,
       professional_id: null,
+      local_id: null,
+      tipo_paciente: null,
       scheduled_at: "2026-02-01T10:00:00Z",
       duration_minutes: 30,
       status: "scheduled",

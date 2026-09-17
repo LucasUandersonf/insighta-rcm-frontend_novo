@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { CalendarCheck, Copy, Crown, Pencil, Plus, Star, UserRound, UserPlus } from "lucide-react";
+import { CalendarCheck, Copy, Crown, Pencil, Plus, ShieldOff, Star, UserRound, UserPlus } from "lucide-react";
 import { Panel, EmptyState, LoadingState, ErrorState } from "@/components/ui/Panel";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
@@ -10,10 +10,12 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useToast } from "@/context/ToastContext";
+import { useAuth } from "@/context/AuthContext";
 import type {
   Appointment,
   AppointmentCreateRequest,
   AppointmentUpdateRequest,
+  Local,
   PaginatedResponse,
   Patient,
   PatientCreateRequest,
@@ -21,6 +23,7 @@ import type {
   PreferredTimeWindow,
   Professional,
   SatisfactionLinkResponse,
+  TipoPaciente,
   VisitIntentTag,
 } from "@/lib/types";
 
@@ -28,6 +31,15 @@ const PREFERRED_TIME_WINDOW_LABELS: Record<PreferredTimeWindow, string> = {
   manha: "Manhã",
   tarde: "Tarde",
   noite: "Noite",
+};
+
+// Fase 4 do plano de adequação ao fluxo real de mercado — vocabulário
+// FECHADO idêntico ao backend (ver TIPO_PACIENTE_VALUES em
+// app/models/appointment.py).
+const TIPO_PACIENTE_LABELS: Record<TipoPaciente, string> = {
+  ambulatorial: "Ambulatorial",
+  internacao: "Internação",
+  pronto_socorro: "Pronto-socorro",
 };
 
 // "Mapa de Dados Insighta" — Domínio Pós-atendimento (Onda 1).
@@ -286,18 +298,22 @@ function CreateAppointmentModal({
   onClose,
   patients,
   professionals,
+  locais,
   preselectedPatientId,
 }: {
   isOpen: boolean;
   onClose: () => void;
   patients: Patient[];
   professionals: Professional[];
+  locais: Local[];
   preselectedPatientId: string;
 }) {
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
   const [patientId, setPatientId] = useState(preselectedPatientId);
   const [professionalId, setProfessionalId] = useState("");
+  const [localId, setLocalId] = useState("");
+  const [tipoPaciente, setTipoPaciente] = useState("");
   const [scheduledAt, setScheduledAt] = useState("");
   const [durationMinutes, setDurationMinutes] = useState("30");
   const [procedureCode, setProcedureCode] = useState("");
@@ -325,6 +341,8 @@ function CreateAppointmentModal({
 
   function resetAndClose() {
     setProfessionalId("");
+    setLocalId("");
+    setTipoPaciente("");
     setScheduledAt("");
     setDurationMinutes("30");
     setProcedureCode("");
@@ -339,6 +357,8 @@ function CreateAppointmentModal({
     mutation.mutate({
       patient_id: patientId,
       professional_id: professionalId || null,
+      local_id: localId || null,
+      tipo_paciente: (tipoPaciente || null) as TipoPaciente | null,
       scheduled_at: new Date(scheduledAt).toISOString(),
       duration_minutes: durationMinutes ? Number(durationMinutes) : null,
       procedure_code: procedureCode || null,
@@ -381,6 +401,31 @@ function CreateAppointmentModal({
             </option>
           ))}
         </SelectField>
+
+        {/* Fase 4 do plano de adequação ao fluxo real de mercado — ver
+            DECISÃO em app/sql/018_locais_tipo_paciente.sql (backend). */}
+        <div className="grid grid-cols-2 gap-3">
+          <SelectField label="Local (opcional)" value={localId} onChange={(e) => setLocalId(e.target.value)}>
+            <option value="">Não informado</option>
+            {locais.map((l) => (
+              <option key={l.id} value={l.id}>
+                {l.nome}
+              </option>
+            ))}
+          </SelectField>
+          <SelectField
+            label="Tipo de paciente (opcional)"
+            value={tipoPaciente}
+            onChange={(e) => setTipoPaciente(e.target.value)}
+          >
+            <option value="">Não informado</option>
+            {Object.entries(TIPO_PACIENTE_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </SelectField>
+        </div>
 
         <div className="grid grid-cols-2 gap-3">
           <TextField
@@ -454,16 +499,20 @@ function RegisterVisitModal({
   isOpen,
   onClose,
   appointment,
+  locais,
 }: {
   isOpen: boolean;
   onClose: () => void;
   appointment: Appointment | null;
+  locais: Local[];
 }) {
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
   const [status, setStatus] = useState("");
   const [procedureCode, setProcedureCode] = useState("");
   const [cidCode, setCidCode] = useState("");
+  const [localId, setLocalId] = useState("");
+  const [tipoPaciente, setTipoPaciente] = useState("");
   const [addonOfferedProcedure, setAddonOfferedProcedure] = useState("");
   const [addonResult, setAddonResult] = useState<"" | "aceito" | "recusado">("");
 
@@ -472,6 +521,8 @@ function RegisterVisitModal({
     setStatus(appointment.status);
     setProcedureCode(appointment.procedure_code ?? "");
     setCidCode(appointment.cid_code ?? "");
+    setLocalId(appointment.local_id ?? "");
+    setTipoPaciente(appointment.tipo_paciente ?? "");
     setAddonOfferedProcedure(appointment.addon_offered_procedure ?? "");
     setAddonResult(appointment.addon_declined === null ? "" : appointment.addon_declined ? "recusado" : "aceito");
   }, [appointment]);
@@ -494,6 +545,8 @@ function RegisterVisitModal({
       status: status || null,
       procedure_code: procedureCode || null,
       cid_code: cidCode || null,
+      local_id: localId || null,
+      tipo_paciente: (tipoPaciente || null) as TipoPaciente | null,
       addon_offered_procedure: addonOfferedProcedure || null,
       addon_declined: addonResult === "" ? null : addonResult === "recusado",
     });
@@ -514,6 +567,30 @@ function RegisterVisitModal({
         <div className="grid grid-cols-2 gap-3">
           <TextField label="Código do procedimento" value={procedureCode} onChange={(e) => setProcedureCode(e.target.value)} />
           <TextField label="CID" value={cidCode} onChange={(e) => setCidCode(e.target.value)} />
+        </div>
+        {/* Fase 4 do plano de adequação ao fluxo real de mercado — nem
+            sempre conhecido na hora de marcar, editável aqui também. */}
+        <div className="grid grid-cols-2 gap-3">
+          <SelectField label="Local (opcional)" value={localId} onChange={(e) => setLocalId(e.target.value)}>
+            <option value="">Não informado</option>
+            {locais.map((l) => (
+              <option key={l.id} value={l.id}>
+                {l.nome}
+              </option>
+            ))}
+          </SelectField>
+          <SelectField
+            label="Tipo de paciente (opcional)"
+            value={tipoPaciente}
+            onChange={(e) => setTipoPaciente(e.target.value)}
+          >
+            <option value="">Não informado</option>
+            {Object.entries(TIPO_PACIENTE_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </SelectField>
         </div>
         <TextField
           label="Procedimento/serviço oferecido no checkout (opcional)"
@@ -606,6 +683,11 @@ function SatisfactionLinkModal({
   );
 }
 
+// Direito de eliminação do titular (LGPD art. 18, VI) — mesmo RBAC do
+// backend (patients.py/_CAN_ANONYMIZE: só admin/owner, ação irreversível
+// demais para ficar aberta à recepção).
+const _CAN_ANONYMIZE_ROLES = new Set(["admin", "owner"]);
+
 export function AppointmentsPage() {
   const [selectedPatientId, setSelectedPatientId] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -613,12 +695,23 @@ export function AppointmentsPage() {
   const [isEditPatientModalOpen, setIsEditPatientModalOpen] = useState(false);
   const [registeringAppointment, setRegisteringAppointment] = useState<Appointment | null>(null);
   const [satisfactionLink, setSatisfactionLink] = useState<SatisfactionLinkResponse | null>(null);
-  const { showError: showSatisfactionLinkError } = useToast();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const { showSuccess, showError: showSatisfactionLinkError } = useToast();
 
   const satisfactionLinkMutation = useMutation({
     mutationFn: (appointmentId: string) =>
       apiClient.post<SatisfactionLinkResponse>(`/api/v1/appointments/${appointmentId}/satisfaction-link`),
     onSuccess: (data) => setSatisfactionLink(data),
+    onError: (err) => showSatisfactionLinkError(getApiErrorMessage(err)),
+  });
+
+  const anonymizeMutation = useMutation({
+    mutationFn: (patientId: string) => apiClient.post<Patient>(`/api/v1/patients/${patientId}/anonymize`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["patients"] });
+      showSuccess("Paciente anonimizado.");
+    },
     onError: (err) => showSatisfactionLinkError(getApiErrorMessage(err)),
   });
 
@@ -634,10 +727,20 @@ export function AppointmentsPage() {
     queryFn: () => apiClient.get<PaginatedResponse<Patient>>("/api/v1/patients?limit=200&offset=0"),
   });
   const patients = patientsPage?.items;
+  const selectedPatient = (patients ?? []).find((p) => p.id === selectedPatientId) ?? null;
+  const canAnonymize = Boolean(user && _CAN_ANONYMIZE_ROLES.has(user.role));
 
   const { data: professionals } = useQuery({
     queryKey: ["professionals"],
     queryFn: () => apiClient.get<Professional[]>("/api/v1/professionals"),
+  });
+
+  // Fase 4 do plano de adequação ao fluxo real de mercado — ativos
+  // apenas (mesmo critério de /professionals acima: não faz sentido
+  // oferecer um local desativado num agendamento novo).
+  const { data: locais } = useQuery({
+    queryKey: ["locais"],
+    queryFn: () => apiClient.get<Local[]>("/api/v1/locais"),
   });
 
   const {
@@ -702,6 +805,35 @@ export function AppointmentsPage() {
             <Pencil size={12} />
             Dados de contato
           </Button>
+        )}
+        {/* Direito de eliminação do titular (LGPD art. 18, VI) — ver
+            DECISÃO em PatientService.anonymize_patient (backend):
+            irreversível, admin/owner apenas. Um paciente já anonimizado
+            não mostra o botão de novo (não existe endpoint de
+            "desanonimizar"). */}
+        {selectedPatientId && canAnonymize && selectedPatient && !selectedPatient.anonymized_at && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="xs"
+            className="mb-4 flex items-center gap-1.5 text-denied"
+            disabled={anonymizeMutation.isPending}
+            onClick={() => {
+              if (
+                confirm(
+                  `Anonimizar ${selectedPatient.full_name}? Isso apaga nome, CPF e data de nascimento permanentemente — não pode ser desfeito.`
+                )
+              ) {
+                anonymizeMutation.mutate(selectedPatient.id);
+              }
+            }}
+          >
+            <ShieldOff size={12} />
+            Anonimizar (LGPD)
+          </Button>
+        )}
+        {selectedPatientId && selectedPatient?.anonymized_at && (
+          <span className="mb-4 text-2xs text-ink-faint">Paciente anonimizado em {formatDateTime(selectedPatient.anonymized_at)}.</span>
         )}
       </div>
 
@@ -795,6 +927,7 @@ export function AppointmentsPage() {
         onClose={() => setIsModalOpen(false)}
         patients={patients ?? []}
         professionals={professionals ?? []}
+        locais={locais ?? []}
         preselectedPatientId={selectedPatientId}
       />
 
@@ -816,6 +949,7 @@ export function AppointmentsPage() {
         isOpen={registeringAppointment !== null}
         onClose={() => setRegisteringAppointment(null)}
         appointment={registeringAppointment}
+        locais={locais ?? []}
       />
 
       <SatisfactionLinkModal link={satisfactionLink} onClose={() => setSatisfactionLink(null)} />

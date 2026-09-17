@@ -3,13 +3,28 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { AppointmentsPage } from "@/pages/AppointmentsPage";
 import { apiClient } from "@/lib/api-client";
+import { useAuth } from "@/context/AuthContext";
 import { renderWithProviders } from "@/test/utils";
-import type { Appointment, Patient } from "@/lib/types";
+import type { Appointment, CurrentUser, Local, Patient } from "@/lib/types";
 
 vi.mock("@/lib/api-client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api-client")>();
   return { ...actual, apiClient: { ...actual.apiClient, get: vi.fn(), post: vi.fn(), patch: vi.fn() } };
 });
+
+// AppointmentsPage usa useAuth() pra decidir se mostra o botão de
+// anonimização LGPD (admin/owner apenas) — AuthContext não é montado de
+// verdade nos testes de página (ver DECISÃO em test/utils.tsx).
+vi.mock("@/context/AuthContext", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/context/AuthContext")>();
+  return { ...actual, useAuth: vi.fn() };
+});
+
+function mockUser(role: CurrentUser["role"] = "owner") {
+  vi.mocked(useAuth).mockReturnValue({
+    user: { tenant_id: "t1", id: "u1", role } as unknown as CurrentUser,
+  } as unknown as ReturnType<typeof useAuth>);
+}
 
 function makePatient(overrides: Partial<Patient> = {}): Patient {
   return {
@@ -19,6 +34,7 @@ function makePatient(overrides: Partial<Patient> = {}): Patient {
     birth_date: null,
     acquisition_source: null,
     created_at: "2026-01-01T00:00:00Z",
+    anonymized_at: null,
     referred_by_patient_id: null,
     communication_consent: null,
     preferred_time_window: null,
@@ -35,6 +51,8 @@ function makeAppointment(overrides: Partial<Appointment> = {}): Appointment {
     patient_id: "p1",
     insurance_plan_id: null,
     professional_id: null,
+    local_id: null,
+    tipo_paciente: null,
     scheduled_at: "2026-06-01T10:00:00Z",
     duration_minutes: 30,
     status: "scheduled",
@@ -56,10 +74,12 @@ function makeAppointment(overrides: Partial<Appointment> = {}): Appointment {
   };
 }
 
-function mockGet(patients: Patient[], appointments: Appointment[] = []) {
+function mockGet(patients: Patient[], appointments: Appointment[] = [], locais: Local[] = []) {
+  mockUser();
   vi.mocked(apiClient.get).mockImplementation((path: string) => {
     if (path.startsWith("/api/v1/patients")) return Promise.resolve({ items: patients, total: patients.length, limit: 200, offset: 0 } as never);
     if (path.startsWith("/api/v1/professionals")) return Promise.resolve([] as never);
+    if (path.startsWith("/api/v1/locais")) return Promise.resolve(locais as never);
     if (path.startsWith("/api/v1/appointments/by-patient")) return Promise.resolve(appointments as never);
     return Promise.reject(new Error(`Sem mock para ${path}`));
   });
@@ -222,6 +242,8 @@ describe("AppointmentsPage — registrar atendimento (checkout + funil de upsell
         status: "completed",
         procedure_code: "10101012",
         cid_code: "J06",
+        local_id: null,
+        tipo_paciente: null,
         addon_offered_procedure: "Limpeza de pele",
         addon_declined: false,
       })
@@ -334,5 +356,126 @@ describe("AppointmentsPage — link de avaliação de satisfação", () => {
 
     expect(await screen.findByText("4/5")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Link de avaliação/ })).not.toBeInTheDocument();
+  });
+});
+
+// Fase 4 do plano de adequação ao fluxo real de mercado (Agendamento ->
+// Atendimento -> Faturamento) — ver DECISÃO em
+// app/sql/018_locais_tipo_paciente.sql (backend): local_id/tipo_paciente
+// já existiam prontos no schema de Appointment, mas nenhum formulário
+// os oferecia.
+describe("AppointmentsPage — Local e Tipo de paciente (Fase 4)", () => {
+  const locais: Local[] = [{ id: "local-1", nome: "Unidade Centro", is_active: true, created_at: "2026-01-01T00:00:00Z" }];
+
+  it("envia local_id e tipo_paciente ao agendar uma nova consulta", async () => {
+    mockGet([makePatient()], [], locais);
+    vi.mocked(apiClient.post).mockResolvedValue({ id: "a1", patient_id: "p1", no_show_risk_level: null });
+    const user = userEvent.setup();
+
+    renderWithProviders(<AppointmentsPage />);
+    await waitFor(() => expect(screen.getByRole("button", { name: /Nova consulta/ })).not.toBeDisabled());
+    await user.click(screen.getByRole("button", { name: /Nova consulta/ }));
+
+    await user.selectOptions(await screen.findByLabelText(/Paciente/), "p1");
+    await user.type(screen.getByLabelText(/Data e horário/), "2026-06-01T10:00");
+    await user.selectOptions(screen.getByLabelText(/^Local/), "local-1");
+    await user.selectOptions(screen.getByLabelText(/Tipo de paciente/), "pronto_socorro");
+
+    await user.click(screen.getByRole("button", { name: "Agendar consulta" }));
+
+    await waitFor(() =>
+      expect(apiClient.post).toHaveBeenCalledWith(
+        "/api/v1/appointments",
+        expect.objectContaining({ local_id: "local-1", tipo_paciente: "pronto_socorro" })
+      )
+    );
+  });
+
+  it("edita local_id e tipo_paciente ao registrar o atendimento", async () => {
+    mockGet([makePatient()], [makeAppointment()], locais);
+    vi.mocked(apiClient.patch).mockResolvedValue(makeAppointment());
+    const user = userEvent.setup();
+
+    renderWithProviders(<AppointmentsPage />);
+    await waitFor(() => expect(screen.getByLabelText("Ver consultas do paciente")).not.toBeDisabled());
+    await user.selectOptions(screen.getByLabelText("Ver consultas do paciente"), "p1");
+    await user.click(await screen.findByRole("button", { name: /Registrar atendimento/ }));
+
+    await user.selectOptions(await screen.findByLabelText(/^Local/), "local-1");
+    await user.selectOptions(screen.getByLabelText(/Tipo de paciente/), "ambulatorial");
+    await user.click(screen.getByRole("button", { name: "Salvar" }));
+
+    await waitFor(() =>
+      expect(apiClient.patch).toHaveBeenCalledWith(
+        "/api/v1/appointments/a1",
+        expect.objectContaining({ local_id: "local-1", tipo_paciente: "ambulatorial" })
+      )
+    );
+  });
+});
+
+// Direito de eliminação do titular (LGPD art. 18, VI) — ver DECISÃO em
+// PatientService.anonymize_patient (backend): admin/owner apenas,
+// irreversível, com confirmação explícita.
+describe("AppointmentsPage — anonimização de paciente (LGPD)", () => {
+  it("admin/owner vê o botão, confirma e chama POST /patients/{id}/anonymize", async () => {
+    mockGet([makePatient({ id: "p1", full_name: "Paciente LGPD" })]);
+    mockUser("admin");
+    vi.mocked(apiClient.post).mockResolvedValue(makePatient({ anonymized_at: "2026-06-01T00:00:00Z" }));
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+    const user = userEvent.setup();
+
+    renderWithProviders(<AppointmentsPage />);
+    await waitFor(() => expect(screen.getByLabelText("Ver consultas do paciente")).not.toBeDisabled());
+    await user.selectOptions(screen.getByLabelText("Ver consultas do paciente"), "p1");
+
+    await user.click(await screen.findByRole("button", { name: /Anonimizar/ }));
+
+    expect(confirmSpy).toHaveBeenCalledWith(expect.stringContaining("Paciente LGPD"));
+    await waitFor(() => expect(apiClient.post).toHaveBeenCalledWith("/api/v1/patients/p1/anonymize"));
+  });
+
+  it("não anonimiza se o usuário cancelar a confirmação", async () => {
+    // Limpa o histórico de chamadas dos testes anteriores — este arquivo
+    // não usa clearMocks global (vite.config.ts), o spy é compartilhado
+    // entre todos os testes do describe.
+    vi.mocked(apiClient.post).mockClear();
+    mockGet([makePatient()]);
+    mockUser("owner");
+    vi.spyOn(window, "confirm").mockReturnValue(false);
+    const user = userEvent.setup();
+
+    renderWithProviders(<AppointmentsPage />);
+    await waitFor(() => expect(screen.getByLabelText("Ver consultas do paciente")).not.toBeDisabled());
+    await user.selectOptions(screen.getByLabelText("Ver consultas do paciente"), "p1");
+
+    await user.click(await screen.findByRole("button", { name: /Anonimizar/ }));
+
+    expect(apiClient.post).not.toHaveBeenCalled();
+  });
+
+  it("atendimento não vê o botão de anonimizar", async () => {
+    mockGet([makePatient()]);
+    mockUser("atendimento");
+    const user = userEvent.setup();
+
+    renderWithProviders(<AppointmentsPage />);
+    await waitFor(() => expect(screen.getByLabelText("Ver consultas do paciente")).not.toBeDisabled());
+    await user.selectOptions(screen.getByLabelText("Ver consultas do paciente"), "p1");
+
+    expect(screen.queryByRole("button", { name: /Anonimizar/ })).not.toBeInTheDocument();
+  });
+
+  it("um paciente já anonimizado mostra a data em vez do botão", async () => {
+    mockGet([makePatient({ anonymized_at: "2026-06-01T00:00:00Z" })]);
+    mockUser("owner");
+    const user = userEvent.setup();
+
+    renderWithProviders(<AppointmentsPage />);
+    await waitFor(() => expect(screen.getByLabelText("Ver consultas do paciente")).not.toBeDisabled());
+    await user.selectOptions(screen.getByLabelText("Ver consultas do paciente"), "p1");
+
+    expect(await screen.findByText(/Paciente anonimizado em/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Anonimizar/ })).not.toBeInTheDocument();
   });
 });
