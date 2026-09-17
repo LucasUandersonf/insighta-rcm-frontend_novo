@@ -24,6 +24,7 @@ const ForgotPasswordPage = lazy(() => import("@/pages/ForgotPasswordPage").then(
 const ResetPasswordPage = lazy(() => import("@/pages/ResetPasswordPage").then((m) => ({ default: m.ResetPasswordPage })));
 const HomePage = lazy(() => import("@/pages/HomePage").then((m) => ({ default: m.HomePage })));
 const DashboardPage = lazy(() => import("@/pages/DashboardPage").then((m) => ({ default: m.DashboardPage })));
+const AgendaRiscoPage = lazy(() => import("@/pages/AgendaRiscoPage").then((m) => ({ default: m.AgendaRiscoPage })));
 const ExecutiveOverviewPage = lazy(() => import("@/pages/ExecutiveOverviewPage").then((m) => ({ default: m.ExecutiveOverviewPage })));
 const ContractsPage = lazy(() => import("@/pages/ContractsPage").then((m) => ({ default: m.ContractsPage })));
 const DenialAppealsPage = lazy(() => import("@/pages/DenialAppealsPage").then((m) => ({ default: m.DenialAppealsPage })));
@@ -123,6 +124,9 @@ export default function App() {
                 </Route>
                 <Route element={<RoleProtectedRoute allowedRoles={["owner", "admin", "financeiro", "auditor"]} />}>
                   <Route path="/decisao" element={<ExecutiveOverviewPage />} />
+                  {/* Roadmap "Rumo à Nota 9" (Fase 2) — mesmo RBAC de /decisao
+                      (o endpoint que alimenta esta tela usa o mesmo _CAN_VIEW). */}
+                  <Route path="/agenda-risco" element={<AgendaRiscoPage />} />
                   <Route path="/contracts" element={<ContractsPage />} />
                   <Route path="/denial-appeals" element={<DenialAppealsPage />} />
                 </Route>

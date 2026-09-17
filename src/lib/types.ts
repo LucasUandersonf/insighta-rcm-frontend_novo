@@ -441,6 +441,10 @@ export interface UpcomingRiskAppointment {
   patient_full_name: string;
   scheduled_at: string;
   risk_level: "medio" | "alto";
+  // Tela "Agenda de risco" (GET /analytics/upcoming-risk-appointments) —
+  // null no card resumido de agenda-metrics (que não busca isso), sempre
+  // presente (podendo ser null) na versão paginada.
+  professional_name?: string | null;
 }
 
 export interface AgendaMetrics {

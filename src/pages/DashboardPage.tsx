@@ -10,6 +10,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { PeriodWindowSelect } from "@/components/ui/PeriodWindowSelect";
 import { Tabs, TabPanel } from "@/components/ui/Tabs";
 import { AgendaAnalyticsPanel } from "@/components/dashboard/AgendaAnalyticsPanel";
+import { MediumRiskBillingsPanel } from "@/components/dashboard/MediumRiskBillingsPanel";
 import { PlanLossRankingPanel } from "@/components/dashboard/PlanLossRankingPanel";
 import { ContractUtilizationPanel } from "@/components/dashboard/ContractUtilizationPanel";
 import { DenialRiskDistributionPanel } from "@/components/dashboard/DenialRiskDistributionPanel";
@@ -410,6 +411,8 @@ export function DashboardPage() {
         </Panel>
       </section>
       )}
+
+      {canViewBillingQueue && <MediumRiskBillingsPanel />}
       </div>
       </TabPanel>
       )}
