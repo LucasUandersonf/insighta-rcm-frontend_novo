@@ -34,6 +34,10 @@ const STEP_CONTENT: Partial<Record<string, { title: string; description: string 
     title: "Consultas",
     description: "A agenda da clínica, já com o risco de falta calculado para cada paciente a partir do histórico dele.",
   },
+  "/pacientes": {
+    title: "Ficha do paciente",
+    description: "Busque por nome ou CPF e veja o histórico completo: agendamentos, atendimentos e faturamentos, tudo numa tela.",
+  },
   "/contracts": {
     title: "Convênios e contratos",
     description: "As tabelas de preço por convênio — é a régua que o motor de glosa usa para conferir cada faturamento importado.",

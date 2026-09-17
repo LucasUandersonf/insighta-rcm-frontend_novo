@@ -445,6 +445,10 @@ export interface UpcomingRiskAppointment {
   // null no card resumido de agenda-metrics (que não busca isso), sempre
   // presente (podendo ser null) na versão paginada.
   professional_name?: string | null;
+  // Ficha do Paciente (Fase 4) — idem professional_name: null no card
+  // resumido, presente na versão paginada, pra linkar cada linha pra
+  // /pacientes?patient_id=....
+  patient_id?: string | null;
 }
 
 export interface AgendaMetrics {
@@ -884,6 +888,47 @@ export interface PatientCreateRequest {
   full_name: string;
   cpf?: string | null;
   birth_date?: string | null;
+}
+
+// Ficha do Paciente (Roadmap "Rumo à Nota 9", Fase 4) — GET /patients/search
+// e GET /patients/{id}/ficha, ver app/schemas/patient.py.
+export interface PatientSearchItem {
+  id: string;
+  full_name: string;
+  cpf: string | null;
+}
+
+export interface PatientFichaBilling {
+  id: string;
+  charged_value: number;
+  status: string;
+  denial_risk_level: "low" | "medium" | "high";
+  created_at: string;
+}
+
+export interface PatientFichaAppointment {
+  id: string;
+  scheduled_at: string;
+  status: string;
+  professional_name: string | null;
+  insurance_plan_name: string | null;
+  no_show_risk_level: NoShowRiskLevel | null;
+  billings: PatientFichaBilling[];
+}
+
+export interface PatientFichaSummary {
+  total_appointments: number;
+  no_show_count: number;
+  no_show_rate: number | null;
+  total_billed: number;
+  total_value_saved: number;
+  last_visit_at: string | null;
+}
+
+export interface PatientFicha {
+  patient: Patient;
+  summary: PatientFichaSummary;
+  appointments: PatientFichaAppointment[];
 }
 
 // --- Profissionais (app/schemas/professional.py) ---

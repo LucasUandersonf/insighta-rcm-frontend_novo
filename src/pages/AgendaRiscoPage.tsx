@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
 import { CalendarClock } from "lucide-react";
 import { Panel, EmptyState, LoadingState, ErrorState } from "@/components/ui/Panel";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -74,7 +75,15 @@ export function AgendaRiscoPage() {
                   key={item.appointment_id}
                   className="border-b border-border-hairline last:border-0 transition-colors hover:bg-canvas-raised/60"
                 >
-                  <td className="px-4 py-2.5 text-ink">{item.patient_full_name}</td>
+                  <td className="px-4 py-2.5 text-ink">
+                    {item.patient_id ? (
+                      <Link to={`/pacientes?patient_id=${item.patient_id}`} className="hover:underline hover:text-accent">
+                        {item.patient_full_name}
+                      </Link>
+                    ) : (
+                      item.patient_full_name
+                    )}
+                  </td>
                   <td className="tabular px-4 py-2.5 font-mono text-ink-muted">{formatDayAndTime(item.scheduled_at)}</td>
                   <td className="px-4 py-2.5 text-ink-muted">{item.professional_name ?? "—"}</td>
                   <td className="px-4 py-2.5 text-right">

@@ -37,6 +37,32 @@ describe("AgendaRiscoPage", () => {
     expect(await screen.findByText("Maria Silva")).toBeInTheDocument();
     expect(screen.getByText("Dra. Ana")).toBeInTheDocument();
     expect(screen.getByText("Alto")).toBeInTheDocument();
+    // Sem patient_id, o nome não é um link — nunca aponta pra uma ficha
+    // que não tem como abrir.
+    expect(screen.queryByRole("link", { name: "Maria Silva" })).not.toBeInTheDocument();
+  });
+
+  it("com patient_id, o nome do paciente linka pra Ficha do Paciente (Fase 4)", async () => {
+    vi.mocked(apiClient.get).mockResolvedValue(
+      page({
+        items: [
+          {
+            appointment_id: "a1",
+            patient_id: "p1",
+            patient_full_name: "Maria Silva",
+            scheduled_at: "2026-09-20T14:30:00Z",
+            risk_level: "alto",
+            professional_name: "Dra. Ana",
+          },
+        ],
+        total: 1,
+      }) as never
+    );
+
+    renderWithProviders(<AgendaRiscoPage />);
+
+    const link = await screen.findByRole("link", { name: "Maria Silva" });
+    expect(link).toHaveAttribute("href", "/pacientes?patient_id=p1");
   });
 
   it("sem profissional vinculado, mostra travessão em vez de vazio", async () => {

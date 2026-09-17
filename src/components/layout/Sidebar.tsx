@@ -14,6 +14,7 @@ import {
   Send,
   ShieldAlert,
   UploadCloud,
+  UserRound,
   Users,
   Wallet,
   type LucideIcon,
@@ -48,6 +49,10 @@ export const NAV_ITEMS: NavItem[] = [
   { to: "/decisao", label: "Sala de Comando", icon: Gauge, roles: ["owner", "admin", "financeiro", "auditor"] },
   { to: "/painel", label: "Painel", icon: LayoutDashboard },
   { to: "/appointments", label: "Consultas", icon: CalendarCheck },
+  // Ficha do Paciente (Roadmap "Rumo à Nota 9", Fase 4) — mesmo RBAC de
+  // GET /patients/search (todo papel, sem "atendimento" de fora — é o
+  // papel que mais precisa disto no dia a dia da recepção).
+  { to: "/pacientes", label: "Ficha do paciente", icon: UserRound },
   // Configuração da grade semanal que alimenta Agenda & Capacidade — não
   // é o CRUD operacional de Profissionais removido no reposicionamento
   // de produto (ver App.tsx); mesmo RBAC de ação administrativa restrita

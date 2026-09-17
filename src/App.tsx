@@ -25,6 +25,7 @@ const ResetPasswordPage = lazy(() => import("@/pages/ResetPasswordPage").then((m
 const HomePage = lazy(() => import("@/pages/HomePage").then((m) => ({ default: m.HomePage })));
 const DashboardPage = lazy(() => import("@/pages/DashboardPage").then((m) => ({ default: m.DashboardPage })));
 const AgendaRiscoPage = lazy(() => import("@/pages/AgendaRiscoPage").then((m) => ({ default: m.AgendaRiscoPage })));
+const PatientFichaPage = lazy(() => import("@/pages/PatientFichaPage").then((m) => ({ default: m.PatientFichaPage })));
 const ExecutiveOverviewPage = lazy(() => import("@/pages/ExecutiveOverviewPage").then((m) => ({ default: m.ExecutiveOverviewPage })));
 const ContractsPage = lazy(() => import("@/pages/ContractsPage").then((m) => ({ default: m.ContractsPage })));
 const DenialAppealsPage = lazy(() => import("@/pages/DenialAppealsPage").then((m) => ({ default: m.DenialAppealsPage })));
@@ -106,6 +107,11 @@ export default function App() {
                 <Route path="/" element={<HomePage />} />
                 <Route path="/painel" element={<DashboardPage />} />
                 <Route path="/appointments" element={<AppointmentsPage />} />
+                {/* Ficha do Paciente (Roadmap "Rumo à Nota 9", Fase 4) — mesmo
+                    RBAC de GET /patients/search e /patients/{id}/ficha
+                    (atendimento/admin/owner/financeiro/auditor = todo papel),
+                    por isso sem RoleProtectedRoute. */}
+                <Route path="/pacientes" element={<PatientFichaPage />} />
                 {/* O CRUD operacional de Pacientes foi removido por decisão de produto
                     — o SaaS opera exclusivamente sobre dados consolidados do ERP
                     externo (ver auditoria Go-Live). /professionals é diferente:
