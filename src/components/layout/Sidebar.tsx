@@ -23,6 +23,7 @@ import {
   UserRound,
   Users,
   Wallet,
+  X,
   type LucideIcon,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
@@ -116,7 +117,21 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
   { to: "/admin/audit-log", label: "Logs de auditoria", icon: ScrollText, roles: ["owner", "admin", "auditor"] },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  /** Achado da Auditoria de Prontidão v1: a sidebar era fixa (w-60, sem
+   * breakpoint nenhum) — quebrava em tablet, o dispositivo mais comum na
+   * recepção de clínica. Abaixo de `xl` (1280px — cobre tablet em
+   * retrato E paisagem, não só celular) ela vira um drawer fora do fluxo
+   * normal, escondido por padrão e controlado pelo hambúrguer no TopBar
+   * (ver AppShell.tsx, dono do estado). Em `xl` pra cima, sempre visível
+   * — comportamento idêntico ao de sempre, essas duas props são no-op
+   * (por isso ambas são opcionais: standalone, como em Sidebar.test.tsx,
+   * continua renderizando igual). */
+  isOpenOnMobile?: boolean;
+  onCloseMobile?: () => void;
+}
+
+export function Sidebar({ isOpenOnMobile = false, onCloseMobile }: SidebarProps) {
   const { user } = useAuth();
 
   const visibleItems = NAV_ITEMS.filter((item) => !item.roles || (user && item.roles.includes(user.role)));
@@ -132,6 +147,11 @@ export function Sidebar() {
           // reaproveita o próprio `to` como chave, não precisa de um id
           // separado por item.
           data-tour-id={item.to}
+          // No drawer mobile/tablet, navegar fecha o menu sozinho — sem
+          // isso o usuário teria que tocar no X toda vez, um passo extra
+          // que ninguém espera num menu de navegação. Em xl+ (sidebar
+          // estática) onCloseMobile é undefined, então isto é um no-op.
+          onClick={onCloseMobile}
           className={({ isActive }) =>
             cn(
               "relative flex items-center gap-2.5 rounded-sm py-2 pl-3 pr-3 text-sm transition-colors",
@@ -158,15 +178,46 @@ export function Sidebar() {
   }
 
   return (
-    <nav className="w-60 shrink-0 border-r border-border-hairline bg-glass px-3 py-5 backdrop-blur-xl">
-      <ul className="space-y-0.5">{visibleItems.map((item) => renderItem(item, "main"))}</ul>
-
-      {visibleAdminItems.length > 0 && (
-        <>
-          <p className="mb-1.5 mt-6 px-3 text-2xs font-medium uppercase tracking-[0.06em] text-ink-faint">Administração</p>
-          <ul className="space-y-0.5">{visibleAdminItems.map((item) => renderItem(item, "admin"))}</ul>
-        </>
+    <>
+      {/* Backdrop do drawer mobile/tablet — só existe abaixo de `xl` e só
+          quando aberto; fecha ao tocar fora, mesmo padrão de Modal.tsx. */}
+      {isOpenOnMobile && (
+        <div
+          data-testid="mobile-nav-backdrop"
+          className="fixed inset-0 z-40 bg-canvas/70 backdrop-blur-sm xl:hidden"
+          aria-hidden="true"
+          onClick={onCloseMobile}
+        />
       )}
-    </nav>
+      <nav
+        className={cn(
+          "fixed inset-y-0 left-0 z-50 w-72 shrink-0 overflow-y-auto border-r border-border-hairline bg-glass px-3 py-5 backdrop-blur-xl transition-transform duration-200 ease-out",
+          "xl:relative xl:inset-y-auto xl:z-auto xl:w-60 xl:translate-x-0 xl:transition-none",
+          isOpenOnMobile ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
+        <div className="mb-2 flex items-center justify-between px-1 xl:hidden">
+          <span className="font-serif text-sm font-semibold tracking-premium text-ink">Insighta RCM</span>
+          <button
+            type="button"
+            onClick={onCloseMobile}
+            aria-label="Fechar menu"
+            title="Fechar menu"
+            className="flex h-8 w-8 items-center justify-center rounded-full border border-border-subtle text-ink-muted transition-colors hover:border-accent/40 hover:text-ink"
+          >
+            <X aria-hidden size={16} strokeWidth={2} />
+          </button>
+        </div>
+
+        <ul className="space-y-0.5">{visibleItems.map((item) => renderItem(item, "main"))}</ul>
+
+        {visibleAdminItems.length > 0 && (
+          <>
+            <p className="mb-1.5 mt-6 px-3 text-2xs font-medium uppercase tracking-[0.06em] text-ink-faint">Administração</p>
+            <ul className="space-y-0.5">{visibleAdminItems.map((item) => renderItem(item, "admin"))}</ul>
+          </>
+        )}
+      </nav>
+    </>
   );
 }
