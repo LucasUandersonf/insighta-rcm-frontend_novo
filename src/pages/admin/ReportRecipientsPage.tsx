@@ -4,6 +4,7 @@ import { AlertTriangle, Plus, Send, Zap } from "lucide-react";
 import { Panel, EmptyState, LoadingState, ErrorState } from "@/components/ui/Panel";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { TextField } from "@/components/ui/FormField";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Badge } from "@/components/ui/Badge";
@@ -171,6 +172,7 @@ export function ReportRecipientsPage() {
   const { showSuccess, showError } = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [recipientToDelete, setRecipientToDelete] = useState<ReportRecipient | null>(null);
 
   const { data: recipients, isLoading, error, refetch } = useQuery({
     queryKey: ["report-recipients"],
@@ -194,6 +196,7 @@ export function ReportRecipientsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["report-recipients"] });
       showSuccess("Destinatário removido.");
+      setRecipientToDelete(null);
     },
     onError: (err) => showError(getApiErrorMessage(err)),
   });
@@ -310,9 +313,7 @@ export function ReportRecipientsPage() {
                         size="xs"
                         className="text-denied"
                         disabled={deleteMutation.isPending}
-                        onClick={() => {
-                          if (confirm(`Remover ${r.name} da lista de destinatários?`)) deleteMutation.mutate(r.id);
-                        }}
+                        onClick={() => setRecipientToDelete(r)}
                       >
                         Remover
                       </Button>
@@ -337,6 +338,15 @@ export function ReportRecipientsPage() {
           setEditingId(null);
         }}
         editing={editing}
+      />
+
+      <ConfirmDialog
+        isOpen={!!recipientToDelete}
+        title="Remover destinatário"
+        message={recipientToDelete ? `${recipientToDelete.name} deixará de receber o relatório semanal e o alerta de risco de falta. Não pode ser desfeito.` : ""}
+        onConfirm={() => recipientToDelete && deleteMutation.mutate(recipientToDelete.id)}
+        onCancel={() => setRecipientToDelete(null)}
+        isConfirming={deleteMutation.isPending}
       />
     </div>
   );

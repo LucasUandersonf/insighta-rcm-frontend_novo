@@ -5,6 +5,7 @@ import { Panel, EmptyState, LoadingState, ErrorState } from "@/components/ui/Pan
 import { Button } from "@/components/ui/Button";
 import { Badge, type BadgeTone } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { SelectField } from "@/components/ui/FormField";
 import { Pagination } from "@/components/ui/Pagination";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -118,6 +119,7 @@ function LoteDetailModal({ lote, planName, onClose }: { lote: Lote | null; planN
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
   const isAberto = lote?.status === "aberto";
+  const [guiaToRemove, setGuiaToRemove] = useState<Guia | null>(null);
 
   const guiasQuery = useQuery({
     queryKey: ["lotes", lote?.id, "guias"],
@@ -151,6 +153,7 @@ function LoteDetailModal({ lote, planName, onClose }: { lote: Lote | null; planN
     onSuccess: () => {
       invalidateLote();
       showSuccess("Guia removida do lote.");
+      setGuiaToRemove(null);
     },
     onError: (err) => showError(getApiErrorMessage(err)),
   });
@@ -189,7 +192,7 @@ function LoteDetailModal({ lote, planName, onClose }: { lote: Lote | null; planN
                 {g.numero ?? "Sem número"} <span className="text-2xs text-ink-faint">— {formatDate(g.created_at)}</span>
               </span>
               {isAberto && (
-                <Button variant="ghost" size="xs" onClick={() => removeMutation.mutate(g.id)} disabled={removeMutation.isPending}>
+                <Button variant="ghost" size="xs" onClick={() => setGuiaToRemove(g)} disabled={removeMutation.isPending}>
                   Remover
                 </Button>
               )}
@@ -238,6 +241,19 @@ function LoteDetailModal({ lote, planName, onClose }: { lote: Lote | null; planN
           </Button>
         )}
       </div>
+
+      <ConfirmDialog
+        isOpen={!!guiaToRemove}
+        title="Remover guia do lote"
+        message={
+          guiaToRemove
+            ? `A guia ${guiaToRemove.numero ?? "sem número"} volta a ficar disponível para atribuição em outro lote — não some do sistema, só sai deste lote.`
+            : ""
+        }
+        onConfirm={() => guiaToRemove && removeMutation.mutate(guiaToRemove.id)}
+        onCancel={() => setGuiaToRemove(null)}
+        isConfirming={removeMutation.isPending}
+      />
     </Modal>
   );
 }

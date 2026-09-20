@@ -4,6 +4,7 @@ import { Megaphone, Plus, Trash2 } from "lucide-react";
 import { Panel, EmptyState, LoadingState, ErrorState } from "@/components/ui/Panel";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { TextField, SelectField } from "@/components/ui/FormField";
 import { Pagination } from "@/components/ui/Pagination";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -137,6 +138,7 @@ function CreateMarketingSpendModal({ isOpen, onClose }: { isOpen: boolean; onClo
 export function MarketingSpendPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [entriesOffset, setEntriesOffset] = useState(0);
+  const [entryToDelete, setEntryToDelete] = useState<MarketingSpend | null>(null);
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
 
@@ -160,6 +162,7 @@ export function MarketingSpendPage() {
       queryClient.invalidateQueries({ queryKey: ["marketing-spend"] });
       queryClient.invalidateQueries({ queryKey: ["analytics", "marketing-channels"] });
       showSuccess("Lançamento removido.");
+      setEntryToDelete(null);
     },
     onError: (err) => showError(getApiErrorMessage(err)),
   });
@@ -207,7 +210,7 @@ export function MarketingSpendPage() {
                       variant="ghost"
                       size="xs"
                       className="flex items-center gap-1 text-denied"
-                      onClick={() => deleteMutation.mutate(e.id)}
+                      onClick={() => setEntryToDelete(e)}
                       disabled={deleteMutation.isPending}
                     >
                       <Trash2 size={12} />
@@ -230,6 +233,19 @@ export function MarketingSpendPage() {
       </Panel>
 
       <CreateMarketingSpendModal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} />
+
+      <ConfirmDialog
+        isOpen={!!entryToDelete}
+        title="Remover gasto de marketing"
+        message={
+          entryToDelete
+            ? `O lançamento de ${SOURCE_LABELS[entryToDelete.source]} (${formatCurrency(entryToDelete.amount_spent)}, ${formatDate(entryToDelete.spend_date)}) será removido e não pode ser desfeito.`
+            : ""
+        }
+        onConfirm={() => entryToDelete && deleteMutation.mutate(entryToDelete.id)}
+        onCancel={() => setEntryToDelete(null)}
+        isConfirming={deleteMutation.isPending}
+      />
     </div>
   );
 }

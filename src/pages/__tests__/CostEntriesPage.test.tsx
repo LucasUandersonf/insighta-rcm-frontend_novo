@@ -93,6 +93,8 @@ describe("CostEntriesPage — épico F3.1 do Plano Diretor", () => {
     await waitFor(() => expect(screen.getByText("Aluguel")).toBeInTheDocument());
 
     fireEvent.click(screen.getByRole("button", { name: /remover/i }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: /remover/i }));
     await waitFor(() => expect(apiClient.delete).toHaveBeenCalledWith("/api/v1/cost-entries/entry-1"));
   });
 });

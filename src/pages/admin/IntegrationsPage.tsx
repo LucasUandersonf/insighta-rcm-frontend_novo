@@ -4,6 +4,7 @@ import { Plug, Plus, Webhook } from "lucide-react";
 import { Panel, EmptyState, LoadingState, ErrorState } from "@/components/ui/Panel";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { TextField } from "@/components/ui/FormField";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Badge, type BadgeTone } from "@/components/ui/Badge";
@@ -204,6 +205,7 @@ function WebhooksSection() {
   const { showSuccess, showError } = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [createdWebhook, setCreatedWebhook] = useState<WebhookSubscriptionCreated | null>(null);
+  const [webhookToDelete, setWebhookToDelete] = useState<WebhookSubscription | null>(null);
 
   const { data: webhooks, isLoading, error } = useQuery({
     queryKey: ["webhook-subscriptions"],
@@ -222,6 +224,7 @@ function WebhooksSection() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["webhook-subscriptions"] });
       showSuccess("Webhook removido.");
+      setWebhookToDelete(null);
     },
     onError: (err) => showError(getApiErrorMessage(err)),
   });
@@ -272,7 +275,7 @@ function WebhooksSection() {
                     >
                       {w.active ? "Desativar" : "Ativar"}
                     </Button>
-                    <Button variant="ghost" size="xs" disabled={deleteMutation.isPending} onClick={() => deleteMutation.mutate(w.id)}>
+                    <Button variant="ghost" size="xs" disabled={deleteMutation.isPending} onClick={() => setWebhookToDelete(w)}>
                       Excluir
                     </Button>
                   </div>
@@ -285,6 +288,20 @@ function WebhooksSection() {
 
       <CreateWebhookModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onCreated={setCreatedWebhook} />
       <CreatedWebhookModal created={createdWebhook} onClose={() => setCreatedWebhook(null)} />
+
+      <ConfirmDialog
+        isOpen={!!webhookToDelete}
+        title="Excluir webhook"
+        message={
+          webhookToDelete
+            ? `O webhook "${webhookToDelete.name}" será excluído e o sistema externo que ele avisa (${webhookToDelete.url}) para de receber notificações imediatamente. Não pode ser desfeito.`
+            : ""
+        }
+        confirmLabel="Excluir"
+        onConfirm={() => webhookToDelete && deleteMutation.mutate(webhookToDelete.id)}
+        onCancel={() => setWebhookToDelete(null)}
+        isConfirming={deleteMutation.isPending}
+      />
     </Panel>
   );
 }
@@ -347,6 +364,7 @@ export function IntegrationsPage() {
   const { showSuccess, showError } = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [createdKey, setCreatedKey] = useState<ApiKeyCreated | null>(null);
+  const [keyToRevoke, setKeyToRevoke] = useState<ApiKey | null>(null);
 
   const { data: keys, isLoading, error } = useQuery({
     queryKey: ["api-keys"],
@@ -358,6 +376,7 @@ export function IntegrationsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["api-keys"] });
       showSuccess("Chave revogada.");
+      setKeyToRevoke(null);
     },
     onError: (err) => showError(getApiErrorMessage(err)),
   });
@@ -409,7 +428,7 @@ export function IntegrationsPage() {
                   </td>
                   <td className="px-4 py-2.5">
                     {!k.revoked_at && (
-                      <Button variant="ghost" size="xs" disabled={revokeMutation.isPending} onClick={() => revokeMutation.mutate(k.id)}>
+                      <Button variant="ghost" size="xs" disabled={revokeMutation.isPending} onClick={() => setKeyToRevoke(k)}>
                         Revogar
                       </Button>
                     )}
@@ -423,6 +442,20 @@ export function IntegrationsPage() {
 
       <CreateKeyModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onCreated={setCreatedKey} />
       <CreatedKeyModal created={createdKey} onClose={() => setCreatedKey(null)} />
+
+      <ConfirmDialog
+        isOpen={!!keyToRevoke}
+        title="Revogar chave de API"
+        message={
+          keyToRevoke
+            ? `A chave "${keyToRevoke.name}" (${keyToRevoke.key_prefix}…) será revogada — qualquer sistema externo que ainda a use para de conseguir enviar dado ao Insighta imediatamente. Não pode ser desfeito.`
+            : ""
+        }
+        confirmLabel="Revogar"
+        onConfirm={() => keyToRevoke && revokeMutation.mutate(keyToRevoke.id)}
+        onCancel={() => setKeyToRevoke(null)}
+        isConfirming={revokeMutation.isPending}
+      />
 
       <WebhooksSection />
       <WebhookDeliveriesSection />

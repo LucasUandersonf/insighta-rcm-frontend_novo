@@ -80,6 +80,8 @@ describe("MarketingSpendPage — achado do Dossiê Insighta RCM", () => {
     await waitFor(() => expect(screen.getByText("Campanha de Verão")).toBeInTheDocument());
 
     fireEvent.click(screen.getByRole("button", { name: /remover/i }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: /remover/i }));
     await waitFor(() => expect(apiClient.delete).toHaveBeenCalledWith("/api/v1/marketing-spend/spend-1"));
   });
 });
