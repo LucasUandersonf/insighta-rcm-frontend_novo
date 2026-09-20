@@ -6,6 +6,8 @@ import {
   storeToken,
   clearStoredToken,
   getStoredToken,
+  storeRefreshToken,
+  clearStoredRefreshToken,
   ApiError,
 } from "@/lib/api-client";
 import { decodeJwtPayload, isTokenExpired } from "@/lib/jwt";
@@ -70,6 +72,17 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
+/** Achado MÉDIO da Auditoria de Prontidão v1 — guarda access_token +
+ * refresh_token juntos, nos 6 pontos onde uma resposta de autenticação
+ * chega (login, cadastro, Google x2, seleção de clínica x2). `refresh_token`
+ * é opcional no tipo (ver DECISÃO em app/schemas/token.py, backend) só
+ * pelos casos que nunca emitem token nenhum ainda (requires_tenant_selection);
+ * todo login de verdade sempre preenche os dois. */
+function storeTokens(accessToken: string, refreshToken: string | undefined): void {
+  storeToken(accessToken);
+  if (refreshToken) storeRefreshToken(refreshToken);
+}
+
 function loadInitialUser(): CurrentUser | null {
   const token = getStoredToken();
   if (!token || isTokenExpired(token)) return null;
@@ -104,7 +117,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setTenantSelection(response.tenant_options);
         return;
       }
-      storeToken(response.access_token!);
+      storeTokens(response.access_token!, response.refresh_token);
       setUser(decodeJwtPayload(response.access_token!));
     } catch (err) {
       // ApiError.message já vem em português, pronto para mostrar —
@@ -121,7 +134,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setRegisterError(null);
     try {
       const response = await registerRequest(data);
-      storeToken(response.access_token);
+      storeTokens(response.access_token, response.refresh_token);
       setUser(decodeJwtPayload(response.access_token));
     } catch (err) {
       setRegisterError(err instanceof ApiError ? err.message : "Não foi possível concluir o cadastro. Tente novamente.");
@@ -150,7 +163,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { needsRegistration: false, requiresTenantSelection: true };
       }
 
-      storeToken(response.access_token!);
+      storeTokens(response.access_token!, response.refresh_token);
       setUser(decodeJwtPayload(response.access_token!));
       return { needsRegistration: false, requiresTenantSelection: false };
     } catch (err) {
@@ -168,7 +181,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setLoginError(null);
         try {
           const response = await googleAuthRequest(pendingGoogleCredential, tenantId);
-          storeToken(response.access_token!);
+          storeTokens(response.access_token!, response.refresh_token);
           setUser(decodeJwtPayload(response.access_token!));
           setTenantSelection(null);
           setPendingGoogleCredential(null);
@@ -186,7 +199,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoginError(null);
       try {
         const response = await loginRequest(pendingCredentials.email, pendingCredentials.password, tenantId);
-        storeToken(response.access_token!);
+        storeTokens(response.access_token!, response.refresh_token);
         setUser(decodeJwtPayload(response.access_token!));
         setTenantSelection(null);
         setPendingCredentials(null);
@@ -209,6 +222,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(() => {
     clearStoredToken();
+    clearStoredRefreshToken();
     setUser(null);
   }, []);
 

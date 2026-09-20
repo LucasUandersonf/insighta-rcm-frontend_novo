@@ -18,6 +18,10 @@ export interface TenantOption {
 export interface TokenResponse {
   access_token?: string;
   token_type: string;
+  // Achado MÉDIO da Auditoria de Prontidão v1 — ver DECISÃO em
+  // app/sql/059_refresh_tokens.sql (backend). Ausente/undefined nos
+  // casos que não emitem token nenhum ainda (ex: requires_tenant_selection=true).
+  refresh_token?: string;
   requires_tenant_selection: boolean;
   tenant_options: TenantOption[];
 }
@@ -47,12 +51,14 @@ export interface RegisterRequest {
 export interface RegisterResponse {
   access_token: string;
   token_type: string;
+  refresh_token?: string;
 }
 
 // --- Login/cadastro com Google (app/schemas/token.py::GoogleCredentialRequest/GoogleAuthResponse) ---
 export interface GoogleAuthResponse {
   access_token?: string;
   token_type: string;
+  refresh_token?: string;
   requires_tenant_selection: boolean;
   tenant_options: TenantOption[];
   needs_registration: boolean;
