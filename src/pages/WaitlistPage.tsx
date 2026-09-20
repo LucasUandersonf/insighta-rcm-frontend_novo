@@ -1,11 +1,12 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CalendarClock, Plus } from "lucide-react";
+import { CalendarClock, Plus, Search } from "lucide-react";
 import { Panel, EmptyState, LoadingState, ErrorState } from "@/components/ui/Panel";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { Badge, type BadgeTone } from "@/components/ui/Badge";
 import { TextField, SelectField, TextareaField } from "@/components/ui/FormField";
+import { Pagination } from "@/components/ui/Pagination";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
@@ -201,16 +202,37 @@ function ResolveWaitlistEntryModal({ entry, onClose }: { entry: WaitlistEntry | 
  * MarketingSpendPage.tsx/CostEntriesPage.tsx: lançamento manual, sem
  * integração automática (a recepção adiciona/resolve/cancela).
  */
+const WAITLIST_PAGE_SIZE = 20;
+
 export function WaitlistPage() {
   const [statusFilter, setStatusFilter] = useState<WaitlistStatus>("aguardando");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [resolvingEntry, setResolvingEntry] = useState<WaitlistEntry | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [offset, setOffset] = useState(0);
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
 
+  // Achado da Auditoria de Prontidão v1: sem busca, uma fila de espera
+  // com muitas entradas (ex: alta demanda sazonal) obrigava a recepção
+  // a rolar a tela inteira até achar o paciente certo, com um limite
+  // fixo de 100 registros que escondia o resto sem nenhum aviso.
+  useEffect(() => {
+    const handle = setTimeout(() => setDebouncedSearch(searchTerm), 300);
+    return () => clearTimeout(handle);
+  }, [searchTerm]);
+
+  useEffect(() => {
+    setOffset(0);
+  }, [statusFilter, debouncedSearch]);
+
   const { data: entriesPage, isLoading, error, refetch } = useQuery({
-    queryKey: ["waitlist", statusFilter],
-    queryFn: () => apiClient.get<PaginatedResponse<WaitlistEntry>>(`/api/v1/waitlist?status=${statusFilter}&limit=100&offset=0`),
+    queryKey: ["waitlist", statusFilter, debouncedSearch, offset],
+    queryFn: () =>
+      apiClient.get<PaginatedResponse<WaitlistEntry>>(
+        `/api/v1/waitlist?status=${statusFilter}&search=${encodeURIComponent(debouncedSearch)}&limit=${WAITLIST_PAGE_SIZE}&offset=${offset}`
+      ),
   });
   const entries = entriesPage?.items ?? [];
 
@@ -237,28 +259,48 @@ export function WaitlistPage() {
         }
       />
 
-      <div className="flex items-center gap-1.5">
-        {(Object.keys(STATUS_LABELS) as WaitlistStatus[]).map((s) => (
-          <button
-            key={s}
-            type="button"
-            onClick={() => setStatusFilter(s)}
-            className={
-              statusFilter === s
-                ? "rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white"
-                : "rounded-md border border-border-hairline px-3 py-1.5 text-xs text-ink-muted hover:bg-canvas-raised"
-            }
-          >
-            {STATUS_LABELS[s]}
-          </button>
-        ))}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-1.5">
+          {(Object.keys(STATUS_LABELS) as WaitlistStatus[]).map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => setStatusFilter(s)}
+              className={
+                statusFilter === s
+                  ? "rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white"
+                  : "rounded-md border border-border-hairline px-3 py-1.5 text-xs text-ink-muted hover:bg-canvas-raised"
+              }
+            >
+              {STATUS_LABELS[s]}
+            </button>
+          ))}
+        </div>
+        <div className="relative w-full max-w-xs sm:w-64">
+          <Search aria-hidden size={13} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-faint" />
+          <input
+            type="search"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Buscar paciente..."
+            aria-label="Buscar paciente na lista de espera"
+            className="w-full rounded-md border border-border-default bg-canvas-raised py-1.5 pl-8 pr-3 text-xs text-ink placeholder:text-ink-faint transition-colors focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/15"
+          />
+        </div>
       </div>
 
       <Panel>
         {isLoading && <LoadingState variant="table" rows={4} />}
         {error && <ErrorState message={getApiErrorMessage(error)} onRetry={() => refetch()} />}
         {!isLoading && !error && entries.length === 0 && (
-          <EmptyState icon={<CalendarClock size={17} strokeWidth={1.5} />} message={`Nenhuma entrada com status "${STATUS_LABELS[statusFilter]}".`} />
+          <EmptyState
+            icon={<CalendarClock size={17} strokeWidth={1.5} />}
+            message={
+              debouncedSearch
+                ? `Nenhum paciente encontrado para "${debouncedSearch}" com status "${STATUS_LABELS[statusFilter]}".`
+                : `Nenhuma entrada com status "${STATUS_LABELS[statusFilter]}".`
+            }
+          />
         )}
         {!isLoading && entries.length > 0 && (
           <table className="w-full text-left text-sm">
@@ -306,6 +348,9 @@ export function WaitlistPage() {
               ))}
             </tbody>
           </table>
+        )}
+        {entriesPage && entriesPage.total > 0 && (
+          <Pagination total={entriesPage.total} limit={WAITLIST_PAGE_SIZE} offset={offset} onOffsetChange={setOffset} />
         )}
       </Panel>
 

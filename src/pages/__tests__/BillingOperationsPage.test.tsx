@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { BillingOperationsPage } from "@/pages/BillingOperationsPage";
 import { apiClient } from "@/lib/api-client";
 import { renderWithProviders } from "@/test/utils";
-import type { BillingSearchItem } from "@/lib/types";
+import type { BillingSearchItem, Guia, InsurancePlan, PaginatedResponse } from "@/lib/types";
 
 vi.mock("@/lib/api-client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api-client")>();
@@ -229,5 +229,58 @@ describe("BillingOperationsPage — aba Auditoria documental (OPME)", () => {
       expect(screen.getByText("Este faturamento não é um item de OPME — nada para conferir.")).toBeInTheDocument()
     );
     expect(screen.queryByRole("button", { name: "Confirmar presente" })).not.toBeInTheDocument();
+  });
+});
+
+function makeGuia(overrides: Partial<Guia> = {}): Guia {
+  return {
+    id: "g1",
+    insurance_plan_id: "plan-1",
+    tipo: "sadt",
+    numero: "SADT-12345",
+    senha: null,
+    senha_validade: null,
+    tabela_procedimento: null,
+    lote_id: null,
+    created_at: "2026-08-20T00:00:00Z",
+    ...overrides,
+  };
+}
+
+function makePlan(overrides: Partial<InsurancePlan> = {}): InsurancePlan {
+  return {
+    id: "plan-1",
+    insurance_company_id: null,
+    display_name: "Unimed Nacional",
+    normalized_key: "unimed_nacional",
+    ans_registry: null,
+    is_active: true,
+    plan_type: "convenio",
+    created_at: "2026-01-01T00:00:00Z",
+    ...overrides,
+  };
+}
+
+// Achado da Auditoria de Prontidão v1 ("busca ausente na aba de Guias
+// do Faturamento") — antes só havia paginação cronológica.
+describe("BillingOperationsPage — aba Guias", () => {
+  it("busca por número da guia manda ?search= pro backend", async () => {
+    const guiasPage: PaginatedResponse<Guia> = { items: [makeGuia()], total: 1, limit: 15, offset: 0 };
+    mockGetByPath({
+      "/api/v1/insurance-companies/plans": [makePlan()],
+      "/api/v1/guias?limit=15&offset=0&search=": guiasPage,
+    });
+    const user = userEvent.setup();
+
+    renderWithProviders(<BillingOperationsPage />);
+    await user.click(screen.getByRole("tab", { name: "Guias" }));
+    await waitFor(() => expect(screen.getByText("SADT-12345")).toBeInTheDocument());
+
+    await user.type(screen.getByLabelText("Buscar guia por número"), "12345");
+
+    await waitFor(
+      () => expect(apiClient.get).toHaveBeenCalledWith(expect.stringContaining("search=12345")),
+      { timeout: 1000 }
+    );
   });
 });

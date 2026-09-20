@@ -1,10 +1,11 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { FileStack, Wallet } from "lucide-react";
+import { FileStack, Search, Wallet } from "lucide-react";
 import { Panel, EmptyState, LoadingState, ErrorState } from "@/components/ui/Panel";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { TextField, SelectField } from "@/components/ui/FormField";
+import { FilterBar } from "@/components/ui/FilterBar";
 import { Pagination } from "@/components/ui/Pagination";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Tabs } from "@/components/ui/Tabs";
@@ -314,14 +315,37 @@ function GuiasTab() {
   const [tabelaProcedimento, setTabelaProcedimento] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
+  // Achado da Auditoria de Prontidão v1 ("busca ausente na aba de
+  // Guias"): antes só havia paginação cronológica — numa clínica com
+  // milhares de guias, achar uma específica exigia virar página uma a
+  // uma. Filtros independentes da busca do formulário de cadastro acima.
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [filterPlanId, setFilterPlanId] = useState("");
+  const [filterTipo, setFilterTipo] = useState("");
+
+  useEffect(() => {
+    const handle = setTimeout(() => setDebouncedSearch(searchTerm), 300);
+    return () => clearTimeout(handle);
+  }, [searchTerm]);
+
+  useEffect(() => {
+    setOffset(0);
+  }, [debouncedSearch, filterPlanId, filterTipo]);
+
   const { data: plans, isLoading: plansLoading } = useQuery({
     queryKey: ["insurance-plans"],
     queryFn: () => apiClient.get<InsurancePlan[]>("/api/v1/insurance-companies/plans"),
   });
 
   const { data: guiasPage, isLoading, error, refetch } = useQuery({
-    queryKey: ["guias", offset],
-    queryFn: () => apiClient.get<PaginatedResponse<Guia>>(`/api/v1/guias?limit=${GUIAS_PAGE_SIZE}&offset=${offset}`),
+    queryKey: ["guias", offset, debouncedSearch, filterPlanId, filterTipo],
+    queryFn: () =>
+      apiClient.get<PaginatedResponse<Guia>>(
+        `/api/v1/guias?limit=${GUIAS_PAGE_SIZE}&offset=${offset}&search=${encodeURIComponent(debouncedSearch)}` +
+          (filterPlanId ? `&insurance_plan_id=${filterPlanId}` : "") +
+          (filterTipo ? `&tipo=${filterTipo}` : "")
+      ),
   });
 
   const mutation = useMutation({
@@ -417,10 +441,55 @@ function GuiasTab() {
       </Panel>
 
       <Panel title="Guias cadastradas" subtitle="Mais recentes primeiro">
+        <FilterBar
+          search={
+            <div className="relative">
+              <Search aria-hidden size={13} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-faint" />
+              <input
+                type="search"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Buscar por número da guia..."
+                aria-label="Buscar guia por número"
+                className="w-full rounded-md border border-border-default bg-canvas-raised py-1.5 pl-8 pr-3 text-xs text-ink placeholder:text-ink-faint transition-colors focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/15"
+              />
+            </div>
+          }
+          hasActiveFilters={!!searchTerm || !!filterPlanId || !!filterTipo}
+          onClear={() => {
+            setSearchTerm("");
+            setFilterPlanId("");
+            setFilterTipo("");
+          }}
+        >
+          <SelectField label="Convênio" value={filterPlanId} onChange={(e) => setFilterPlanId(e.target.value)}>
+            <option value="">Todos</option>
+            {(plans ?? []).map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.display_name}
+              </option>
+            ))}
+          </SelectField>
+          <SelectField label="Tipo" value={filterTipo} onChange={(e) => setFilterTipo(e.target.value)}>
+            <option value="">Todos</option>
+            {Object.entries(GUIA_TIPO_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </SelectField>
+        </FilterBar>
         {isLoading && <LoadingState variant="table" rows={4} />}
         {error && <ErrorState message={getApiErrorMessage(error)} onRetry={() => refetch()} />}
         {!isLoading && !error && (guiasPage?.items ?? []).length === 0 && (
-          <EmptyState icon={<FileStack size={17} strokeWidth={1.5} />} message="Nenhuma guia cadastrada ainda." />
+          <EmptyState
+            icon={<FileStack size={17} strokeWidth={1.5} />}
+            message={
+              debouncedSearch || filterPlanId || filterTipo
+                ? "Nenhuma guia encontrada com esse filtro."
+                : "Nenhuma guia cadastrada ainda."
+            }
+          />
         )}
         {!isLoading && (guiasPage?.items ?? []).length > 0 && (
           <table className="w-full text-left text-sm">
