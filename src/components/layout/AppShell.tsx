@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { TopBar } from "./TopBar";
@@ -24,6 +24,17 @@ export function AppShell() {
   // em qualquer artboard de modal), não só o escurecimento do scrim.
   const isModalOpen = useIsAnyModalOpen();
 
+  // Achado da Auditoria de Prontidão v1 — ver DECISÃO em Sidebar.tsx.
+  // Estado mora aqui (não dentro de Sidebar/TopBar) porque os dois
+  // precisam dele: TopBar dispara o toggle, Sidebar consome o valor —
+  // e troca de rota fecha o drawer sozinho (Achado F-05 já reseta o
+  // ErrorBoundary por location.pathname acima; mesmo raciocínio de "não
+  // deixar estado de navegação anterior grudado na tela seguinte").
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+  useEffect(() => {
+    setIsMobileNavOpen(false);
+  }, [location.pathname]);
+
   return (
     <div className="min-h-screen bg-canvas bg-premium-canvas bg-no-repeat">
       {/* Link "pular para o conteúdo" — invisível até receber foco de
@@ -37,10 +48,10 @@ export function AppShell() {
       </a>
       <OnboardingTourProvider>
         <div className={cn("transition-[filter] duration-200", isModalOpen && "blur-[1.5px] saturate-[0.85]")}>
-          <TopBar />
+          <TopBar onToggleMobileNav={() => setIsMobileNavOpen((open) => !open)} />
           <div className="flex">
-            <Sidebar />
-            <main id="main-content" className="mx-auto w-full max-w-[1400px] px-6 py-6">
+            <Sidebar isOpenOnMobile={isMobileNavOpen} onCloseMobile={() => setIsMobileNavOpen(false)} />
+            <main id="main-content" className="mx-auto w-full max-w-[1400px] px-4 py-6 sm:px-6">
               <ErrorBoundary scope="route" key={location.pathname}>
                 <AnimatePresence mode="wait">
                   <motion.div

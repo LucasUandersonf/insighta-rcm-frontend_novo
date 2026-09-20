@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { useAuth } from "@/context/AuthContext";
@@ -13,10 +14,10 @@ function mockUser(role: CurrentUser["role"]) {
   vi.mocked(useAuth).mockReturnValue({ user: { tenant_id: "t1", sub: "u1", role } } as unknown as ReturnType<typeof useAuth>);
 }
 
-function renderSidebar() {
+function renderSidebar(props: Parameters<typeof Sidebar>[0] = {}) {
   return render(
     <MemoryRouter>
-      <Sidebar />
+      <Sidebar {...props} />
     </MemoryRouter>
   );
 }
@@ -56,5 +57,60 @@ describe("Sidebar", () => {
 
     expect(screen.getByRole("link", { name: /Logs de auditoria/ })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /Usuários/ })).not.toBeInTheDocument();
+  });
+
+  /**
+   * Achado da Auditoria de Prontidão v1 — o drawer mobile/tablet (ver
+   * DECISÃO em Sidebar.tsx) só é útil se as três formas de fechar
+   * funcionarem: tocar fora (backdrop), o X e navegar. Isto testa o
+   * CONTRATO (onCloseMobile chamado), não CSS de posicionamento — jsdom
+   * não faz layout real, então visibilidade responsiva não é testável
+   * aqui, só o comportamento.
+   */
+  describe("drawer mobile/tablet", () => {
+    it("sem isOpenOnMobile/onCloseMobile, renderiza igual ao uso estático (compatibilidade)", () => {
+      mockUser("owner");
+      renderSidebar();
+      expect(screen.getByRole("link", { name: /Sala de Comando/ })).toBeInTheDocument();
+    });
+
+    it("clicar no backdrop chama onCloseMobile", async () => {
+      mockUser("owner");
+      const onCloseMobile = vi.fn();
+      const user = userEvent.setup();
+      renderSidebar({ isOpenOnMobile: true, onCloseMobile });
+
+      await user.click(screen.getByTestId("mobile-nav-backdrop"));
+
+      expect(onCloseMobile).toHaveBeenCalledTimes(1);
+    });
+
+    it("clicar no botão de fechar (X) chama onCloseMobile", async () => {
+      mockUser("owner");
+      const onCloseMobile = vi.fn();
+      const user = userEvent.setup();
+      renderSidebar({ isOpenOnMobile: true, onCloseMobile });
+
+      await user.click(screen.getByRole("button", { name: "Fechar menu" }));
+
+      expect(onCloseMobile).toHaveBeenCalledTimes(1);
+    });
+
+    it("clicar num item de navegação chama onCloseMobile (fecha o drawer ao navegar)", async () => {
+      mockUser("owner");
+      const onCloseMobile = vi.fn();
+      const user = userEvent.setup();
+      renderSidebar({ isOpenOnMobile: true, onCloseMobile });
+
+      await user.click(screen.getByRole("link", { name: /Sala de Comando/ }));
+
+      expect(onCloseMobile).toHaveBeenCalledTimes(1);
+    });
+
+    it("sem isOpenOnMobile, o backdrop não é renderizado", () => {
+      mockUser("owner");
+      renderSidebar({ onCloseMobile: vi.fn() });
+      expect(screen.queryByTestId("mobile-nav-backdrop")).not.toBeInTheDocument();
+    });
   });
 });
