@@ -12,6 +12,9 @@ import { reportError } from "./monitoring";
 // URL base sem duplicar a leitura de import.meta.env.
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL as string | undefined;
 const TOKEN_STORAGE_KEY = "insighta_access_token";
+// Achado MÉDIO da Auditoria de Prontidão v1 — ver DECISÃO em
+// app/sql/059_refresh_tokens.sql (backend).
+const REFRESH_TOKEN_STORAGE_KEY = "insighta_refresh_token";
 
 // DECISÃO — nunca "throw" na carga do módulo por configuração ausente
 // -------------------------------------------------------------------------
@@ -57,11 +60,74 @@ export function clearStoredToken(): void {
   localStorage.removeItem(TOKEN_STORAGE_KEY);
 }
 
+export function getStoredRefreshToken(): string | null {
+  return localStorage.getItem(REFRESH_TOKEN_STORAGE_KEY);
+}
+
+export function storeRefreshToken(token: string): void {
+  localStorage.setItem(REFRESH_TOKEN_STORAGE_KEY, token);
+}
+
+export function clearStoredRefreshToken(): void {
+  localStorage.removeItem(REFRESH_TOKEN_STORAGE_KEY);
+}
+
+interface RefreshTokenApiResponse {
+  access_token: string;
+  refresh_token?: string;
+}
+
+// Dedup: se várias chamadas em paralelo tomam 401 ao mesmo tempo (ex:
+// a Home dispara 2-3 queries simultâneas), só uma tentativa real de
+// refresh acontece — as outras esperam a MESMA promise, em vez de cada
+// uma rotacionar o token e invalidar a rotação das outras.
+let refreshInFlight: Promise<boolean> | null = null;
+
+/**
+ * Tenta renovar a sessão silenciosamente usando o refresh token
+ * guardado — ver DECISÃO completa em app/sql/059_refresh_tokens.sql
+ * (backend) e POST /auth/refresh. Nunca lança: retorna false em
+ * qualquer falha (sem refresh token guardado, token expirado/revogado,
+ * rede fora do ar), deixando quem chamou decidir o que fazer (aqui,
+ * `request()` cai no fluxo antigo de "auth:unauthorized").
+ */
+async function attemptSilentRefresh(): Promise<boolean> {
+  if (refreshInFlight) return refreshInFlight;
+
+  refreshInFlight = (async () => {
+    const refreshToken = getStoredRefreshToken();
+    if (!refreshToken || !API_BASE_URL) return false;
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/auth/refresh`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+      });
+      if (!response.ok) return false;
+      const body: RefreshTokenApiResponse = await response.json();
+      storeToken(body.access_token);
+      if (body.refresh_token) storeRefreshToken(body.refresh_token);
+      return true;
+    } catch {
+      return false;
+    }
+  })();
+
+  try {
+    return await refreshInFlight;
+  } finally {
+    refreshInFlight = null;
+  }
+}
+
 interface RequestOptions {
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown;
   /** Requisições públicas (ex: login) não devem mandar o header Authorization. */
   skipAuth?: boolean;
+  /** Uso interno — marca que esta chamada já é uma RETENTATIVA pós-refresh,
+   * pra nunca entrar num loop (refresh -> 401 de novo -> refresh -> ...). */
+  _isRetryAfterRefresh?: boolean;
 }
 
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
@@ -91,6 +157,17 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   });
 
   if (!response.ok) {
+    // Achado MÉDIO da Auditoria de Prontidão v1 — antes de desistir e
+    // derrubar a sessão, tenta renovar silenciosamente com o refresh
+    // token guardado (ver DECISÃO em attemptSilentRefresh). Só UMA
+    // retentativa (via _isRetryAfterRefresh) — nunca um loop.
+    if (response.status === 401 && !options.skipAuth && !options._isRetryAfterRefresh) {
+      const refreshed = await attemptSilentRefresh();
+      if (refreshed) {
+        return request<T>(path, { ...options, _isRetryAfterRefresh: true });
+      }
+    }
+
     let errorBody: ApiErrorBody;
     try {
       errorBody = await response.json();
@@ -102,10 +179,11 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
       };
     }
 
-    // Sessão expirada/inválida: dispara um evento global em vez de deixar
-    // CADA tela lidar com 401 na mão. AuthContext escuta esse evento e
-    // faz logout + redireciona — sem acoplar este módulo (que não é um
-    // componente React) a hooks/navegação.
+    // Sessão expirada/inválida (e o refresh acima não resolveu, ou nem
+    // se aplicava): dispara um evento global em vez de deixar CADA tela
+    // lidar com 401 na mão. AuthContext escuta esse evento e faz logout
+    // + redireciona — sem acoplar este módulo (que não é um componente
+    // React) a hooks/navegação.
     if (response.status === 401 && !options.skipAuth) {
       window.dispatchEvent(new CustomEvent("auth:unauthorized"));
     }
@@ -136,7 +214,7 @@ export const apiClient = {
    * `request()` de propósito: `response.json()` quebraria num corpo que
    * não é JSON. Devolve o Blob pronto para `URL.createObjectURL`.
    */
-  async getBlob(path: string): Promise<Blob> {
+  async getBlob(path: string, _isRetryAfterRefresh = false): Promise<Blob> {
     if (!API_BASE_URL) {
       throw new ApiError(0, {
         error_code: "configuracao_ausente",
@@ -151,6 +229,9 @@ export const apiClient = {
     const response = await fetch(`${API_BASE_URL}${path}`, { method: "GET", headers });
 
     if (!response.ok) {
+      if (response.status === 401 && !_isRetryAfterRefresh && (await attemptSilentRefresh())) {
+        return apiClient.getBlob(path, true);
+      }
       let errorBody: ApiErrorBody;
       try {
         errorBody = await response.json();
@@ -178,7 +259,7 @@ export const apiClient = {
    * boundary do multipart sozinho a partir do FormData; um Content-Type
    * fixo aqui quebraria o parse no backend).
    */
-  async upload<T>(path: string, formData: FormData): Promise<T> {
+  async upload<T>(path: string, formData: FormData, _isRetryAfterRefresh = false): Promise<T> {
     if (!API_BASE_URL) {
       throw new ApiError(0, {
         error_code: "configuracao_ausente",
@@ -197,6 +278,9 @@ export const apiClient = {
     });
 
     if (!response.ok) {
+      if (response.status === 401 && !_isRetryAfterRefresh && (await attemptSilentRefresh())) {
+        return apiClient.upload<T>(path, formData, true);
+      }
       let errorBody: ApiErrorBody;
       try {
         errorBody = await response.json();

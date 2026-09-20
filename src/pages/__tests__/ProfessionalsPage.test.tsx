@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ProfessionalsPage } from "@/pages/ProfessionalsPage";
 import { apiClient } from "@/lib/api-client";
@@ -102,6 +102,10 @@ describe("ProfessionalsPage — ausências planejadas", () => {
     expect(await screen.findByText(/20\/12\/2026–05\/01\/2027 — Recesso/)).toBeInTheDocument();
 
     await user.click(screen.getByLabelText(/Remover ausência de 01\/07\/2026/));
+    await waitFor(() => expect(screen.getAllByRole("dialog")).toHaveLength(2));
+    const dialogs = screen.getAllByRole("dialog");
+    const confirmDialog = dialogs[dialogs.length - 1];
+    await user.click(within(confirmDialog).getByRole("button", { name: /^remover$/i }));
     await waitFor(() =>
       expect(apiClient.delete).toHaveBeenCalledWith("/api/v1/professionals/p1/planned-absences/abs-1")
     );

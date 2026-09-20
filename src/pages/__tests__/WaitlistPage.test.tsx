@@ -104,6 +104,25 @@ describe("WaitlistPage", () => {
     );
   });
 
+  it("busca por nome do paciente manda ?search= pro backend (achado da Auditoria v1)", async () => {
+    const entriesPage: PaginatedResponse<WaitlistEntry> = { items: [makeEntry()], total: 1, limit: 20, offset: 0 };
+    mockGetByPath({
+      "/api/v1/waitlist?status=aguardando&search=": entriesPage,
+      "/api/v1/patients": [] as Patient[],
+      "/api/v1/professionals": [] as Professional[],
+    });
+
+    renderWithProviders(<WaitlistPage />);
+    await waitFor(() => expect(screen.getByText("Paciente Espera")).toBeInTheDocument());
+
+    fireEvent.change(screen.getByLabelText("Buscar paciente na lista de espera"), { target: { value: "beatriz" } });
+
+    await waitFor(
+      () => expect(apiClient.get).toHaveBeenCalledWith(expect.stringContaining("search=beatriz")),
+      { timeout: 1000 }
+    );
+  });
+
   it("cancela uma entrada aguardando", async () => {
     const entriesPage: PaginatedResponse<WaitlistEntry> = { items: [makeEntry()], total: 1, limit: 100, offset: 0 };
     mockGetByPath({

@@ -18,6 +18,10 @@ export interface TenantOption {
 export interface TokenResponse {
   access_token?: string;
   token_type: string;
+  // Achado MÉDIO da Auditoria de Prontidão v1 — ver DECISÃO em
+  // app/sql/059_refresh_tokens.sql (backend). Ausente/undefined nos
+  // casos que não emitem token nenhum ainda (ex: requires_tenant_selection=true).
+  refresh_token?: string;
   requires_tenant_selection: boolean;
   tenant_options: TenantOption[];
 }
@@ -47,12 +51,14 @@ export interface RegisterRequest {
 export interface RegisterResponse {
   access_token: string;
   token_type: string;
+  refresh_token?: string;
 }
 
 // --- Login/cadastro com Google (app/schemas/token.py::GoogleCredentialRequest/GoogleAuthResponse) ---
 export interface GoogleAuthResponse {
   access_token?: string;
   token_type: string;
+  refresh_token?: string;
   requires_tenant_selection: boolean;
   tenant_options: TenantOption[];
   needs_registration: boolean;
@@ -2062,5 +2068,35 @@ export interface PlatformAuditLogEntry {
   id: number;
   actor_email: string;
   action: string;
+  created_at: string;
+}
+
+// Achado CRÍTICO da Auditoria de Prontidão v1 ("produto não se cobra
+// sozinho") — fluxo self-service de upgrade de plano, ver DECISÃO
+// completa em app/services/payment_provider.py (backend).
+export interface PlanCatalogEntry {
+  tier: PlanTier;
+  label: string;
+  monthly_price_cents: number;
+  self_service: boolean;
+}
+
+export interface SubscriptionStatus {
+  plan_tier: PlanTier;
+  pending_checkout_id: string | null;
+}
+
+export interface CheckoutSession {
+  checkout_id: string;
+  checkout_url: string;
+  amount_cents: number;
+  plan_tier: PlanTier;
+}
+
+export interface CheckoutDetail {
+  id: string;
+  plan_tier: PlanTier;
+  status: "pending" | "completed" | "canceled";
+  amount_cents: number;
   created_at: string;
 }

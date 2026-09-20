@@ -5,6 +5,7 @@ import { CalendarClock, Pencil, Plus, X } from "lucide-react";
 import { Panel, EmptyState, LoadingState, ErrorState } from "@/components/ui/Panel";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { TextField, SelectField } from "@/components/ui/FormField";
 import { FilterBar } from "@/components/ui/FilterBar";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -157,6 +158,7 @@ function PlannedAbsencesEditor({
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [reason, setReason] = useState("");
+  const [absenceToRemove, setAbsenceToRemove] = useState<PlannedAbsence | null>(null);
 
   const addMutation = useMutation({
     mutationFn: (payload: PlannedAbsenceCreateRequest) =>
@@ -174,7 +176,10 @@ function PlannedAbsencesEditor({
   const removeMutation = useMutation({
     mutationFn: (absenceId: string) =>
       apiClient.delete(`/api/v1/professionals/${professionalId}/planned-absences/${absenceId}`),
-    onSuccess: (_data, absenceId) => onChange(absences.filter((a) => a.id !== absenceId)),
+    onSuccess: (_data, absenceId) => {
+      onChange(absences.filter((a) => a.id !== absenceId));
+      setAbsenceToRemove(null);
+    },
     onError: (err) => showError(getApiErrorMessage(err)),
   });
 
@@ -204,7 +209,7 @@ function PlannedAbsencesEditor({
               </span>
               <button
                 type="button"
-                onClick={() => removeMutation.mutate(a.id)}
+                onClick={() => setAbsenceToRemove(a)}
                 disabled={removeMutation.isPending}
                 aria-label={`Remover ausência de ${formatDateBR(a.start_date)} a ${formatDateBR(a.end_date)}`}
                 className="shrink-0 text-denied transition-colors hover:text-denied/70"
@@ -229,6 +234,19 @@ function PlannedAbsencesEditor({
           + Adicionar
         </Button>
       </div>
+
+      <ConfirmDialog
+        isOpen={!!absenceToRemove}
+        title="Remover ausência planejada"
+        message={
+          absenceToRemove
+            ? `A ausência de ${formatDateBR(absenceToRemove.start_date)} a ${formatDateBR(absenceToRemove.end_date)} será removida — a previsão de capacidade volta a considerar esse período como disponível.`
+            : ""
+        }
+        onConfirm={() => absenceToRemove && removeMutation.mutate(absenceToRemove.id)}
+        onCancel={() => setAbsenceToRemove(null)}
+        isConfirming={removeMutation.isPending}
+      />
     </div>
   );
 }

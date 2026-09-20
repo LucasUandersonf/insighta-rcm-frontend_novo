@@ -51,6 +51,10 @@ const ReportRecipientsPage = lazy(() => import("@/pages/admin/ReportRecipientsPa
 const AuditLogPage = lazy(() => import("@/pages/admin/AuditLogPage").then((m) => ({ default: m.AuditLogPage })));
 const PlatformLoginPage = lazy(() => import("@/pages/platform/PlatformLoginPage").then((m) => ({ default: m.PlatformLoginPage })));
 const PlatformDashboardPage = lazy(() => import("@/pages/platform/PlatformDashboardPage").then((m) => ({ default: m.PlatformDashboardPage })));
+const MockCheckoutPage = lazy(() => import("@/pages/MockCheckoutPage").then((m) => ({ default: m.MockCheckoutPage })));
+const StripeCheckoutReturnPage = lazy(() =>
+  import("@/pages/StripeCheckoutReturnPage").then((m) => ({ default: m.StripeCheckoutReturnPage }))
+);
 
 /**
  * Tela de erro REAL, visível, em vez de deixar a aplicação simplesmente
@@ -209,6 +213,21 @@ export default function App() {
                   <Route path="/admin/audit-log" element={<AuditLogPage />} />
                 </Route>
               </Route>
+              {/* Achado CRÍTICO da Auditoria de Prontidão v1 ("produto não
+                  se cobra sozinho") — checkout de upgrade self-service.
+                  Fora do AppShell de propósito (sem sidebar/topbar): mesma
+                  experiência de "tela cheia de pagamento" de qualquer
+                  checkout real, dentro do ProtectedRoute porque só um
+                  owner autenticado pode chegar aqui (ver RBAC no backend,
+                  subscription.py). */}
+              <Route path="/checkout/mock/:checkoutId" element={<MockCheckoutPage />} />
+              {/* Irmã da rota acima — ativa quando o backend usa
+                  StripePaymentProvider em vez do mock (ver DECISÃO em
+                  app/services/stripe_payment_provider.py). O Stripe
+                  redireciona pra cá depois de cobrar de verdade na
+                  própria tela dele; esta página só confirma e mostra
+                  o resultado, nunca coleta cartão. */}
+              <Route path="/checkout/stripe/:checkoutId" element={<StripeCheckoutReturnPage />} />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

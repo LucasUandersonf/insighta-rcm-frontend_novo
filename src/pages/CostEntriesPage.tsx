@@ -4,6 +4,7 @@ import { Plus, Receipt, Trash2 } from "lucide-react";
 import { Panel, EmptyState, LoadingState, ErrorState } from "@/components/ui/Panel";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { TextField, SelectField } from "@/components/ui/FormField";
 import { Pagination } from "@/components/ui/Pagination";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -144,6 +145,7 @@ function CreateCostEntryModal({ isOpen, onClose, professionals }: { isOpen: bool
  */
 export function CostEntriesPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [entryToDelete, setEntryToDelete] = useState<CostEntry | null>(null);
   const [entriesOffset, setEntriesOffset] = useState(0);
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
@@ -172,6 +174,7 @@ export function CostEntriesPage() {
       queryClient.invalidateQueries({ queryKey: ["cost-entries"] });
       queryClient.invalidateQueries({ queryKey: ["analytics", "profitability"] });
       showSuccess("Lançamento removido.");
+      setEntryToDelete(null);
     },
     onError: (err) => showError(getApiErrorMessage(err)),
   });
@@ -223,7 +226,7 @@ export function CostEntriesPage() {
                       variant="ghost"
                       size="xs"
                       className="flex items-center gap-1 text-denied"
-                      onClick={() => deleteMutation.mutate(e.id)}
+                      onClick={() => setEntryToDelete(e)}
                       disabled={deleteMutation.isPending}
                     >
                       <Trash2 size={12} />
@@ -246,6 +249,19 @@ export function CostEntriesPage() {
       </Panel>
 
       <CreateCostEntryModal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} professionals={professionals ?? []} />
+
+      <ConfirmDialog
+        isOpen={!!entryToDelete}
+        title="Remover lançamento de custo"
+        message={
+          entryToDelete
+            ? `O lançamento de ${CATEGORY_LABELS[entryToDelete.category]} (${formatCurrency(entryToDelete.amount)}, ${formatMonth(entryToDelete.period_month)}) será removido e não pode ser desfeito.`
+            : ""
+        }
+        onConfirm={() => entryToDelete && deleteMutation.mutate(entryToDelete.id)}
+        onCancel={() => setEntryToDelete(null)}
+        isConfirming={deleteMutation.isPending}
+      />
     </div>
   );
 }
