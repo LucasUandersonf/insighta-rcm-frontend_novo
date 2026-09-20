@@ -2064,3 +2064,33 @@ export interface PlatformAuditLogEntry {
   action: string;
   created_at: string;
 }
+
+// Achado CRÍTICO da Auditoria de Prontidão v1 ("produto não se cobra
+// sozinho") — fluxo self-service de upgrade de plano, ver DECISÃO
+// completa em app/services/payment_provider.py (backend).
+export interface PlanCatalogEntry {
+  tier: PlanTier;
+  label: string;
+  monthly_price_cents: number;
+  self_service: boolean;
+}
+
+export interface SubscriptionStatus {
+  plan_tier: PlanTier;
+  pending_checkout_id: string | null;
+}
+
+export interface CheckoutSession {
+  checkout_id: string;
+  checkout_url: string;
+  amount_cents: number;
+  plan_tier: PlanTier;
+}
+
+export interface CheckoutDetail {
+  id: string;
+  plan_tier: PlanTier;
+  status: "pending" | "completed" | "canceled";
+  amount_cents: number;
+  created_at: string;
+}

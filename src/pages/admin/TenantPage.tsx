@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Building2, Sparkles } from "lucide-react";
 import { Panel, LoadingState, ErrorState } from "@/components/ui/Panel";
@@ -12,9 +13,11 @@ import { useToast } from "@/context/ToastContext";
 import { useAuth } from "@/context/AuthContext";
 import type {
   AnnualGoalSuggestion,
+  CheckoutSession,
   DenialRiskThresholdSuggestion,
   HealthScoreCeilingSuggestion,
   NoShowThresholdSuggestion,
+  PlanCatalogEntry,
   Tenant,
 } from "@/lib/types";
 
@@ -26,6 +29,76 @@ const PLAN_LABELS: Record<string, string> = {
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
+}
+
+/**
+ * Achado CRÍTICO da Auditoria de Prontidão v1 ("produto não se cobra
+ * sozinho") — antes desta tela, mudar de plano era só um texto "fale com
+ * o time comercial", sem nenhum jeito de fato pagar. Cada tier
+ * self_service=true ganha um botão que abre o checkout (mock hoje,
+ * Stripe real depois — ver DECISÃO em app/services/payment_provider.py,
+ * backend); enterprise continua "fale com vendas" de propósito (ver
+ * DECISÃO no mesmo arquivo: plano de maior porte nunca é self-service).
+ * Só owner inicia checkout (mesmo RBAC do backend, _CAN_CHECKOUT em
+ * app/api/v1/endpoints/subscription.py).
+ */
+function SubscriptionPlanPanel({ tenant, isOwner }: { tenant: Tenant; isOwner: boolean }) {
+  const navigate = useNavigate();
+  const { showError } = useToast();
+
+  const { data: planCatalog, isLoading } = useQuery({
+    queryKey: ["subscription", "plans"],
+    queryFn: () => apiClient.get<PlanCatalogEntry[]>("/api/v1/subscription/plans"),
+  });
+
+  const checkoutMutation = useMutation({
+    mutationFn: (planTier: string) => apiClient.post<CheckoutSession>("/api/v1/subscription/checkout", { plan_tier: planTier }),
+    onSuccess: (session) => navigate(`/checkout/mock/${session.checkout_id}`),
+    onError: (err) => showError(getApiErrorMessage(err)),
+  });
+
+  return (
+    <Panel title="Plano e assinatura">
+      <div className="p-4">
+        {isLoading && <p className="text-sm text-ink-muted">Carregando planos...</p>}
+        {!isLoading && (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            {(planCatalog ?? []).map((plan) => {
+              const isCurrent = plan.tier === tenant.plan_tier;
+              return (
+                <div
+                  key={plan.tier}
+                  className={`rounded-lg border p-4 ${isCurrent ? "border-accent/40 bg-accent-bg" : "border-border-hairline bg-canvas-raised/40"}`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-ink">{plan.label}</span>
+                    {isCurrent && <Badge tone="accent">Plano atual</Badge>}
+                  </div>
+                  <p className="mt-2 font-serif text-lg font-medium text-ink">
+                    {plan.self_service ? `${formatCurrency(plan.monthly_price_cents / 100)}/mês` : "Sob consulta"}
+                  </p>
+                  {isOwner && !isCurrent && plan.self_service && (
+                    <Button
+                      variant="secondary"
+                      className="mt-3 w-full"
+                      disabled={checkoutMutation.isPending}
+                      onClick={() => checkoutMutation.mutate(plan.tier)}
+                    >
+                      {checkoutMutation.isPending ? "Abrindo checkout..." : "Fazer upgrade"}
+                    </Button>
+                  )}
+                  {!plan.self_service && !isCurrent && (
+                    <p className="mt-3 text-2xs text-ink-faint">Fale com o time comercial para contratar este plano.</p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+        {!isOwner && <p className="mt-3 text-2xs text-ink-faint">Só o papel "owner" pode mudar de plano.</p>}
+      </div>
+    </Panel>
+  );
 }
 
 /**
@@ -658,11 +731,6 @@ export function TenantPage() {
     queryFn: () => apiClient.get<Tenant>("/api/v1/tenant"),
   });
 
-  const { data: availablePlans } = useQuery({
-    queryKey: ["tenant", "plans"],
-    queryFn: () => apiClient.get<string[]>("/api/v1/tenant/plans/available"),
-  });
-
   const [legalName, setLegalName] = useState("");
   const [tradeName, setTradeName] = useState("");
   const [specialty, setSpecialty] = useState("");
@@ -727,11 +795,7 @@ export function TenantPage() {
                 tem esse dado real e validado por especialidade). Os limiares abaixo continuam calibrados pelo
                 histórico da sua própria clínica.
               </p>
-              <p className="mt-4 text-2xs text-ink-faint">
-                CNPJ não pode ser alterado por aqui — fale com o suporte. Para alterar de plano
-                {(availablePlans ?? []).length > 0 && <> (disponíveis: {(availablePlans ?? []).map((t) => PLAN_LABELS[t] ?? t).join(", ")})</>},
-                fale com o time comercial — mudança de assinatura ainda não é self-service neste MVP.
-              </p>
+              <p className="mt-4 text-2xs text-ink-faint">CNPJ não pode ser alterado por aqui — fale com o suporte.</p>
               {isOwner && (
                 <div className="mt-3 flex justify-end">
                   <Button type="submit" disabled={mutation.isPending}>
@@ -743,6 +807,7 @@ export function TenantPage() {
             </form>
           </Panel>
 
+          <SubscriptionPlanPanel tenant={tenant} isOwner={isOwner} />
           <AnnualGoalPanel tenant={tenant} isOwner={isOwner} />
           <NoShowThresholdsPanel tenant={tenant} isOwner={isOwner} />
           <DenialRiskThresholdsPanel tenant={tenant} isOwner={isOwner} />

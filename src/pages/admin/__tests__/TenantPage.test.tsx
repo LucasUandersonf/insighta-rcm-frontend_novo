@@ -61,7 +61,12 @@ describe("TenantPage — Épico F2.1 do Plano Diretor (Calibração por especial
     vi.mocked(useAuth).mockReturnValue({ user: { tenant_id: "t1", sub: "u1", role: "owner" } } as unknown as ReturnType<
       typeof useAuth
     >);
-    mockGetByPath({ "/api/v1/tenant/plans/available": [], "/api/v1/tenant": makeTenant() });
+    mockGetByPath({
+      "/api/v1/tenant/plans/available": [],
+      "/api/v1/subscription/plans": [],
+      "/api/v1/subscription": { plan_tier: "starter", pending_checkout_id: null },
+      "/api/v1/tenant": makeTenant(),
+    });
 
     renderWithProviders(<TenantPage />);
 
@@ -77,7 +82,12 @@ describe("TenantPage — Épico F2.1 do Plano Diretor (Calibração por especial
     vi.mocked(useAuth).mockReturnValue({ user: { tenant_id: "t1", sub: "u1", role: "owner" } } as unknown as ReturnType<
       typeof useAuth
     >);
-    mockGetByPath({ "/api/v1/tenant/plans/available": [], "/api/v1/tenant": makeTenant() });
+    mockGetByPath({
+      "/api/v1/tenant/plans/available": [],
+      "/api/v1/subscription/plans": [],
+      "/api/v1/subscription": { plan_tier: "starter", pending_checkout_id: null },
+      "/api/v1/tenant": makeTenant(),
+    });
     vi.mocked(apiClient.patch).mockResolvedValue(makeTenant({ specialty: "odontologia" }));
 
     renderWithProviders(<TenantPage />);
@@ -98,7 +108,12 @@ describe("TenantPage — Épico F2.1 do Plano Diretor (Calibração por especial
     vi.mocked(useAuth).mockReturnValue({ user: { tenant_id: "t1", sub: "u1", role: "owner" } } as unknown as ReturnType<
       typeof useAuth
     >);
-    mockGetByPath({ "/api/v1/tenant/plans/available": [], "/api/v1/tenant": makeTenant() });
+    mockGetByPath({
+      "/api/v1/tenant/plans/available": [],
+      "/api/v1/subscription/plans": [],
+      "/api/v1/subscription": { plan_tier: "starter", pending_checkout_id: null },
+      "/api/v1/tenant": makeTenant(),
+    });
     vi.mocked(apiClient.patch).mockResolvedValue(
       makeTenant({ denial_risk_warning_threshold: 10, denial_risk_critical_threshold: 35 })
     );
@@ -125,6 +140,8 @@ describe("TenantPage — Épico F2.1 do Plano Diretor (Calibração por especial
     >);
     mockGetByPath({
       "/api/v1/tenant/plans/available": [],
+      "/api/v1/subscription/plans": [],
+      "/api/v1/subscription": { plan_tier: "starter", pending_checkout_id: null },
       "/api/v1/tenant/denial-risk-thresholds/suggested": { warning_threshold: 12.5, critical_threshold: 38.2, sample_size: 8 },
       "/api/v1/tenant": makeTenant(),
     });
@@ -147,6 +164,8 @@ describe("TenantPage — Épico F2.1 do Plano Diretor (Calibração por especial
     >);
     mockGetByPath({
       "/api/v1/tenant/plans/available": [],
+      "/api/v1/subscription/plans": [],
+      "/api/v1/subscription": { plan_tier: "starter", pending_checkout_id: null },
       "/api/v1/tenant/annual-goal/suggested": {
         trailing_12_months_total: 100_000,
         own_growth_rate: 0.2,
@@ -180,6 +199,8 @@ describe("TenantPage — Épico F2.1 do Plano Diretor (Calibração por especial
     >);
     mockGetByPath({
       "/api/v1/tenant/plans/available": [],
+      "/api/v1/subscription/plans": [],
+      "/api/v1/subscription": { plan_tier: "starter", pending_checkout_id: null },
       "/api/v1/tenant/annual-goal/suggested": {
         trailing_12_months_total: 50_000,
         own_growth_rate: null,
@@ -204,7 +225,12 @@ describe("TenantPage — Épico F2.1 do Plano Diretor (Calibração por especial
     vi.mocked(useAuth).mockReturnValue({
       user: { tenant_id: "t1", sub: "u2", role: "financeiro" },
     } as unknown as ReturnType<typeof useAuth>);
-    mockGetByPath({ "/api/v1/tenant/plans/available": [], "/api/v1/tenant": makeTenant() });
+    mockGetByPath({
+      "/api/v1/tenant/plans/available": [],
+      "/api/v1/subscription/plans": [],
+      "/api/v1/subscription": { plan_tier: "starter", pending_checkout_id: null },
+      "/api/v1/tenant": makeTenant(),
+    });
 
     renderWithProviders(<TenantPage />);
     await waitFor(() => expect(screen.getByLabelText("Especialidade predominante")).toBeInTheDocument());
