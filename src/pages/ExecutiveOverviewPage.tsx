@@ -62,6 +62,11 @@ function formatPct(value: number): string {
 
 const TABS_GROUP = "sala-de-comando";
 type TabId = "hoje" | "diagnostico" | "crm" | "oportunidades" | "comparativo" | "simulador" | "capital" | "rentabilidade" | "roi";
+const TAB_IDS: TabId[] = ["hoje", "diagnostico", "crm", "oportunidades", "comparativo", "simulador", "capital", "rentabilidade", "roi"];
+
+function isTabId(value: string | null): value is TabId {
+  return !!value && (TAB_IDS as string[]).includes(value);
+}
 
 /**
  * Sala de Comando 2.0 (ver Roadmap "Sala de Comando 2.0") — a mesma
@@ -76,12 +81,18 @@ export function ExecutiveOverviewPage() {
   const { windowDays, setWindowDays, dateFrom, dateTo } = useDateWindow(7);
   const { data: profile } = useCurrentUserProfile();
   // Deep-link de aba/foco a partir de fora da Sala de Comando (Avaliação
-  // Home/Sala de Comando, Achado 2) — antes, qualquer destino "#tab:"/
-  // Épico F1.1 do Plano Diretor: "Hoje" é a página inicial da Sala de
-  // Comando agora — o gestor não escolhe mais aba antes de saber o que
-  // fazer (a fila única já chega ordenada por impacto).
+  // Home/Sala de Comando, Achado 2) — "?tab=" explícito e válido manda
+  // (ex: clique em um card da Home que aponta pra "?tab=crm"); "?tab="
+  // ausente vira "hoje" (Épico F1.1 do Plano Diretor: a fila única já
+  // chega ordenada por impacto, o gestor não escolhe mais aba antes de
+  // saber o que fazer); "?tab=" presente mas inválido cai no fallback
+  // antigo "diagnostico" (nunca quebra a tela por um link velho/errado).
   const [searchParams] = useSearchParams();
-  const [activeTab, setActiveTab] = useState<TabId>("hoje");
+  const [activeTab, setActiveTab] = useState<TabId>(() => {
+    const tab = searchParams.get("tab");
+    if (tab === null) return "hoje";
+    return isTabId(tab) ? tab : "diagnostico";
+  });
   // Foco de agenda (ver AgendaFocus, lib/types.ts) — disparado pelos
   // botões de ação dos insights de queda de agenda/agenda ociosa (ver
   // DECISÃO em SmartInsightsFeed.tsx::InsightActionButton). Mora aqui
