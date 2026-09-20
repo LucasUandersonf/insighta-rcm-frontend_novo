@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowRight, ArrowUpRight, CheckCircle2, Sparkles } from "lucide-react";
+import { ArrowRight, ArrowUpRight, CheckCircle2, Sparkles, UploadCloud } from "lucide-react";
 import { LoadingState } from "@/components/ui/Panel";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -9,8 +9,54 @@ import { SEVERITY_CONFIG, formatCurrency } from "@/components/dashboard/SmartIns
 import { RecentlyResolvedList } from "@/components/dashboard/RecentlyResolvedList";
 import { apiClient } from "@/lib/api-client";
 import { firstNameFrom, useCurrentUserProfile } from "@/lib/useCurrentUserProfile";
+import { useAuth } from "@/context/AuthContext";
 import { cn } from "@/lib/cn";
-import type { ExecutiveNarrative, SmartInsight } from "@/lib/types";
+import type { ExecutiveNarrative, IngestionFileEntry, PaginatedResponse, SmartInsight } from "@/lib/types";
+
+// Achado ALTO da Auditoria de Prontidão v1 ("sem wizard de tenant novo"):
+// mesmo RBAC de /upload (ingestion.py/_CAN_MANAGE) — quem não pode subir
+// dado (atendimento/auditor) recebe uma mensagem diferente, pedindo pra
+// avisar quem pode, em vez de um botão que levaria a uma tela 403.
+const _CAN_UPLOAD_ROLES = ["owner", "admin", "financeiro"];
+
+/**
+ * Achado ALTO da Auditoria de Prontidão v1: uma clínica nova caía direto
+ * nesta tela com a mensagem "Tudo tranquilo por aqui" — tecnicamente
+ * verdade (não há nada urgente porque não há dado NENHUM), mas enganosa
+ * pra quem só precisa saber "por onde eu começo" no primeiro acesso. O
+ * sinal usado aqui é o MESMO que UploadCenterPage já usa pro próprio
+ * estado vazio (GET /ingestion/files, total=0) — nenhum endpoint novo,
+ * nenhuma heurística inventada à parte.
+ */
+function FirstRunWizard({ canUpload }: { canUpload: boolean }) {
+  const navigate = useNavigate();
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, ease: "easeOut" }}
+      className="flex flex-col items-start gap-3 rounded-lg border border-accent/25 bg-accent-bg p-5"
+    >
+      <span aria-hidden className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-canvas-surface/70 text-accent">
+        <UploadCloud size={18} strokeWidth={2} />
+      </span>
+      <div>
+        <p className="text-sm font-medium text-ink">Vamos começar? Sua clínica ainda não tem nenhum dado importado.</p>
+        <p className="mt-1 text-xs leading-relaxed text-ink-muted">
+          {canUpload
+            ? "Suba sua agenda, faturamento ou tabela de convênio na Central de Upload — é o primeiro passo para a Sala de Comando começar a gerar insights de verdade."
+            : "Peça para o owner, administrador(a) ou financeiro da clínica subir os primeiros dados na Central de Upload — depois disso, esta tela passa a mostrar as prioridades reais do dia."}
+        </p>
+      </div>
+      {canUpload && (
+        <Button type="button" size="sm" onClick={() => navigate("/upload")} className="inline-flex items-center gap-1.5">
+          Ir para Central de Upload
+          <ArrowRight aria-hidden size={13} />
+        </Button>
+      )}
+    </motion.div>
+  );
+}
 
 /**
  * Home estilo Jarvis (Roadmap "Rumo à Nota 9", Fase 1) — pedido direto do
@@ -101,25 +147,39 @@ function PriorityCard({ insight, index }: { insight: SmartInsight; index: number
 
 export function HomePage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { data: profile } = useCurrentUserProfile();
   const { data, isLoading, error } = useQuery({
     queryKey: ["analytics", "executive-narrative"],
     queryFn: () => apiClient.get<ExecutiveNarrative>("/api/v1/analytics/executive-narrative"),
     retry: false,
   });
+  // Achado ALTO da Auditoria de Prontidão v1 — mesmo sinal que
+  // UploadCenterPage já usa pro próprio estado vazio (limit=1 porque só
+  // o `total` importa aqui, nunca a lista em si).
+  const { data: ingestionHistory, isLoading: isLoadingIngestion } = useQuery({
+    queryKey: ["ingestion-files", "first-run-check"],
+    queryFn: () => apiClient.get<PaginatedResponse<IngestionFileEntry>>("/api/v1/ingestion/files?limit=1&offset=0"),
+  });
 
   const priorities = data?.top_priorities ?? [];
   const recentlyResolved = data?.recently_resolved ?? [];
   const greeting = profile ? `${timeOfDayGreeting()}, ${firstNameFrom(profile.full_name)}.` : null;
+  const isFirstRun = !isLoadingIngestion && ingestionHistory?.total === 0;
+  const canUpload = !!user && _CAN_UPLOAD_ROLES.includes(user.role);
 
   return (
     <div className="mx-auto max-w-3xl space-y-10 py-6">
       <div>
         {greeting && <p className="text-sm text-ink-muted">{greeting}</p>}
-        {isLoading ? (
+        {isLoading || isLoadingIngestion ? (
           <div className="mt-4">
             <LoadingState rows={2} />
           </div>
+        ) : isFirstRun ? (
+          <p className="mt-3 font-serif text-2xl font-medium tracking-tightest text-ink">
+            Sua clínica ainda não tem dado importado — vamos resolver isso.
+          </p>
         ) : data?.narrative ? (
           <motion.p
             key={data.narrative}
@@ -139,10 +199,12 @@ export function HomePage() {
                 : "Aqui está o resumo de hoje — confira as prioridades abaixo."}
           </p>
         )}
-        {!isLoading && <div className="mt-3"><RecentlyResolvedList titles={recentlyResolved} /></div>}
+        {!isLoading && !isFirstRun && <div className="mt-3"><RecentlyResolvedList titles={recentlyResolved} /></div>}
       </div>
 
-      {priorities.length > 0 ? (
+      {isFirstRun ? (
+        <FirstRunWizard canUpload={canUpload} />
+      ) : priorities.length > 0 ? (
         <div className="space-y-3">
           <h2 className="flex items-center gap-1.5 text-2xs font-medium uppercase tracking-wide text-ink-faint">
             <Sparkles aria-hidden size={12} />

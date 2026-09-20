@@ -3,13 +3,16 @@ import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HomePage } from "@/pages/HomePage";
 import { apiClient } from "@/lib/api-client";
+import { useAuth } from "@/context/AuthContext";
 import { renderWithProviders } from "@/test/utils";
-import type { ExecutiveNarrative, PlatformUser } from "@/lib/types";
+import type { CurrentUser, ExecutiveNarrative, PlatformUser } from "@/lib/types";
 
 vi.mock("@/lib/api-client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api-client")>();
   return { ...actual, apiClient: { ...actual.apiClient, get: vi.fn() } };
 });
+
+vi.mock("@/context/AuthContext", () => ({ useAuth: vi.fn() }));
 
 const navigateMock = vi.fn();
 vi.mock("react-router-dom", async (importOriginal) => {
@@ -19,10 +22,20 @@ vi.mock("react-router-dom", async (importOriginal) => {
 
 const PROFILE: PlatformUser = { id: "u1", full_name: "Marina Souza", email: "marina@clinica.com" } as PlatformUser;
 
-function mockEndpoints(narrative: ExecutiveNarrative) {
+function mockUser(role: CurrentUser["role"] = "owner") {
+  vi.mocked(useAuth).mockReturnValue({ user: { tenant_id: "t1", sub: "u1", role } } as unknown as ReturnType<typeof useAuth>);
+}
+
+// Achado ALTO da Auditoria de Prontidão v1 ("sem wizard de tenant novo")
+// — ingestionTotal>0 por padrão aqui, pra nenhum teste pré-existente
+// cair sem querer no estado de primeiro uso; os testes DEDICADOS a ele
+// passam ingestionTotal=0 explicitamente.
+function mockEndpoints(narrative: ExecutiveNarrative, ingestionTotal = 5) {
+  mockUser();
   vi.mocked(apiClient.get).mockImplementation((url: string) => {
     if (url.includes("executive-narrative")) return Promise.resolve(narrative as never);
     if (url.includes("users/me")) return Promise.resolve(PROFILE as never);
+    if (url.includes("ingestion/files")) return Promise.resolve({ items: [], total: ingestionTotal, limit: 1, offset: 0 } as never);
     return Promise.reject(new Error(`unexpected url in test: ${url}`));
   });
 }
@@ -220,5 +233,52 @@ describe("HomePage", () => {
     const button = await screen.findByRole("button", { name: /Ver tudo na Sala de Comando/ });
     await user.click(button);
     expect(navigateMock).toHaveBeenCalledWith("/decisao");
+  });
+
+  // Achado ALTO da Auditoria de Prontidão v1: tenant novo (zero arquivo
+  // importado) caía no mesmo "Tudo tranquilo por aqui" de quem já opera
+  // normalmente — sem nenhuma pista de que o primeiro passo é subir dado
+  // na Central de Upload.
+  describe("primeiro uso (tenant sem dado importado)", () => {
+    it("owner vê o convite pra Central de Upload em vez de 'tudo tranquilo'", async () => {
+      mockEndpoints(
+        { period_start: "2026-09-10", period_end: "2026-09-16", narrative: null, generated_at: null, top_priorities: [], recently_resolved: [] },
+        0
+      );
+      const user = userEvent.setup();
+
+      renderWithProviders(<HomePage />);
+
+      expect(await screen.findByText(/Sua clínica ainda não tem dado importado/)).toBeInTheDocument();
+      expect(screen.queryByText(/Tudo tranquilo por aqui/)).not.toBeInTheDocument();
+
+      await user.click(screen.getByRole("button", { name: "Ir para Central de Upload" }));
+      expect(navigateMock).toHaveBeenCalledWith("/upload");
+    });
+
+    it("atendimento (sem RBAC de upload) vê pedido pra avisar a equipe, sem botão que levaria a um 403", async () => {
+      mockEndpoints(
+        { period_start: "2026-09-10", period_end: "2026-09-16", narrative: null, generated_at: null, top_priorities: [], recently_resolved: [] },
+        0
+      );
+      mockUser("atendimento");
+
+      renderWithProviders(<HomePage />);
+
+      expect(await screen.findByText(/Peça para o owner, administrador\(a\) ou financeiro/)).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Ir para Central de Upload" })).not.toBeInTheDocument();
+    });
+
+    it("com dado importado (total>0), nunca mostra o convite de primeiro uso", async () => {
+      mockEndpoints(
+        { period_start: "2026-09-10", period_end: "2026-09-16", narrative: null, generated_at: null, top_priorities: [], recently_resolved: [] },
+        5
+      );
+
+      renderWithProviders(<HomePage />);
+
+      await waitFor(() => expect(apiClient.get).toHaveBeenCalled());
+      expect(screen.queryByText(/Sua clínica ainda não tem dado importado/)).not.toBeInTheDocument();
+    });
   });
 });
