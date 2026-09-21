@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { BillingOperationsPage } from "@/pages/BillingOperationsPage";
@@ -39,6 +39,94 @@ function mockGetByPath(routes: Record<string, unknown>) {
     return Promise.reject(new Error(`Sem mock para ${path}`));
   });
 }
+
+// Achado da Auditoria Estratégica ("liquidar era ação financeira de mão
+// única, sem confirmação e sem forma de reverter") — cobre o ConfirmDialog
+// antes de registrar o pagamento e o fluxo de reverter uma liquidação já
+// feita.
+describe("BillingOperationsPage — aba Registrar pagamento", () => {
+  // O mock de apiClient é um módulo compartilhado por todo o arquivo, e
+  // este projeto não zera mocks entre testes (sem clearMocks no vitest
+  // config) — sem isto, uma chamada de um teste anterior sobrevive no
+  // histórico do mock e quebra a asserção `.not.toHaveBeenCalled()`
+  // abaixo, que é a primeira deste tipo neste arquivo.
+  beforeEach(() => {
+    vi.mocked(apiClient.post).mockClear();
+    vi.mocked(apiClient.get).mockClear();
+  });
+
+  it("pede confirmação antes de registrar o pagamento, e só chama o backend depois de confirmar", async () => {
+    mockGetByPath({
+      "/api/v1/billing/search": [makeResult({ status: "pending" })],
+      "/api/v1/insurance-companies/plans": [],
+      "/api/v1/guias": { items: [], total: 0, limit: 15, offset: 0 },
+    });
+    vi.mocked(apiClient.post).mockResolvedValue({});
+    const user = userEvent.setup();
+
+    renderWithProviders(<BillingOperationsPage />);
+    await user.type(screen.getByLabelText(/Buscar faturamento/), "Maria da Silva");
+    await waitFor(() => expect(screen.getByText("Maria da Silva Santos")).toBeInTheDocument(), { timeout: 2000 });
+    await user.click(screen.getByText("Maria da Silva Santos"));
+
+    await user.type(screen.getByLabelText(/Valor recebido/), "150");
+    await user.click(screen.getByRole("button", { name: "Registrar pagamento" }));
+
+    // O clique acima só abre o ConfirmDialog — nenhuma chamada ainda.
+    expect(apiClient.post).not.toHaveBeenCalled();
+    expect(screen.getByText(/Confirma o registro de/)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Registrar" }));
+
+    await waitFor(() =>
+      expect(apiClient.post).toHaveBeenCalledWith("/api/v1/billing/b1/settle", { received_value: 150 })
+    );
+  });
+
+  it("cancelar o ConfirmDialog não registra nada", async () => {
+    mockGetByPath({
+      "/api/v1/billing/search": [makeResult({ status: "pending" })],
+      "/api/v1/insurance-companies/plans": [],
+      "/api/v1/guias": { items: [], total: 0, limit: 15, offset: 0 },
+    });
+    const user = userEvent.setup();
+
+    renderWithProviders(<BillingOperationsPage />);
+    await user.type(screen.getByLabelText(/Buscar faturamento/), "Maria da Silva");
+    await waitFor(() => expect(screen.getByText("Maria da Silva Santos")).toBeInTheDocument(), { timeout: 2000 });
+    await user.click(screen.getByText("Maria da Silva Santos"));
+    await user.type(screen.getByLabelText(/Valor recebido/), "150");
+    await user.click(screen.getByRole("button", { name: "Registrar pagamento" }));
+
+    await user.click(screen.getByRole("button", { name: "Cancelar" }));
+
+    expect(apiClient.post).not.toHaveBeenCalled();
+    await waitFor(() => expect(screen.queryByText(/Confirma o registro de/)).not.toBeInTheDocument());
+  });
+
+  it("faturamento já liquidado mostra o botão de reverter em vez do formulário", async () => {
+    mockGetByPath({
+      "/api/v1/billing/search": [makeResult({ status: "paid" })],
+      "/api/v1/insurance-companies/plans": [],
+      "/api/v1/guias": { items: [], total: 0, limit: 15, offset: 0 },
+    });
+    vi.mocked(apiClient.post).mockResolvedValue({});
+    const user = userEvent.setup();
+
+    renderWithProviders(<BillingOperationsPage />);
+    await user.type(screen.getByLabelText(/Buscar faturamento/), "Maria da Silva");
+    await waitFor(() => expect(screen.getByText("Maria da Silva Santos")).toBeInTheDocument(), { timeout: 2000 });
+    await user.click(screen.getByText("Maria da Silva Santos"));
+
+    expect(screen.getByText(/já foi liquidado/)).toBeInTheDocument();
+    expect(screen.queryByLabelText("Valor recebido")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Reverter liquidação" }));
+    await user.click(screen.getByRole("button", { name: "Reverter" }));
+
+    await waitFor(() => expect(apiClient.post).toHaveBeenCalledWith("/api/v1/billing/b1/unsettle"));
+  });
+});
 
 // Épico F4.2 do Plano Diretor ("Fechar lacunas operacionais") — confirmar
 // se a coparticipação cobrada foi de fato recebida do paciente.

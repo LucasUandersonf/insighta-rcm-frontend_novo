@@ -59,6 +59,11 @@ const FAQ_ITEMS: { question: string; answer: string }[] = [
     answer:
       "Um admin ou owner pode anonimizar o cadastro do paciente (substitui nome/CPF/data de nascimento por um placeholder). O histórico de agendamento e faturamento vinculado é preservado, porque a clínica é obrigada a mantê-lo por obrigação legal — a LGPD permite isso. A ação é irreversível.",
   },
+  {
+    question: "Como registro um atendimento particular, sem convênio?",
+    answer:
+      "Em Convênios e contratos, cadastre um plano com o tipo 'Particular (sem operadora)' — não precisa de operadora nenhuma vinculada. A partir daí, use esse plano normalmente ao criar o faturamento do atendimento: ele aparece separado do restante nos indicadores da Sala de Comando e do Painel. Se quiser, cadastre também uma tabela de preços para esse plano (Convênios e contratos > tabela de preços) para o sistema avisar quando um valor particular fugir do que você cobra normalmente — o mesmo mecanismo que já usa para glosa de convênio.",
+  },
 ];
 
 async function _createSupportRequest(payload: SupportRequestCreateRequest): Promise<SupportRequest> {

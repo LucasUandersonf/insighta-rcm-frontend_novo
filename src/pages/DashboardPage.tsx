@@ -64,9 +64,10 @@ const PAGE_SIZE = 20;
 // no roteador — ver App.tsx —, acessível a todo papel autenticado).
 // backend logo ao entrar. "Junta Técnica Insighta": esta rota deixou de
 // ser "/" (pós-login, para todo papel) — agora é "/painel", só destino
-// de drill-down a partir de um card do feed (ver RootRedirect.tsx); o
-// papel sem acesso à Sala de Comando ainda cai aqui, como fallback (ver
-// RootRedirect.tsx), e continua vendo o mesmo aviso de acesso abaixo.
+// de drill-down a partir de um card do feed. A raiz "/" é a Home estilo
+// Jarvis (ver HomePage.tsx/App.tsx) para todo papel, não um redirect —
+// o papel sem acesso à Sala de Comando continua vendo o mesmo aviso de
+// acesso abaixo ao entrar aqui diretamente.
 const CAN_VIEW_ANALYTICS: UserRole[] = ["owner", "admin", "financeiro", "auditor"];
 const CAN_VIEW_BILLING_QUEUE: UserRole[] = ["owner", "admin", "financeiro"];
 

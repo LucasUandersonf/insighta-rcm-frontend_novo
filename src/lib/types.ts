@@ -1371,6 +1371,21 @@ export interface OrganizationSummary {
   consolidated_no_show_rate: number | null;
 }
 
+// POST /tenant/organization/invite + POST /tenant/organization/join —
+// Achado da Auditoria Estratégica ("vinculação self-service de
+// unidades multi-tenant"). O código só existe nesta resposta, uma vez
+// (mesmo princípio de um segredo de posse única) — repassar por fora
+// do produto (WhatsApp, e-mail) é responsabilidade de quem gerou.
+export interface OrganizationInviteResponse {
+  code: string;
+  organization_name: string;
+  expires_at: string;
+}
+
+export interface OrganizationJoinResponse {
+  organization_name: string;
+}
+
 // GET /tenant/annual-goal/suggested (Épico F3.3 do Plano Diretor —
 // "Metas e cenários orientados a dados") — duas sugestões
 // independentes (crescimento histórico próprio vs. ritmo/percentil de
@@ -1900,12 +1915,18 @@ export interface ContractItem {
   tuss_code: string;
   procedure_name: string | null;
   agreed_price: number;
+  // Achado da Auditoria Estratégica — custo de insumo estimado da
+  // clínica (nunca o valor pago pelo convênio), opcional. Ainda sem
+  // campo de captura na UI nesta rodada (só leitura/API por enquanto) —
+  // ver DECISÃO em app/sql/061_contract_item_standard_cost.sql (backend).
+  standard_cost: number | null;
 }
 
 export interface ContractItemInput {
   tuss_code: string;
   procedure_name?: string | null;
   agreed_price: number;
+  standard_cost?: number | null;
 }
 
 export interface Contract {

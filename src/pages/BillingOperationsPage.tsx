@@ -4,6 +4,7 @@ import { FileStack, Search, Wallet } from "lucide-react";
 import { Panel, EmptyState, LoadingState, ErrorState } from "@/components/ui/Panel";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { TextField, SelectField } from "@/components/ui/FormField";
 import { FilterBar } from "@/components/ui/FilterBar";
 import { Pagination } from "@/components/ui/Pagination";
@@ -51,18 +52,26 @@ function SettlementTab() {
   const [selected, setSelected] = useState<BillingSearchItem | null>(null);
   const [receivedValue, setReceivedValue] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  // Achado da Auditoria Estratégica: liquidar era uma ação financeira de
+  // mão única, sem "tem certeza?" — o valor submetido ia direto pro
+  // banco no clique. Guarda o valor pendente de confirmação em vez de
+  // disparar a mutação direto do form.
+  const [pendingSettle, setPendingSettle] = useState<{ billing: BillingSearchItem; value: number } | null>(null);
+  const [showUnsettleConfirm, setShowUnsettleConfirm] = useState(false);
 
-  const mutation = useMutation({
-    mutationFn: () =>
-      apiClient.post(`/api/v1/billing/${selected!.id}/settle`, { received_value: Number(receivedValue) }),
-    onSuccess: () => {
+  const settleMutation = useMutation({
+    mutationFn: (vars: { billingId: string; value: number }) =>
+      apiClient.post(`/api/v1/billing/${vars.billingId}/settle`, { received_value: vars.value }),
+    onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ["billing"] });
-      showSuccess(`Pagamento de ${formatCurrency(Number(receivedValue))} registrado para ${selected!.patient_name}.`);
+      showSuccess(`Pagamento de ${formatCurrency(vars.value)} registrado para ${selected!.patient_name}.`);
       setSelected(null);
       setReceivedValue("");
       setFieldErrors({});
+      setPendingSettle(null);
     },
     onError: (err) => {
+      setPendingSettle(null);
       if (err instanceof ApiError && err.campos) {
         const mapped: Record<string, string> = {};
         for (const c of err.campos) mapped[c.campo] = c.problema;
@@ -70,6 +79,24 @@ function SettlementTab() {
       } else {
         showError(getApiErrorMessage(err));
       }
+    },
+  });
+
+  // Achado da Auditoria Estratégica: sem isto, um faturamento já
+  // liquidado por engano (valor errado, faturamento errado) ficava sem
+  // conserto possível na tela — o único caminho era pedir pra alguém
+  // com acesso ao banco corrigir na mão.
+  const unsettleMutation = useMutation({
+    mutationFn: (billingId: string) => apiClient.post(`/api/v1/billing/${billingId}/unsettle`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["billing"] });
+      showSuccess(`Liquidação de ${selected!.patient_name} revertida — faturamento voltou a 'pendente'.`);
+      setSelected(null);
+      setShowUnsettleConfirm(false);
+    },
+    onError: (err) => {
+      setShowUnsettleConfirm(false);
+      showError(getApiErrorMessage(err));
     },
   });
 
@@ -85,8 +112,10 @@ function SettlementTab() {
       setFieldErrors({ received_value: "Informe um valor recebido maior que zero." });
       return;
     }
-    mutation.mutate();
+    setPendingSettle({ billing: selected, value });
   }
+
+  const alreadySettled = selected?.status === "paid";
 
   return (
     <Panel
@@ -95,7 +124,26 @@ function SettlementTab() {
     >
       <form onSubmit={handleSubmit} className="p-4">
         <BillingSearchPicker selected={selected} onSelect={setSelected} error={fieldErrors["billing"]} />
-        {selected && (
+        {selected && alreadySettled && (
+          <div className="mb-4 rounded-lg border border-denied/30 bg-denied-bg p-4">
+            <p className="text-sm text-ink">
+              Este faturamento já foi liquidado (recebido: {formatCurrency(selected.charged_value)}). Para registrar
+              um novo valor, reverta a liquidação atual primeiro.
+            </p>
+            <div className="mt-3 flex justify-end">
+              <Button
+                type="button"
+                variant="secondary"
+                className="text-denied"
+                onClick={() => setShowUnsettleConfirm(true)}
+                disabled={unsettleMutation.isPending}
+              >
+                {unsettleMutation.isPending ? "Revertendo..." : "Reverter liquidação"}
+              </Button>
+            </div>
+          </div>
+        )}
+        {selected && !alreadySettled && (
           <>
             <TextField
               label="Valor recebido"
@@ -115,14 +163,42 @@ function SettlementTab() {
                 </span>
               </p>
             )}
+            <div className="mt-1 flex justify-end">
+              <Button type="submit" disabled={settleMutation.isPending}>
+                Registrar pagamento
+              </Button>
+            </div>
           </>
         )}
-        <div className="mt-1 flex justify-end">
-          <Button type="submit" disabled={mutation.isPending}>
-            {mutation.isPending ? "Registrando..." : "Registrar pagamento"}
-          </Button>
-        </div>
       </form>
+
+      <ConfirmDialog
+        isOpen={!!pendingSettle}
+        title="Registrar pagamento recebido"
+        message={
+          pendingSettle
+            ? `Confirma o registro de ${formatCurrency(pendingSettle.value)} recebido de ${pendingSettle.billing.patient_name}? Esta ação fica visível na trilha de auditoria e pode ser revertida depois, se necessário.`
+            : ""
+        }
+        confirmLabel="Registrar"
+        onConfirm={() => pendingSettle && settleMutation.mutate({ billingId: pendingSettle.billing.id, value: pendingSettle.value })}
+        onCancel={() => setPendingSettle(null)}
+        isConfirming={settleMutation.isPending}
+      />
+
+      <ConfirmDialog
+        isOpen={showUnsettleConfirm}
+        title="Reverter liquidação"
+        message={
+          selected
+            ? `O faturamento de ${selected.patient_name} volta ao status 'pendente' e o valor recebido é apagado. Você poderá registrar um novo pagamento depois.`
+            : ""
+        }
+        confirmLabel="Reverter"
+        onConfirm={() => selected && unsettleMutation.mutate(selected.id)}
+        onCancel={() => setShowUnsettleConfirm(false)}
+        isConfirming={unsettleMutation.isPending}
+      />
     </Panel>
   );
 }

@@ -346,6 +346,26 @@ export async function confirmPasswordReset(token: string, newPassword: string): 
   );
 }
 
+/** Achado da Auditoria Estratégica: até aqui, "Sair" só limpava o
+ * armazenamento local — o refresh_token continuava válido no backend
+ * por até 30 dias, sem forma de revogar. `skipAuth: true` porque isto
+ * precisa funcionar mesmo com o access_token já expirado (é
+ * frequentemente o caso quando o usuário finalmente clica "Sair"), e o
+ * backend não exige Authorization para este endpoint (ver DECISÃO em
+ * POST /auth/logout, que espelha /auth/refresh no mesmo critério). */
+export async function logoutRequest(refreshToken: string): Promise<void> {
+  return apiClient.post<void>("/api/v1/auth/logout", { refresh_token: refreshToken }, { skipAuth: true });
+}
+
+/** "Encerrar todas as sessões" — de um dispositivo em que o usuário
+ * AINDA está autenticado, revoga toda sessão deste usuário (incluindo a
+ * de um dispositivo perdido/roubado que ele não tem mais em mãos). Ao
+ * contrário de logoutRequest acima, exige o access_token válido — por
+ * isso sem skipAuth. */
+export async function logoutAllSessionsRequest(): Promise<{ revoked_count: number }> {
+  return apiClient.post<{ revoked_count: number }>("/api/v1/auth/logout-all-sessions");
+}
+
 /** Lado público (sem autenticação) do link de avaliação de satisfação
  * pós-atendimento — ver DECISÃO em 052_appointment_satisfaction.sql
  * (backend). O paciente abre `/satisfacao/:token` sem estar logado. */
