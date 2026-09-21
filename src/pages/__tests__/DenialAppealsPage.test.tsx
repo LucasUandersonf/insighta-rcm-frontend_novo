@@ -3,7 +3,12 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { DenialAppealsPage } from "@/pages/DenialAppealsPage";
 import { apiClient } from "@/lib/api-client";
 import { renderWithProviders } from "@/test/utils";
-import type { DenialAppeal, DenialAppealDraftJustificationResponse, PaginatedResponse } from "@/lib/types";
+import type {
+  AiGenerationJob,
+  DenialAppeal,
+  DenialAppealDraftJustificationResponse,
+  PaginatedResponse,
+} from "@/lib/types";
 
 vi.mock("@/lib/api-client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api-client")>();
@@ -34,12 +39,27 @@ function makeAppeal(overrides: Partial<DenialAppeal> = {}): DenialAppeal {
 describe("DenialAppealsPage — rascunho de justificativa via IA (Parecer Técnico, revisão 2)", () => {
   it("gera rascunho com IA, permite editar, e baixa o PDF com a justificativa no query param", async () => {
     const appealsPage: PaginatedResponse<DenialAppeal> = { items: [makeAppeal()], total: 1, limit: 20, offset: 0 };
-    vi.mocked(apiClient.get).mockResolvedValue(appealsPage as never);
 
-    const draftResponse: DenialAppealDraftJustificationResponse = {
+    // Achado 1.7 da Auditoria Implacável: o rascunho via IA agora é um
+    // job assíncrono (POST enfileira, GET /ai-jobs/{id} faz polling) —
+    // ver DECISÃO em app/sql/065_ai_generation_jobs.sql no backend.
+    const draftResult: DenialAppealDraftJustificationResponse = {
       draft: "A guia foi corretamente autorizada sob o número 998877, conforme dados do caso.",
     };
-    vi.mocked(apiClient.post).mockResolvedValue(draftResponse as never);
+    const completedJob: AiGenerationJob<DenialAppealDraftJustificationResponse> = {
+      id: "draft-job-1",
+      kind: "denial_appeal_draft",
+      status: "completed",
+      result: draftResult,
+      error: null,
+      created_at: "2026-09-01T00:00:00Z",
+      completed_at: "2026-09-01T00:00:01Z",
+    };
+    vi.mocked(apiClient.get).mockImplementation((path: string) => {
+      if (path.startsWith("/api/v1/ai-jobs/")) return Promise.resolve(completedJob as never);
+      return Promise.resolve(appealsPage as never);
+    });
+    vi.mocked(apiClient.post).mockResolvedValue({ job_id: "draft-job-1", status: "pending" } as never);
     vi.mocked(apiClient.getBlob).mockResolvedValue(new Blob(["%PDF"], { type: "application/pdf" }) as never);
 
     // jsdom não implementa URL.createObjectURL/revokeObjectURL — precisa
@@ -63,7 +83,7 @@ describe("DenialAppealsPage — rascunho de justificativa via IA (Parecer Técni
       expect(apiClient.post).toHaveBeenCalledWith("/api/v1/denial-appeals/appeal-1/draft-justification")
     );
     await waitFor(() =>
-      expect(within(dialog).getByLabelText(/Justificativa/)).toHaveValue(draftResponse.draft)
+      expect(within(dialog).getByLabelText(/Justificativa/)).toHaveValue(draftResult.draft)
     );
 
     fireEvent.click(within(dialog).getByRole("button", { name: /Baixar documento/i }));
@@ -72,7 +92,7 @@ describe("DenialAppealsPage — rascunho de justificativa via IA (Parecer Técni
     const calledPath = vi.mocked(apiClient.getBlob).mock.calls[0][0];
     expect(calledPath).toContain("/api/v1/denial-appeals/appeal-1/document?justification=");
     const queryString = calledPath.split("?")[1];
-    expect(new URLSearchParams(queryString).get("justification")).toBe(draftResponse.draft);
+    expect(new URLSearchParams(queryString).get("justification")).toBe(draftResult.draft);
     expect(createObjectURLSpy).toHaveBeenCalled();
     expect(openSpy).toHaveBeenCalled();
   });

@@ -16,6 +16,7 @@ import { getApiErrorMessage } from "@/lib/query-client";
 import { useToast } from "@/context/ToastContext";
 import type {
   BillingSearchItem,
+  BillingStatusHistoryEntry,
   Guia,
   GuiaCreateRequest,
   GuiaTipo,
@@ -40,6 +41,66 @@ function formatCurrency(value: number): string {
 
 function formatDate(iso: string): string {
   return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(iso));
+}
+
+function formatDateTime(iso: string): string {
+  return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(iso));
+}
+
+// "Mapa de Dados Insighta" — rótulo amigável para o status bruto do
+// ledger (ver core.billing.status no backend); "—" (from_status null)
+// é a primeira linha do ledger, sem transição anterior.
+const BILLING_STATUS_LABELS: Record<string, string> = {
+  pending: "pendente",
+  held_for_review: "em revisão",
+  submitted: "enviado",
+  paid: "pago",
+  denied: "glosado",
+  reversed: "revertido",
+};
+
+function statusLabel(status: string | null): string {
+  if (status === null) return "—";
+  return BILLING_STATUS_LABELS[status] ?? status;
+}
+
+// ---------------------------------------------------------------------
+// Transparência de acesso (Pilar 2 da Auditoria Implacável, padrão
+// Singapura/NEHR: "quem mudou o quê, quando") — ledger estruturado de
+// toda transição de status deste faturamento (GET /billing/{id}/status-
+// history), lido do core.billing_status_history, não do audit_log
+// genérico. Sempre visível quando um faturamento está selecionado —
+// achado deliberado: transparência funciona melhor como padrão do que
+// escondida atrás de um clique extra.
+// ---------------------------------------------------------------------
+
+function BillingStatusHistoryTimeline({ billingId }: { billingId: string }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ["billing", billingId, "status-history"],
+    queryFn: () => apiClient.get<BillingStatusHistoryEntry[]>(`/api/v1/billing/${billingId}/status-history`),
+  });
+
+  if (isLoading) return <p className="mb-4 text-2xs text-ink-faint">Carregando histórico...</p>;
+  if (!data || data.length === 0) return null;
+
+  return (
+    <div className="mb-4 rounded-lg border border-border-hairline bg-canvas-raised/40 p-3">
+      <p className="mb-2 text-2xs font-medium uppercase tracking-wide text-ink-faint">Histórico deste faturamento</p>
+      <ul className="space-y-1.5">
+        {data.map((entry, i) => (
+          <li key={i} className="flex items-center justify-between gap-3 text-2xs">
+            <span className="text-ink-muted">
+              {statusLabel(entry.from_status)} <span className="text-ink-faint">→</span>{" "}
+              <span className="font-medium text-ink">{statusLabel(entry.to_status)}</span>
+              {entry.changed_by_name && <> · {entry.changed_by_name}</>}
+              {!entry.changed_by_name && <> · importação automática</>}
+            </span>
+            <span className="shrink-0 text-ink-faint">{formatDateTime(entry.created_at)}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 }
 
 // ---------------------------------------------------------------------
@@ -124,6 +185,7 @@ function SettlementTab() {
     >
       <form onSubmit={handleSubmit} className="p-4">
         <BillingSearchPicker selected={selected} onSelect={setSelected} error={fieldErrors["billing"]} />
+        {selected && <BillingStatusHistoryTimeline billingId={selected.id} />}
         {selected && alreadySettled && (
           <div className="mb-4 rounded-lg border border-denied/30 bg-denied-bg p-4">
             <p className="text-sm text-ink">

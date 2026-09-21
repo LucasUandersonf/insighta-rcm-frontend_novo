@@ -36,6 +36,11 @@ function mockGetByPath(routes: Record<string, unknown>) {
     for (const [prefix, value] of Object.entries(routes)) {
       if (path.startsWith(prefix)) return Promise.resolve(value as never);
     }
+    // BillingStatusHistoryTimeline busca isto automaticamente assim que
+    // um faturamento é selecionado, em TODO teste deste arquivo — sem
+    // isto, cada teste precisaria mockar a rota individualmente.
+    // Default: sem histórico (o componente não renderiza nada).
+    if (path.endsWith("/status-history")) return Promise.resolve([] as never);
     return Promise.reject(new Error(`Sem mock para ${path}`));
   });
 }
@@ -81,6 +86,42 @@ describe("BillingOperationsPage — aba Registrar pagamento", () => {
     await waitFor(() =>
       expect(apiClient.post).toHaveBeenCalledWith("/api/v1/billing/b1/settle", { received_value: 150 })
     );
+  });
+
+  it("mostra o histórico de transições do faturamento selecionado (transparência de acesso)", async () => {
+    mockGetByPath({
+      "/api/v1/billing/search": [makeResult({ status: "paid" })],
+      "/api/v1/insurance-companies/plans": [],
+      "/api/v1/guias": { items: [], total: 0, limit: 15, offset: 0 },
+      "/api/v1/billing/b1/status-history": [
+        {
+          from_status: "pending",
+          to_status: "paid",
+          source: "human",
+          reason: null,
+          changed_by_name: "Ana Financeiro",
+          created_at: "2026-08-21T14:30:00Z",
+        },
+        {
+          from_status: null,
+          to_status: "pending",
+          source: "human",
+          reason: null,
+          changed_by_name: null,
+          created_at: "2026-08-20T10:00:00Z",
+        },
+      ],
+    });
+    const user = userEvent.setup();
+
+    renderWithProviders(<BillingOperationsPage />);
+    await user.type(screen.getByLabelText(/Buscar faturamento/), "Maria da Silva");
+    await waitFor(() => expect(screen.getByText("Maria da Silva Santos")).toBeInTheDocument(), { timeout: 2000 });
+    await user.click(screen.getByText("Maria da Silva Santos"));
+
+    await waitFor(() => expect(screen.getByText("Histórico deste faturamento")).toBeInTheDocument());
+    expect(screen.getByText(/Ana Financeiro/)).toBeInTheDocument();
+    expect(screen.getByText(/importação automática/)).toBeInTheDocument();
   });
 
   it("cancelar o ConfirmDialog não registra nada", async () => {
