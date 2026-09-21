@@ -81,5 +81,20 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
     css: false,
+    // DECISÃO — VITE_API_BASE_URL fixa para os testes, nunca herdada do
+    // .env local
+    // -------------------------------------------------------------------
+    // api-client-refresh.test.ts mocka `global.fetch` e checa a URL exata
+    // chamada (ex: "http://localhost:9999/api/v1/auth/refresh") — sem
+    // isto aqui, o valor vinha do `.env` de cada máquina (gitignored,
+    // nunca existe em CI): passava por acidente em dev com o valor
+    // "certo" configurado, e quebrava em CI com a variável simplesmente
+    // ausente (`VITE_API_BASE_URL não configurada`). `test.env` do
+    // Vitest tem prioridade sobre `.env`/`process.env` — mesmo valor em
+    // qualquer máquina e no CI, e não interfere no build/dev real
+    // (Railway continua configurando a variável real de produção).
+    env: {
+      VITE_API_BASE_URL: "http://localhost:9999",
+    },
   },
 });
