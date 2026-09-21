@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FileText, Paperclip, Plus, ShieldAlert, Sparkles } from "lucide-react";
 import { Panel, EmptyState, LoadingState, ErrorState } from "@/components/ui/Panel";
@@ -14,6 +14,8 @@ import { apiClient, ApiError } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useToast } from "@/context/ToastContext";
 import type {
+  AiGenerationJob,
+  AiGenerationJobEnqueuedResponse,
   AppealStatus,
   AppealType,
   BillingSearchItem,
@@ -327,16 +329,43 @@ function JustificationModal({ appeal, onClose }: { appeal: DenialAppeal | null; 
   const { showError } = useToast();
   const [justification, setJustification] = useState("");
   const [isDownloading, setIsDownloading] = useState(false);
+  // Achado 1.7 da Auditoria Implacável: o rascunho via IA saiu do
+  // caminho síncrono da requisição (ver DECISÃO em
+  // app/sql/065_ai_generation_jobs.sql no backend) — o POST só devolve
+  // um job_id, o texto de verdade vem do polling abaixo.
+  const [draftJobId, setDraftJobId] = useState<string | null>(null);
 
-  const draftMutation = useMutation({
+  const enqueueDraftMutation = useMutation({
     mutationFn: (appealId: string) =>
-      apiClient.post<DenialAppealDraftJustificationResponse>(`/api/v1/denial-appeals/${appealId}/draft-justification`),
-    onSuccess: (data) => setJustification(data.draft),
+      apiClient.post<AiGenerationJobEnqueuedResponse>(`/api/v1/denial-appeals/${appealId}/draft-justification`),
+    onSuccess: (data) => setDraftJobId(data.job_id),
     onError: (err) => showError(getApiErrorMessage(err)),
   });
 
+  const draftJobQuery = useQuery({
+    queryKey: ["ai-jobs", draftJobId],
+    queryFn: () => apiClient.get<AiGenerationJob<DenialAppealDraftJustificationResponse>>(`/api/v1/ai-jobs/${draftJobId}`),
+    enabled: draftJobId !== null,
+    refetchInterval: (query) => (query.state.data?.status === "pending" ? 1000 : false),
+  });
+
+  useEffect(() => {
+    const job = draftJobQuery.data;
+    if (!job || job.status === "pending") return;
+    if (job.status === "completed" && job.result) {
+      setJustification(job.result.draft);
+    } else if (job.status === "failed") {
+      showError(job.error ?? "Falha ao gerar rascunho com IA.");
+    }
+    setDraftJobId(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftJobQuery.data]);
+
+  const isDrafting = enqueueDraftMutation.isPending || (draftJobId !== null && draftJobQuery.data?.status !== "failed");
+
   function handleClose() {
     setJustification("");
+    setDraftJobId(null);
     onClose();
   }
 
@@ -365,11 +394,11 @@ function JustificationModal({ appeal, onClose }: { appeal: DenialAppeal | null; 
         variant="secondary"
         size="sm"
         className="mb-4 flex items-center gap-1.5"
-        onClick={() => draftMutation.mutate(appeal.id)}
-        disabled={draftMutation.isPending}
+        onClick={() => enqueueDraftMutation.mutate(appeal.id)}
+        disabled={isDrafting}
       >
         <Sparkles size={14} />
-        {draftMutation.isPending ? "Gerando rascunho..." : "Gerar rascunho com IA"}
+        {isDrafting ? "Gerando rascunho..." : "Gerar rascunho com IA"}
       </Button>
       <TextareaField
         label="Justificativa"

@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Building2, ClipboardList, FileText, Plus, Sparkles, X } from "lucide-react";
 import { Panel, EmptyState, LoadingState, ErrorState } from "@/components/ui/Panel";
@@ -13,6 +13,8 @@ import { apiClient, ApiError } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useToast } from "@/context/ToastContext";
 import type {
+  AiGenerationJob,
+  AiGenerationJobEnqueuedResponse,
   Contract,
   ContractCreateRequest,
   ContractItemInput,
@@ -574,22 +576,47 @@ function ReviewContractModal({
   const { showSuccess, showError } = useToast();
   const [preview, setPreview] = useState<ExtractionPreview | null>(null);
   const [reviewItems, setReviewItems] = useState<ContractItemInput[]>([]);
+  // Achado 1.7 da Auditoria Implacável: a extração via IA saiu do
+  // caminho síncrono da requisição (ver DECISÃO em
+  // app/sql/065_ai_generation_jobs.sql no backend) — o POST só devolve
+  // um job_id, o resultado de verdade vem do polling abaixo.
+  const [extractJobId, setExtractJobId] = useState<string | null>(null);
 
-  const extractMutation = useMutation({
-    mutationFn: (contractId: string) => apiClient.post<ExtractionPreview>(`/api/v1/contracts/${contractId}/extract`),
-    onSuccess: (data) => {
-      setPreview(data);
+  const enqueueExtractMutation = useMutation({
+    mutationFn: (contractId: string) =>
+      apiClient.post<AiGenerationJobEnqueuedResponse>(`/api/v1/contracts/${contractId}/extract`),
+    onSuccess: (data) => setExtractJobId(data.job_id),
+    onError: (err) => showError(getApiErrorMessage(err)),
+  });
+
+  const extractJobQuery = useQuery({
+    queryKey: ["ai-jobs", extractJobId],
+    queryFn: () => apiClient.get<AiGenerationJob<ExtractionPreview>>(`/api/v1/ai-jobs/${extractJobId}`),
+    enabled: extractJobId !== null,
+    refetchInterval: (query) => (query.state.data?.status === "pending" ? 1000 : false),
+  });
+
+  useEffect(() => {
+    const job = extractJobQuery.data;
+    if (!job || job.status === "pending") return;
+    if (job.status === "completed" && job.result) {
+      setPreview(job.result);
       setReviewItems(
-        data.items.map((i: ExtractedItem) => ({
+        job.result.items.map((i: ExtractedItem) => ({
           tuss_code: i.tuss_code,
           procedure_name: i.procedure_name,
           agreed_price: i.agreed_price,
         }))
       );
       queryClient.invalidateQueries({ queryKey: ["contracts"] });
-    },
-    onError: (err) => showError(getApiErrorMessage(err)),
-  });
+    } else if (job.status === "failed") {
+      showError(job.error ?? "Falha ao extrair o contrato com IA.");
+    }
+    setExtractJobId(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [extractJobQuery.data]);
+
+  const isExtracting = enqueueExtractMutation.isPending || (extractJobId !== null && extractJobQuery.data?.status !== "failed");
 
   const homologateMutation = useMutation({
     mutationFn: ({ contractId, payload }: { contractId: string; payload: HomologateRequest }) =>
@@ -605,6 +632,7 @@ function ReviewContractModal({
   function handleClose() {
     setPreview(null);
     setReviewItems([]);
+    setExtractJobId(null);
     onClose();
   }
 
@@ -628,11 +656,11 @@ function ReviewContractModal({
           <p className="mb-4 text-sm text-ink-muted">
             Este contrato ainda não foi extraído. Clique abaixo para a IA ler o PDF e propor a tabela de preços.
           </p>
-          <Button onClick={() => extractMutation.mutate(contract.id)} disabled={extractMutation.isPending}>
-            {extractMutation.isPending ? "Extraindo com IA..." : "Extrair com IA"}
+          <Button onClick={() => enqueueExtractMutation.mutate(contract.id)} disabled={isExtracting}>
+            {isExtracting ? "Extraindo com IA..." : "Extrair com IA"}
           </Button>
-          {extractMutation.isError && (
-            <p className="mt-3 text-xs text-denied">{getApiErrorMessage(extractMutation.error)}</p>
+          {enqueueExtractMutation.isError && (
+            <p className="mt-3 text-xs text-denied">{getApiErrorMessage(enqueueExtractMutation.error)}</p>
           )}
         </div>
       )}

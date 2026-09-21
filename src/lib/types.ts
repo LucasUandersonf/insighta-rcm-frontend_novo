@@ -1493,6 +1493,20 @@ export interface BillingSearchItem {
   payment_method: PaymentMethod | null;
 }
 
+// GET /billing/{id}/status-history — Achado 1.6 / Pilar 2 da Auditoria
+// Implacável ("transparência de acesso", padrão Singapura/NEHR): ledger
+// estruturado de toda transição de status deste faturamento, mais
+// recente primeiro. `changed_by_name` é null quando a transição veio de
+// importação automática (nenhum usuário humano específico por trás).
+export interface BillingStatusHistoryEntry {
+  from_status: string | null;
+  to_status: string;
+  source: string;
+  reason: string | null;
+  changed_by_name: string | null;
+  created_at: string;
+}
+
 // Guia (TISS) — ver app/models/guia.py no backend. Fase 1 do plano de
 // adequação ao fluxo real de mercado; já é preenchida automaticamente
 // pela ingestão de Faturamento (colunas guia_tipo/guia_numero/guia_senha)
@@ -1967,6 +1981,33 @@ export interface HomologateRequest {
   items: ContractItemInput[];
 }
 
+// Achado 1.7 da Auditoria Implacável: a extração de contrato e o
+// rascunho de recurso de glosa saíram do caminho síncrono da
+// requisição (ver DECISÃO completa em app/sql/065_ai_generation_jobs.sql
+// e app/worker/ai_generation_job.py no backend). POST .../extract e
+// POST .../draft-justification agora devolvem só isto — sempre
+// job_id + status='pending' — e o resultado de verdade vem do polling
+// em GET /ai-jobs/{job_id}.
+export interface AiGenerationJobEnqueuedResponse {
+  job_id: string;
+  status: "pending";
+}
+
+export type AiGenerationJobStatus = "pending" | "completed" | "failed";
+
+// `result` depende de `kind` (o chamador já sabe qual pediu):
+// ExtractionPreview para contract_extraction, { draft: string } para
+// denial_appeal_draft.
+export interface AiGenerationJob<TResult = unknown> {
+  id: string;
+  kind: "contract_extraction" | "denial_appeal_draft";
+  status: AiGenerationJobStatus;
+  result: TResult | null;
+  error: string | null;
+  created_at: string;
+  completed_at: string | null;
+}
+
 // --- Recurso de Glosa / conformidade ANS (app/schemas/denial_appeal.py) ---
 export type AppealType = "tecnica" | "administrativa" | "medica";
 export type AppealStatus = "aberto" | "protocolado" | "deferido" | "indeferido" | "nip_aberta";
@@ -2009,10 +2050,11 @@ export interface DenialAppealResolveRequest {
   resolution_notes?: string | null;
 }
 
-// POST /denial-appeals/{id}/draft-justification — rascunho via IA, SEMPRE
-// grounded nos fatos do caso (ver DECISÃO em
-// app/services/denial_appeal_draft_service.py no backend). Volta como
-// texto editável, nunca gravado sozinho.
+// Formato de AiGenerationJob["result"] quando kind === "denial_appeal_draft"
+// (POST /denial-appeals/{id}/draft-justification enfileira o job — ver
+// AiGenerationJob acima) — rascunho via IA, SEMPRE grounded nos fatos
+// do caso (ver DECISÃO em app/services/denial_appeal_draft_service.py
+// no backend). Volta como texto editável, nunca gravado sozinho.
 export interface DenialAppealDraftJustificationResponse {
   draft: string;
 }
