@@ -27,26 +27,53 @@ import type {
 // backend (mantidos manualmente em sincronia, mesmo critério do resto
 // deste arquivo de tipos/telas).
 const CANONICAL_FIELD_LABELS: Record<string, string> = {
-  patient_cpf: "CPF do paciente",
-  patient_name: "Nome do paciente",
-  professional_name: "Nome do profissional",
-  professional_registry: "Registro do profissional",
-  insurance_plan_raw_name: "Convênio",
-  procedure_code: "Código do procedimento",
-  cid_code: "CID",
-  charged_value: "Valor cobrado",
+  source_row_id: "ID da transação",
+  source_appointment_id: "ID do atendimento",
   service_date: "Data do atendimento",
-  local_name: "Local de atendimento",
-  tipo_paciente: "Tipo de paciente",
-  guia_tipo: "Tipo de guia",
-  guia_numero: "Número da guia",
-  guia_senha: "Senha da guia",
-  // Campos novos, achado do Dicionário de Dados (auditoria BI/Dados).
-  quantidade: "Quantidade",
-  numero_carteirinha: "Número da carteirinha",
-  tabela_procedimento: "Tabela do procedimento",
-  tipo_item: "Tipo de item",
-  valor_coparticipacao: "Valor de coparticipação",
+  service_time: "Hora do atendimento",
+  competencia: "Competência",
+  billing_period: "Período de faturamento",
+  local_name: "Nome da unidade",
+  local_type: "Tipo da unidade",
+  local_external_id: "ID da unidade",
+  patient_external_hash: "Hash do paciente",
+  patient_document_masked: "Documento mascarado",
+  age_at_visit: "Idade do paciente",
+  patient_sex: "Sexo do paciente",
+  patient_municipio: "Município do paciente",
+  patient_estado: "Estado do paciente",
+  insurance_plan_raw_name: "Convênio",
+  tipo_convenio: "Tipo de convênio",
+  plan_tier: "Nome do plano",
+  accommodation_type: "Tipo de acomodação",
+  service_category: "Tipo de atendimento",
+  carater_atendimento: "Caráter do atendimento",
+  cid_code: "CID principal",
+  cid_principal_description: "Descrição do CID principal",
+  cid_secundario: "CID secundário",
+  cid_secundario_description: "Descrição do CID secundário",
+  professional_name: "Nome do profissional executante",
+  professional_registry: "Conselho do profissional executante",
+  professional_specialty: "Especialidade do profissional",
+  requesting_professional_name: "Nome do profissional solicitante",
+  procedure_code: "Código do procedimento",
+  procedure_name: "Nome do procedimento",
+  procedure_group: "Grupo do procedimento",
+  quantidade: "Quantidade executada",
+  lote_external_id: "ID do lote",
+  lote_generated_at: "Data de geração do lote",
+  lote_status: "Status do lote",
+  charged_value: "Valor cobrado",
+  unit_value: "Valor unitário",
+  discount_percentage: "Percentual de desconto",
+  discount_value: "Valor de desconto",
+  motivo_glosa: "Motivo da glosa",
+  received_value: "Valor recebido",
+  payment_method: "Forma de pagamento",
+  payment_bank: "Banco de recebimento",
+  due_date: "Data de vencimento",
+  settlement_date: "Data de recebimento",
+  notes: "Observações",
 };
 
 // Central de Upload — o caminho que faltava no produto para o cliente
@@ -190,14 +217,13 @@ function ColumnMappingModal({ file, isOpen, onClose }: { file: File | null; isOp
 const DATA_TYPE_LABELS: Record<string, string> = {
   faturamento: "Faturamento",
   agenda: "Agenda",
-  glosa: "Glosa (demonstrativo de pagamento)",
 };
 
 function BatchUploadTab() {
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
   const [file, setFile] = useState<File | null>(null);
-  const [dataType, setDataType] = useState<"faturamento" | "agenda" | "glosa">("faturamento");
+  const [dataType, setDataType] = useState<"faturamento" | "agenda">("faturamento");
   const [offset, setOffset] = useState(0);
   const [isMappingModalOpen, setIsMappingModalOpen] = useState(false);
 
@@ -236,28 +262,27 @@ function BatchUploadTab() {
     <div className="space-y-4">
       <Panel
         title="Upload de lotes operacionais"
-        subtitle="CSV, XML ou JSON — faturamento ou agenda do seu ERP. Processado na hora: você vê o resultado nesta mesma tela."
+        subtitle="Faturamento (CSV) ou Agenda (CSV, XML ou JSON) do seu ERP. Processado na hora: você vê o resultado nesta mesma tela."
       >
         <div className="p-4">
           <SelectField
             label="Template"
             value={dataType}
-            onChange={(e) => setDataType(e.target.value as "faturamento" | "agenda" | "glosa")}
+            onChange={(e) => setDataType(e.target.value as "faturamento" | "agenda")}
             className="mb-4 max-w-xs"
           >
             <option value="faturamento">Faturamento</option>
             <option value="agenda">Agenda</option>
-            <option value="glosa">Glosa (demonstrativo de pagamento)</option>
           </SelectField>
-          {dataType === "glosa" && (
+          {dataType === "faturamento" && (
             <p className="mb-4 -mt-2 text-2xs text-ink-faint">
-              Cada linha liquida um faturamento já existente (casado por convênio + número da guia) — nunca cria
-              paciente/consulta novos. Envie primeiro o Faturamento da guia; o demonstrativo de pagamento vem depois.
+              Um arquivo, uma linha por transação — envie sem desfecho (recebimento/glosa) assim que faturar, e reenvie a
+              MESMA linha (mesmo ID de transação) mais tarde já com o desfecho preenchido para reconciliar automaticamente.
             </p>
           )}
           <Dropzone
-            accept={[".csv", ".xml", ".json"]}
-            hint="CSV, XML ou JSON — até 20MB"
+            accept={dataType === "faturamento" ? [".csv"] : [".csv", ".xml", ".json"]}
+            hint={dataType === "faturamento" ? "CSV — até 20MB" : "CSV, XML ou JSON — até 20MB"}
             file={file}
             onFileSelected={setFile}
             isUploading={mutation.isPending}
