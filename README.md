@@ -1,12 +1,18 @@
-# Insighta — Plataforma de Inteligência de Receita e Decisão Estratégica (Frontend)
+# Insighta — Central de Inteligência de Dados da Operação de Saúde (Frontend)
 
-> **Reposicionamento de produto (14/09/2026):** o nome "RCM" descrevia
-> o dado que o sistema processa (faturamento, glosa, convênio), não o
-> que ele entrega. O núcleo do produto — hoje concentrado em
-> `ExecutiveOverviewPage.tsx` ("Sala de Comando") — é previsão de
-> receita, comparativo com a mediana de outras clínicas (efeito de
-> rede que uma clínica isolada nunca reproduz sozinha) e ação
-> priorizada, não só faturamento estruturado. Ver o mesmo
+> **Reposicionamento de produto (21/09/2026): não somos um software de
+> RCM — somos dados.** "RCM" descreve um dos domínios de dado que o
+> sistema unifica (faturamento, glosa, convênio), não a identidade do
+> produto. A Home e a "Sala de Comando" (`ExecutiveOverviewPage.tsx`)
+> existem para cruzar, do mesmo paciente/clínica, frentes que
+> normalmente vivem em telas isoladas — agenda, CRM (Ficha do
+> Paciente), risco de falta/glosa, financeiro e o resultado de cada
+> insight ao longo do tempo — e devolver isso como leitura ativa
+> (narrativa executiva, fila de prioridade, ação anexada a cada
+> indicador), não como um dashboard passivo esperando interpretação.
+> Comparativo com a mediana de outras clínicas (efeito de rede que uma
+> clínica isolada nunca reproduz sozinha) e previsão de receita são
+> parte dessa leitura, não o produto inteiro. Ver o mesmo
 > reposicionamento, com mais detalhe técnico, no README do backend
 > (`insighta-rcm-backend`).
 
