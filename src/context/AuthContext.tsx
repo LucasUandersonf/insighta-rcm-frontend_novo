@@ -3,11 +3,13 @@ import {
   login as loginRequest,
   register as registerRequest,
   googleAuth as googleAuthRequest,
+  logoutRequest,
   storeToken,
   clearStoredToken,
   getStoredToken,
   storeRefreshToken,
   clearStoredRefreshToken,
+  getStoredRefreshToken,
   ApiError,
 } from "@/lib/api-client";
 import { decodeJwtPayload, isTokenExpired } from "@/lib/jwt";
@@ -221,6 +223,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
+    // Achado da Auditoria Estratégica: antes disto, "Sair" só limpava o
+    // armazenamento local — o refresh_token continuava válido no
+    // backend por até 30 dias (dispositivo perdido/roubado não tinha
+    // como ser revogado). Best-effort e SEM esperar a resposta: o
+    // logout local (limpar estado, redirecionar) tem que ser imediato
+    // mesmo se a rede estiver fora — nunca travar o usuário na tela por
+    // causa disto, e nunca deixar uma falha de rede aqui aparecer como
+    // erro visível (o usuário já está saindo, o refresh token vai
+    // expirar sozinho de qualquer forma se esta chamada falhar).
+    const refreshToken = getStoredRefreshToken();
+    if (refreshToken) {
+      logoutRequest(refreshToken).catch(() => {});
+    }
     clearStoredToken();
     clearStoredRefreshToken();
     setUser(null);
