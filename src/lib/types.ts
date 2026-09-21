@@ -1900,12 +1900,18 @@ export interface ContractItem {
   tuss_code: string;
   procedure_name: string | null;
   agreed_price: number;
+  // Achado da Auditoria Estratégica — custo de insumo estimado da
+  // clínica (nunca o valor pago pelo convênio), opcional. Ainda sem
+  // campo de captura na UI nesta rodada (só leitura/API por enquanto) —
+  // ver DECISÃO em app/sql/061_contract_item_standard_cost.sql (backend).
+  standard_cost: number | null;
 }
 
 export interface ContractItemInput {
   tuss_code: string;
   procedure_name?: string | null;
   agreed_price: number;
+  standard_cost?: number | null;
 }
 
 export interface Contract {
