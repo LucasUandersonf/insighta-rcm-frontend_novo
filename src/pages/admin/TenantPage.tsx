@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Building2, Sparkles } from "lucide-react";
+import { Building2, Copy, Link2, Sparkles } from "lucide-react";
 import { Panel, LoadingState, ErrorState } from "@/components/ui/Panel";
 import { Button } from "@/components/ui/Button";
 import { TextField } from "@/components/ui/FormField";
@@ -17,9 +17,15 @@ import type {
   DenialRiskThresholdSuggestion,
   HealthScoreCeilingSuggestion,
   NoShowThresholdSuggestion,
+  OrganizationInviteResponse,
+  OrganizationJoinResponse,
   PlanCatalogEntry,
   Tenant,
 } from "@/lib/types";
+
+function formatDateTime(value: string): string {
+  return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(value));
+}
 
 const PLAN_LABELS: Record<string, string> = {
   starter: "Starter",
@@ -720,6 +726,134 @@ function HealthScoreCeilingsPanel({ tenant, isOwner }: { tenant: Tenant; isOwner
   );
 }
 
+/**
+ * Achado da Auditoria Estratégica ("primeiro incremento de enterprise:
+ * vinculação self-service de unidades multi-tenant") — antes, agrupar
+ * clínicas na mesma Organization (Comparativo multi-unidade, ver
+ * OrganizationSummaryPage) só acontecia via ops (create_admin.py).
+ * Decisão confirmada com o usuário: manter self-service, mas com uma
+ * defesa automática contra fraude adequada a "enterprise" — o backend
+ * SÓ vincula quando a raiz do CNPJ (matriz/filial) de quem entra bate
+ * com a de quem convidou (ver DECISÃO completa em
+ * app/sql/062_organization_invites.sql, backend). Por isso o erro do
+ * backend é sempre a MESMA mensagem genérica (código errado, expirado,
+ * já usado, ou empresa sem relação nenhuma) — nunca revelamos aqui qual
+ * desses casos é, mesmo princípio anti-enumeração do restante do
+ * produto (ex: login).
+ */
+function OrganizationLinkingPanel({ isOwner }: { isOwner: boolean }) {
+  const { showSuccess, showError } = useToast();
+  const [invite, setInvite] = useState<OrganizationInviteResponse | null>(null);
+  const [joinCode, setJoinCode] = useState("");
+
+  const inviteMutation = useMutation({
+    mutationFn: () => apiClient.post<OrganizationInviteResponse>("/api/v1/tenant/organization/invite"),
+    onSuccess: (data) => setInvite(data),
+    onError: (err) => showError(getApiErrorMessage(err)),
+  });
+
+  const joinMutation = useMutation({
+    mutationFn: (code: string) => apiClient.post<OrganizationJoinResponse>("/api/v1/tenant/organization/join", { code }),
+    onSuccess: (data) => {
+      showSuccess(`Vinculado à organização "${data.organization_name}" com sucesso.`);
+      setJoinCode("");
+    },
+    onError: (err) => showError(getApiErrorMessage(err)),
+  });
+
+  async function handleCopy() {
+    if (!invite) return;
+    try {
+      await navigator.clipboard.writeText(invite.code);
+      showSuccess("Código copiado.");
+    } catch {
+      showError("Não foi possível copiar o código automaticamente — selecione e copie manualmente.");
+    }
+  }
+
+  function handleJoinSubmit(e: FormEvent) {
+    e.preventDefault();
+    if (!joinCode.trim()) return;
+    joinMutation.mutate(joinCode.trim());
+  }
+
+  if (!isOwner) {
+    return (
+      <Panel title="Vincular outra unidade">
+        <div className="p-4">
+          <p className="text-2xs text-ink-faint">Só o papel "owner" pode gerar convites ou vincular esta clínica a uma organização.</p>
+        </div>
+      </Panel>
+    );
+  }
+
+  return (
+    <Panel title="Vincular outra unidade">
+      <div className="space-y-5 p-4">
+        <p className="max-w-xl text-xs leading-relaxed text-ink-faint">
+          Se sua clínica tem mais de uma unidade (matriz/filial do mesmo grupo), vincule-as para ver o comparativo
+          consolidado entre elas na tela "Comparativo entre unidades". Gere um código aqui e passe para quem
+          administra a outra unidade — ela entra com o código na própria tela "Minha clínica".
+        </p>
+
+        <div>
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <span className="text-xs font-medium text-ink">Gerar código de convite</span>
+            <Button
+              type="button"
+              variant="secondary"
+              size="xs"
+              className="flex shrink-0 items-center gap-1.5"
+              onClick={() => inviteMutation.mutate()}
+              disabled={inviteMutation.isPending}
+            >
+              <Link2 size={12} />
+              {inviteMutation.isPending ? "Gerando..." : "Gerar novo código"}
+            </Button>
+          </div>
+          {invite && (
+            <div className="rounded-md border border-border-hairline bg-canvas-raised/40 p-3">
+              <div className="flex items-center gap-2">
+                <input
+                  readOnly
+                  value={invite.code}
+                  onFocus={(e) => e.target.select()}
+                  className="w-full rounded-md border border-border-default bg-canvas-raised px-3 py-2 font-mono text-xs text-ink"
+                />
+                <Button type="button" variant="secondary" size="xs" onClick={handleCopy} className="flex shrink-0 items-center gap-1">
+                  <Copy size={12} />
+                  Copiar
+                </Button>
+              </div>
+              <p className="mt-2 text-2xs text-ink-faint">
+                Válido até {formatDateTime(invite.expires_at)}. Só funciona para uma unidade com a MESMA raiz de CNPJ
+                (os 8 primeiros dígitos) desta clínica — a verificação é automática, um código sozinho não é
+                suficiente.
+              </p>
+            </div>
+          )}
+        </div>
+
+        <form onSubmit={handleJoinSubmit} className="border-t border-border-hairline pt-4">
+          <span className="mb-2 block text-xs font-medium text-ink">Entrar com um código recebido</span>
+          <div className="flex max-w-md items-end gap-3">
+            <TextField
+              label="Código de convite"
+              value={joinCode}
+              onChange={(e) => setJoinCode(e.target.value)}
+              placeholder="Cole aqui o código recebido"
+              className="mb-0 flex-1"
+            />
+            <Button type="submit" disabled={joinMutation.isPending || !joinCode.trim()}>
+              {joinMutation.isPending ? "Vinculando..." : "Vincular"}
+            </Button>
+          </div>
+        </form>
+      </div>
+    </Panel>
+  );
+}
+
 export function TenantPage() {
   const { user } = useAuth();
   const isOwner = user?.role === "owner";
@@ -808,6 +942,7 @@ export function TenantPage() {
           </Panel>
 
           <SubscriptionPlanPanel tenant={tenant} isOwner={isOwner} />
+          <OrganizationLinkingPanel isOwner={isOwner} />
           <AnnualGoalPanel tenant={tenant} isOwner={isOwner} />
           <NoShowThresholdsPanel tenant={tenant} isOwner={isOwner} />
           <DenialRiskThresholdsPanel tenant={tenant} isOwner={isOwner} />

@@ -1371,6 +1371,21 @@ export interface OrganizationSummary {
   consolidated_no_show_rate: number | null;
 }
 
+// POST /tenant/organization/invite + POST /tenant/organization/join —
+// Achado da Auditoria Estratégica ("vinculação self-service de
+// unidades multi-tenant"). O código só existe nesta resposta, uma vez
+// (mesmo princípio de um segredo de posse única) — repassar por fora
+// do produto (WhatsApp, e-mail) é responsabilidade de quem gerou.
+export interface OrganizationInviteResponse {
+  code: string;
+  organization_name: string;
+  expires_at: string;
+}
+
+export interface OrganizationJoinResponse {
+  organization_name: string;
+}
+
 // GET /tenant/annual-goal/suggested (Épico F3.3 do Plano Diretor —
 // "Metas e cenários orientados a dados") — duas sugestões
 // independentes (crescimento histórico próprio vs. ritmo/percentil de

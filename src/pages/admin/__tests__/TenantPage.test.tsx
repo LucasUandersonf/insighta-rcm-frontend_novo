@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { TenantPage } from "@/pages/admin/TenantPage";
 import { apiClient } from "@/lib/api-client";
 import { useAuth } from "@/context/AuthContext";
@@ -8,7 +9,7 @@ import type { Tenant } from "@/lib/types";
 
 vi.mock("@/lib/api-client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api-client")>();
-  return { ...actual, apiClient: { ...actual.apiClient, get: vi.fn(), patch: vi.fn() } };
+  return { ...actual, apiClient: { ...actual.apiClient, get: vi.fn(), patch: vi.fn(), post: vi.fn() } };
 });
 
 vi.mock("@/context/AuthContext", () => ({ useAuth: vi.fn() }));
@@ -238,5 +239,88 @@ describe("TenantPage — Épico F2.1 do Plano Diretor (Calibração por especial
     expect(screen.getByLabelText("Especialidade predominante")).toBeDisabled();
     expect(screen.queryByRole("button", { name: "Salvar limiares" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Salvar tetos" })).not.toBeInTheDocument();
+  });
+});
+
+// Achado da Auditoria Estratégica ("vinculação self-service de unidades
+// multi-tenant") — ver DECISÃO completa em
+// app/sql/062_organization_invites.sql (backend). O código do convite
+// só aparece na resposta de POST /tenant/organization/invite, nunca
+// recuperável depois — por isso o teste prova que ele fica visível +
+// copiável na tela, não só que a chamada foi feita.
+describe("TenantPage — vinculação self-service de unidades (Auditoria Estratégica)", () => {
+  it("owner gera um código de convite e pode copiá-lo", async () => {
+    vi.mocked(useAuth).mockReturnValue({ user: { tenant_id: "t1", sub: "u1", role: "owner" } } as unknown as ReturnType<
+      typeof useAuth
+    >);
+    mockGetByPath({
+      "/api/v1/tenant/plans/available": [],
+      "/api/v1/subscription/plans": [],
+      "/api/v1/subscription": { plan_tier: "starter", pending_checkout_id: null },
+      "/api/v1/tenant": makeTenant(),
+    });
+    vi.mocked(apiClient.post).mockResolvedValue({
+      code: "codigo-de-convite-bem-comprido-e-aleatorio",
+      organization_name: "Clínica Teste",
+      expires_at: "2026-06-15T10:00:00Z",
+    });
+    const user = userEvent.setup();
+    const writeText = vi.spyOn(navigator.clipboard, "writeText").mockResolvedValue(undefined);
+
+    renderWithProviders(<TenantPage />);
+    await waitFor(() => expect(screen.getByText("Vincular outra unidade")).toBeInTheDocument());
+    const panel = panelFor("Vincular outra unidade");
+
+    await user.click(within(panel).getByRole("button", { name: "Gerar novo código" }));
+
+    await waitFor(() => expect(apiClient.post).toHaveBeenCalledWith("/api/v1/tenant/organization/invite"));
+    expect(await within(panel).findByDisplayValue("codigo-de-convite-bem-comprido-e-aleatorio")).toBeInTheDocument();
+
+    await user.click(within(panel).getByRole("button", { name: "Copiar" }));
+    expect(writeText).toHaveBeenCalledWith("codigo-de-convite-bem-comprido-e-aleatorio");
+  });
+
+  it("owner entra em uma organização com um código recebido", async () => {
+    vi.mocked(useAuth).mockReturnValue({ user: { tenant_id: "t2", sub: "u2", role: "owner" } } as unknown as ReturnType<
+      typeof useAuth
+    >);
+    mockGetByPath({
+      "/api/v1/tenant/plans/available": [],
+      "/api/v1/subscription/plans": [],
+      "/api/v1/subscription": { plan_tier: "starter", pending_checkout_id: null },
+      "/api/v1/tenant": makeTenant({ id: "t2" }),
+    });
+    vi.mocked(apiClient.post).mockResolvedValue({ organization_name: "Grupo Clínica Alfa" });
+    const user = userEvent.setup();
+
+    renderWithProviders(<TenantPage />);
+    await waitFor(() => expect(screen.getByText("Vincular outra unidade")).toBeInTheDocument());
+    const panel = panelFor("Vincular outra unidade");
+
+    await user.type(within(panel).getByLabelText("Código de convite"), "codigo-recebido-por-whatsapp");
+    await user.click(within(panel).getByRole("button", { name: "Vincular" }));
+
+    await waitFor(() =>
+      expect(apiClient.post).toHaveBeenCalledWith("/api/v1/tenant/organization/join", { code: "codigo-recebido-por-whatsapp" })
+    );
+  });
+
+  it("não-owner vê a mensagem de permissão em vez dos controles de vinculação", async () => {
+    vi.mocked(useAuth).mockReturnValue({
+      user: { tenant_id: "t1", sub: "u2", role: "financeiro" },
+    } as unknown as ReturnType<typeof useAuth>);
+    mockGetByPath({
+      "/api/v1/tenant/plans/available": [],
+      "/api/v1/subscription/plans": [],
+      "/api/v1/subscription": { plan_tier: "starter", pending_checkout_id: null },
+      "/api/v1/tenant": makeTenant(),
+    });
+
+    renderWithProviders(<TenantPage />);
+    await waitFor(() => expect(screen.getByText("Vincular outra unidade")).toBeInTheDocument());
+    const panel = panelFor("Vincular outra unidade");
+
+    expect(within(panel).getByText(/Só o papel "owner" pode gerar convites/)).toBeInTheDocument();
+    expect(within(panel).queryByRole("button", { name: "Gerar novo código" })).not.toBeInTheDocument();
   });
 });
