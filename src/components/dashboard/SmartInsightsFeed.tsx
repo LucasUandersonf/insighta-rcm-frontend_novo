@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowRight, CalendarClock, ChevronDown, CheckCircle2, Package, TrendingDown, TrendingUp, TriangleAlert, Users, Wallet } from "lucide-react";
+import { ArrowRight, CalendarClock, ChevronDown, CheckCircle2, ClipboardList, Package, TrendingDown, TrendingUp, TriangleAlert, Users, Wallet } from "lucide-react";
 import { LoadingState, ErrorState } from "@/components/ui/Panel";
 import { BentoCard } from "@/components/ui/BentoGrid";
 import { Badge, type BadgeTone } from "@/components/ui/Badge";
@@ -289,7 +289,7 @@ function SecondaryInsightCard({
 // nunca emite essa categoria (só PriorityQueuePanel.tsx a usa, pra um
 // terceiro badge da fila "Hoje") — CategorySection abaixo só agrupa as
 // categorias que o feed de fato produz.
-const CATEGORY_CONFIG: Record<"faturamento" | "agenda" | "estoque", { label: string; icon: typeof Wallet }> = {
+const CATEGORY_CONFIG: Record<"faturamento" | "agenda" | "estoque" | "prontuario", { label: string; icon: typeof Wallet }> = {
   faturamento: { label: "Faturamento & Convênios", icon: Wallet },
   agenda: { label: "Agenda & Ocupação", icon: CalendarClock },
   // Achado do Comitê de Liderança Tecnológica ("5 pernas", Sala de
@@ -297,6 +297,11 @@ const CATEGORY_CONFIG: Record<"faturamento" | "agenda" | "estoque", { label: str
   // em duas seções (ver DECISÃO completa em smart_insights_engine.py::
   // _stock_stockout_risk_insight/_stock_expiring_lot_value_insight).
   estoque: { label: "Estoque & Suprimentos", icon: Package },
+  // Segunda categoria nova (mesma rodada, template PEP — ver DECISÃO em
+  // smart_insights_engine.py::_pep_documentation_gap_insight/
+  // _pep_cid_completeness_insight): documentação clínica não é nem
+  // faturamento nem agenda, é a perna assistencial/PEP.
+  prontuario: { label: "Prontuário & Documentação Clínica", icon: ClipboardList },
 };
 
 /**
@@ -318,7 +323,7 @@ function CategorySection({
   onFocusAgenda,
   workflow,
 }: {
-  category: "faturamento" | "agenda" | "estoque";
+  category: "faturamento" | "agenda" | "estoque" | "prontuario";
   insights: SmartInsight[];
   onNavigateTab?: (tabId: string) => void;
   onFocusAgenda?: (focus: AgendaFocus) => void;
@@ -410,6 +415,7 @@ export function SmartInsightsFeed({
   const faturamentoInsights = visibleRest.filter((insight) => insight.category === "faturamento");
   const agendaInsights = visibleRest.filter((insight) => insight.category === "agenda");
   const estoqueInsights = visibleRest.filter((insight) => insight.category === "estoque");
+  const prontuarioInsights = visibleRest.filter((insight) => insight.category === "prontuario");
 
   return (
     <motion.div
@@ -424,6 +430,7 @@ export function SmartInsightsFeed({
       <CategorySection category="faturamento" insights={faturamentoInsights} onNavigateTab={onNavigateTab} onFocusAgenda={onFocusAgenda} workflow={workflow} />
       <CategorySection category="agenda" insights={agendaInsights} onNavigateTab={onNavigateTab} onFocusAgenda={onFocusAgenda} workflow={workflow} />
       <CategorySection category="estoque" insights={estoqueInsights} onNavigateTab={onNavigateTab} onFocusAgenda={onFocusAgenda} workflow={workflow} />
+      <CategorySection category="prontuario" insights={prontuarioInsights} onNavigateTab={onNavigateTab} onFocusAgenda={onFocusAgenda} workflow={workflow} />
       {hiddenCount > 0 && (
         <div className="flex justify-center">
           <Button type="button" variant="secondary" size="sm" onClick={() => setExpanded(true)} className="inline-flex items-center gap-1.5">

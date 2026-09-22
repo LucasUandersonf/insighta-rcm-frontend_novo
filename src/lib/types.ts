@@ -799,7 +799,7 @@ export type InsightSeverity = "critical" | "warning" | "positive" | "comparativo
 // aparece em itens sintéticos da fila (PriorityQueueItem, ver abaixo) —
 // nunca emitido por generate_insights(), então SmartInsightsFeed.tsx
 // nunca precisa saber desse terceiro valor.
-export type InsightCategory = "faturamento" | "agenda" | "estoque" | "estrategia";
+export type InsightCategory = "faturamento" | "agenda" | "estoque" | "prontuario" | "estrategia";
 
 export interface SmartInsight {
   severity: InsightSeverity;
