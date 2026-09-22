@@ -78,6 +78,7 @@ export function SignUpPage() {
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
   const [planTier, setPlanTier] = useState<PlanTier>("professional");
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [googleError, setGoogleError] = useState<string | null>(null);
 
@@ -143,8 +144,16 @@ export function SignUpPage() {
     try {
       await register(
         googleCredential
-          ? { trade_name: tradeName, cnpj, plan_tier: planTier, google_credential: googleCredential }
-          : { trade_name: tradeName, cnpj, owner_name: ownerName, email, password, plan_tier: planTier }
+          ? { trade_name: tradeName, cnpj, plan_tier: planTier, google_credential: googleCredential, terms_accepted: termsAccepted }
+          : {
+              trade_name: tradeName,
+              cnpj,
+              owner_name: ownerName,
+              email,
+              password,
+              plan_tier: planTier,
+              terms_accepted: termsAccepted,
+            }
       );
       navigate("/", { replace: true });
     } catch {
@@ -327,6 +336,31 @@ export function SignUpPage() {
                 Sem necessidade de cartão de crédito no cadastro. A ativação do plano é feita diretamente com a nossa equipe.
               </p>
 
+              {/* LGPD ("vamos chegar a 9.5") — aceite explícito, nunca
+                  marcado por padrão (RegisterRequest.terms_accepted não
+                  tem default no backend, ver DECISÃO lá). */}
+              <label htmlFor="terms_accepted" className="mt-4 flex items-start gap-2.5 text-2xs text-ink-muted">
+                <input
+                  id="terms_accepted"
+                  type="checkbox"
+                  required
+                  checked={termsAccepted}
+                  onChange={(e) => setTermsAccepted(e.target.checked)}
+                  className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded border-border-default text-accent focus:ring-accent"
+                />
+                <span>
+                  Li e aceito os{" "}
+                  <Link to="/termos" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
+                    Termos de Uso
+                  </Link>{" "}
+                  e a{" "}
+                  <Link to="/privacidade" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
+                    Política de Privacidade
+                  </Link>{" "}
+                  da Insighta.
+                </span>
+              </label>
+
               {registerError && (
                 <div role="alert" className="mt-4 rounded-md border border-denied/25 bg-denied-bg px-3 py-2 text-xs text-denied">
                   {registerError}
@@ -344,7 +378,7 @@ export function SignUpPage() {
                 </button>
                 <button
                   type="submit"
-                  disabled={isRegistering}
+                  disabled={isRegistering || !termsAccepted}
                   className="flex flex-1 items-center justify-center gap-1.5 rounded-md bg-aura-line px-3 py-2.5 text-sm font-medium text-white shadow-elevated transition-all duration-150 hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isRegistering ? "Criando conta..." : "Criar conta"}

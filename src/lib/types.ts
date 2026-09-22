@@ -42,6 +42,10 @@ export interface RegisterRequest {
   email?: string;
   password?: string;
   google_credential?: string;
+  // LGPD ("vamos chegar a 9.5") — sem default no backend
+  // (RegisterRequest.terms_accepted): precisa vir true de propósito, só
+  // depois do checkbox de aceite marcado em SignUpPage.tsx.
+  terms_accepted: boolean;
 }
 
 // Espelha TokenResponse — POST /auth/register nunca tem ambiguidade de

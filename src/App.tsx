@@ -20,6 +20,8 @@ import { RouteLoadingFallback } from "@/components/RouteLoadingFallback";
 // vite.config.ts, que separa as bibliotecas de terceiros do mesmo jeito.
 const LoginPage = lazy(() => import("@/pages/LoginPage").then((m) => ({ default: m.LoginPage })));
 const SignUpPage = lazy(() => import("@/pages/SignUpPage").then((m) => ({ default: m.SignUpPage })));
+const TermsOfServicePage = lazy(() => import("@/pages/TermsOfServicePage").then((m) => ({ default: m.TermsOfServicePage })));
+const PrivacyPolicyPage = lazy(() => import("@/pages/PrivacyPolicyPage").then((m) => ({ default: m.PrivacyPolicyPage })));
 const ForgotPasswordPage = lazy(() => import("@/pages/ForgotPasswordPage").then((m) => ({ default: m.ForgotPasswordPage })));
 const ResetPasswordPage = lazy(() => import("@/pages/ResetPasswordPage").then((m) => ({ default: m.ResetPasswordPage })));
 const HomePage = lazy(() => import("@/pages/HomePage").then((m) => ({ default: m.HomePage })));
@@ -100,6 +102,11 @@ export default function App() {
             <Routes>
               <Route path="/login" element={<LoginPage />} />
               <Route path="/signup" element={<SignUpPage />} />
+              {/* LGPD ("vamos chegar a 9.5") — texto jurídico real, público,
+                  sem autenticação: linkado no cadastro (checkbox de aceite,
+                  ver SignUpPage.tsx) e acessível a qualquer momento. */}
+              <Route path="/termos" element={<TermsOfServicePage />} />
+              <Route path="/privacidade" element={<PrivacyPolicyPage />} />
               <Route path="/forgot-password" element={<ForgotPasswordPage />} />
               <Route path="/reset-password" element={<ResetPasswordPage />} />
               {/* "Mapa de Dados Insighta" — Domínio Pós-atendimento (Onda 2):
