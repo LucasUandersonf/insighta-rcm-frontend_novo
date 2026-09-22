@@ -192,7 +192,7 @@ export function ProfitabilityPanel({ dateFrom, dateTo }: { dateFrom: string; dat
       ) : (
         <BentoCard colSpan={12} noPadding>
           <p className="px-4 pt-4 text-sm font-medium text-ink">Rentabilidade por profissional</p>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto" tabIndex={0}>
             <table className="w-full min-w-[560px] text-left">
               <thead>
                 <tr className="border-b border-border-hairline text-2xs font-medium uppercase tracking-wide text-ink-faint">
@@ -217,7 +217,7 @@ export function ProfitabilityPanel({ dateFrom, dateTo }: { dateFrom: string; dat
       {data.by_procedure.length > 0 && (
         <BentoCard colSpan={12} noPadding>
           <p className="px-4 pt-4 text-sm font-medium text-ink">Mix de receita por procedimento</p>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto" tabIndex={0}>
             <table className="w-full min-w-[480px] text-left">
               <thead>
                 <tr className="border-b border-border-hairline text-2xs font-medium uppercase tracking-wide text-ink-faint">

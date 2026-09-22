@@ -3,6 +3,7 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { DenialAppealsPage } from "@/pages/DenialAppealsPage";
 import { apiClient } from "@/lib/api-client";
 import { renderWithProviders } from "@/test/utils";
+import { expectNoA11yViolations } from "@/test/a11y";
 import type {
   AiGenerationJob,
   DenialAppeal,
@@ -117,5 +118,15 @@ describe("DenialAppealsPage — rascunho de justificativa via IA (Parecer Técni
     fireEvent.click(within(dialog).getByRole("button", { name: /Baixar documento/i }));
 
     await waitFor(() => expect(apiClient.getBlob).toHaveBeenCalledWith("/api/v1/denial-appeals/appeal-1/document"));
+  });
+
+  it("não tem violações de acessibilidade", async () => {
+    const appealsPage: PaginatedResponse<DenialAppeal> = { items: [makeAppeal()], total: 1, limit: 20, offset: 0 };
+    vi.mocked(apiClient.get).mockResolvedValue(appealsPage as never);
+
+    const { container } = renderWithProviders(<DenialAppealsPage />);
+    await waitFor(() => expect(screen.getByText("Administrativa")).toBeInTheDocument());
+
+    await expectNoA11yViolations(container);
   });
 });

@@ -3,6 +3,7 @@ import { screen, waitFor } from "@testing-library/react";
 import { PepConformidadePanel } from "@/components/dashboard/PepConformidadePanel";
 import { apiClient } from "@/lib/api-client";
 import { renderWithProviders } from "@/test/utils";
+import { expectNoA11yViolations } from "@/test/a11y";
 import type { PepConformidade } from "@/lib/types";
 
 vi.mock("@/lib/api-client", async (importOriginal) => {
@@ -48,5 +49,24 @@ describe("PepConformidadePanel", () => {
 
     const dashes = await screen.findAllByText("—");
     expect(dashes).toHaveLength(2);
+  });
+
+  it("não tem violações de acessibilidade", async () => {
+    const data: PepConformidade = {
+      period_start: "2026-09-01",
+      period_end: "2026-09-07",
+      missing_documentation_count: 1,
+      completed_encounters_count: 2,
+      missing_documentation_pct: 50,
+      missing_cid_count: 0,
+      evolutions_count: 1,
+      missing_cid_pct: 0,
+    };
+    vi.mocked(apiClient.get).mockResolvedValue(data);
+
+    const { container } = renderWithProviders(<PepConformidadePanel dateFrom="2026-09-01" dateTo="2026-09-07" />);
+
+    await waitFor(() => expect(screen.getAllByText("50%").length).toBeGreaterThan(0));
+    await expectNoA11yViolations(container);
   });
 });

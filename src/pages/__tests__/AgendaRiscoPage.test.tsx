@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { AgendaRiscoPage } from "@/pages/AgendaRiscoPage";
 import { apiClient } from "@/lib/api-client";
 import { renderWithProviders } from "@/test/utils";
+import { expectNoA11yViolations } from "@/test/a11y";
 import type { PaginatedResponse, UpcomingRiskAppointment } from "@/lib/types";
 
 vi.mock("@/lib/api-client", async (importOriginal) => {
@@ -114,5 +115,27 @@ describe("AgendaRiscoPage", () => {
     await screen.findByText("Primeira Página");
     await user.click(screen.getByRole("button", { name: "Próxima página" }));
     expect(await screen.findByText("Segunda Página")).toBeInTheDocument();
+  });
+
+  it("não tem violações de acessibilidade", async () => {
+    vi.mocked(apiClient.get).mockResolvedValue(
+      page({
+        items: [
+          {
+            appointment_id: "a1",
+            patient_full_name: "Maria Silva",
+            scheduled_at: "2026-09-20T14:30:00Z",
+            risk_level: "alto",
+            professional_name: "Dra. Ana",
+          },
+        ],
+        total: 1,
+      }) as never
+    );
+
+    const { container } = renderWithProviders(<AgendaRiscoPage />);
+    await screen.findByText("Maria Silva");
+
+    await expectNoA11yViolations(container);
   });
 });

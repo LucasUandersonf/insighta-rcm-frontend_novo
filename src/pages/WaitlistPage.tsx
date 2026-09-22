@@ -311,7 +311,7 @@ export function WaitlistPage() {
                 <th className="px-4 py-2.5 font-medium">Período</th>
                 <th className="px-4 py-2.5 font-medium">Desde</th>
                 <th className="px-4 py-2.5 font-medium">Status</th>
-                <th className="px-4 py-2.5 font-medium"></th>
+                <th className="px-4 py-2.5 font-medium"><span className="sr-only">Ações</span></th>
               </tr>
             </thead>
             <tbody>
@@ -350,7 +350,7 @@ export function WaitlistPage() {
           </table>
         )}
         {entriesPage && entriesPage.total > 0 && (
-          <Pagination total={entriesPage.total} limit={WAITLIST_PAGE_SIZE} offset={offset} onOffsetChange={setOffset} />
+          <Pagination total={entriesPage.total} limit={WAITLIST_PAGE_SIZE} offset={offset} onOffsetChange={setOffset} label="Paginação da lista de espera" />
         )}
       </Panel>
 

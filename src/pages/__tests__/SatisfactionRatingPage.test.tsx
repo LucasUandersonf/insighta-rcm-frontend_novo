@@ -5,6 +5,7 @@ import { Route, Routes } from "react-router-dom";
 import { SatisfactionRatingPage } from "@/pages/SatisfactionRatingPage";
 import { getSatisfactionStatus, submitSatisfactionScore } from "@/lib/api-client";
 import { renderWithProviders } from "@/test/utils";
+import { expectNoA11yViolations } from "@/test/a11y";
 
 // Mocka as duas funções nomeadas diretamente (não apiClient.get/post):
 // getSatisfactionStatus/submitSatisfactionScore chamam apiClient.get/post
@@ -60,5 +61,14 @@ describe("SatisfactionRatingPage", () => {
     renderAtToken("abc123");
 
     expect(await screen.findByRole("button", { name: "Enviar avaliação" })).toBeDisabled();
+  });
+
+  it("não tem violações de acessibilidade", async () => {
+    vi.mocked(getSatisfactionStatus).mockResolvedValue({ valid: true });
+
+    const { container } = renderAtToken("abc123");
+
+    expect(await screen.findByText("Como foi sua consulta?")).toBeInTheDocument();
+    await expectNoA11yViolations(container);
   });
 });

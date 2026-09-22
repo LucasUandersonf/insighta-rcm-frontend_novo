@@ -195,7 +195,7 @@ export function MarketingSpendPage() {
                 <th className="px-4 py-2.5 font-medium">Canal</th>
                 <th className="px-4 py-2.5 font-medium">Campanha</th>
                 <th className="px-4 py-2.5 font-medium text-right">Gasto</th>
-                <th className="px-4 py-2.5 font-medium"></th>
+                <th className="px-4 py-2.5 font-medium"><span className="sr-only">Ações</span></th>
               </tr>
             </thead>
             <tbody>
@@ -228,6 +228,7 @@ export function MarketingSpendPage() {
             limit={MARKETING_SPEND_PAGE_SIZE}
             offset={entriesOffset}
             onOffsetChange={setEntriesOffset}
+            label="Paginação de gastos de marketing"
           />
         )}
       </Panel>

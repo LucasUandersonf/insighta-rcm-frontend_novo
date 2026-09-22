@@ -59,7 +59,7 @@ export function PatientRevenueParetoPanel({ dateFrom, dateTo }: { dateFrom: stri
           {data.top_n_share_pct !== null ? ` somam ${data.top_n_share_pct.toFixed(1)}% de tudo que a clínica faturou.` : "."}
         </p>
       </div>
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto" tabIndex={0}>
         <table className="w-full min-w-[560px] text-left">
           <thead>
             <tr className="border-b border-border-hairline text-2xs font-medium uppercase tracking-wide text-ink-faint">

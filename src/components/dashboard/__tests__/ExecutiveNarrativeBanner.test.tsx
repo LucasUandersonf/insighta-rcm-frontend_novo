@@ -3,6 +3,7 @@ import { screen, waitFor } from "@testing-library/react";
 import { ExecutiveNarrativeBanner } from "@/components/dashboard/ExecutiveNarrativeBanner";
 import { apiClient } from "@/lib/api-client";
 import { renderWithProviders } from "@/test/utils";
+import { expectNoA11yViolations } from "@/test/a11y";
 import type { ExecutiveNarrative } from "@/lib/types";
 
 vi.mock("@/lib/api-client", async (importOriginal) => {
@@ -59,5 +60,26 @@ describe("ExecutiveNarrativeBanner", () => {
     await waitFor(() => expect(apiClient.get).toHaveBeenCalled());
     expect(container.querySelector(".border-aura-line\\/30")).not.toBeInTheDocument();
     expect(screen.queryByText(/falha/i)).not.toBeInTheDocument();
+  });
+
+  it("não tem violações de acessibilidade", async () => {
+    const data: ExecutiveNarrative = {
+      period_start: "2026-09-07",
+      period_end: "2026-09-13",
+      narrative: "A clínica faturou bem esta semana, mas o prazo de recebimento merece atenção.",
+      generated_at: "2026-09-13T08:00:00Z",
+      top_priorities: [],
+      recently_resolved: [],
+    };
+    vi.mocked(apiClient.get).mockResolvedValue(data);
+
+    const { container } = renderWithProviders(<ExecutiveNarrativeBanner />);
+
+    await waitFor(() =>
+      expect(
+        screen.getByText("A clínica faturou bem esta semana, mas o prazo de recebimento merece atenção.")
+      ).toBeInTheDocument()
+    );
+    await expectNoA11yViolations(container);
   });
 });

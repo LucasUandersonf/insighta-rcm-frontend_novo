@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { PatientFichaPage } from "@/pages/PatientFichaPage";
 import { apiClient } from "@/lib/api-client";
 import { renderWithProviders } from "@/test/utils";
+import { expectNoA11yViolations } from "@/test/a11y";
 import type { PatientFicha, PatientSearchItem } from "@/lib/types";
 
 vi.mock("@/lib/api-client", async (importOriginal) => {
@@ -145,5 +146,17 @@ describe("PatientFichaPage", () => {
     await user.click(screen.getByRole("button", { name: /Buscar outro paciente/ }));
 
     await waitFor(() => expect(screen.getByLabelText(/Buscar paciente/)).toBeInTheDocument());
+  });
+
+  it("não tem violações de acessibilidade", async () => {
+    vi.mocked(apiClient.get).mockImplementation((url: string) => {
+      if (url.includes("/patients/p1/ficha")) return Promise.resolve(ficha() as never);
+      return Promise.reject(new Error(`unexpected url: ${url}`));
+    });
+
+    const { container } = renderWithProviders(<PatientFichaPage />, { route: "/pacientes?patient_id=p1" });
+
+    await screen.findByRole("heading", { name: "Carlos Andrade" });
+    await expectNoA11yViolations(container);
   });
 });

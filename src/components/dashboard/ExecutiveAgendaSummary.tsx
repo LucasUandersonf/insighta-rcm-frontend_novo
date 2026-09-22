@@ -67,7 +67,7 @@ function AppointmentListPanel({ dateFrom, dateTo }: { dateFrom: string; dateTo: 
       )}
       {data && data.total > 0 && (
         <>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto" tabIndex={0}>
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-border-hairline text-2xs uppercase tracking-wide text-ink-faint">
@@ -91,7 +91,7 @@ function AppointmentListPanel({ dateFrom, dateTo }: { dateFrom: string; dateTo: 
               </tbody>
             </table>
           </div>
-          <Pagination total={data.total} limit={data.limit} offset={data.offset} onOffsetChange={setOffset} />
+          <Pagination total={data.total} limit={data.limit} offset={data.offset} onOffsetChange={setOffset} label="Paginação da agenda" />
         </>
       )}
     </BentoCard>

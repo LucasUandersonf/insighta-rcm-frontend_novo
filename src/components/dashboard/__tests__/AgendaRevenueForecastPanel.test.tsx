@@ -3,6 +3,7 @@ import { screen, waitFor } from "@testing-library/react";
 import { AgendaRevenueForecastPanel } from "@/components/dashboard/AgendaRevenueForecastPanel";
 import { apiClient } from "@/lib/api-client";
 import { renderWithProviders } from "@/test/utils";
+import { expectNoA11yViolations } from "@/test/a11y";
 import type { AgendaRevenueForecast } from "@/lib/types";
 
 vi.mock("@/lib/api-client", async (importOriginal) => {
@@ -59,5 +60,26 @@ describe("AgendaRevenueForecastPanel", () => {
     await waitFor(() =>
       expect(screen.getByText("Nenhum agendamento futuro nesse período ainda.")).toBeInTheDocument()
     );
+  });
+
+  it("não tem violações de acessibilidade", async () => {
+    const data: AgendaRevenueForecast = {
+      period_start: "2026-09-12",
+      period_end: "2026-09-25",
+      total_scheduled_count: 3,
+      total_scheduled_value: 400,
+      known_risk_count: 1,
+      known_risk_value: 200,
+      expected_value: 160,
+      unrated_count: 1,
+      unrated_value: 200,
+      unpriced_count: 1,
+    };
+    vi.mocked(apiClient.get).mockResolvedValue(data);
+
+    const { container } = renderWithProviders(<AgendaRevenueForecastPanel />);
+
+    await waitFor(() => expect(screen.getByText(/R\$\s*160,00/)).toBeInTheDocument());
+    await expectNoA11yViolations(container);
   });
 });

@@ -3,6 +3,7 @@ import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { DenialRiskDistributionPanel } from "@/components/dashboard/DenialRiskDistributionPanel";
 import { apiClient } from "@/lib/api-client";
 import { renderWithProviders } from "@/test/utils";
+import { expectNoA11yViolations } from "@/test/a11y";
 import type { DenialRiskDistribution } from "@/lib/types";
 
 vi.mock("@/lib/api-client", async (importOriginal) => {
@@ -45,5 +46,25 @@ describe("DenialRiskDistributionPanel", () => {
     renderWithProviders(<DenialRiskDistributionPanel dateFrom="2026-09-01" dateTo="2026-09-07" />);
 
     await waitFor(() => expect(screen.getByText(/Nenhum faturamento revisado nesta janela/)).toBeInTheDocument());
+  });
+
+  it("não tem violações de acessibilidade", async () => {
+    const data: DenialRiskDistribution = {
+      period_start: "2026-09-01",
+      period_end: "2026-09-07",
+      total_reviewed: 3,
+      total_value_reviewed: 900,
+      items: [
+        { level: "high", count: 1, value: 500 },
+        { level: "medium", count: 1, value: 300 },
+        { level: "low", count: 1, value: 100 },
+      ],
+    };
+    vi.mocked(apiClient.get).mockResolvedValue(data);
+
+    const { container } = renderWithProviders(<DenialRiskDistributionPanel dateFrom="2026-09-01" dateTo="2026-09-07" />);
+
+    await waitFor(() => expect(screen.getByText("Revisados")).toBeInTheDocument());
+    await expectNoA11yViolations(container);
   });
 });

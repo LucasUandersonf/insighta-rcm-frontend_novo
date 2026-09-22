@@ -57,7 +57,7 @@ export function AbcCurvePanel({ dateFrom, dateTo }: { dateFrom: string; dateTo: 
           {countByClasse.B} classe B, {countByClasse.C} classe C.
         </p>
       </div>
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto" tabIndex={0}>
         <table className="w-full min-w-[520px] text-left">
           <thead>
             <tr className="border-b border-border-hairline text-2xs font-medium uppercase tracking-wide text-ink-faint">

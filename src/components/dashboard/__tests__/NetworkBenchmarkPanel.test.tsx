@@ -3,6 +3,7 @@ import { screen, waitFor } from "@testing-library/react";
 import { NetworkBenchmarkPanel } from "@/components/dashboard/NetworkBenchmarkPanel";
 import { apiClient } from "@/lib/api-client";
 import { renderWithProviders } from "@/test/utils";
+import { expectNoA11yViolations } from "@/test/a11y";
 import type { NetworkBenchmark } from "@/lib/types";
 
 vi.mock("@/lib/api-client", async (importOriginal) => {
@@ -116,5 +117,37 @@ describe("NetworkBenchmarkPanel", () => {
     await waitFor(() => expect(screen.getByText("Churn precoce")).toBeInTheDocument());
     expect(screen.getByText(/Você — 20\.0%/)).toBeInTheDocument();
     expect(screen.getByText(/Mediana 10\.0%/)).toBeInTheDocument();
+  });
+
+  it("não tem violações de acessibilidade", async () => {
+    const data: NetworkBenchmark = {
+      window_days: 90,
+      metrics: [
+        {
+          key: "denial",
+          label: "Taxa de glosa",
+          your_rate: 0.09,
+          your_sample: 40,
+          network_median: 0.05,
+          cohort_size: 8,
+          cohort_is_segmented_by_specialty: false,
+        },
+        {
+          key: "churn",
+          label: "Churn precoce",
+          your_rate: 0.2,
+          your_sample: 10,
+          network_median: 0.1,
+          cohort_size: 6,
+          cohort_is_segmented_by_specialty: false,
+        },
+      ],
+    };
+    vi.mocked(apiClient.get).mockResolvedValue(data);
+
+    const { container } = renderWithProviders(<NetworkBenchmarkPanel />);
+
+    await waitFor(() => expect(screen.getByText("Churn precoce")).toBeInTheDocument());
+    await expectNoA11yViolations(container);
   });
 });

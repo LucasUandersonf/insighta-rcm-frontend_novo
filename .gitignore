@@ -5,3 +5,9 @@ tsconfig.tsbuildinfo
 # Screenshots avulsos tirados pra montar o deck de vendas (Artifact) —
 # scratch local, nunca parte do produto.
 .screenshots-pitch/
+# Saída gerada do Playwright (e2e/) — screenshots de QA visual e
+# relatórios de execução, nunca versionados (regenerar rodando
+# `npm run test:e2e` contra um tenant demo local).
+e2e-screenshots/
+test-results/
+playwright-report/

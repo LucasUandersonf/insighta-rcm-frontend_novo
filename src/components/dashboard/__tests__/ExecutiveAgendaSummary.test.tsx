@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { ExecutiveAgendaSummary } from "@/components/dashboard/ExecutiveAgendaSummary";
 import { apiClient } from "@/lib/api-client";
 import { renderWithProviders } from "@/test/utils";
+import { expectNoA11yViolations } from "@/test/a11y";
 import type { AgendaMetrics, AppointmentListItem, PaginatedResponse, RecallCandidates } from "@/lib/types";
 
 vi.mock("@/lib/api-client", async (importOriginal) => {
@@ -234,5 +235,27 @@ describe("ExecutiveAgendaSummary", () => {
     renderWithProviders(<ExecutiveAgendaSummary dateFrom="2026-01-01" dateTo="2026-01-07" />);
 
     expect(await screen.findByText("Nenhum agendamento nesse período.")).toBeInTheDocument();
+  });
+
+  it("não tem violações de acessibilidade", async () => {
+    const item: AppointmentListItem = {
+      id: "a1",
+      patient_name: "Paciente Canal",
+      scheduled_at: "2026-01-05T14:00:00Z",
+      status: "no_show",
+      procedure_code: null,
+      visit_type: null,
+      booking_channel: "whatsapp",
+      cancellation_reason: null,
+    };
+    vi.mocked(apiClient.get).mockImplementation((url: string) => {
+      if (url.includes("/api/v1/appointments?")) return Promise.resolve(appointmentsPage({ items: [item], total: 1 }) as never);
+      return Promise.resolve(baseMetrics() as never);
+    });
+
+    const { container } = renderWithProviders(<ExecutiveAgendaSummary dateFrom="2026-01-01" dateTo="2026-01-07" />);
+
+    expect(await screen.findByText("Paciente Canal")).toBeInTheDocument();
+    await expectNoA11yViolations(container);
   });
 });

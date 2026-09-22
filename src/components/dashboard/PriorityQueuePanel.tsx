@@ -111,7 +111,7 @@ export function PriorityQueuePanel({
                     )}
                     <ActionedBadge actioned={actioned} />
                   </div>
-                  <h4 className="text-sm font-medium text-ink">{item.title}</h4>
+                  <h3 className="text-sm font-medium text-ink">{item.title}</h3>
                   <p className="mt-1 text-xs leading-relaxed text-ink-muted">{item.message}</p>
                   <div className={cn("mt-2 flex flex-wrap items-center gap-3")}>
                     {item.financial_impact !== null && (

@@ -106,7 +106,7 @@ export function OportunidadesPanel() {
           </BentoCard>
 
           <BentoCard colSpan={12} noPadding>
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto" tabIndex={0}>
               <table className="w-full min-w-[720px] text-left">
                 <thead>
                   <tr className="border-b border-border-hairline text-2xs font-medium uppercase tracking-wide text-ink-faint">

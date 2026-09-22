@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { ProfessionalsPage } from "@/pages/ProfessionalsPage";
 import { apiClient } from "@/lib/api-client";
 import { renderWithProviders } from "@/test/utils";
+import { expectNoA11yViolations } from "@/test/a11y";
 import type { PlannedAbsence, Professional } from "@/lib/types";
 
 vi.mock("@/lib/api-client", async (importOriginal) => {
@@ -186,5 +187,16 @@ describe("ProfessionalsPage — tipo de contrato e comissão", () => {
     renderWithProviders(<ProfessionalsPage />);
 
     await waitFor(() => expect(screen.getByText("PJ · 35%")).toBeInTheDocument());
+  });
+
+  it("não tem violações de acessibilidade", async () => {
+    vi.mocked(apiClient.get).mockResolvedValue([
+      makeProfessional({ id: "p1", full_name: "Dr. X", contract_type: "pj", commission_rate: 35 }),
+    ] as never);
+
+    const { container } = renderWithProviders(<ProfessionalsPage />);
+
+    await waitFor(() => expect(screen.getByText("PJ · 35%")).toBeInTheDocument());
+    await expectNoA11yViolations(container);
   });
 });

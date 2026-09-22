@@ -94,7 +94,9 @@ export function AgendaRiscoPage() {
             </tbody>
           </table>
         )}
-        {data && data.total > 0 && <Pagination total={data.total} limit={PAGE_SIZE} offset={offset} onOffsetChange={setOffset} />}
+        {data && data.total > 0 && (
+          <Pagination total={data.total} limit={PAGE_SIZE} offset={offset} onOffsetChange={setOffset} label="Paginação da agenda de risco" />
+        )}
       </Panel>
     </div>
   );

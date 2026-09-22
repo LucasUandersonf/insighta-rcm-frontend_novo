@@ -3,6 +3,7 @@ import { screen, waitFor } from "@testing-library/react";
 import { UpsellFunnelPanel } from "@/components/dashboard/UpsellFunnelPanel";
 import { apiClient } from "@/lib/api-client";
 import { renderWithProviders } from "@/test/utils";
+import { expectNoA11yViolations } from "@/test/a11y";
 import type { UpsellFunnel } from "@/lib/types";
 
 vi.mock("@/lib/api-client", async (importOriginal) => {
@@ -50,5 +51,25 @@ describe("UpsellFunnelPanel", () => {
     await waitFor(() =>
       expect(screen.getByText(/Nenhuma oferta de procedimento adicional registrada neste período/)).toBeInTheDocument()
     );
+  });
+
+  it("não tem violações de acessibilidade", async () => {
+    const data: UpsellFunnel = {
+      period_start: "2026-09-01",
+      period_end: "2026-09-07",
+      total_offered: 3,
+      total_accepted: 2,
+      overall_acceptance_rate: 2 / 3,
+      items: [
+        { procedure_name: "Clareamento dental", offered_count: 2, accepted_count: 1, acceptance_rate: 0.5 },
+        { procedure_name: "Limpeza avançada", offered_count: 1, accepted_count: 1, acceptance_rate: 1.0 },
+      ],
+    };
+    vi.mocked(apiClient.get).mockResolvedValue(data);
+
+    const { container } = renderWithProviders(<UpsellFunnelPanel dateFrom="2026-09-01" dateTo="2026-09-07" />);
+
+    await waitFor(() => expect(screen.getByText("Clareamento dental")).toBeInTheDocument());
+    await expectNoA11yViolations(container);
   });
 });

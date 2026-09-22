@@ -63,7 +63,7 @@ export function UpsellFunnelPanel({ dateFrom, dateTo }: { dateFrom: string; date
           {data.overall_acceptance_rate !== null ? ` (${formatPct(data.overall_acceptance_rate)} de aceite).` : "."}
         </p>
       </div>
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto" tabIndex={0}>
         <table className="w-full min-w-[560px] text-left">
           <thead>
             <tr className="border-b border-border-hairline text-2xs font-medium uppercase tracking-wide text-ink-faint">

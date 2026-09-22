@@ -200,7 +200,7 @@ export function SetupPage() {
                     <th className="px-4 py-2.5 font-medium">Texto do convênio no arquivo</th>
                     <th className="px-4 py-2.5 font-medium">Lançamentos pendentes</th>
                     <th className="px-4 py-2.5 font-medium">Recebido em</th>
-                    <th className="px-4 py-2.5 font-medium"></th>
+                    <th className="px-4 py-2.5 font-medium"><span className="sr-only">Ações</span></th>
                   </tr>
                 </thead>
                 <tbody>

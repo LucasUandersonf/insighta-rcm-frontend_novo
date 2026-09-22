@@ -3,6 +3,7 @@ import { screen, waitFor } from "@testing-library/react";
 import { AgendaAnalyticsPanel } from "@/components/dashboard/AgendaAnalyticsPanel";
 import { apiClient } from "@/lib/api-client";
 import { renderWithProviders } from "@/test/utils";
+import { expectNoA11yViolations } from "@/test/a11y";
 import type { AgendaMetrics, ReturnRate } from "@/lib/types";
 
 vi.mock("@/lib/api-client", async (importOriginal) => {
@@ -80,5 +81,20 @@ describe("AgendaAnalyticsPanel", () => {
         screen.getByText(/Sem atendimentos com desfecho conhecido nesta janela para calcular taxa de cancelamento/)
       ).toBeInTheDocument()
     );
+  });
+
+  it("não tem violações de acessibilidade", async () => {
+    const data: AgendaMetrics = {
+      ...BASE_METRICS,
+      weekday_cancellation_rates: [
+        { weekday: 1, cancellation_count: 2, total_appointments: 5, cancellation_rate: 0.4 },
+      ],
+    };
+    mockAgendaMetrics(data);
+
+    const { container } = renderWithProviders(<AgendaAnalyticsPanel dateFrom="2026-09-01" dateTo="2026-09-07" />);
+
+    await waitFor(() => expect(screen.getByText("Taxa de cancelamento por dia da semana")).toBeInTheDocument());
+    await expectNoA11yViolations(container);
   });
 });

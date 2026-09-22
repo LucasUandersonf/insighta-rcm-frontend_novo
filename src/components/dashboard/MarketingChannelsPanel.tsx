@@ -75,7 +75,7 @@ export function MarketingChannelsPanel({ dateFrom, dateTo }: { dateFrom: string;
           até hoje, não só o que gerou nesta janela.
         </p>
       </div>
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto" tabIndex={0}>
         <table className="w-full min-w-[680px] text-left">
           <thead>
             <tr className="border-b border-border-hairline text-2xs font-medium uppercase tracking-wide text-ink-faint">

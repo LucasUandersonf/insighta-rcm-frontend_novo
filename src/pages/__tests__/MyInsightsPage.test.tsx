@@ -4,6 +4,7 @@ import { MyInsightsPage } from "@/pages/MyInsightsPage";
 import { apiClient } from "@/lib/api-client";
 import { useAuth } from "@/context/AuthContext";
 import { renderWithProviders } from "@/test/utils";
+import { expectNoA11yViolations } from "@/test/a11y";
 import type { CurrentUser, InsightOutcome, InsightOutcomesRealizedSummary, PaginatedResponse } from "@/lib/types";
 
 vi.mock("@/lib/api-client", async (importOriginal) => {
@@ -104,5 +105,26 @@ describe("MyInsightsPage — épicos F1.2/F1.3 do Plano Diretor", () => {
 
     await waitFor(() => expect(screen.getByText("Nada atribuído a você no momento.")).toBeInTheDocument());
     await waitFor(() => expect(screen.getByText(/Ainda nenhum insight reavaliado/)).toBeInTheDocument());
+  });
+
+  it("não tem violações de acessibilidade", async () => {
+    mockUser("financeiro");
+    const mine: PaginatedResponse<InsightOutcome> = { items: [makeOutcome()], total: 1, limit: 50, offset: 0 };
+    const realized: InsightOutcomesRealizedSummary = {
+      total_resolved_and_reevaluated: 1,
+      total_delta_realized: 300,
+      items: [makeOutcome({ id: "outcome-2", status: "resolvido", financial_impact_snapshot: 500, resolved_metric_value: 200 })],
+    };
+    vi.mocked(apiClient.get).mockImplementation((path: string) => {
+      if (path.includes("/mine")) return Promise.resolve(mine as never);
+      if (path.includes("realized-summary")) return Promise.resolve(realized as never);
+      return Promise.reject(new Error(`sem mock para ${path}`));
+    });
+
+    const { container } = renderWithProviders(<MyInsightsPage />);
+
+    await waitFor(() => expect(screen.getByText("Contrato com baixa utilização")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Insights que valeram a pena")).toBeInTheDocument());
+    await expectNoA11yViolations(container);
   });
 });

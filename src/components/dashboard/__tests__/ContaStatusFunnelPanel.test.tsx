@@ -3,6 +3,7 @@ import { screen } from "@testing-library/react";
 import { ContaStatusFunnelPanel } from "@/components/dashboard/ContaStatusFunnelPanel";
 import { apiClient } from "@/lib/api-client";
 import { renderWithProviders } from "@/test/utils";
+import { expectNoA11yViolations } from "@/test/a11y";
 import type { ContaStatusFunnel } from "@/lib/types";
 
 vi.mock("@/lib/api-client", async (importOriginal) => {
@@ -93,5 +94,24 @@ describe("ContaStatusFunnelPanel", () => {
 
     await screen.findByText("Contas");
     expect(screen.queryByText(/parada.*em auditoria/)).not.toBeInTheDocument();
+  });
+
+  it("não tem violações de acessibilidade", async () => {
+    mockFunnel({
+      aberta: 3,
+      pre_faturada: 1,
+      faturada: 5,
+      em_auditoria: 2,
+      glosada_parcial: 0,
+      fechada: 10,
+      cancelada: 1,
+      stale_em_auditoria_count: 2,
+      oldest_em_auditoria_age_days: 45,
+    });
+
+    const { container } = renderWithProviders(<ContaStatusFunnelPanel />);
+
+    await screen.findByText("Aberta");
+    await expectNoA11yViolations(container);
   });
 });

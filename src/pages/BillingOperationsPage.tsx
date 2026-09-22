@@ -9,7 +9,7 @@ import { TextField, SelectField } from "@/components/ui/FormField";
 import { FilterBar } from "@/components/ui/FilterBar";
 import { Pagination } from "@/components/ui/Pagination";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { Tabs } from "@/components/ui/Tabs";
+import { Tabs, TabPanel } from "@/components/ui/Tabs";
 import { BillingSearchPicker } from "@/components/billing/BillingSearchPicker";
 import { apiClient, ApiError } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
@@ -658,7 +658,7 @@ function GuiasTab() {
           </table>
         )}
         {guiasPage && guiasPage.total > 0 && (
-          <Pagination total={guiasPage.total} limit={GUIAS_PAGE_SIZE} offset={offset} onOffsetChange={setOffset} />
+          <Pagination total={guiasPage.total} limit={GUIAS_PAGE_SIZE} offset={offset} onOffsetChange={setOffset} label="Paginação de guias" />
         )}
       </Panel>
     </div>
@@ -690,10 +690,26 @@ export function BillingOperationsPage() {
         ]}
       />
 
-      {tab === "pagamento" && <SettlementTab />}
-      {tab === "coparticipacao" && <CoparticipationTab />}
-      {tab === "auditoria-opme" && <OpmeDocumentationTab />}
-      {tab === "guias" && <GuiasTab />}
+      {tab === "pagamento" && (
+        <TabPanel id="pagamento" groupId={TABS_GROUP}>
+          <SettlementTab />
+        </TabPanel>
+      )}
+      {tab === "coparticipacao" && (
+        <TabPanel id="coparticipacao" groupId={TABS_GROUP}>
+          <CoparticipationTab />
+        </TabPanel>
+      )}
+      {tab === "auditoria-opme" && (
+        <TabPanel id="auditoria-opme" groupId={TABS_GROUP}>
+          <OpmeDocumentationTab />
+        </TabPanel>
+      )}
+      {tab === "guias" && (
+        <TabPanel id="guias" groupId={TABS_GROUP}>
+          <GuiasTab />
+        </TabPanel>
+      )}
     </div>
   );
 }

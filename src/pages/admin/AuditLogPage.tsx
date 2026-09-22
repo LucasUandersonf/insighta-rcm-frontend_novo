@@ -158,7 +158,7 @@ export function AuditLogPage() {
           </table>
         )}
         {data && data.total > 0 && (
-          <Pagination total={data.total} limit={PAGE_SIZE} offset={offset} onOffsetChange={setOffset} />
+          <Pagination total={data.total} limit={PAGE_SIZE} offset={offset} onOffsetChange={setOffset} label="Paginação do log de auditoria" />
         )}
       </Panel>
     </div>

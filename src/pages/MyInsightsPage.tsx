@@ -84,7 +84,7 @@ function MyPendingSection() {
                 <Badge tone={STATUS_TONE[outcome.status]}>{STATUS_LABELS[outcome.status]}</Badge>
                 {outcome.due_date && <span className="text-2xs text-ink-faint">Prazo: {formatDate(outcome.due_date)}</span>}
               </div>
-              <h4 className="text-sm font-medium text-ink">{outcome.title}</h4>
+              <h3 className="text-sm font-medium text-ink">{outcome.title}</h3>
               <p className="text-xs leading-relaxed text-ink-muted">{outcome.message}</p>
               <div className="flex flex-wrap items-end gap-3">
                 <SelectField
@@ -156,7 +156,7 @@ function RealizedValueSection() {
           <div className="mt-3 divide-y divide-border-hairline">
             {data.items.map((outcome) => (
               <div key={outcome.id} className="px-5 py-3">
-                <h4 className="text-sm font-medium text-ink">{outcome.title}</h4>
+                <h3 className="text-sm font-medium text-ink">{outcome.title}</h3>
                 <p className="mt-0.5 text-2xs text-ink-faint">
                   Impacto quando marcado: {outcome.financial_impact_snapshot !== null ? formatCurrency(outcome.financial_impact_snapshot) : "—"}
                   {" · "}

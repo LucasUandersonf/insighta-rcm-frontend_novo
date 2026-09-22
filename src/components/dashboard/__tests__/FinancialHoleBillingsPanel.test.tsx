@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { FinancialHoleBillingsPanel } from "@/components/dashboard/FinancialHoleBillingsPanel";
 import { apiClient } from "@/lib/api-client";
 import { renderWithProviders } from "@/test/utils";
+import { expectNoA11yViolations } from "@/test/a11y";
 import type { FinancialHoleBillings } from "@/lib/types";
 
 vi.mock("@/lib/api-client", async (importOriginal) => {
@@ -164,5 +165,33 @@ describe("FinancialHoleBillingsPanel", () => {
     const button = await screen.findByRole("button", { name: "Ir para Contratos" });
     await user.click(button);
     expect(navigateMock).toHaveBeenCalledWith("/contracts");
+  });
+
+  it("não tem violações de acessibilidade", async () => {
+    const data: FinancialHoleBillings = {
+      period_start: "2026-01-01",
+      period_end: "2026-01-07",
+      total_count: 1,
+      total_hole_value: 50,
+      limit: 15,
+      offset: 0,
+      items: [
+        {
+          billing_id: "b1",
+          patient_full_name: "Paciente Analytics",
+          procedure_label: "Consulta em consultório",
+          insurance_plan_name: "Unimed Nacional",
+          charged_value: 150,
+          agreed_price: 200,
+          hole_value: 50,
+        },
+      ],
+    };
+    vi.mocked(apiClient.get).mockResolvedValue(data);
+
+    const { container } = renderWithProviders(<FinancialHoleBillingsPanel dateFrom="2026-01-01" dateTo="2026-01-07" />);
+
+    await waitFor(() => expect(screen.getByText("Paciente Analytics")).toBeInTheDocument());
+    await expectNoA11yViolations(container);
   });
 });

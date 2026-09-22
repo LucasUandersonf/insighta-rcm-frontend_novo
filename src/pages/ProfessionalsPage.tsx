@@ -496,7 +496,7 @@ export function ProfessionalsPage() {
                 <th className="px-4 py-2.5 font-medium">Contrato</th>
                 <th className="px-4 py-2.5 font-medium">Grade semanal</th>
                 <th className="px-4 py-2.5 font-medium">Status</th>
-                <th className="px-4 py-2.5 font-medium"></th>
+                <th className="px-4 py-2.5 font-medium"><span className="sr-only">Ações</span></th>
               </tr>
             </thead>
             <tbody>

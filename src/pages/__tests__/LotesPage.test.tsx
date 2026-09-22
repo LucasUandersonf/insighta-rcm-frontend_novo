@@ -3,6 +3,7 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { LotesPage } from "@/pages/LotesPage";
 import { apiClient } from "@/lib/api-client";
 import { renderWithProviders } from "@/test/utils";
+import { expectNoA11yViolations } from "@/test/a11y";
 import type { Guia, InsurancePlan, Lote, PaginatedResponse } from "@/lib/types";
 
 vi.mock("@/lib/api-client", async (importOriginal) => {
@@ -147,5 +148,19 @@ describe("LotesPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Adicionar" }));
 
     await waitFor(() => expect(apiClient.post).toHaveBeenCalledWith(`/api/v1/lotes/${lote.id}/guias/${"guia-1"}`));
+  });
+
+  it("não tem violações de acessibilidade", async () => {
+    const lotesPage: PaginatedResponse<Lote> = { items: [makeLote()], total: 1, limit: 20, offset: 0 };
+    mockGetByPath({
+      "/api/v1/insurance-companies/plans?include_inactive=true": [makePlan()],
+      "/api/v1/insurance-companies/plans": [makePlan()],
+      "/api/v1/lotes": lotesPage,
+    });
+
+    const { container } = renderWithProviders(<LotesPage />);
+
+    await waitFor(() => expect(screen.getByText("Unimed Nacional")).toBeInTheDocument());
+    await expectNoA11yViolations(container);
   });
 });

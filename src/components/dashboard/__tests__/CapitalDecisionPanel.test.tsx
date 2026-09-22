@@ -3,6 +3,7 @@ import { screen, waitFor } from "@testing-library/react";
 import { CapitalDecisionPanel } from "@/components/dashboard/CapitalDecisionPanel";
 import { apiClient } from "@/lib/api-client";
 import { renderWithProviders } from "@/test/utils";
+import { expectNoA11yViolations } from "@/test/a11y";
 import type { CapitalDecisionBaseData } from "@/lib/types";
 
 vi.mock("@/lib/api-client", async (importOriginal) => {
@@ -80,5 +81,24 @@ describe("CapitalDecisionPanel", () => {
     renderWithProviders(<CapitalDecisionPanel />);
 
     await waitFor(() => expect(screen.getByText(/Amostra insuficiente para "Dermatologia"/)).toBeInTheDocument());
+  });
+
+  it("não tem violações de acessibilidade", async () => {
+    vi.mocked(apiClient.get).mockResolvedValue(
+      baseData({
+        sample_size: 3,
+        avg_revenue_per_hour: 300,
+        has_cost_data: true,
+        avg_margin_per_hour: 250,
+        belongs_to_organization: true,
+        sibling_units_count: 2,
+        avg_monthly_revenue_per_unit: 20000,
+      })
+    );
+
+    const { container } = renderWithProviders(<CapitalDecisionPanel />);
+
+    await waitFor(() => expect(screen.getByText(/R\$\s?13\.666,67/)).toBeInTheDocument());
+    await expectNoA11yViolations(container);
   });
 });

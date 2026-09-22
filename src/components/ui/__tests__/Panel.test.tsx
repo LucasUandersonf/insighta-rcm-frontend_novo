@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { Panel } from "@/components/ui/Panel";
+import { expectNoA11yViolations } from "@/test/a11y";
 
 describe("Panel", () => {
   it("sem `glow`, não aplica nenhuma classe de hover tingida (comportamento padrão preservado)", () => {
@@ -42,5 +43,15 @@ describe("Panel", () => {
       </Panel>
     );
     expect(screen.getByText("atualizado há 5 min")).toBeInTheDocument();
+  });
+
+  it("não tem violações de acessibilidade", async () => {
+    const { container } = render(
+      <Panel title="Fila de correção" glow="pending" updatedAt={Date.now()}>
+        conteúdo
+      </Panel>
+    );
+    expect(screen.getByText("Fila de correção")).toBeInTheDocument();
+    await expectNoA11yViolations(container);
   });
 });

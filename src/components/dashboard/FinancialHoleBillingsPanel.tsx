@@ -91,7 +91,7 @@ export function FinancialHoleBillingsPanel({ dateFrom, dateTo }: { dateFrom: str
       </div>
 
       <BentoCard colSpan={12} noPadding>
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto" tabIndex={0}>
           <table className="w-full min-w-[640px] text-left">
             <thead>
               <tr className="border-b border-border-hairline text-2xs font-medium uppercase tracking-wide text-ink-faint">
@@ -109,7 +109,7 @@ export function FinancialHoleBillingsPanel({ dateFrom, dateTo }: { dateFrom: str
             </tbody>
           </table>
         </div>
-        <Pagination total={data.total_count} limit={data.limit} offset={data.offset} onOffsetChange={setOffset} />
+        <Pagination total={data.total_count} limit={data.limit} offset={data.offset} onOffsetChange={setOffset} label="Paginação de contas abaixo do combinado" />
       </BentoCard>
     </div>
   );
