@@ -321,8 +321,8 @@ function BatchUploadTab() {
           )}
           {dataType === "pep" && (
             <p className="mb-4 -mt-2 text-2xs text-ink-faint">
-              Evoluções clínicas (queixa, exame, conduta) — o atendimento precisa já existir no sistema (via Agenda ou
-              Atendimento) antes desta linha chegar.
+              Prontuário completo (SOAP, sinais vitais, alergias/comorbidades, TCLE e assinatura digital) — o
+              atendimento precisa já existir no sistema (via Agenda ou Atendimento) antes desta linha chegar.
             </p>
           )}
           <Dropzone
