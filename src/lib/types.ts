@@ -100,8 +100,8 @@ export interface IngestionFileEntry {
   id: string;
   original_filename: string | null;
   file_format: IngestionFileFormat;
-  // Template de integração que o arquivo segue — "faturamento" ou
-  // "agenda" (ver app/sql/019_agenda_ingestion.sql).
+  // Template de integração que o arquivo segue — "faturamento", "agenda"
+  // ou "atendimento" (ver app/sql/075_atendimento_operational_timing.sql).
   data_type: string;
   status: IngestionFileStatus;
   row_count: number;

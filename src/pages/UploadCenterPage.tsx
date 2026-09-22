@@ -225,13 +225,18 @@ function ColumnMappingModal({ file, isOpen, onClose }: { file: File | null; isOp
 const DATA_TYPE_LABELS: Record<string, string> = {
   faturamento: "Faturamento",
   agenda: "Agenda",
+  atendimento: "Atendimento",
 };
+
+// Templates que só aceitam CSV (Agenda é o único com XML/JSON também —
+// ver DECISÃO em app/sql/019_agenda_ingestion.sql).
+const CSV_ONLY_DATA_TYPES: ReadonlySet<string> = new Set(["faturamento", "atendimento"]);
 
 function BatchUploadTab() {
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
   const [file, setFile] = useState<File | null>(null);
-  const [dataType, setDataType] = useState<"faturamento" | "agenda">("faturamento");
+  const [dataType, setDataType] = useState<"faturamento" | "agenda" | "atendimento">("faturamento");
   const [offset, setOffset] = useState(0);
   const [isMappingModalOpen, setIsMappingModalOpen] = useState(false);
 
@@ -270,17 +275,18 @@ function BatchUploadTab() {
     <div className="space-y-4">
       <Panel
         title="Upload de lotes operacionais"
-        subtitle="Faturamento (CSV) ou Agenda (CSV, XML ou JSON) do seu ERP. Processado na hora: você vê o resultado nesta mesma tela."
+        subtitle="Faturamento ou Atendimento (CSV) ou Agenda (CSV, XML ou JSON) do seu ERP. Processado na hora: você vê o resultado nesta mesma tela."
       >
         <div className="p-4">
           <SelectField
             label="Template"
             value={dataType}
-            onChange={(e) => setDataType(e.target.value as "faturamento" | "agenda")}
+            onChange={(e) => setDataType(e.target.value as "faturamento" | "agenda" | "atendimento")}
             className="mb-4 max-w-xs"
           >
             <option value="faturamento">Faturamento</option>
             <option value="agenda">Agenda</option>
+            <option value="atendimento">Atendimento</option>
           </SelectField>
           {dataType === "faturamento" && (
             <p className="mb-4 -mt-2 text-2xs text-ink-faint">
@@ -288,9 +294,15 @@ function BatchUploadTab() {
               MESMA linha (mesmo ID de transação) mais tarde já com o desfecho preenchido para reconciliar automaticamente.
             </p>
           )}
+          {dataType === "atendimento" && (
+            <p className="mb-4 -mt-2 text-2xs text-ink-faint">
+              Tempos operacionais (totem, triagem, recepção, consultório, saída) de cada visita — cruzado automaticamente
+              com Agenda/Faturamento pelo mesmo código de atendimento do seu ERP, nunca precisa chegar primeiro.
+            </p>
+          )}
           <Dropzone
-            accept={dataType === "faturamento" ? [".csv"] : [".csv", ".xml", ".json"]}
-            hint={dataType === "faturamento" ? "CSV — até 20MB" : "CSV, XML ou JSON — até 20MB"}
+            accept={CSV_ONLY_DATA_TYPES.has(dataType) ? [".csv"] : [".csv", ".xml", ".json"]}
+            hint={CSV_ONLY_DATA_TYPES.has(dataType) ? "CSV — até 20MB" : "CSV, XML ou JSON — até 20MB"}
             file={file}
             onFileSelected={setFile}
             isUploading={mutation.isPending}
