@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
-import { CalendarClock, Search, UserRound, X } from "lucide-react";
+import { CalendarClock, FileText, Package, Search, UserRound, X } from "lucide-react";
 import { KpiCard } from "@/components/ui/KpiCard";
 import { Panel, EmptyState, LoadingState, ErrorState } from "@/components/ui/Panel";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -202,6 +202,33 @@ export function PatientFichaPage() {
                             <span className="tabular font-mono text-ink-muted">{formatCurrency(billing.charged_value)}</span>
                             <span>· {billing.status}</span>
                             <RiskBadge level={billing.denial_risk_level} />
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {appointment.stock_movements.length > 0 && (
+                      <ul className="mt-2 space-y-1 pl-4">
+                        {appointment.stock_movements.map((movement) => (
+                          <li key={movement.id} className="flex items-center gap-2 text-2xs text-ink-faint">
+                            <Package aria-hidden size={11} className="shrink-0 text-ink-faint" />
+                            <span className="text-ink-muted">{movement.material_name}</span>
+                            <span>· {movement.tipo} de {movement.quantidade}</span>
+                            {movement.valor_total_custo !== null && (
+                              <span className="tabular font-mono">{formatCurrency(movement.valor_total_custo)}</span>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {appointment.clinical_evolutions.length > 0 && (
+                      <ul className="mt-2 space-y-1 pl-4">
+                        {appointment.clinical_evolutions.map((evolution) => (
+                          <li key={evolution.id} className="flex items-start gap-2 text-2xs text-ink-faint">
+                            <FileText aria-hidden size={11} className="mt-0.5 shrink-0 text-ink-faint" />
+                            <span>
+                              {evolution.professional_name && <span className="text-ink-muted">{evolution.professional_name} · </span>}
+                              {evolution.hipotese_diagnostica_principal ?? evolution.conduta_terapeutica_plano ?? "Evolução clínica registrada"}
+                            </span>
                           </li>
                         ))}
                       </ul>

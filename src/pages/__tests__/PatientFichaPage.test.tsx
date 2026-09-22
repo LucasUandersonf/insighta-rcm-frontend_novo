@@ -31,6 +31,8 @@ function ficha(overrides: Partial<PatientFicha> = {}): PatientFicha {
         insurance_plan_name: "Unimed",
         no_show_risk_level: "baixo",
         billings: [{ id: "b1", charged_value: 200, status: "paid", denial_risk_level: "low", created_at: "2026-01-05T10:00:00Z" }],
+        stock_movements: [],
+        clinical_evolutions: [],
       },
     ],
     ...overrides,
@@ -94,6 +96,40 @@ describe("PatientFichaPage", () => {
     renderWithProviders(<PatientFichaPage />, { route: "/pacientes?patient_id=p1" });
 
     expect(await screen.findByText("Nenhum atendimento registrado para este paciente.")).toBeInTheDocument();
+  });
+
+  it("mostra materiais consumidos (Estoque) e evoluções clínicas (PEP) aninhados no atendimento", async () => {
+    vi.mocked(apiClient.get).mockImplementation((url: string) => {
+      if (url.includes("/patients/p1/ficha")) {
+        return Promise.resolve(
+          ficha({
+            appointments: [
+              {
+                id: "a1",
+                scheduled_at: "2026-01-05T10:00:00Z",
+                status: "completed",
+                professional_name: "Dra. Ana",
+                insurance_plan_name: "Unimed",
+                no_show_risk_level: "baixo",
+                billings: [],
+                stock_movements: [
+                  { id: "m1", material_name: "Seringa 10ml", categoria: "material_medico_hospitalar", tipo: "saida", quantidade: 2, valor_total_custo: 31, data_movimentacao: "2026-01-05T10:10:00Z" },
+                ],
+                clinical_evolutions: [
+                  { id: "e1", tipo: "anamnese_inicial", professional_name: "Dra. Ana", hipotese_diagnostica_principal: "Bronquite aguda", conduta_terapeutica_plano: "Repouso", data_evolucao: "2026-01-05T10:20:00Z" },
+                ],
+              },
+            ],
+          }) as never
+        );
+      }
+      return Promise.reject(new Error(`unexpected url: ${url}`));
+    });
+
+    renderWithProviders(<PatientFichaPage />, { route: "/pacientes?patient_id=p1" });
+
+    expect(await screen.findByText(/Seringa 10ml/)).toBeInTheDocument();
+    expect(screen.getByText(/Bronquite aguda/)).toBeInTheDocument();
   });
 
   it("botão 'Buscar outro paciente' limpa a seleção e volta pra busca", async () => {

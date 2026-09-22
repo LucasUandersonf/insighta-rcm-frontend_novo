@@ -1639,6 +1639,25 @@ export interface PatientFichaBilling {
   created_at: string;
 }
 
+export interface PatientFichaStockMovement {
+  id: string;
+  material_name: string;
+  categoria: string | null;
+  tipo: string;
+  quantidade: number;
+  valor_total_custo: number | null;
+  data_movimentacao: string;
+}
+
+export interface PatientFichaClinicalEvolution {
+  id: string;
+  tipo: string | null;
+  professional_name: string | null;
+  hipotese_diagnostica_principal: string | null;
+  conduta_terapeutica_plano: string | null;
+  data_evolucao: string;
+}
+
 export interface PatientFichaAppointment {
   id: string;
   scheduled_at: string;
@@ -1647,6 +1666,8 @@ export interface PatientFichaAppointment {
   insurance_plan_name: string | null;
   no_show_risk_level: NoShowRiskLevel | null;
   billings: PatientFichaBilling[];
+  stock_movements: PatientFichaStockMovement[];
+  clinical_evolutions: PatientFichaClinicalEvolution[];
 }
 
 export interface PatientFichaSummary {
