@@ -3,6 +3,7 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { ContractsPage } from "@/pages/ContractsPage";
 import { apiClient } from "@/lib/api-client";
 import { renderWithProviders } from "@/test/utils";
+import { expectNoA11yViolations } from "@/test/a11y";
 import type { Contract, InsuranceCompany, InsurancePlan, PaginatedResponse } from "@/lib/types";
 
 vi.mock("@/lib/api-client", async (importOriginal) => {
@@ -100,5 +101,22 @@ describe("ContractsPage — plan_type (Onda 3 do Plano de Ação)", () => {
         expect.objectContaining({ plan_type: "particular", insurance_company_id: null })
       )
     );
+  });
+
+  it("não tem violações de acessibilidade", async () => {
+    mockGetByPath({
+      "/api/v1/insurance-companies?include_inactive=true": [makeCompany()],
+      "/api/v1/insurance-companies/plans?include_inactive=true": [
+        makePlan({ id: "plan-particular", display_name: "Convênio Particular", insurance_company_id: null, plan_type: "particular" }),
+      ],
+      "/api/v1/insurance-companies": [makeCompany()],
+      "/api/v1/insurance-companies/plans": [makePlan()],
+      "/api/v1/contracts": EMPTY_CONTRACTS,
+    });
+
+    const { container } = renderWithProviders(<ContractsPage />);
+    await waitFor(() => expect(screen.getByText("Convênio Particular")).toBeInTheDocument());
+
+    await expectNoA11yViolations(container);
   });
 });

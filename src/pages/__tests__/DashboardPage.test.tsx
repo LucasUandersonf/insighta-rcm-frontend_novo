@@ -5,6 +5,7 @@ import { DashboardPage } from "@/pages/DashboardPage";
 import { apiClient } from "@/lib/api-client";
 import { useAuth } from "@/context/AuthContext";
 import { renderWithProviders } from "@/test/utils";
+import { expectNoA11yViolations } from "@/test/a11y";
 import type { BillingResponse, ExecutiveSummary, PaginatedResponse } from "@/lib/types";
 
 vi.mock("@/lib/api-client", async (importOriginal) => {
@@ -132,5 +133,21 @@ describe("DashboardPage — deep-link de convênio (item 4 do roadmap)", () => {
     await user.click(screen.getByRole("button", { name: /Limpar filtro/ }));
 
     await waitFor(() => expect(screen.queryByText(/Filtrando por 1 convênio/)).not.toBeInTheDocument());
+  });
+
+  it("não tem violações de acessibilidade", async () => {
+    vi.mocked(useAuth).mockReturnValue({ user: { tenant_id: "t1", sub: "u1", role: "owner" } } as unknown as ReturnType<
+      typeof useAuth
+    >);
+    vi.mocked(apiClient.get).mockImplementation((url: string) => {
+      if (url.includes("high-risk")) return Promise.resolve(billingPage([makeBilling()]) as never);
+      if (url.includes("executive-summary")) return Promise.resolve(SUMMARY as never);
+      return Promise.reject(new Error(`URL não mockada: ${url}`));
+    });
+
+    const { container } = renderWithProviders(<DashboardPage />);
+    await waitFor(() => expect(screen.getByText("Faturamentos de alto risco")).toBeInTheDocument());
+
+    await expectNoA11yViolations(container);
   });
 });

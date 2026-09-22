@@ -3,6 +3,7 @@ import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { SetupPage } from "@/pages/SetupPage";
 import { apiClient, ApiError } from "@/lib/api-client";
 import { renderWithProviders } from "@/test/utils";
+import { expectNoA11yViolations } from "@/test/a11y";
 import type { InsurancePlan, RejectedRow, ResolveInsurancePlanResponse } from "@/lib/types";
 
 // Achado da Auditoria de Prontidão v1: SetupPage é o único jeito de
@@ -170,5 +171,25 @@ describe("SetupPage", () => {
     expect(await screen.findByText("Plano inválido para este tenant.")).toBeInTheDocument();
     // Modal continua aberto — usuário não perde o contexto ao ver o erro.
     expect(screen.getByText("Mapear convênio não reconhecido")).toBeInTheDocument();
+  });
+
+  it("não tem violações de acessibilidade", async () => {
+    const rows: RejectedRow[] = [
+      makeRejectedRow({ id: 1, raw_value: "UNIMED REGIONAL XYZ", payload: { patient_name: "Maria Silva" } }),
+      makeRejectedRow({ id: 2, raw_value: "UNIMED REGIONAL XYZ", payload: { patient_name: "João Souza" } }),
+      makeRejectedRow({ id: 3, raw_value: "AMIL SAUDE ABC", payload: { patient_name: "Ana Costa" } }),
+      makeRejectedRow({
+        id: 4,
+        reason: "validation_error",
+        raw_value: "data de nascimento inválida",
+        row_number: 40,
+      }),
+    ];
+    vi.mocked(apiClient.get).mockResolvedValue(rows as never);
+
+    const { container } = renderWithProviders(<SetupPage />);
+
+    await screen.findByText("UNIMED REGIONAL XYZ");
+    await expectNoA11yViolations(container);
   });
 });

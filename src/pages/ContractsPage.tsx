@@ -982,6 +982,7 @@ export function ContractsPage() {
             limit={CONTRACTS_PAGE_SIZE}
             offset={contractsOffset}
             onOffsetChange={setContractsOffset}
+            label="Paginação de contratos"
           />
         )}
       </Panel>

@@ -148,19 +148,64 @@ entre arquivos).
 ### Acessibilidade — checagem automatizada dentro dos próprios testes
 
 `src/test/a11y.ts` roda o **axe-core** sobre o container renderizado de
-cada teste (`expectNoA11yViolations(container)`) — quase toda página e
-componente de UI testado nesta rodada chama isso pelo menos uma vez, uma
+cada teste (`expectNoA11yViolations(container)`) — **100% das páginas
+(`src/pages/**/__tests__`) e dos componentes de UI/dashboard
+(`src/components/**/__tests__`) chamam isso pelo menos uma vez** (rodada
+"UX/acessibilidade vamos chegar a 9.5"; antes cobria só ~23%). Uma
 regressão de acessibilidade (label sem associação, botão sem nome
-acessível, papel ARIA inválido) quebra a suíte, não só "parece certo
-visualmente".
+acessível, papel ARIA inválido, ordem de heading pulada) quebra a
+suíte, não só "parece certo visualmente".
 
 **Limitação documentada, não escondida**: a regra `color-contrast` do
 axe fica desligada nesses testes — jsdom não calcula layout/estilo
 computado de verdade (não é um motor de renderização), então essa regra
-especificamente produz falso positivo/negativo sob jsdom. Uma auditoria
-de contraste real precisa de um navegador de verdade (Playwright) —
-fora do escopo desta rodada, é a pendência formal registrada aqui em vez
-de simplesmente não ser mencionada.
+especificamente produz falso positivo/negativo sob jsdom.
+
+### Auditoria de acessibilidade em navegador real (Playwright) — fecha a lacuna do jsdom
+
+`playwright.config.ts` + `e2e/sala-de-comando.spec.ts` rodam o
+**ruleset COMPLETO do axe-core** (incluindo `color-contrast`) contra um
+Chromium de verdade, logado com um tenant demo real
+(`scripts/seed_demo_data.py`, backend), nas **11 abas da Sala de
+Comando** (`hoje`, `diagnostico`, `crm`, `oportunidades`, `comparativo`,
+`rentabilidade`, `simulador`, `capital`, `roi`, `estoque`, `clinico`),
+em dois viewports (`chromium-desktop` e `chromium-mobile`/Pixel 7) — 22
+combinações no total, mais QA visual (screenshot de página inteira por
+combinação).
+
+```bash
+npm run test:e2e   # precisa de backend + frontend + tenant demo de pé — ver playwright.config.ts
+```
+
+Sem `webServer` automático de propósito: os testes dependem de dado
+demo real (não é possível simular o cenário de negócio inteiro com
+mocks e ainda assim testar acessibilidade "de verdade").
+
+Achados reais desta auditoria (encontrados pelo Chromium real, não pelo
+jsdom — cada um corrigido na raiz, não contornado no teste):
+- **`landmark-unique` (moderado)** — `<Pagination>` (`Pagination.tsx`)
+  usava sempre o mesmo `aria-label="Paginação"` fixo; quando duas listas
+  paginadas aparecem na mesma tela (ex: aba Diagnóstico tem duas), os
+  dois `<nav>` viravam landmarks indistinguíveis para quem navega por
+  leitor de tela. Adicionado prop `label` opcional, com um rótulo
+  específico em cada um dos ~17 usos no produto.
+- **Abas da Sala de Comando inutilizáveis em mobile** — `Tabs.tsx`
+  renderizava a `tablist` como `inline-flex` sem limite de largura nem
+  scroll próprio; com 11 abas isso empurrava a PÁGINA INTEIRA além da
+  viewport (confirmado: `scrollWidth` 1267px numa tela de 412px), e o
+  scroll horizontal resultante fazia elementos de outra parte do layout
+  sobreporem e **bloquearem clique nas abas depois da 2ª/3ª** — não é só
+  um problema estético, era uma tela realmente inoperável em celular.
+  Corrigido: a `tablist` agora tem seu próprio `overflow-x-auto`, a
+  página em volta não estica mais.
+- **`scrollable-region-focusable` (sério)** — vários contêineres de
+  tabela com `overflow-x-auto` (13 ocorrências em 12 arquivos) ficavam
+  sem nenhum jeito de rolar por teclado quando a tabela de fato
+  transbordava a viewport (só existia rolagem por toque/mouse) — falha
+  de WCAG 2.1.1 (Keyboard) que só aparece em telas estreitas o
+  suficiente pra tabela transbordar, por isso nunca apareceu nos testes
+  jsdom (sem layout real) nem no desktop. Corrigido com `tabIndex={0}`
+  em cada um.
 
 ### Achados corrigidos na mesma rodada (não só "testado", também consertado)
 

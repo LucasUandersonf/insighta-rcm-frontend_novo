@@ -3,6 +3,7 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { CostEntriesPage } from "@/pages/CostEntriesPage";
 import { apiClient } from "@/lib/api-client";
 import { renderWithProviders } from "@/test/utils";
+import { expectNoA11yViolations } from "@/test/a11y";
 import type { CostEntry, PaginatedResponse, Professional } from "@/lib/types";
 
 vi.mock("@/lib/api-client", async (importOriginal) => {
@@ -96,5 +97,15 @@ describe("CostEntriesPage — épico F3.1 do Plano Diretor", () => {
     const dialog = await screen.findByRole("dialog");
     fireEvent.click(within(dialog).getByRole("button", { name: /remover/i }));
     await waitFor(() => expect(apiClient.delete).toHaveBeenCalledWith("/api/v1/cost-entries/entry-1"));
+  });
+
+  it("não tem violações de acessibilidade", async () => {
+    const entriesPage: PaginatedResponse<CostEntry> = { items: [makeEntry()], total: 1, limit: 20, offset: 0 };
+    mockGetByPath({ "/api/v1/professionals": [] as Professional[], "/api/v1/cost-entries": entriesPage });
+
+    const { container } = renderWithProviders(<CostEntriesPage />);
+    await waitFor(() => expect(screen.getByText("Aluguel")).toBeInTheDocument());
+
+    await expectNoA11yViolations(container);
   });
 });

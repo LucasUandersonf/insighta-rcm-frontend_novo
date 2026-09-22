@@ -208,7 +208,7 @@ export function CostEntriesPage() {
                 <th className="px-4 py-2.5 font-medium">Descrição</th>
                 <th className="px-4 py-2.5 font-medium">Profissional</th>
                 <th className="px-4 py-2.5 font-medium text-right">Valor</th>
-                <th className="px-4 py-2.5 font-medium"></th>
+                <th className="px-4 py-2.5 font-medium"><span className="sr-only">Ações</span></th>
               </tr>
             </thead>
             <tbody>
@@ -244,6 +244,7 @@ export function CostEntriesPage() {
             limit={COST_ENTRIES_PAGE_SIZE}
             offset={entriesOffset}
             onOffsetChange={setEntriesOffset}
+            label="Paginação de lançamentos de custo"
           />
         )}
       </Panel>

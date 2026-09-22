@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { BillingOperationsPage } from "@/pages/BillingOperationsPage";
 import { apiClient } from "@/lib/api-client";
 import { renderWithProviders } from "@/test/utils";
+import { expectNoA11yViolations } from "@/test/a11y";
 import type { BillingSearchItem, Guia, InsurancePlan, PaginatedResponse } from "@/lib/types";
 
 vi.mock("@/lib/api-client", async (importOriginal) => {
@@ -411,5 +412,20 @@ describe("BillingOperationsPage — aba Guias", () => {
       () => expect(apiClient.get).toHaveBeenCalledWith(expect.stringContaining("search=12345")),
       { timeout: 1000 }
     );
+  });
+
+  it("não tem violações de acessibilidade", async () => {
+    const guiasPage: PaginatedResponse<Guia> = { items: [makeGuia()], total: 1, limit: 15, offset: 0 };
+    mockGetByPath({
+      "/api/v1/insurance-companies/plans": [makePlan()],
+      "/api/v1/guias?limit=15&offset=0&search=": guiasPage,
+    });
+    const user = userEvent.setup();
+
+    const { container } = renderWithProviders(<BillingOperationsPage />);
+    await user.click(screen.getByRole("tab", { name: "Guias" }));
+    await waitFor(() => expect(screen.getByText("SADT-12345")).toBeInTheDocument());
+
+    await expectNoA11yViolations(container);
   });
 });

@@ -359,7 +359,7 @@ export function LotesPage() {
                 <th className="px-4 py-2.5 font-medium">Guias</th>
                 <th className="px-4 py-2.5 font-medium">Status</th>
                 <th className="px-4 py-2.5 font-medium">Aberto em</th>
-                <th className="px-4 py-2.5 font-medium"></th>
+                <th className="px-4 py-2.5 font-medium"><span className="sr-only">Ações</span></th>
               </tr>
             </thead>
             <tbody>
@@ -383,7 +383,7 @@ export function LotesPage() {
           </table>
         )}
         {lotesPage && lotesPage.total > 0 && (
-          <Pagination total={lotesPage.total} limit={LOTES_PAGE_SIZE} offset={lotesOffset} onOffsetChange={setLotesOffset} />
+          <Pagination total={lotesPage.total} limit={LOTES_PAGE_SIZE} offset={lotesOffset} onOffsetChange={setLotesOffset} label="Paginação de lotes" />
         )}
       </Panel>
 

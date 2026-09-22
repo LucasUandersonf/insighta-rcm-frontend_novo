@@ -52,7 +52,7 @@ export function ConsumptionByProfessionalPanel({ dateFrom, dateTo }: { dateFrom:
           Custo médio de material por atendimento, por profissional solicitante — maior custo médio primeiro, o jeito mais direto de ver desvio de padrão de consumo.
         </p>
       </div>
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto" tabIndex={0}>
         <table className="w-full min-w-[560px] text-left">
           <thead>
             <tr className="border-b border-border-hairline text-2xs font-medium uppercase tracking-wide text-ink-faint">

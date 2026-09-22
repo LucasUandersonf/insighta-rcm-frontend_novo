@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { BillingSearchPicker } from "@/components/billing/BillingSearchPicker";
 import { apiClient } from "@/lib/api-client";
 import { renderWithProviders } from "@/test/utils";
+import { expectNoA11yViolations } from "@/test/a11y";
 import type { BillingSearchItem } from "@/lib/types";
 
 vi.mock("@/lib/api-client", async (importOriginal) => {
@@ -79,5 +80,16 @@ describe("BillingSearchPicker", () => {
 
     await new Promise((r) => setTimeout(r, 400));
     expect(apiClient.get).not.toHaveBeenCalled();
+  });
+
+  it("não tem violações de acessibilidade", async () => {
+    vi.mocked(apiClient.get).mockResolvedValue([RESULT]);
+    const user = userEvent.setup();
+
+    const { container } = renderWithProviders(<Wrapper />);
+    await user.type(screen.getByLabelText(/Buscar faturamento/), "Maria da Silva");
+    await waitFor(() => expect(screen.getByText("Maria da Silva Santos")).toBeInTheDocument(), { timeout: 2000 });
+
+    await expectNoA11yViolations(container);
   });
 });

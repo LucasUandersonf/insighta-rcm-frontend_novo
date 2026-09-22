@@ -3,6 +3,7 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { RegisterOutreachButton } from "@/components/dashboard/RegisterOutreachButton";
 import { apiClient } from "@/lib/api-client";
 import { renderWithProviders } from "@/test/utils";
+import { expectNoA11yViolations } from "@/test/a11y";
 import type { PatientOutreachLogEntry } from "@/lib/types";
 
 vi.mock("@/lib/api-client", async (importOriginal) => {
@@ -43,5 +44,18 @@ describe("RegisterOutreachButton", () => {
         expect.objectContaining({ channel: "telefone", outcome: "agendou", notes: "Vai voltar semana que vem" })
       )
     );
+  });
+
+  it("não tem violações de acessibilidade", async () => {
+    vi.mocked(apiClient.post).mockResolvedValue(makeEntry());
+
+    const { container } = renderWithProviders(
+      <RegisterOutreachButton patientId="p1" patientName="Paciente Teste" invalidateKeys={[["analytics", "inactive-patients"]]} />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Registrar contato/ }));
+    await screen.findByRole("heading", { name: "Registrar contato — Paciente Teste" });
+
+    await expectNoA11yViolations(container);
   });
 });

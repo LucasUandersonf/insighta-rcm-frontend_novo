@@ -81,6 +81,11 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
     css: false,
+    // e2e/ roda em Playwright (Chromium de verdade, ver playwright.config.ts)
+    // — sem essa exclusão, o Vitest tentava carregar e2e/*.spec.ts também,
+    // e `test.skip(...)` no nível do módulo (padrão do Playwright) não
+    // existe na API do Vitest, quebrando a coleta de testes.
+    exclude: ["**/node_modules/**", "**/e2e/**"],
     // DECISÃO — VITE_API_BASE_URL fixa para os testes, nunca herdada do
     // .env local
     // -------------------------------------------------------------------

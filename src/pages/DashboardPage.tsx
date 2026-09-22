@@ -445,7 +445,7 @@ export function DashboardPage() {
             </table>
           )}
           {highRiskPage && highRiskPage.total > 0 && (
-            <Pagination total={highRiskPage.total} limit={PAGE_SIZE} offset={offset} onOffsetChange={setOffset} />
+            <Pagination total={highRiskPage.total} limit={PAGE_SIZE} offset={offset} onOffsetChange={setOffset} label="Paginação de faturamentos de alto risco" />
           )}
         </Panel>
       </section>

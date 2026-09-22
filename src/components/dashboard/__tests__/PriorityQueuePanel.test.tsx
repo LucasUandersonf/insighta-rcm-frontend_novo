@@ -4,6 +4,7 @@ import { PriorityQueuePanel } from "@/components/dashboard/PriorityQueuePanel";
 import { apiClient } from "@/lib/api-client";
 import { useAuth } from "@/context/AuthContext";
 import { renderWithProviders } from "@/test/utils";
+import { expectNoA11yViolations } from "@/test/a11y";
 import type { CurrentUser, InsightOutcome, PlatformUser, PriorityQueue } from "@/lib/types";
 
 vi.mock("@/lib/api-client", async (importOriginal) => {
@@ -178,5 +179,33 @@ describe("PriorityQueuePanel — épico F1.1 do Plano Diretor", () => {
       )
     );
     await waitFor(() => expect(screen.getByText("Atribuído")).toBeInTheDocument());
+  });
+
+  it("não tem violações de acessibilidade", async () => {
+    mockUser("auditor");
+    const data: PriorityQueue = {
+      period_start: "2026-09-01",
+      period_end: "2026-09-07",
+      total_considered: 5,
+      items: [
+        RAIOX_ITEM,
+        {
+          severity: "warning",
+          category: "agenda",
+          title: "Queda de ocupação da agenda",
+          message: "Ocupação caiu 12pp.",
+          financial_impact: 80,
+          action_label: null,
+          action_href: null,
+          source: "insight",
+        },
+      ],
+    };
+    vi.mocked(apiClient.get).mockResolvedValue(data);
+
+    const { container } = renderWithProviders(<PriorityQueuePanel dateFrom="2026-09-01" dateTo="2026-09-07" />);
+
+    await waitFor(() => expect(screen.getByText("Maior perda concentrada no convênio Unimed Nacional")).toBeInTheDocument());
+    await expectNoA11yViolations(container);
   });
 });

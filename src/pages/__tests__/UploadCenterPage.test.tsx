@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { UploadCenterPage } from "@/pages/UploadCenterPage";
 import { apiClient, ApiError } from "@/lib/api-client";
 import { renderWithProviders } from "@/test/utils";
+import { expectNoA11yViolations } from "@/test/a11y";
 import type { Contract, IngestionFileEntry, InsurancePlan, PaginatedResponse, UploadIngestionFileResponse } from "@/lib/types";
 
 // Achado da Auditoria de Prontidão v1: Central de Upload é a ÚNICA porta
@@ -161,6 +162,24 @@ describe("UploadCenterPage — aba Lotes Operacionais", () => {
     expect(screen.getByText("Processado")).toBeInTheDocument();
     expect(screen.getByText("Falhou")).toBeInTheDocument();
     expect(screen.getByText("15")).toBeInTheDocument();
+  });
+
+  it("não tem violações de acessibilidade", async () => {
+    const history: PaginatedResponse<IngestionFileEntry> = {
+      items: [
+        makeFileEntry({ id: "a", original_filename: "agenda-agosto.xml", file_format: "xml", data_type: "agenda", status: "processed", row_count: 40, error_row_count: 0 }),
+        makeFileEntry({ id: "b", original_filename: "glosa-julho.json", file_format: "json", data_type: "glosa", status: "failed", row_count: 0, error_row_count: 15 }),
+      ],
+      total: 2,
+      limit: 15,
+      offset: 0,
+    };
+    vi.mocked(apiClient.get).mockResolvedValue(history as never);
+
+    const { container } = renderWithProviders(<UploadCenterPage />);
+
+    await screen.findByText("agenda-agosto.xml");
+    await expectNoA11yViolations(container);
   });
 });
 

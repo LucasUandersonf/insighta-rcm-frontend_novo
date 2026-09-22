@@ -205,7 +205,7 @@ export function PlatformDashboardPage() {
           {error && !(error instanceof ApiError && error.status === 401) && <ErrorState message={getApiErrorMessage(error)} />}
           {!isLoading && !error && rows.length === 0 && <EmptyState message="Nenhuma clínica cadastrada ainda." />}
           {!isLoading && rows.length > 0 && (
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto" tabIndex={0}>
               <table className="w-full text-left text-sm">
                 <thead>
                   <tr className="border-b border-border-hairline text-2xs uppercase tracking-wide text-ink-faint">
@@ -244,7 +244,7 @@ export function PlatformDashboardPage() {
 
         {auditRows.length > 0 && (
           <Panel title="Histórico" subtitle="Quem fez o quê neste painel — login individual, ver core.platform_audit_log.">
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto" tabIndex={0}>
               <table className="w-full text-left text-sm">
                 <thead>
                   <tr className="border-b border-border-hairline text-2xs uppercase tracking-wide text-ink-faint">

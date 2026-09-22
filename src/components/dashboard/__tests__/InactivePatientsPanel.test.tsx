@@ -3,6 +3,7 @@ import { screen, waitFor } from "@testing-library/react";
 import { InactivePatientsPanel } from "@/components/dashboard/InactivePatientsPanel";
 import { apiClient } from "@/lib/api-client";
 import { renderWithProviders } from "@/test/utils";
+import { expectNoA11yViolations } from "@/test/a11y";
 import type { InactivePatients } from "@/lib/types";
 
 vi.mock("@/lib/api-client", async (importOriginal) => {
@@ -76,5 +77,36 @@ describe("InactivePatientsPanel", () => {
     renderWithProviders(<InactivePatientsPanel />);
 
     await waitFor(() => expect(screen.getByText(/Mostrando os 1 mais inativos de 30 no total/)).toBeInTheDocument());
+  });
+
+  it("não tem violações de acessibilidade", async () => {
+    const data: InactivePatients = {
+      total_count: 2,
+      inactive_after_days: 365,
+      items: [
+        {
+          patient_id: "p1",
+          full_name: "Paciente Sumido",
+          last_appointment_at: "2024-01-10T00:00:00Z",
+          days_since_last_appointment: 800,
+          last_outreach_at: null,
+          last_outreach_outcome: null,
+        },
+        {
+          patient_id: "p2",
+          full_name: "Paciente Distante",
+          last_appointment_at: "2024-11-01T00:00:00Z",
+          days_since_last_appointment: 400,
+          last_outreach_at: "2026-01-05T00:00:00Z",
+          last_outreach_outcome: "sem_resposta",
+        },
+      ],
+    };
+    vi.mocked(apiClient.get).mockResolvedValue(data);
+
+    const { container } = renderWithProviders(<InactivePatientsPanel />);
+
+    await waitFor(() => expect(screen.getByText("Paciente Sumido")).toBeInTheDocument());
+    await expectNoA11yViolations(container);
   });
 });

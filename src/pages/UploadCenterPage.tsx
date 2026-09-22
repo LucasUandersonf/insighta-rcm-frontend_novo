@@ -9,7 +9,7 @@ import { Modal } from "@/components/ui/Modal";
 import { SelectField, TextField } from "@/components/ui/FormField";
 import { Pagination } from "@/components/ui/Pagination";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { Tabs } from "@/components/ui/Tabs";
+import { Tabs, TabPanel } from "@/components/ui/Tabs";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useToast } from "@/context/ToastContext";
@@ -395,7 +395,7 @@ function BatchUploadTab() {
             </table>
           )}
         {history && history.total > 0 && (
-          <Pagination total={history.total} limit={HISTORY_PAGE_SIZE} offset={offset} onOffsetChange={setOffset} />
+          <Pagination total={history.total} limit={HISTORY_PAGE_SIZE} offset={offset} onOffsetChange={setOffset} label="Paginação do histórico de envios" />
         )}
       </Panel>
     </div>
@@ -517,7 +517,15 @@ export function UploadCenterPage() {
         ]}
       />
 
-      {tab === "lotes" ? <BatchUploadTab /> : <ContractUploadTab />}
+      {tab === "lotes" ? (
+        <TabPanel id="lotes" groupId={TABS_GROUP}>
+          <BatchUploadTab />
+        </TabPanel>
+      ) : (
+        <TabPanel id="contratos" groupId={TABS_GROUP}>
+          <ContractUploadTab />
+        </TabPanel>
+      )}
     </div>
   );
 }

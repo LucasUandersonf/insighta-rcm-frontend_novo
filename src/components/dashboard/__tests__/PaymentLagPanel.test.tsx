@@ -3,6 +3,7 @@ import { screen, waitFor } from "@testing-library/react";
 import { PaymentLagPanel } from "@/components/dashboard/PaymentLagPanel";
 import { apiClient } from "@/lib/api-client";
 import { renderWithProviders } from "@/test/utils";
+import { expectNoA11yViolations } from "@/test/a11y";
 import type { PaymentLagByPlan } from "@/lib/types";
 
 vi.mock("@/lib/api-client", async (importOriginal) => {
@@ -87,5 +88,36 @@ describe("PaymentLagPanel", () => {
     await waitFor(() =>
       expect(screen.getByText("Nenhum faturamento conciliado por convênio nesta janela.")).toBeInTheDocument()
     );
+  });
+
+  it("não tem violações de acessibilidade", async () => {
+    const data: PaymentLagByPlan = {
+      period_start: "2026-01-01",
+      period_end: "2026-01-07",
+      avg_days_to_receive: 55,
+      billings_settled_count: 2,
+      items: [
+        {
+          insurance_plan_id: "p1",
+          insurance_plan_name: "Convênio Lento",
+          plan_type: "convenio",
+          avg_days_to_receive: 100,
+          billings_settled_count: 1,
+        },
+        {
+          insurance_plan_id: "p2",
+          insurance_plan_name: "Convênio Rápido",
+          plan_type: "convenio",
+          avg_days_to_receive: 10,
+          billings_settled_count: 1,
+        },
+      ],
+    };
+    vi.mocked(apiClient.get).mockResolvedValue(data);
+
+    const { container } = renderWithProviders(<PaymentLagPanel dateFrom="2026-01-01" dateTo="2026-01-07" />);
+
+    await waitFor(() => expect(screen.getByText("Convênio Lento")).toBeInTheDocument());
+    await expectNoA11yViolations(container);
   });
 });

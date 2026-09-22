@@ -3,6 +3,7 @@ import { screen } from "@testing-library/react";
 import { MediumRiskBillingsPanel } from "@/components/dashboard/MediumRiskBillingsPanel";
 import { apiClient } from "@/lib/api-client";
 import { renderWithProviders } from "@/test/utils";
+import { expectNoA11yViolations } from "@/test/a11y";
 import type { BillingResponse, PaginatedResponse } from "@/lib/types";
 
 vi.mock("@/lib/api-client", async (importOriginal) => {
@@ -47,5 +48,16 @@ describe("MediumRiskBillingsPanel", () => {
     renderWithProviders(<MediumRiskBillingsPanel />);
 
     expect(await screen.findByText(/nada precisando de uma segunda olhada/)).toBeInTheDocument();
+  });
+
+  it("não tem violações de acessibilidade", async () => {
+    vi.mocked(apiClient.get).mockResolvedValue(
+      { items: [makeBilling()], total: 1, limit: 20, offset: 0 } as PaginatedResponse<BillingResponse> as never
+    );
+
+    const { container } = renderWithProviders(<MediumRiskBillingsPanel />);
+
+    expect(await screen.findByText("no_contract_reference")).toBeInTheDocument();
+    await expectNoA11yViolations(container);
   });
 });

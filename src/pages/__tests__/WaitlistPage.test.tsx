@@ -3,6 +3,7 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { WaitlistPage } from "@/pages/WaitlistPage";
 import { apiClient } from "@/lib/api-client";
 import { renderWithProviders } from "@/test/utils";
+import { expectNoA11yViolations } from "@/test/a11y";
 import type { Appointment, PaginatedResponse, Patient, Professional, WaitlistEntry } from "@/lib/types";
 
 vi.mock("@/lib/api-client", async (importOriginal) => {
@@ -187,5 +188,24 @@ describe("WaitlistPage", () => {
     await waitFor(() =>
       expect(apiClient.post).toHaveBeenCalledWith("/api/v1/waitlist/w1/resolve", { appointment_id: "a1" })
     );
+  });
+
+  it("não tem violações de acessibilidade", async () => {
+    const entriesPage: PaginatedResponse<WaitlistEntry> = {
+      items: [makeEntry({ preferred_time_window: "manha" }), makeEntry({ id: "w2", professional_full_name: "Dra. Espera" })],
+      total: 2,
+      limit: 100,
+      offset: 0,
+    };
+    mockGetByPath({
+      "/api/v1/waitlist?status=aguardando": entriesPage,
+      "/api/v1/patients": [makePatient()],
+      "/api/v1/professionals": [],
+    });
+
+    const { container } = renderWithProviders(<WaitlistPage />);
+
+    await waitFor(() => expect(screen.getAllByText("Paciente Espera").length).toBeGreaterThan(0));
+    await expectNoA11yViolations(container);
   });
 });

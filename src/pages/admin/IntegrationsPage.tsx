@@ -328,7 +328,7 @@ function WebhookDeliveriesSection() {
       {isLoading && <LoadingState />}
       {error && <ErrorState message={getApiErrorMessage(error)} />}
       {!isLoading && rows.length > 0 && (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto" tabIndex={0}>
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-border-hairline text-2xs uppercase tracking-wide text-ink-faint">

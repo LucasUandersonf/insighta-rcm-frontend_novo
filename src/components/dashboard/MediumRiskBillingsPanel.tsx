@@ -89,7 +89,9 @@ export function MediumRiskBillingsPanel() {
             </tbody>
           </table>
         )}
-        {data && data.total > 0 && <Pagination total={data.total} limit={PAGE_SIZE} offset={offset} onOffsetChange={setOffset} />}
+        {data && data.total > 0 && (
+          <Pagination total={data.total} limit={PAGE_SIZE} offset={offset} onOffsetChange={setOffset} label="Paginação de faturamentos de risco médio" />
+        )}
       </Panel>
     </section>
   );

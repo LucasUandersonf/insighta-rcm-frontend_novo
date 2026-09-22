@@ -5,6 +5,7 @@ import { Route, Routes } from "react-router-dom";
 import { MockCheckoutPage } from "@/pages/MockCheckoutPage";
 import { apiClient, ApiError } from "@/lib/api-client";
 import { renderWithProviders } from "@/test/utils";
+import { expectNoA11yViolations } from "@/test/a11y";
 import type { CheckoutDetail } from "@/lib/types";
 
 // Achado CRÍTICO da Auditoria de Prontidão v1 ("produto não se cobra
@@ -112,5 +113,15 @@ describe("MockCheckoutPage", () => {
     renderAtCheckout("nao-existe");
 
     expect(await screen.findByText("Checkout não encontrado")).toBeInTheDocument();
+  });
+
+  it("não tem violações de acessibilidade", async () => {
+    vi.mocked(apiClient.get).mockResolvedValue(makeCheckout() as never);
+    vi.mocked(apiClient.post).mockResolvedValue({ plan_tier: "professional" } as never);
+
+    const { container } = renderAtCheckout("checkout-1");
+
+    expect(await screen.findByText("Finalizar upgrade")).toBeInTheDocument();
+    await expectNoA11yViolations(container);
   });
 });

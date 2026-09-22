@@ -3,6 +3,7 @@ import { screen, waitFor } from "@testing-library/react";
 import { DenialReasonConfirmationPanel } from "@/components/dashboard/DenialReasonConfirmationPanel";
 import { apiClient } from "@/lib/api-client";
 import { renderWithProviders } from "@/test/utils";
+import { expectNoA11yViolations } from "@/test/a11y";
 import type { DenialReasonConfirmation } from "@/lib/types";
 
 vi.mock("@/lib/api-client", async (importOriginal) => {
@@ -68,5 +69,23 @@ describe("DenialReasonConfirmationPanel", () => {
     await waitFor(() =>
       expect(screen.getByText(/Nenhum motivo com amostra suficiente ainda/)).toBeInTheDocument()
     );
+  });
+
+  it("não tem violações de acessibilidade", async () => {
+    const data: DenialReasonConfirmation = {
+      baseline_sample_size: 20,
+      baseline_denial_rate: 0.2,
+      min_sample: 5,
+      items: [
+        { reason_code: "missing_cid", reason_label: "faltou o código da doença (CID) no atendimento", sample_size: 8, confirmed_denial_rate: 0.8 },
+        { reason_code: "no_contract_reference", reason_label: "esse convênio ainda não tem uma tabela de preços cadastrada", sample_size: 6, confirmed_denial_rate: 0.2 },
+      ],
+    };
+    vi.mocked(apiClient.get).mockResolvedValue(data);
+
+    const { container } = renderWithProviders(<DenialReasonConfirmationPanel />);
+
+    await waitFor(() => expect(screen.getByText("Sem motivo sinalizado (base)")).toBeInTheDocument());
+    await expectNoA11yViolations(container);
   });
 });

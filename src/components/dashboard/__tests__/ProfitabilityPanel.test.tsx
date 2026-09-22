@@ -3,6 +3,7 @@ import { screen, waitFor } from "@testing-library/react";
 import { ProfitabilityPanel } from "@/components/dashboard/ProfitabilityPanel";
 import { apiClient } from "@/lib/api-client";
 import { renderWithProviders } from "@/test/utils";
+import { expectNoA11yViolations } from "@/test/a11y";
 import type { Profitability } from "@/lib/types";
 
 vi.mock("@/lib/api-client", async (importOriginal) => {
@@ -142,5 +143,32 @@ describe("ProfitabilityPanel", () => {
       );
       expect(screen.queryByText("Como você está frente ao mercado")).not.toBeInTheDocument();
     });
+  });
+
+  it("não tem violações de acessibilidade", async () => {
+    const data: Profitability = {
+      period_start: "2026-09-01",
+      period_end: "2026-09-07",
+      total_billed: 1000,
+      by_professional: [
+        { professional_id: "p1", full_name: "Dr. Rentável", revenue: 300, booked_minutes: 60, revenue_per_hour: 300, allocated_cost: null, net_margin: null, margin_per_hour: null },
+        { professional_id: "p2", full_name: "Dra. Sem Agenda", revenue: 100, booked_minutes: 0, revenue_per_hour: null, allocated_cost: null, net_margin: null, margin_per_hour: null },
+      ],
+      by_procedure: [
+        { procedure_code: "80808080", procedure_name: "Consulta", revenue: 800, billing_count: 2, share_pct: 80 },
+        { procedure_code: "90909090", procedure_name: null, revenue: 200, billing_count: 1, share_pct: 20 },
+      ],
+      has_cost_data: false,
+      total_costs: null,
+      net_margin: null,
+      net_margin_pct: null,
+      fixed_cost_pct: null,
+    };
+    vi.mocked(apiClient.get).mockResolvedValue(data);
+
+    const { container } = renderWithProviders(<ProfitabilityPanel dateFrom="2026-09-01" dateTo="2026-09-07" />);
+
+    await waitFor(() => expect(screen.getByText("Dr. Rentável")).toBeInTheDocument());
+    await expectNoA11yViolations(container);
   });
 });

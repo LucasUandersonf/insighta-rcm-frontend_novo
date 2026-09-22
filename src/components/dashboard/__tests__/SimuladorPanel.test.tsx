@@ -3,6 +3,7 @@ import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { SimuladorPanel } from "@/components/dashboard/SimuladorPanel";
 import { apiClient } from "@/lib/api-client";
 import { renderWithProviders } from "@/test/utils";
+import { expectNoA11yViolations } from "@/test/a11y";
 
 vi.mock("@/lib/api-client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api-client")>();
@@ -118,5 +119,27 @@ describe("SimuladorPanel", () => {
     await waitFor(() => expect(screen.getByLabelText("Reduzir valor em risco de glosa")).toHaveValue("75"));
     fireEvent.change(screen.getByLabelText("Reduzir valor em risco de glosa"), { target: { value: "10" } });
     expect(screen.getByLabelText("Reduzir valor em risco de glosa")).toHaveValue("10");
+  });
+
+  it("não tem violações de acessibilidade", async () => {
+    vi.mocked(apiClient.get).mockImplementation((url: string) => {
+      if (url.includes("executive-summary")) return Promise.resolve({ denial_at_risk_value: 10_000 } as never);
+      if (url.includes("agenda-metrics")) return Promise.resolve({ estimated_revenue_at_risk: 2_000 } as never);
+      if (url.includes("network-benchmark")) {
+        return Promise.resolve({
+          window_days: 90,
+          metrics: [
+            { key: "denial", label: "Taxa de glosa", your_rate: 0.4, your_sample: 20, network_median: 0.1, cohort_size: 5 },
+            { key: "no_show", label: "Taxa de falta", your_rate: 0.2, your_sample: 20, network_median: 0.1, cohort_size: 5 },
+          ],
+        } as never);
+      }
+      throw new Error(`URL inesperada: ${url}`);
+    });
+
+    const { container } = renderWithProviders(<SimuladorPanel />);
+
+    await waitFor(() => expect(screen.getByText(/R\$\s?4\.400,00/)).toBeInTheDocument());
+    await expectNoA11yViolations(container);
   });
 });

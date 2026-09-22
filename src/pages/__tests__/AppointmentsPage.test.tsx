@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { AppointmentsPage } from "@/pages/AppointmentsPage";
 import { apiClient } from "@/lib/api-client";
 import { renderWithProviders } from "@/test/utils";
+import { expectNoA11yViolations } from "@/test/a11y";
 import type { Appointment, Patient } from "@/lib/types";
 
 vi.mock("@/lib/api-client", async (importOriginal) => {
@@ -334,5 +335,17 @@ describe("AppointmentsPage — link de avaliação de satisfação", () => {
 
     expect(await screen.findByText("4/5")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Link de avaliação/ })).not.toBeInTheDocument();
+  });
+
+  it("não tem violações de acessibilidade", async () => {
+    mockGet([makePatient()], [makeAppointment({ status: "completed" })]);
+
+    const { container } = renderWithProviders(<AppointmentsPage />);
+    await waitFor(() => expect(screen.getByLabelText("Ver consultas do paciente")).not.toBeDisabled());
+    const user = userEvent.setup();
+    await user.selectOptions(screen.getByLabelText("Ver consultas do paciente"), "p1");
+    await screen.findByText("Registrar atendimento");
+
+    await expectNoA11yViolations(container);
   });
 });

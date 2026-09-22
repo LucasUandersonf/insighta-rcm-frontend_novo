@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { useAuth } from "@/context/AuthContext";
+import { expectNoA11yViolations } from "@/test/a11y";
 import type { CurrentUser } from "@/lib/types";
 
 vi.mock("@/context/AuthContext", () => ({
@@ -112,5 +113,13 @@ describe("Sidebar", () => {
       renderSidebar({ onCloseMobile: vi.fn() });
       expect(screen.queryByTestId("mobile-nav-backdrop")).not.toBeInTheDocument();
     });
+  });
+
+  it("não tem violações de acessibilidade", async () => {
+    mockUser("owner");
+    const { container } = renderSidebar();
+
+    expect(screen.getByText("Administração")).toBeInTheDocument();
+    await expectNoA11yViolations(container);
   });
 });

@@ -3,6 +3,7 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { MarketingSpendPage } from "@/pages/MarketingSpendPage";
 import { apiClient } from "@/lib/api-client";
 import { renderWithProviders } from "@/test/utils";
+import { expectNoA11yViolations } from "@/test/a11y";
 import type { MarketingSpend, PaginatedResponse } from "@/lib/types";
 
 vi.mock("@/lib/api-client", async (importOriginal) => {
@@ -83,5 +84,15 @@ describe("MarketingSpendPage — achado do Dossiê Insighta RCM", () => {
     const dialog = await screen.findByRole("dialog");
     fireEvent.click(within(dialog).getByRole("button", { name: /remover/i }));
     await waitFor(() => expect(apiClient.delete).toHaveBeenCalledWith("/api/v1/marketing-spend/spend-1"));
+  });
+
+  it("não tem violações de acessibilidade", async () => {
+    const entriesPage: PaginatedResponse<MarketingSpend> = { items: [makeEntry()], total: 1, limit: 20, offset: 0 };
+    vi.mocked(apiClient.get).mockResolvedValue(entriesPage);
+
+    const { container } = renderWithProviders(<MarketingSpendPage />);
+
+    await waitFor(() => expect(screen.getByText("Campanha de Verão")).toBeInTheDocument());
+    await expectNoA11yViolations(container);
   });
 });

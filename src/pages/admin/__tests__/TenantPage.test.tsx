@@ -5,6 +5,7 @@ import { TenantPage } from "@/pages/admin/TenantPage";
 import { apiClient } from "@/lib/api-client";
 import { useAuth } from "@/context/AuthContext";
 import { renderWithProviders } from "@/test/utils";
+import { expectNoA11yViolations } from "@/test/a11y";
 import type { Tenant } from "@/lib/types";
 
 vi.mock("@/lib/api-client", async (importOriginal) => {
@@ -239,6 +240,23 @@ describe("TenantPage — Épico F2.1 do Plano Diretor (Calibração por especial
     expect(screen.getByLabelText("Especialidade predominante")).toBeDisabled();
     expect(screen.queryByRole("button", { name: "Salvar limiares" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Salvar tetos" })).not.toBeInTheDocument();
+  });
+
+  it("não tem violações de acessibilidade", async () => {
+    vi.mocked(useAuth).mockReturnValue({ user: { tenant_id: "t1", sub: "u1", role: "owner" } } as unknown as ReturnType<
+      typeof useAuth
+    >);
+    mockGetByPath({
+      "/api/v1/tenant/plans/available": [],
+      "/api/v1/subscription/plans": [],
+      "/api/v1/subscription": { plan_tier: "starter", pending_checkout_id: null },
+      "/api/v1/tenant": makeTenant(),
+    });
+
+    const { container } = renderWithProviders(<TenantPage />);
+
+    await waitFor(() => expect(screen.getByLabelText("Especialidade predominante")).toBeInTheDocument());
+    await expectNoA11yViolations(container);
   });
 });
 

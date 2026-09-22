@@ -102,52 +102,65 @@ export function Tabs({
   }
 
   return (
-    <div
-      role="tablist"
-      aria-orientation="horizontal"
-      className={cn(
-        "inline-flex gap-1 rounded-xl border border-border-hairline bg-canvas-raised/60 p-1 backdrop-blur-xl",
-        className
-      )}
-    >
-      {items.map((item, index) => {
-        const isActive = item.id === active;
-        return (
-          <button
-            key={item.id}
-            ref={(el) => {
-              buttonRefs.current[item.id] = el;
-            }}
-            id={`tab-${groupId}-${item.id}`}
-            role="tab"
-            type="button"
-            aria-selected={isActive}
-            aria-controls={`tabpanel-${groupId}-${item.id}`}
-            tabIndex={isActive ? 0 : -1}
-            onClick={() => onChange(item.id)}
-            onKeyDown={(e) => handleKeyDown(e, index)}
-            className={cn(
-              "relative flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors",
-              isActive ? "text-accent" : "text-ink-faint hover:text-ink"
-            )}
-          >
-            {isActive && (
-              <motion.span
-                layoutId={`tabs-active-pill-${groupId}`}
-                className="absolute inset-0 rounded-lg bg-glass shadow-card"
-                transition={{ type: "spring", stiffness: 420, damping: 34 }}
-              />
-            )}
-            {item.icon && (
-              <item.icon aria-hidden size={13} className="relative" />
-            )}
-            <span className="relative">{item.label}</span>
-          </button>
-        );
-      })}
+    // Achado da auditoria de UX/acessibilidade ("QA visual + responsivo real
+    // das 11 abas") — em telas estreitas, uma `tablist` com muitos itens
+    // (ex: as 11 abas da Sala de Comando) não cabia na largura da viewport;
+    // como o antigo elemento raiz era `inline-flex` (sem limite de largura
+    // nem overflow próprio), ele empurrava a PÁGINA INTEIRA pra largura do
+    // conteúdo — resultado: scroll horizontal na página toda, e pior, um
+    // elemento de outra parte do layout (cabeçalho) acabava sobrepondo e
+    // bloqueando clique nas abas depois da 2ª/3ª (confirmado via Playwright
+    // real, não só um teste unitário). Fix: um wrapper com `overflow-x-auto`
+    // vira o único elemento que rola — a página em volta não estica mais.
+    <div className="overflow-x-auto">
+      <div
+        role="tablist"
+        aria-orientation="horizontal"
+        className={cn(
+          "inline-flex gap-1 whitespace-nowrap rounded-xl border border-border-hairline bg-canvas-raised/60 p-1 backdrop-blur-xl",
+          className
+        )}
+      >
+        {items.map((item, index) => {
+          const isActive = item.id === active;
+          return (
+            <button
+              key={item.id}
+              ref={(el) => {
+                buttonRefs.current[item.id] = el;
+              }}
+              id={`tab-${groupId}-${item.id}`}
+              role="tab"
+              type="button"
+              aria-selected={isActive}
+              aria-controls={`tabpanel-${groupId}-${item.id}`}
+              tabIndex={isActive ? 0 : -1}
+              onClick={() => onChange(item.id)}
+              onKeyDown={(e) => handleKeyDown(e, index)}
+              className={cn(
+                "relative flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors",
+                isActive ? "text-accent" : "text-ink-faint hover:text-ink"
+              )}
+            >
+              {isActive && (
+                <motion.span
+                  layoutId={`tabs-active-pill-${groupId}`}
+                  className="absolute inset-0 rounded-lg bg-glass shadow-card"
+                  transition={{ type: "spring", stiffness: 420, damping: 34 }}
+                />
+              )}
+              {item.icon && (
+                <item.icon aria-hidden size={13} className="relative" />
+              )}
+              <span className="relative">{item.label}</span>
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
+
 
 /** Wrapper de conteúdo de uma aba — só cuida do papel ARIA
  * (`tabpanel`/`aria-labelledby`); quem chama decide se/quando montar

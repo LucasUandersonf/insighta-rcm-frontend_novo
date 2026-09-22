@@ -5,6 +5,7 @@ import { ExecutiveOverviewPage } from "@/pages/ExecutiveOverviewPage";
 import { apiClient } from "@/lib/api-client";
 import { useAuth } from "@/context/AuthContext";
 import { renderWithProviders } from "@/test/utils";
+import { expectNoA11yViolations } from "@/test/a11y";
 import type { CurrentUser } from "@/lib/types";
 
 vi.mock("@/lib/api-client", async (importOriginal) => {
@@ -182,5 +183,17 @@ describe("ExecutiveOverviewPage", () => {
 
     // Épico F1.1: "Hoje" é a página inicial agora
     expect(await screen.findByText(/Nenhuma ação prioritária agora|Ações prioritárias/)).toBeInTheDocument();
+  });
+
+  it("não tem violações de acessibilidade", async () => {
+    vi.mocked(useAuth).mockReturnValue({
+      user: { tenant_id: "t1", id: "u1", role: "owner" } as unknown as CurrentUser,
+    } as unknown as ReturnType<typeof useAuth>);
+    mockAllEndpoints();
+
+    const { container } = renderWithProviders(<ExecutiveOverviewPage />);
+    expect(await screen.findByText(/Nenhuma ação prioritária agora/)).toBeInTheDocument();
+
+    await expectNoA11yViolations(container);
   });
 });

@@ -3,6 +3,7 @@ import { screen, waitFor } from "@testing-library/react";
 import { OportunidadesPanel } from "@/components/dashboard/OportunidadesPanel";
 import { apiClient } from "@/lib/api-client";
 import { renderWithProviders } from "@/test/utils";
+import { expectNoA11yViolations } from "@/test/a11y";
 import type { Oportunidades } from "@/lib/types";
 
 vi.mock("@/lib/api-client", async (importOriginal) => {
@@ -137,5 +138,34 @@ describe("OportunidadesPanel", () => {
 
     await waitFor(() => expect(screen.getByText("Unimed Regional")).toBeInTheDocument());
     expect(screen.queryByText(/Contrato vence em/)).not.toBeInTheDocument();
+  });
+
+  it("não tem violações de acessibilidade", async () => {
+    const data: Oportunidades = {
+      window_days: 90,
+      items: [
+        {
+          insurance_plan_id: "p1",
+          plan_display_name: "Unimed Regional",
+          tuss_code: "10101012",
+          procedure_name: "Consulta em consultório",
+          your_price: 100,
+          network_median_price: 150,
+          network_cohort_size: 4,
+          monthly_volume: 20,
+          gap_value: 50,
+          gap_pct: 0.5,
+          estimated_monthly_opportunity: 1000,
+          days_until_contract_renewal: 90,
+          contract_valid_until: "2026-12-14",
+        },
+      ],
+    };
+    vi.mocked(apiClient.get).mockResolvedValue(data);
+
+    const { container } = renderWithProviders(<OportunidadesPanel />);
+
+    await waitFor(() => expect(screen.getByText("Unimed Regional")).toBeInTheDocument());
+    await expectNoA11yViolations(container);
   });
 });

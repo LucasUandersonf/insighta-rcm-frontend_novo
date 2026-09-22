@@ -3,6 +3,7 @@ import { screen, waitFor } from "@testing-library/react";
 import { ContributionMarginPanel } from "@/components/dashboard/ContributionMarginPanel";
 import { apiClient } from "@/lib/api-client";
 import { renderWithProviders } from "@/test/utils";
+import { expectNoA11yViolations } from "@/test/a11y";
 import type { ContributionMargin } from "@/lib/types";
 
 vi.mock("@/lib/api-client", async (importOriginal) => {
@@ -47,5 +48,21 @@ describe("ContributionMarginPanel", () => {
     renderWithProviders(<ContributionMarginPanel dateFrom="2026-09-01" dateTo="2026-09-07" />);
 
     await waitFor(() => expect(screen.getByText(/Nenhum atendimento de procedimento único/)).toBeInTheDocument());
+  });
+
+  it("não tem violações de acessibilidade", async () => {
+    const data: ContributionMargin = {
+      period_start: "2026-09-01",
+      period_end: "2026-09-07",
+      items: [
+        { procedure_code: "10101012", total_revenue: 1000, total_cost: 200, margin_pct: 80, sample_count: 5 },
+      ],
+    };
+    vi.mocked(apiClient.get).mockResolvedValue(data);
+
+    const { container } = renderWithProviders(<ContributionMarginPanel dateFrom="2026-09-01" dateTo="2026-09-07" />);
+
+    await waitFor(() => expect(screen.getByText("10101012")).toBeInTheDocument());
+    await expectNoA11yViolations(container);
   });
 });

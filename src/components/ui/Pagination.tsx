@@ -9,12 +9,19 @@ interface PaginationProps {
   /** Offset atual (0-based). */
   offset: number;
   onOffsetChange: (offset: number) => void;
+  /** Achado da auditoria de acessibilidade (axe "landmark-unique"): quando
+   * mais de uma lista paginada aparece na mesma tela (ex: aba Diagnóstico
+   * da Sala de Comando tem duas), todas com o `<nav aria-label>` padrão
+   * viravam landmarks indistinguíveis para quem navega por leitor de tela.
+   * Cada consumidor com esse risco passa um rótulo que diz DE QUE lista é
+   * a paginação; o padrão genérico cobre o caso comum de instância única. */
+  label?: string;
 }
 
 /** Controle de paginação genérico — "Mostrando X–Y de Z" + anterior/próxima
  * + números de página, sem dado embutido (consumidor injeta total/limit/offset
  * vindos da resposta paginada do backend). */
-export function Pagination({ total, limit, offset, onOffsetChange }: PaginationProps) {
+export function Pagination({ total, limit, offset, onOffsetChange, label = "Paginação" }: PaginationProps) {
   if (total <= 0 || limit <= 0) return null;
 
   const pageCount = Math.max(1, Math.ceil(total / limit));
@@ -40,7 +47,7 @@ export function Pagination({ total, limit, offset, onOffsetChange }: PaginationP
 
   return (
     <nav
-      aria-label="Paginação"
+      aria-label={label}
       className="flex flex-wrap items-center justify-between gap-3 border-t border-border-hairline px-5 py-3.5"
     >
       <p className="text-2xs text-ink-faint">

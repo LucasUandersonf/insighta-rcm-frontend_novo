@@ -5,6 +5,7 @@ import { SmartInsightsFeed } from "@/components/dashboard/SmartInsightsFeed";
 import { apiClient } from "@/lib/api-client";
 import { useAuth } from "@/context/AuthContext";
 import { renderWithProviders } from "@/test/utils";
+import { expectNoA11yViolations } from "@/test/a11y";
 import type { CurrentUser, SmartInsights } from "@/lib/types";
 
 vi.mock("@/lib/api-client", async (importOriginal) => {
@@ -369,5 +370,30 @@ describe("SmartInsightsFeed", () => {
       );
       expect(within(secondaryCard).getByText("Atribuído")).toBeInTheDocument();
     });
+  });
+
+  it("não tem violações de acessibilidade", async () => {
+    const data: SmartInsights = {
+      period_start: "2026-01-01",
+      period_end: "2026-01-07",
+      insights: [
+        {
+          severity: "critical",
+          category: "faturamento",
+          title: "Glosa disparou",
+          message: "...",
+          financial_impact: 9000,
+          action_label: "Ver faturamentos de alto risco",
+          action_href: "/",
+        },
+        { severity: "warning", category: "agenda", title: "Quarta-feira com menos consultas", message: "...", financial_impact: null },
+      ],
+    };
+    vi.mocked(apiClient.get).mockResolvedValue(data);
+
+    const { container } = renderWithProviders(<SmartInsightsFeed dateFrom="2026-01-01" dateTo="2026-01-07" />);
+
+    await screen.findByText("Glosa disparou");
+    await expectNoA11yViolations(container);
   });
 });

@@ -3,6 +3,7 @@ import { screen, waitFor } from "@testing-library/react";
 import { ProductRoiPanel } from "@/components/dashboard/ProductRoiPanel";
 import { apiClient } from "@/lib/api-client";
 import { renderWithProviders } from "@/test/utils";
+import { expectNoA11yViolations } from "@/test/a11y";
 import type { ProductRoi } from "@/lib/types";
 
 vi.mock("@/lib/api-client", async (importOriginal) => {
@@ -52,5 +53,23 @@ describe("ProductRoiPanel", () => {
     await waitFor(() =>
       expect(screen.getByText(/Ainda não há nenhum valor protegido, recuperado ou realizado/)).toBeInTheDocument()
     );
+  });
+
+  it("não tem violações de acessibilidade", async () => {
+    const data: ProductRoi = {
+      protected_from_denial_value: 3000,
+      recovered_appeals_value: 5000,
+      recovered_appeals_count: 3,
+      realized_insight_outcomes_value: 2000,
+      realized_insight_outcomes_count: 1,
+      total_roi_value: 10000,
+      tracking_since: "2026-01-15",
+    };
+    vi.mocked(apiClient.get).mockResolvedValue(data);
+
+    const { container } = renderWithProviders(<ProductRoiPanel />);
+
+    await waitFor(() => expect(screen.getByText(/R\$\s?10\.000,00/)).toBeInTheDocument());
+    await expectNoA11yViolations(container);
   });
 });
