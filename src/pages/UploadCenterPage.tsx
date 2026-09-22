@@ -222,26 +222,32 @@ function ColumnMappingModal({ file, isOpen, onClose }: { file: File | null; isOp
   );
 }
 
+type DataType = "faturamento" | "agenda" | "atendimento" | "estoque" | "pep";
+
 const DATA_TYPE_LABELS: Record<string, string> = {
   faturamento: "Faturamento",
   agenda: "Agenda",
   atendimento: "Atendimento",
+  estoque: "Estoque",
+  pep: "PEP (Prontuário)",
 };
 
-// Formatos aceitos por template — Faturamento/Atendimento aceitam CSV e
-// JSON (mesmo dicionário de campos nos dois); Agenda é o único com XML
-// também (ver DECISÃO em app/sql/019_agenda_ingestion.sql).
+// Formatos aceitos por template — Faturamento/Atendimento/Estoque/PEP
+// aceitam CSV e JSON (mesmo dicionário de campos nos dois); Agenda é o
+// único com XML também (ver DECISÃO em app/sql/019_agenda_ingestion.sql).
 const ACCEPTED_FORMATS_BY_DATA_TYPE: Record<string, string[]> = {
   faturamento: [".csv", ".json"],
   agenda: [".csv", ".xml", ".json"],
   atendimento: [".csv", ".json"],
+  estoque: [".csv", ".json"],
+  pep: [".csv", ".json"],
 };
 
 function BatchUploadTab() {
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
   const [file, setFile] = useState<File | null>(null);
-  const [dataType, setDataType] = useState<"faturamento" | "agenda" | "atendimento">("faturamento");
+  const [dataType, setDataType] = useState<DataType>("faturamento");
   const [offset, setOffset] = useState(0);
   const [isMappingModalOpen, setIsMappingModalOpen] = useState(false);
 
@@ -280,18 +286,20 @@ function BatchUploadTab() {
     <div className="space-y-4">
       <Panel
         title="Upload de lotes operacionais"
-        subtitle="Faturamento, Atendimento ou Agenda (CSV ou JSON — Agenda também aceita XML) do seu ERP. Processado na hora: você vê o resultado nesta mesma tela."
+        subtitle="Faturamento, Atendimento, Estoque, PEP ou Agenda (CSV ou JSON — Agenda também aceita XML) do seu ERP. Processado na hora: você vê o resultado nesta mesma tela."
       >
         <div className="p-4">
           <SelectField
             label="Template"
             value={dataType}
-            onChange={(e) => setDataType(e.target.value as "faturamento" | "agenda" | "atendimento")}
+            onChange={(e) => setDataType(e.target.value as DataType)}
             className="mb-4 max-w-xs"
           >
             <option value="faturamento">Faturamento</option>
             <option value="agenda">Agenda</option>
             <option value="atendimento">Atendimento</option>
+            <option value="estoque">Estoque</option>
+            <option value="pep">PEP (Prontuário)</option>
           </SelectField>
           {dataType === "faturamento" && (
             <p className="mb-4 -mt-2 text-2xs text-ink-faint">
@@ -303,6 +311,18 @@ function BatchUploadTab() {
             <p className="mb-4 -mt-2 text-2xs text-ink-faint">
               Tempos operacionais (totem, triagem, recepção, consultório, saída) de cada visita — cruzado automaticamente
               com Agenda/Faturamento pelo mesmo código de atendimento do seu ERP, nunca precisa chegar primeiro.
+            </p>
+          )}
+          {dataType === "estoque" && (
+            <p className="mb-4 -mt-2 text-2xs text-ink-faint">
+              Materiais e medicamentos consumidos — vinculados a um atendimento quando o código bate (opcional: reposição
+              de almoxarifado sem visita também é aceita).
+            </p>
+          )}
+          {dataType === "pep" && (
+            <p className="mb-4 -mt-2 text-2xs text-ink-faint">
+              Evoluções clínicas (queixa, exame, conduta) — o atendimento precisa já existir no sistema (via Agenda ou
+              Atendimento) antes desta linha chegar.
             </p>
           )}
           <Dropzone
