@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { PeriodWindowSelect } from "@/components/ui/PeriodWindowSelect";
 import { Tabs, TabPanel } from "@/components/ui/Tabs";
 import { CrmPanel } from "@/components/dashboard/CrmPanel";
+import { ContaStatusFunnelPanel } from "@/components/dashboard/ContaStatusFunnelPanel";
 import { AverageTicketPanel } from "@/components/dashboard/AverageTicketPanel";
 import { BirthdaysPanel } from "@/components/dashboard/BirthdaysPanel";
 import { DailySummaryPanel } from "@/components/dashboard/DailySummaryPanel";
@@ -306,6 +307,16 @@ export function ExecutiveOverviewPage() {
                 </div>
               </section>
             )}
+
+            {/* Bloco "Contas" (core.contas, migração 076) — primeira
+                superfície analítica agregada dessa camada, que até aqui só
+                existia como dado bruto no banco e na visão por paciente da
+                Ficha. É o destino do action_href="#tab:diagnostico" do
+                insight de conta parada em auditoria (ver DECISÃO em
+                smart_insights_engine.py::_conta_stale_em_auditoria_insight).
+                Sempre "estado agora" — não usa dateFrom/dateTo, igual ao
+                CrmSummary/CrmPanel acima. */}
+            <ContaStatusFunnelPanel />
 
             {/* id="buraco-financeiro" — destino do botão "Ver contas abaixo
                 do combinado" do insight de cobrança abaixo do contrato (ver

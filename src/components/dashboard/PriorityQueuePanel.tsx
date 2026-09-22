@@ -36,6 +36,7 @@ const SEVERITY_LABEL: Record<InsightSeverity, string> = {
 const CATEGORY_LABEL: Record<InsightCategory, string> = {
   faturamento: "Faturamento",
   agenda: "Agenda",
+  estoque: "Estoque",
   estrategia: "Estratégia",
 };
 

@@ -799,7 +799,7 @@ export type InsightSeverity = "critical" | "warning" | "positive" | "comparativo
 // aparece em itens sintéticos da fila (PriorityQueueItem, ver abaixo) —
 // nunca emitido por generate_insights(), então SmartInsightsFeed.tsx
 // nunca precisa saber desse terceiro valor.
-export type InsightCategory = "faturamento" | "agenda" | "estrategia";
+export type InsightCategory = "faturamento" | "agenda" | "estoque" | "estrategia";
 
 export interface SmartInsight {
   severity: InsightSeverity;
@@ -1066,6 +1066,21 @@ export interface CrmSummary {
   avg_days_since_last_visit: number | null;
   return_rate: number | null;
   return_rate_sample_size: number;
+}
+
+// Aba Diagnóstico (GET /analytics/conta-status-funnel) — Sala de Comando
+// 3.0, achado do Comitê de Liderança Tecnológica ("5 pernas"). Sempre os
+// 7 status, mesmo quando 0 (nunca omite uma etapa do funil).
+export interface ContaStatusFunnel {
+  aberta: number;
+  pre_faturada: number;
+  faturada: number;
+  em_auditoria: number;
+  glosada_parcial: number;
+  fechada: number;
+  cancelada: number;
+  stale_em_auditoria_count: number;
+  oldest_em_auditoria_age_days: number | null;
 }
 
 // RFM completo (GET /analytics/patient-rfm) — Gaps Dossiê Insighta RCM,
