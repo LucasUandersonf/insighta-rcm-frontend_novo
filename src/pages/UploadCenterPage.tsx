@@ -228,9 +228,14 @@ const DATA_TYPE_LABELS: Record<string, string> = {
   atendimento: "Atendimento",
 };
 
-// Templates que só aceitam CSV (Agenda é o único com XML/JSON também —
-// ver DECISÃO em app/sql/019_agenda_ingestion.sql).
-const CSV_ONLY_DATA_TYPES: ReadonlySet<string> = new Set(["faturamento", "atendimento"]);
+// Formatos aceitos por template — Faturamento/Atendimento aceitam CSV e
+// JSON (mesmo dicionário de campos nos dois); Agenda é o único com XML
+// também (ver DECISÃO em app/sql/019_agenda_ingestion.sql).
+const ACCEPTED_FORMATS_BY_DATA_TYPE: Record<string, string[]> = {
+  faturamento: [".csv", ".json"],
+  agenda: [".csv", ".xml", ".json"],
+  atendimento: [".csv", ".json"],
+};
 
 function BatchUploadTab() {
   const queryClient = useQueryClient();
@@ -275,7 +280,7 @@ function BatchUploadTab() {
     <div className="space-y-4">
       <Panel
         title="Upload de lotes operacionais"
-        subtitle="Faturamento ou Atendimento (CSV) ou Agenda (CSV, XML ou JSON) do seu ERP. Processado na hora: você vê o resultado nesta mesma tela."
+        subtitle="Faturamento, Atendimento ou Agenda (CSV ou JSON — Agenda também aceita XML) do seu ERP. Processado na hora: você vê o resultado nesta mesma tela."
       >
         <div className="p-4">
           <SelectField
@@ -301,8 +306,8 @@ function BatchUploadTab() {
             </p>
           )}
           <Dropzone
-            accept={CSV_ONLY_DATA_TYPES.has(dataType) ? [".csv"] : [".csv", ".xml", ".json"]}
-            hint={CSV_ONLY_DATA_TYPES.has(dataType) ? "CSV — até 20MB" : "CSV, XML ou JSON — até 20MB"}
+            accept={ACCEPTED_FORMATS_BY_DATA_TYPE[dataType]}
+            hint={dataType === "agenda" ? "CSV, XML ou JSON — até 20MB" : "CSV ou JSON — até 20MB"}
             file={file}
             onFileSelected={setFile}
             isUploading={mutation.isPending}
