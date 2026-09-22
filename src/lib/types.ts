@@ -1083,6 +1083,68 @@ export interface ContaStatusFunnel {
   oldest_em_auditoria_age_days: number | null;
 }
 
+// Aba Estoque dedicada (GET /analytics/estoque-abc-curve) — Sala de
+// Comando 3.0, achado do Comitê de Liderança Tecnológica ("5 pernas").
+// Curva ABC de farmácia por valor de consumo no período.
+export interface AbcCurveItem {
+  material_id: string;
+  nome: string;
+  valor_consumido: number;
+  classe: "A" | "B" | "C";
+}
+
+export interface AbcCurve {
+  period_start: string;
+  period_end: string;
+  items: AbcCurveItem[];
+}
+
+// Aba Estoque dedicada (GET /analytics/estoque-consumo-por-medico) —
+// custo de material consumido por profissional solicitante.
+export interface ConsumptionByProfessionalItem {
+  professional_id: string;
+  professional_name: string;
+  custo_total: number;
+  atendimentos_count: number;
+  custo_medio_por_atendimento: number;
+}
+
+export interface ConsumptionByProfessional {
+  period_start: string;
+  period_end: string;
+  items: ConsumptionByProfessionalItem[];
+}
+
+// Aba Estoque dedicada (GET /analytics/margem-contribuicao-por-procedimento)
+// — margem de contribuição real (receita - custo de material) por
+// procedimento, só atendimentos de procedimento único.
+export interface ContributionMarginItem {
+  procedure_code: string;
+  total_revenue: number;
+  total_cost: number;
+  margin_pct: number | null;
+  sample_count: number;
+}
+
+export interface ContributionMargin {
+  period_start: string;
+  period_end: string;
+  items: ContributionMarginItem[];
+}
+
+// Aba Clínico dedicada (GET /analytics/pep-conformidade) — conformidade
+// assistencial do PEP como números agregados diretos.
+export interface PepConformidade {
+  period_start: string;
+  period_end: string;
+  missing_documentation_count: number;
+  completed_encounters_count: number;
+  missing_documentation_pct: number | null;
+  missing_cid_count: number;
+  evolutions_count: number;
+  missing_cid_pct: number | null;
+}
+
 // RFM completo (GET /analytics/patient-rfm) — Gaps Dossiê Insighta RCM,
 // item 4. Recência e Frequência já existiam espalhadas (InactivePatients,
 // score VIP); Valor era a dimensão que faltava pra virar RFM de verdade.
