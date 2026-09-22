@@ -27,26 +27,61 @@ import type {
 // backend (mantidos manualmente em sincronia, mesmo critério do resto
 // deste arquivo de tipos/telas).
 const CANONICAL_FIELD_LABELS: Record<string, string> = {
-  patient_cpf: "CPF do paciente",
-  patient_name: "Nome do paciente",
-  professional_name: "Nome do profissional",
-  professional_registry: "Registro do profissional",
-  insurance_plan_raw_name: "Convênio",
-  procedure_code: "Código do procedimento",
-  cid_code: "CID",
-  charged_value: "Valor cobrado",
+  source_row_id: "ID da transação",
+  source_appointment_id: "ID do atendimento",
   service_date: "Data do atendimento",
-  local_name: "Local de atendimento",
-  tipo_paciente: "Tipo de paciente",
-  guia_tipo: "Tipo de guia",
-  guia_numero: "Número da guia",
-  guia_senha: "Senha da guia",
-  // Campos novos, achado do Dicionário de Dados (auditoria BI/Dados).
-  quantidade: "Quantidade",
-  numero_carteirinha: "Número da carteirinha",
-  tabela_procedimento: "Tabela do procedimento",
-  tipo_item: "Tipo de item",
-  valor_coparticipacao: "Valor de coparticipação",
+  service_time: "Hora do atendimento",
+  competencia: "Competência",
+  billing_period: "Período de faturamento",
+  local_name: "Nome da unidade",
+  local_type: "Tipo da unidade",
+  local_external_id: "ID da unidade",
+  patient_external_hash: "Hash do paciente",
+  patient_document_masked: "Documento mascarado",
+  age_at_visit: "Idade do paciente",
+  age_bracket: "Faixa etária do paciente",
+  patient_sex: "Sexo do paciente",
+  patient_municipio: "Município do paciente",
+  patient_estado: "Estado do paciente",
+  tipo_pessoa: "Tipo de pessoa",
+  insurance_plan_raw_name: "Convênio",
+  tipo_convenio: "Tipo de convênio",
+  source_insurance_plan_code: "ID do convênio (sistema de origem)",
+  source_plan_code: "ID do plano (sistema de origem)",
+  plan_tier: "Nome do plano",
+  accommodation_type: "Tipo de acomodação",
+  service_category: "Tipo de atendimento",
+  source_service_type_code: "ID do tipo de atendimento (sistema de origem)",
+  carater_atendimento: "Caráter do atendimento",
+  cid_code: "CID principal",
+  cid_principal_description: "Descrição do CID principal",
+  cid_secundario: "CID secundário",
+  cid_secundario_description: "Descrição do CID secundário",
+  professional_name: "Nome do profissional executante",
+  professional_registry: "Conselho do profissional executante",
+  professional_specialty: "Especialidade do profissional",
+  professional_external_id: "ID do profissional executante (sistema de origem)",
+  requesting_professional_name: "Nome do profissional solicitante",
+  requesting_professional_external_id: "ID do profissional solicitante (sistema de origem)",
+  procedure_code: "Código do procedimento",
+  procedure_name: "Nome do procedimento",
+  procedure_group: "Grupo do procedimento",
+  source_procedure_code: "ID do procedimento (sistema de origem)",
+  quantidade: "Quantidade executada",
+  lote_external_id: "ID do lote",
+  lote_generated_at: "Data de geração do lote",
+  lote_status: "Status do lote",
+  charged_value: "Valor cobrado",
+  unit_value: "Valor unitário",
+  discount_percentage: "Percentual de desconto",
+  discount_value: "Valor de desconto",
+  motivo_glosa: "Motivo da glosa",
+  received_value: "Valor recebido",
+  payment_method: "Forma de pagamento",
+  payment_bank: "Banco de recebimento",
+  due_date: "Data de vencimento",
+  settlement_date: "Data de recebimento",
+  notes: "Observações",
 };
 
 // Central de Upload — o caminho que faltava no produto para o cliente
@@ -187,17 +222,32 @@ function ColumnMappingModal({ file, isOpen, onClose }: { file: File | null; isOp
   );
 }
 
+type DataType = "faturamento" | "agenda" | "atendimento" | "estoque" | "pep";
+
 const DATA_TYPE_LABELS: Record<string, string> = {
   faturamento: "Faturamento",
   agenda: "Agenda",
-  glosa: "Glosa (demonstrativo de pagamento)",
+  atendimento: "Atendimento",
+  estoque: "Estoque",
+  pep: "PEP (Prontuário)",
+};
+
+// Formatos aceitos por template — Faturamento/Atendimento/Estoque/PEP
+// aceitam CSV e JSON (mesmo dicionário de campos nos dois); Agenda é o
+// único com XML também (ver DECISÃO em app/sql/019_agenda_ingestion.sql).
+const ACCEPTED_FORMATS_BY_DATA_TYPE: Record<string, string[]> = {
+  faturamento: [".csv", ".json"],
+  agenda: [".csv", ".xml", ".json"],
+  atendimento: [".csv", ".json"],
+  estoque: [".csv", ".json"],
+  pep: [".csv", ".json"],
 };
 
 function BatchUploadTab() {
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
   const [file, setFile] = useState<File | null>(null);
-  const [dataType, setDataType] = useState<"faturamento" | "agenda" | "glosa">("faturamento");
+  const [dataType, setDataType] = useState<DataType>("faturamento");
   const [offset, setOffset] = useState(0);
   const [isMappingModalOpen, setIsMappingModalOpen] = useState(false);
 
@@ -236,28 +286,48 @@ function BatchUploadTab() {
     <div className="space-y-4">
       <Panel
         title="Upload de lotes operacionais"
-        subtitle="CSV, XML ou JSON — faturamento ou agenda do seu ERP. Processado na hora: você vê o resultado nesta mesma tela."
+        subtitle="Faturamento, Atendimento, Estoque, PEP ou Agenda (CSV ou JSON — Agenda também aceita XML) do seu ERP. Processado na hora: você vê o resultado nesta mesma tela."
       >
         <div className="p-4">
           <SelectField
             label="Template"
             value={dataType}
-            onChange={(e) => setDataType(e.target.value as "faturamento" | "agenda" | "glosa")}
+            onChange={(e) => setDataType(e.target.value as DataType)}
             className="mb-4 max-w-xs"
           >
             <option value="faturamento">Faturamento</option>
             <option value="agenda">Agenda</option>
-            <option value="glosa">Glosa (demonstrativo de pagamento)</option>
+            <option value="atendimento">Atendimento</option>
+            <option value="estoque">Estoque</option>
+            <option value="pep">PEP (Prontuário)</option>
           </SelectField>
-          {dataType === "glosa" && (
+          {dataType === "faturamento" && (
             <p className="mb-4 -mt-2 text-2xs text-ink-faint">
-              Cada linha liquida um faturamento já existente (casado por convênio + número da guia) — nunca cria
-              paciente/consulta novos. Envie primeiro o Faturamento da guia; o demonstrativo de pagamento vem depois.
+              Um arquivo, uma linha por transação — envie sem desfecho (recebimento/glosa) assim que faturar, e reenvie a
+              MESMA linha (mesmo ID de transação) mais tarde já com o desfecho preenchido para reconciliar automaticamente.
+            </p>
+          )}
+          {dataType === "atendimento" && (
+            <p className="mb-4 -mt-2 text-2xs text-ink-faint">
+              Tempos operacionais (totem, triagem, recepção, consultório, saída) de cada visita — cruzado automaticamente
+              com Agenda/Faturamento pelo mesmo código de atendimento do seu ERP, nunca precisa chegar primeiro.
+            </p>
+          )}
+          {dataType === "estoque" && (
+            <p className="mb-4 -mt-2 text-2xs text-ink-faint">
+              Materiais e medicamentos consumidos — vinculados a um atendimento quando o código bate (opcional: reposição
+              de almoxarifado sem visita também é aceita).
+            </p>
+          )}
+          {dataType === "pep" && (
+            <p className="mb-4 -mt-2 text-2xs text-ink-faint">
+              Prontuário completo (SOAP, sinais vitais, alergias/comorbidades, TCLE e assinatura digital) — o
+              atendimento precisa já existir no sistema (via Agenda ou Atendimento) antes desta linha chegar.
             </p>
           )}
           <Dropzone
-            accept={[".csv", ".xml", ".json"]}
-            hint="CSV, XML ou JSON — até 20MB"
+            accept={ACCEPTED_FORMATS_BY_DATA_TYPE[dataType]}
+            hint={dataType === "agenda" ? "CSV, XML ou JSON — até 20MB" : "CSV ou JSON — até 20MB"}
             file={file}
             onFileSelected={setFile}
             isUploading={mutation.isPending}

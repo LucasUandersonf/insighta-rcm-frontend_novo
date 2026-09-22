@@ -100,8 +100,8 @@ export interface IngestionFileEntry {
   id: string;
   original_filename: string | null;
   file_format: IngestionFileFormat;
-  // Template de integração que o arquivo segue — "faturamento" ou
-  // "agenda" (ver app/sql/019_agenda_ingestion.sql).
+  // Template de integração que o arquivo segue — "faturamento", "agenda"
+  // ou "atendimento" (ver app/sql/075_atendimento_operational_timing.sql).
   data_type: string;
   status: IngestionFileStatus;
   row_count: number;
@@ -799,7 +799,7 @@ export type InsightSeverity = "critical" | "warning" | "positive" | "comparativo
 // aparece em itens sintéticos da fila (PriorityQueueItem, ver abaixo) —
 // nunca emitido por generate_insights(), então SmartInsightsFeed.tsx
 // nunca precisa saber desse terceiro valor.
-export type InsightCategory = "faturamento" | "agenda" | "estrategia";
+export type InsightCategory = "faturamento" | "agenda" | "estoque" | "prontuario" | "estrategia";
 
 export interface SmartInsight {
   severity: InsightSeverity;
@@ -1066,6 +1066,83 @@ export interface CrmSummary {
   avg_days_since_last_visit: number | null;
   return_rate: number | null;
   return_rate_sample_size: number;
+}
+
+// Aba Diagnóstico (GET /analytics/conta-status-funnel) — Sala de Comando
+// 3.0, achado do Comitê de Liderança Tecnológica ("5 pernas"). Sempre os
+// 7 status, mesmo quando 0 (nunca omite uma etapa do funil).
+export interface ContaStatusFunnel {
+  aberta: number;
+  pre_faturada: number;
+  faturada: number;
+  em_auditoria: number;
+  glosada_parcial: number;
+  fechada: number;
+  cancelada: number;
+  stale_em_auditoria_count: number;
+  oldest_em_auditoria_age_days: number | null;
+}
+
+// Aba Estoque dedicada (GET /analytics/estoque-abc-curve) — Sala de
+// Comando 3.0, achado do Comitê de Liderança Tecnológica ("5 pernas").
+// Curva ABC de farmácia por valor de consumo no período.
+export interface AbcCurveItem {
+  material_id: string;
+  nome: string;
+  valor_consumido: number;
+  classe: "A" | "B" | "C";
+}
+
+export interface AbcCurve {
+  period_start: string;
+  period_end: string;
+  items: AbcCurveItem[];
+}
+
+// Aba Estoque dedicada (GET /analytics/estoque-consumo-por-medico) —
+// custo de material consumido por profissional solicitante.
+export interface ConsumptionByProfessionalItem {
+  professional_id: string;
+  professional_name: string;
+  custo_total: number;
+  atendimentos_count: number;
+  custo_medio_por_atendimento: number;
+}
+
+export interface ConsumptionByProfessional {
+  period_start: string;
+  period_end: string;
+  items: ConsumptionByProfessionalItem[];
+}
+
+// Aba Estoque dedicada (GET /analytics/margem-contribuicao-por-procedimento)
+// — margem de contribuição real (receita - custo de material) por
+// procedimento, só atendimentos de procedimento único.
+export interface ContributionMarginItem {
+  procedure_code: string;
+  total_revenue: number;
+  total_cost: number;
+  margin_pct: number | null;
+  sample_count: number;
+}
+
+export interface ContributionMargin {
+  period_start: string;
+  period_end: string;
+  items: ContributionMarginItem[];
+}
+
+// Aba Clínico dedicada (GET /analytics/pep-conformidade) — conformidade
+// assistencial do PEP como números agregados diretos.
+export interface PepConformidade {
+  period_start: string;
+  period_end: string;
+  missing_documentation_count: number;
+  completed_encounters_count: number;
+  missing_documentation_pct: number | null;
+  missing_cid_count: number;
+  evolutions_count: number;
+  missing_cid_pct: number | null;
 }
 
 // RFM completo (GET /analytics/patient-rfm) — Gaps Dossiê Insighta RCM,
@@ -1639,6 +1716,25 @@ export interface PatientFichaBilling {
   created_at: string;
 }
 
+export interface PatientFichaStockMovement {
+  id: string;
+  material_name: string;
+  categoria: string | null;
+  tipo: string;
+  quantidade: number;
+  valor_total_custo: number | null;
+  data_movimentacao: string;
+}
+
+export interface PatientFichaClinicalEvolution {
+  id: string;
+  tipo: string | null;
+  professional_name: string | null;
+  hipotese_diagnostica_principal: string | null;
+  conduta_terapeutica_plano: string | null;
+  data_evolucao: string;
+}
+
 export interface PatientFichaAppointment {
   id: string;
   scheduled_at: string;
@@ -1647,6 +1743,8 @@ export interface PatientFichaAppointment {
   insurance_plan_name: string | null;
   no_show_risk_level: NoShowRiskLevel | null;
   billings: PatientFichaBilling[];
+  stock_movements: PatientFichaStockMovement[];
+  clinical_evolutions: PatientFichaClinicalEvolution[];
 }
 
 export interface PatientFichaSummary {

@@ -1,13 +1,16 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
-import { Award, BadgeDollarSign, HeartHandshake, Landmark, LayoutDashboard, ListChecks, SlidersHorizontal, Target, Users } from "lucide-react";
+import { Award, BadgeDollarSign, ClipboardList, HeartHandshake, Landmark, LayoutDashboard, ListChecks, Package, SlidersHorizontal, Target, Users } from "lucide-react";
 import { KpiCard } from "@/components/ui/KpiCard";
 import { ErrorState, LoadingState } from "@/components/ui/Panel";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PeriodWindowSelect } from "@/components/ui/PeriodWindowSelect";
 import { Tabs, TabPanel } from "@/components/ui/Tabs";
 import { CrmPanel } from "@/components/dashboard/CrmPanel";
+import { ContaStatusFunnelPanel } from "@/components/dashboard/ContaStatusFunnelPanel";
+import { EstoquePanel } from "@/components/dashboard/EstoquePanel";
+import { PepConformidadePanel } from "@/components/dashboard/PepConformidadePanel";
 import { AverageTicketPanel } from "@/components/dashboard/AverageTicketPanel";
 import { BirthdaysPanel } from "@/components/dashboard/BirthdaysPanel";
 import { DailySummaryPanel } from "@/components/dashboard/DailySummaryPanel";
@@ -61,8 +64,10 @@ function formatPct(value: number): string {
 }
 
 const TABS_GROUP = "sala-de-comando";
-type TabId = "hoje" | "diagnostico" | "crm" | "oportunidades" | "comparativo" | "simulador" | "capital" | "rentabilidade" | "roi";
-const TAB_IDS: TabId[] = ["hoje", "diagnostico", "crm", "oportunidades", "comparativo", "simulador", "capital", "rentabilidade", "roi"];
+type TabId = "hoje" | "diagnostico" | "crm" | "oportunidades" | "comparativo" | "simulador" | "capital" | "rentabilidade" | "roi" | "estoque" | "clinico";
+const TAB_IDS: TabId[] = [
+  "hoje", "diagnostico", "crm", "oportunidades", "comparativo", "simulador", "capital", "rentabilidade", "roi", "estoque", "clinico",
+];
 
 function isTabId(value: string | null): value is TabId {
   return !!value && (TAB_IDS as string[]).includes(value);
@@ -143,7 +148,7 @@ export function ExecutiveOverviewPage() {
         subtitle="Onde estamos perdendo dinheiro hoje?"
         greeting={profile ? `${timeOfDayGreeting()}, ${firstNameFrom(profile.full_name)}.` : undefined}
         action={
-          activeTab === "hoje" || activeTab === "diagnostico" || activeTab === "rentabilidade" ? (
+          activeTab === "hoje" || activeTab === "diagnostico" || activeTab === "rentabilidade" || activeTab === "estoque" || activeTab === "clinico" ? (
             <PeriodWindowSelect windowDays={windowDays} onChange={setWindowDays} />
           ) : undefined
         }
@@ -169,6 +174,8 @@ export function ExecutiveOverviewPage() {
           { id: "simulador", label: "Simulador", icon: SlidersHorizontal },
           { id: "capital", label: "Capital", icon: Landmark },
           { id: "roi", label: "ROI", icon: Award },
+          { id: "estoque", label: "Estoque", icon: Package },
+          { id: "clinico", label: "Clínico", icon: ClipboardList },
         ]}
       />
 
@@ -307,6 +314,16 @@ export function ExecutiveOverviewPage() {
               </section>
             )}
 
+            {/* Bloco "Contas" (core.contas, migração 076) — primeira
+                superfície analítica agregada dessa camada, que até aqui só
+                existia como dado bruto no banco e na visão por paciente da
+                Ficha. É o destino do action_href="#tab:diagnostico" do
+                insight de conta parada em auditoria (ver DECISÃO em
+                smart_insights_engine.py::_conta_stale_em_auditoria_insight).
+                Sempre "estado agora" — não usa dateFrom/dateTo, igual ao
+                CrmSummary/CrmPanel acima. */}
+            <ContaStatusFunnelPanel />
+
             {/* id="buraco-financeiro" — destino do botão "Ver contas abaixo
                 do combinado" do insight de cobrança abaixo do contrato (ver
                 DECISÃO em smart_insights_engine.py::_financial_hole_insight).
@@ -424,6 +441,29 @@ export function ExecutiveOverviewPage() {
       {activeTab === "roi" && (
         <TabPanel id="roi" groupId={TABS_GROUP}>
           <ProductRoiPanel />
+        </TabPanel>
+      )}
+
+      {/* Achado do Comitê de Liderança Tecnológica ("5 pernas", Sala de
+          Comando 3.0) — os 3 insights de BI mais profundos de Estoque
+          (curva ABC, desvio de consumo por médico, margem de
+          contribuição real) que só existiam no dicionário de dados,
+          nunca em tela. Ruptura/vencimento continuam no feed da aba
+          Diagnóstico (ver DECISÃO em _stock_stockout_risk_insight/
+          _stock_expiring_lot_value_insight, backend). */}
+      {activeTab === "estoque" && (
+        <TabPanel id="estoque" groupId={TABS_GROUP}>
+          <EstoquePanel dateFrom={dateFrom} dateTo={dateTo} />
+        </TabPanel>
+      )}
+
+      {/* Primeira aba dedicada ao PEP (Prontuário Eletrônico do
+          Paciente) — antes só existia por paciente, na Ficha (ver
+          DECISÃO em _pep_documentation_gap_insight/
+          _pep_cid_completeness_insight, backend). */}
+      {activeTab === "clinico" && (
+        <TabPanel id="clinico" groupId={TABS_GROUP}>
+          <PepConformidadePanel dateFrom={dateFrom} dateTo={dateTo} />
         </TabPanel>
       )}
     </div>
