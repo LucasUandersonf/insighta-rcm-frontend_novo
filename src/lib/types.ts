@@ -2095,6 +2095,8 @@ export interface ExtractedItem {
   procedure_name: string | null;
   agreed_price: number;
   warning: string | null;
+  /** Página do PDF onde a linha foi lida (Frente 1). */
+  source_page?: number | null;
 }
 
 export interface ExtractionPreview {
@@ -2102,6 +2104,9 @@ export interface ExtractionPreview {
   status: ContractStatus;
   items: ExtractedItem[];
   warnings: string[];
+  pages_total?: number | null;
+  /** Páginas que a IA não leu por inteiro — conferir à mão. */
+  incomplete_pages?: number[];
 }
 
 export interface HomologateRequest {
