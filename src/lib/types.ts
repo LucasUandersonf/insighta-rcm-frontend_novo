@@ -2429,3 +2429,27 @@ export interface UnbilledConsumption {
   total_cost: number;
   items: UnbilledConsumptionItem[];
 }
+
+/** GET /analytics/no-show-accuracy — Frente 1: acerto da previsão de falta. */
+export interface NoShowLevelOutcome {
+  risk_level: "baixo" | "medio" | "alto";
+  appointments: number;
+  no_shows: number;
+  no_show_rate: number | null;
+}
+
+export interface NoShowAccuracy {
+  window_days: number;
+  evaluated: number;
+  no_shows: number;
+  flagged_no_shows: number;
+  hit_rate: number | null;
+  lift: number | null;
+  by_level: NoShowLevelOutcome[];
+  low_threshold: number;
+  medium_threshold: number;
+  calibration_status: "aprendendo" | "padrao" | "auto" | "manual";
+  calibrated_at: string | null;
+  history_days: number;
+  days_until_calibration: number;
+}
