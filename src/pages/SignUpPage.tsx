@@ -282,7 +282,7 @@ export function SignUpPage() {
               <button
                 type="button"
                 onClick={handleContinue}
-                className="flex w-full items-center justify-center gap-1.5 rounded-md bg-aura-line px-3 py-2.5 text-sm font-medium text-white shadow-elevated transition-all duration-150 hover:brightness-110 active:scale-[0.98]"
+                className="flex w-full items-center justify-center gap-1.5 rounded-[11px] bg-brand px-3 py-2.5 text-sm font-medium text-white transition-all duration-150 hover:brightness-110 active:scale-[0.98]"
               >
                 Continuar
                 <ArrowRight aria-hidden size={14} />
@@ -379,7 +379,7 @@ export function SignUpPage() {
                 <button
                   type="submit"
                   disabled={isRegistering || !termsAccepted}
-                  className="flex flex-1 items-center justify-center gap-1.5 rounded-md bg-aura-line px-3 py-2.5 text-sm font-medium text-white shadow-elevated transition-all duration-150 hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+                  className="flex flex-1 items-center justify-center gap-1.5 rounded-[11px] bg-brand px-3 py-2.5 text-sm font-medium text-white transition-all duration-150 hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isRegistering ? "Criando conta..." : "Criar conta"}
                 </button>

@@ -20,13 +20,13 @@ import { cn } from "@/lib/cn";
 export function PageHeader({
   title,
   subtitle,
-  icon: Icon,
   greeting,
   action,
   className,
 }: {
   title: string;
   subtitle?: string;
+  /** Mantido por compatibilidade — o cabeçalho do Redesign 2026 não desenha ícone (ver canvas de design). */
   icon?: LucideIcon;
   /** Saudação pessoal acima do título — ver DECISÃO acima. Só a Sala
    * de Comando usa isso; todas as outras telas usam `icon`. */
@@ -42,15 +42,10 @@ export function PageHeader({
       className={cn("flex flex-wrap items-end justify-between gap-4", className)}
     >
       <div className="flex items-start gap-3">
-        {!greeting && Icon && (
-          <span aria-hidden className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-border-hairline bg-canvas-surface text-accent shadow-card">
-            <Icon size={16} strokeWidth={2.1} />
-          </span>
-        )}
         <div>
-          {greeting && <p className="mb-1 text-sm text-ink-muted">{greeting}</p>}
-          <h1 className="font-serif text-2xl font-medium tracking-tightest text-ink">{title}</h1>
-          {subtitle && <p className="mt-1 max-w-2xl text-sm text-ink-faint">{subtitle}</p>}
+          {greeting && <p className="mb-1.5 text-sm text-ink-muted">{greeting}</p>}
+          <h1 className="text-[28px] font-semibold leading-tight tracking-[-0.02em] text-ink sm:text-[34px]">{title}</h1>
+          {subtitle && <p className="mt-1.5 max-w-2xl text-sm text-ink-muted">{subtitle}</p>}
         </div>
       </div>
       {action && <div className="flex shrink-0 items-center gap-2">{action}</div>}

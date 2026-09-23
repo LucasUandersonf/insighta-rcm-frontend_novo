@@ -54,7 +54,7 @@ describe("HomePage", () => {
     renderWithProviders(<HomePage />);
 
     expect(await screen.findByText("A agenda de quinta está mais vazia que o normal — ainda dá pra reverter.")).toBeInTheDocument();
-    expect(await screen.findByText(/, Marina\.$/)).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 1, name: /, Marina$/ })).toBeInTheDocument();
   });
 
   it("mostra até 3 cards de prioridade com botão de ação real", async () => {

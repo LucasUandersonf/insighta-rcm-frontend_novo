@@ -15,8 +15,8 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   size?: "md" | "sm" | "xs";
 }
 
-// DECISÃO — "primary" usa a mesma marca (bg-aura-line) das telas
-// públicas de login/cadastro, não mais bg-revenue.
+// DECISÃO — "primary" usa o violeta sólido da marca (bg-brand, #6A57E3
+// no escuro — Redesign 2026), o mesmo do login/cadastro, nunca bg-revenue.
 // -------------------------------------------------------------------
 // bg-revenue é uma cor SEMÂNTICA de dado financeiro (receita/positivo —
 // ver --revenue em index.css e os badges de status "ativo"/"deferido"
@@ -25,21 +25,21 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 // parecia estar comunicando um dado financeiro positivo, e o dia em que
 // existir uma ação primária dentro de um contexto "negativo" (ex:
 // confirmar um cancelamento) o botão ficaria verde por acidente. A
-// marca (bg-aura-line, o mesmo gradiente do CTA de login/cadastro) é
+// marca (bg-brand, a mesma cor do CTA de login/cadastro) é
 // neutra em relação ao dado e é o que o Design System Specialist marca
 // como "a cor de ação primária" — bg-revenue continua reservado para
 // dado/estado financeiro, nunca para cromar botão.
 const variantClasses: Record<NonNullable<ButtonProps["variant"]>, string> = {
-  primary: "bg-aura-line text-white shadow-elevated hover:brightness-110",
-  secondary: "border border-border-subtle text-ink hover:border-accent/40 hover:bg-canvas-raised/40 bg-transparent",
+  primary: "bg-brand text-white hover:brightness-110",
+  secondary: "border border-border-hairline bg-canvas-raised/40 text-ink hover:border-accent/40 hover:bg-canvas-raised/70",
   ghost: "text-ink-muted hover:text-ink bg-transparent",
 };
 
 // Paddings/tamanhos de fonte exatos do canvas de design (.btn/.btn-sm/.btn-xs).
 const sizeClasses: Record<NonNullable<ButtonProps["size"]>, string> = {
-  md: "rounded-md px-3 py-2 text-sm",
-  sm: "rounded-md px-2.5 py-[5px] text-xs",
-  xs: "rounded-sm px-2 py-1 text-2xs",
+  md: "rounded-[11px] px-4 py-2.5 text-[13px]",
+  sm: "rounded-[10px] px-3 py-1.5 text-xs",
+  xs: "rounded-lg px-2.5 py-1 text-2xs",
 };
 
 export function Button({ variant = "primary", size = "md", className, disabled, ...props }: ButtonProps) {

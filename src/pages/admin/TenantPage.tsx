@@ -80,7 +80,7 @@ function SubscriptionPlanPanel({ tenant, isOwner }: { tenant: Tenant; isOwner: b
                     <span className="text-sm font-medium text-ink">{plan.label}</span>
                     {isCurrent && <Badge tone="accent">Plano atual</Badge>}
                   </div>
-                  <p className="mt-2 font-serif text-lg font-medium text-ink">
+                  <p className="mt-2 text-lg font-semibold text-ink">
                     {plan.self_service ? `${formatCurrency(plan.monthly_price_cents / 100)}/mês` : "Sob consulta"}
                   </p>
                   {isOwner && !isCurrent && plan.self_service && (

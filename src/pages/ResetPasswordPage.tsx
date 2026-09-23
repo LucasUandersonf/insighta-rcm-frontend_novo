@@ -53,7 +53,7 @@ export function ResetPasswordPage() {
           <span className="mb-3 inline-flex h-11 w-11 items-center justify-center rounded-full bg-canvas-surface/70 text-denied">
             <ShieldAlert size={20} strokeWidth={2} />
           </span>
-          <h1 className="font-serif text-lg font-medium text-ink">Link inválido</h1>
+          <h1 className="text-lg font-semibold text-ink">Link inválido</h1>
           <p className="mt-2 text-sm leading-relaxed text-ink-muted">
             Este link de redefinição não tem um token válido. Peça um novo link na tela de recuperação de senha.
           </p>
@@ -74,12 +74,12 @@ export function ResetPasswordPage() {
             <span className="mb-3 inline-flex h-11 w-11 items-center justify-center rounded-full bg-canvas-surface/70 text-revenue">
               <CheckCircle2 size={20} strokeWidth={2} />
             </span>
-            <h1 className="font-serif text-lg font-medium text-ink">Senha redefinida</h1>
+            <h1 className="text-lg font-semibold text-ink">Senha redefinida</h1>
             <p className="mt-2 text-sm leading-relaxed text-ink-muted">Sua senha foi atualizada. Já dá para entrar com ela.</p>
             <button
               type="button"
               onClick={() => navigate("/login", { replace: true })}
-              className="mt-5 inline-flex items-center gap-1.5 rounded-md bg-aura-line px-4 py-2 text-sm font-medium text-white shadow-elevated transition-all hover:brightness-110 active:scale-[0.98]"
+              className="mt-5 inline-flex items-center gap-1.5 rounded-[11px] bg-brand px-4 py-2 text-sm font-medium text-white transition-all hover:brightness-110 active:scale-[0.98]"
             >
               Ir para o login
             </button>
@@ -138,7 +138,7 @@ export function ResetPasswordPage() {
               <button
                 type="submit"
                 disabled={isSubmitting || !canSubmit}
-                className="flex w-full items-center justify-center gap-1.5 rounded-md bg-aura-line px-3 py-2.5 text-sm font-medium text-white shadow-elevated transition-all duration-150 hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+                className="flex w-full items-center justify-center gap-1.5 rounded-[11px] bg-brand px-3 py-2.5 text-sm font-medium text-white transition-all duration-150 hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isSubmitting ? "Salvando..." : "Salvar nova senha"}
               </button>

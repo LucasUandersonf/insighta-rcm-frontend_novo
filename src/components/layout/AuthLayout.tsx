@@ -89,7 +89,7 @@ export function AuthFormHeader({ title, subtitle }: { title: string; subtitle: s
         </div>
       </div>
       <div className="mb-6">
-        <h1 className="font-serif text-xl font-medium tracking-tightest text-ink">{title}</h1>
+        <h1 className="text-xl font-semibold tracking-[-0.01em] text-ink">{title}</h1>
         <p className="mt-1 text-sm text-ink-muted">{subtitle}</p>
       </div>
     </>

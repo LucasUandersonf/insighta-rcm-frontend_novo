@@ -59,17 +59,6 @@ const toneGlow: Record<NonNullable<KpiCardProps["tone"]>, "revenue" | "pending" 
   neutral: "accent",
 };
 
-const toneBarClasses: Record<NonNullable<KpiCardProps["tone"]>, string> = {
-  revenue: "bg-revenue",
-  pending: "bg-pending",
-  denied: "bg-denied",
-  neutral: "bg-border-default",
-};
-
-// Gradiente de texto por tom (ver prop `gradient`) — bg-clip-text exige
-// a dupla background-image (bg-grad-*) + text-transparent; sem tom
-// próprio (neutral) o gradiente não existe, então cai no texto sólido
-// normal independente do valor de `gradient`.
 const toneGradientClasses: Record<NonNullable<KpiCardProps["tone"]>, string | null> = {
   revenue: "bg-grad-revenue bg-clip-text text-transparent",
   pending: "bg-grad-pending bg-clip-text text-transparent",
@@ -97,19 +86,14 @@ export function KpiCard({
     <BentoCard
       colSpan={colSpan ?? (compact ? 2 : 4)}
       glow={toneGlow[tone]}
-      shadow="elevated-lg"
-      className={cn(compact ? "p-3.5" : "p-5")}
+      className={cn(compact ? "p-4" : "px-6 py-5")}
     >
-      {/* Trilho de cor no topo — identidade visual imediata do tom
-          (receita/pendente/glosado) legível mesmo antes de ler o número. */}
-      <span aria-hidden className={cn("absolute inset-x-0 top-0 h-[3px]", toneBarClasses[tone])} />
-
-      <div className={cn("flex items-center justify-between", compact ? "mb-1.5" : "mb-3")}>
-        <span className="text-2xs font-medium uppercase tracking-wide text-ink-muted">{label}</span>
+      <div className={cn("flex items-center justify-between", compact ? "mb-1.5" : "mb-2.5")}>
+        <span className="text-[13px] text-ink-muted">{label}</span>
         {isPlaceholder && (
           <span
             title="Aguardando endpoint de agregação no backend — valor de exemplo"
-            className="rounded-sm bg-canvas-raised px-1.5 py-0.5 text-2xs text-ink-faint"
+            className="rounded-md bg-canvas-raised px-1.5 py-0.5 text-2xs text-ink-faint"
           >
             exemplo
           </span>
@@ -118,9 +102,9 @@ export function KpiCard({
 
       <div
         className={cn(
-          "tabular font-sans font-semibold tracking-tightest",
+          "tabular font-sans font-semibold tracking-[-0.02em]",
           gradientClasses ?? toneClasses[tone],
-          compact ? "text-[22px]" : "text-display"
+          compact ? "text-[22px]" : "text-[30px] leading-tight"
         )}
       >
         {numericValue !== undefined && format ? (
@@ -138,17 +122,17 @@ export function KpiCard({
       {trend && (
         <div
           className={cn(
-            "mt-2.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-2xs font-medium",
-            trend.positive ? "bg-revenue-bg text-revenue" : "bg-denied-bg text-denied"
+            "mt-2 inline-flex items-center gap-1.5 text-xs font-medium",
+            trend.positive ? "text-revenue" : "text-denied"
           )}
         >
-          {trend.positive ? <ArrowUp aria-hidden size={10} /> : <ArrowDown aria-hidden size={10} />}
+          {trend.positive ? <ArrowUp aria-hidden size={12} /> : <ArrowDown aria-hidden size={12} />}
           {trend.value}
         </div>
       )}
 
       {!compact && narrative && (
-        <div className="mt-3 border-t border-border-hairline pt-2.5">
+        <div className="mt-2.5">
           <NarrativeInsight text={narrative} />
         </div>
       )}

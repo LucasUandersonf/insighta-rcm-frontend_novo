@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -27,7 +27,7 @@
  * ficar ilegível sem uma base escura por trás.
  * ------------------------------------------------------------------ */
 :root {
-  --radius: 14px;
+  --radius: 16px;
 
   --canvas: 210 33% 99%;
   --canvas-surface: 0 0% 100%;
@@ -51,14 +51,16 @@
   --pending-dim: 37 90% 88%;
   --denied: 0 72% 51%;
   --denied-dim: 0 83% 91%;
-  --accent: 243 75% 59%;
-  --accent-dim: 234 89% 92%;
-  --accent-muted: 243 60% 40%;
+  --accent: 248 62% 55%;
+  --accent-dim: 248 89% 93%;
+  --accent-muted: 248 55% 40%;
+  --brand: 248 72% 58%;
+  --ink-soft: 223 16% 30%;
 
   /* Gradiente de marca (céu -> índigo -> violeta) — alimenta o logo, os
      avatares e as auras decorativas de fundo (.bg-premium-canvas). */
   --aura-1: 199 89% 64%;
-  --aura-2: 243 75% 63%;
+  --aura-2: 248 72% 62%;
   --aura-3: 271 76% 65%;
 
   --tint-alpha: 0.1;
@@ -82,46 +84,51 @@
 }
 
 .dark {
-  --canvas: 224 71% 4%;
-  --canvas-surface: 222 55% 8%;
-  --canvas-raised: 220 45% 14%;
-  --canvas-overlay: 222 55% 6%;
-  --canvas-inset: 224 60% 3%;
-  --canvas-deep: 226 65% 2%;
+  /* DECISÃO — v4 (Redesign 2026, "sem sidebar"): valores exatos do canvas
+     de design aprovado (Insighta RCM — Redesign 2026). Fundo #0B0C12,
+     superfícies em branco translúcido 3–8%, violeta #6A57E3/#8B7CF6 como
+     marca e os três semânticos de dado recalibrados para o fundo novo
+     (#3DD68C receita, #F0B44C pendente, #F26B6B glosado). */
+  --canvas: 233 24% 6%;
+  --canvas-surface: 233 17% 9%;
+  --canvas-raised: 235 19% 13%;
+  --canvas-overlay: 234 21% 10%;
+  --canvas-inset: 233 24% 5%;
+  --canvas-deep: 233 26% 4%;
 
-  --border-subtle: 220 35% 17%;
-  --border-default: 220 35% 24%;
-  --border-hairline-base: 210 90% 92%;
-  --border-hairline-alpha: 0.09;
+  --border-subtle: 230 10% 14%;
+  --border-default: 230 9% 20%;
+  --border-hairline-base: 0 0% 100%;
+  --border-hairline-alpha: 0.08;
 
-  --ink: 216 33% 97%;
-  --ink-muted: 223 14% 66%;
-  --ink-faint: 220 13% 56%;
+  --ink: 231 22% 94%;
+  --ink-muted: 231 13% 68%;
+  --ink-faint: 230 11% 57%;
+  /* Texto de apoio "claro" do canvas (#C5C7D6) — parágrafos explicativos. */
+  --ink-soft: 232 16% 81%;
 
-  --revenue: 160 80% 44%;
-  --revenue-dim: 162 80% 20%;
-  --pending: 37 91% 55%;
-  --pending-dim: 36 77% 31%;
-  --denied: 0 84% 60%;
-  --denied-dim: 0 70% 35%;
-  --accent: 243 90% 74%;
-  --accent-dim: 243 45% 26%;
-  --accent-muted: 243 85% 84%;
+  --revenue: 151 65% 54%;
+  --revenue-dim: 151 50% 22%;
+  --pending: 39 85% 62%;
+  --pending-dim: 39 60% 28%;
+  --denied: 0 84% 68%;
+  --denied-dim: 0 60% 32%;
+  --accent: 248 87% 73%;
+  --accent-dim: 248 40% 24%;
+  --accent-muted: 249 100% 83%;
+  --brand: 248 72% 62%;
 
-  --aura-1: 199 92% 60%;
-  --aura-2: 243 85% 67%;
-  --aura-3: 271 82% 68%;
+  --aura-1: 199 93% 60%;
+  --aura-2: 248 72% 62%;
+  --aura-3: 271 91% 65%;
 
-  --tint-alpha: 0.14;
-  --glow-alpha: 0.22;
-  --glow-alpha-soft: 0.14;
-  --shadow-tint: 226 70% 1%;
-  /* Vidro fosco de verdade no escuro — translúcido o bastante para as
-     auras de fundo atravessarem o card (com backdrop-blur, ver
-     BentoCard.tsx), sem comprometer a leitura do texto por cima. */
-  --glass-alpha: 0.66;
+  --tint-alpha: 0.13;
+  --glow-alpha: 0.16;
+  --glow-alpha-soft: 0.08;
+  --shadow-tint: 233 40% 2%;
+  --glass-alpha: 0.72;
 
-  --tier1: 271 75% 76%;
+  --tier1: 271 100% 83%;
   --tier2: 199 85% 72%;
 }
 

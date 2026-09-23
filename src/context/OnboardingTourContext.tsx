@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useCompleteOnboarding, useCurrentUserProfile } from "@/lib/useCurrentUserProfile";
-import { NAV_ITEMS, ADMIN_NAV_ITEMS } from "@/components/layout/Sidebar";
+import { ACCOUNT_TOUR_ID, ADMIN_NAV_ITEMS, NAV_ITEMS, tourTargetFor } from "@/lib/navigation";
 import { OnboardingTour, type TourStep } from "@/components/onboarding/OnboardingTour";
 import type { UserRole } from "@/lib/types";
 
@@ -54,7 +54,7 @@ const STEP_CONTENT: Partial<Record<string, { title: string; description: string 
 
 const ADMIN_STEP = {
   title: "Administração",
-  description: "Usuários, integrações, dados da clínica e log de auditoria — configuração da conta, não o uso do dia a dia.",
+  description: "Usuários, integrações, dados da clínica e log de auditoria ficam no menu da sua foto de perfil — configuração da conta, não o uso do dia a dia.",
 };
 
 function isVisibleFor(role: UserRole | undefined, roles: UserRole[] | undefined): boolean {
@@ -80,17 +80,17 @@ function useTourSteps(): TourStep[] {
       if (!isVisibleFor(user?.role, item.roles)) continue;
       const content = STEP_CONTENT[item.to];
       if (!content) continue;
-      steps.push({ targetSelector: `[data-tour-id="${item.to}"]`, ...content });
+      steps.push({ targetSelector: `[data-tour-id="${tourTargetFor(item)}"]`, ...content });
     }
 
     const visibleAdminItem = ADMIN_NAV_ITEMS.find((item) => isVisibleFor(user?.role, item.roles));
     if (visibleAdminItem) {
-      steps.push({ targetSelector: `[data-tour-id="${visibleAdminItem.to}"]`, ...ADMIN_STEP });
+      steps.push({ targetSelector: `[data-tour-id="${ACCOUNT_TOUR_ID}"]`, ...ADMIN_STEP });
     }
 
     steps.push({
       title: "Pronto!",
-      description: "Você pode rever este tour quando quiser pela Central de Ajuda (ícone de salva-vidas, no topo da tela).",
+      description: "Você pode rever este tour quando quiser pela Central de Ajuda, no menu da sua foto de perfil (canto superior direito).",
     });
 
     return steps;

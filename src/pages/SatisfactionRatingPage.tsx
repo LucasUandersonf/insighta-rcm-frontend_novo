@@ -39,7 +39,7 @@ export function SatisfactionRatingPage() {
           <span className="mb-3 inline-flex h-11 w-11 items-center justify-center rounded-full bg-canvas-surface/70 text-denied">
             <ShieldAlert size={20} strokeWidth={2} />
           </span>
-          <h1 className="font-serif text-lg font-medium text-ink">Link inválido</h1>
+          <h1 className="text-lg font-semibold text-ink">Link inválido</h1>
           <p className="mt-2 text-sm leading-relaxed text-ink-muted">
             Este link de avaliação já foi usado, expirou, ou não é válido. Se você ainda quiser avaliar seu
             atendimento, entre em contato diretamente com a clínica.
@@ -67,7 +67,7 @@ export function SatisfactionRatingPage() {
             <span className="mb-3 inline-flex h-11 w-11 items-center justify-center rounded-full bg-canvas-surface/70 text-revenue">
               <CheckCircle2 size={20} strokeWidth={2} />
             </span>
-            <h1 className="font-serif text-lg font-medium text-ink">Obrigado pela avaliação!</h1>
+            <h1 className="text-lg font-semibold text-ink">Obrigado pela avaliação!</h1>
             <p className="mt-2 text-sm leading-relaxed text-ink-muted">Sua nota foi enviada com sucesso.</p>
           </div>
         ) : (
@@ -110,7 +110,7 @@ export function SatisfactionRatingPage() {
                   setSubmitError(null);
                   mutation.mutate();
                 }}
-                className="flex w-full items-center justify-center gap-1.5 rounded-md bg-aura-line px-3 py-2.5 text-sm font-medium text-white shadow-elevated transition-all duration-150 hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+                className="flex w-full items-center justify-center gap-1.5 rounded-[11px] bg-brand px-3 py-2.5 text-sm font-medium text-white transition-all duration-150 hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {mutation.isPending ? "Enviando..." : "Enviar avaliação"}
               </button>

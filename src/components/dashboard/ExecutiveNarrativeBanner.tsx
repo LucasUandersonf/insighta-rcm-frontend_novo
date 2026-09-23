@@ -43,10 +43,19 @@ export function ExecutiveNarrativeBanner() {
   return (
     <div className="space-y-2">
       {data?.narrative && (
-        <div className="flex items-start gap-3 rounded-lg border border-aura-line/30 bg-gradient-to-br from-aura-line/[0.07] to-transparent px-4 py-3.5">
-          <Sparkles size={16} strokeWidth={2} className="mt-0.5 shrink-0 text-aura-line" aria-hidden />
-          <p className="text-sm leading-relaxed text-ink">{data.narrative}</p>
-        </div>
+        <section
+          aria-label="Resumo do período"
+          className="flex flex-col gap-3.5 rounded-[20px] border border-border-hairline bg-glass px-6 py-6 backdrop-blur-xl sm:px-8 sm:py-7"
+        >
+          <span className="flex items-center gap-2 text-xs font-medium text-accent-muted">
+            <Sparkles size={14} strokeWidth={2} aria-hidden />
+            Briefing do Insighta
+            {data.generated_at && (
+              <> · atualizado às {new Date(data.generated_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</>
+            )}
+          </span>
+          <p className="font-serif text-xl leading-[1.45] text-ink sm:text-[25px]">{data.narrative}</p>
+        </section>
       )}
       <RecentlyResolvedList titles={recentlyResolved} />
     </div>

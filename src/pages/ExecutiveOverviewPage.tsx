@@ -145,7 +145,7 @@ export function ExecutiveOverviewPage() {
     <div className="space-y-6">
       <PageHeader
         title="Sala de Comando"
-        subtitle="Onde estamos perdendo dinheiro hoje?"
+        subtitle="Onde estamos perdendo dinheiro hoje — e o que fazer primeiro."
         greeting={profile ? `${timeOfDayGreeting()}, ${firstNameFrom(profile.full_name)}.` : undefined}
         action={
           activeTab === "hoje" || activeTab === "diagnostico" || activeTab === "rentabilidade" || activeTab === "estoque" || activeTab === "clinico" ? (

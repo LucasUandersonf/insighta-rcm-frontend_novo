@@ -353,7 +353,7 @@ describe("SmartInsightsFeed", () => {
       renderWithProviders(<SmartInsightsFeed dateFrom="2026-01-01" dateTo="2026-01-07" />);
 
       await screen.findByText("Quarta-feira com menos consultas");
-      const secondaryCard = screen.getByText("Quarta-feira com menos consultas").closest("div.p-4") as HTMLElement;
+      const secondaryCard = screen.getByText("Quarta-feira com menos consultas").closest("[data-insight-card]") as HTMLElement;
       await user.click(within(secondaryCard).getByRole("button", { name: /Atribuir/ }));
 
       const modalTitle = await screen.findByText("Atribuir insight");

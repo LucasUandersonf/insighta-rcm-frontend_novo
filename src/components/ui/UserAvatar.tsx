@@ -19,7 +19,7 @@ export function UserAvatar({ fullName, size = "md" }: { fullName: string; size?:
         // Degradê de marca (céu -> índigo -> violeta, ver DECISÃO v3 em
         // index.css) — nunca as cores semânticas de dado (revenue/pending/
         // denied), que ficam reservadas para comunicar estado de negócio.
-        "flex shrink-0 items-center justify-center rounded-full bg-aura-line font-semibold tracking-tight text-white",
+        "flex shrink-0 items-center justify-center rounded-full bg-[linear-gradient(135deg,hsl(var(--aura-1)),hsl(var(--aura-2))_55%,hsl(var(--aura-3)))] font-semibold tracking-tight text-white",
         dimensions
       )}
     >

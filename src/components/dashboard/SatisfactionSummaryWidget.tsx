@@ -70,7 +70,7 @@ export function SatisfactionSummaryWidget() {
       <div className="flex flex-wrap items-center gap-6">
         <div className="flex shrink-0 items-center gap-2">
           <Star size={22} className="fill-pending text-pending" />
-          <span className="font-serif text-xl font-medium text-ink">
+          <span className="text-xl font-semibold text-ink">
             <AnimatedNumber value={average_score.value} format={(n) => n.toFixed(1)} durationSeconds={0.8} />
           </span>
           <span className="text-sm text-ink-faint">/5</span>
