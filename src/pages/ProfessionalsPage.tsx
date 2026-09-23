@@ -456,8 +456,8 @@ export function ProfessionalsPage() {
     <div className="space-y-6">
       <PageHeader
         icon={CalendarClock}
-        title="Profissionais & grade de agenda"
-        subtitle="Especialistas e a grade semanal de disponibilidade de cada um — a base de cálculo de ocupação e ociosidade da agenda."
+        title="Horários de atendimento"
+        subtitle="Os profissionais chegam pela importação; aqui você só informa a grade semanal de cada um — é ela que mostra ocupação e horários vagos."
         action={
           <Button onClick={() => setModalState({ open: true, editing: null })} className="flex items-center gap-1.5">
             <Plus size={14} />

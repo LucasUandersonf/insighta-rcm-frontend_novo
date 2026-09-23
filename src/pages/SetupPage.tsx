@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
 import { SelectField } from "@/components/ui/FormField";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { ImportDataNav } from "@/components/layout/ImportDataNav";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useToast } from "@/context/ToastContext";
@@ -173,9 +174,11 @@ export function SetupPage() {
     <div className="space-y-6">
       <PageHeader
         icon={ListChecks}
-        title="Setup de importação"
+        title="Importar dados"
         subtitle="Linhas que a Central de Upload não conseguiu promover sozinha — resolva o que dá para mapear, corrija o que precisa de um novo envio."
       />
+
+      <ImportDataNav />
 
       {isLoading && <LoadingState variant="table" rows={4} />}
       {error && <ErrorState message={getApiErrorMessage(error)} onRetry={() => refetch()} />}

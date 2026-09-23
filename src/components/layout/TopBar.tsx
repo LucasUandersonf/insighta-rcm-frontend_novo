@@ -432,6 +432,9 @@ function ModulesPanel({
   panelRef: RefObject<HTMLDivElement>;
 }) {
   const alertByRoute = new Map(alerts.map((alert) => [alert.route, alert]));
+  // Um módulo que junta rotas (ex.: Importar dados = /upload + /setup)
+  // mostra o alerta de qualquer uma delas.
+  const alertFor = (item: NavItem) => [item.to, ...(item.matches ?? [])].map((r) => alertByRoute.get(r)).find(Boolean);
   const groups = MODULE_GROUPS.map((group) => ({ ...group, items: items.filter((item) => item.group === group.id) })).filter(
     (group) => group.items.length > 0
   );
@@ -458,8 +461,8 @@ function ModulesPanel({
               }
             >
               <span className="text-[13px] font-medium text-ink">{item.label}</span>
-              {alertByRoute.get(item.to) ? (
-                <span className={cn("text-xs leading-snug", ALERT_TONE[alertByRoute.get(item.to)!.tone])}>{alertByRoute.get(item.to)!.text}</span>
+              {alertFor(item) ? (
+                <span className={cn("text-xs leading-snug", ALERT_TONE[alertFor(item)!.tone])}>{alertFor(item)!.text}</span>
               ) : (
                 item.description && <span className="text-xs leading-snug text-ink-muted">{item.description}</span>
               )}
@@ -536,10 +539,18 @@ export function TopBar() {
         NAV_ITEMS.filter((item) => item.placement === "primary"),
         user?.role
       );
+  // "Consolidado da rede" só para grupo com mais de uma unidade.
+  const { data: organization } = useQuery({
+    queryKey: ["analytics", "organization-summary"],
+    queryFn: () => apiClient.get<OrganizationSummary>("/api/v1/analytics/organization-summary"),
+    enabled: isManager && canViewFinance,
+    retry: false,
+  });
+  const hasNetwork = (organization?.units?.length ?? 0) > 1;
   const moduleItems = isCoordinatorView
     ? []
     : visibleItems(
-        NAV_ITEMS.filter((item) => item.placement === "modules"),
+        NAV_ITEMS.filter((item) => item.placement === "modules" && (!item.requiresNetwork || hasNetwork)),
         user?.role
       );
   const jumpItems = isCoordinatorView
@@ -550,7 +561,8 @@ export function TopBar() {
     if (to === "/" && isCoordinatorView) return coordinatorSummary?.open_count ?? 0;
     return 0;
   };
-  const currentModule = moduleItems.find((item) => location.pathname === item.to || location.pathname.startsWith(`${item.to}/`));
+  const isInside = (path: string) => location.pathname === path || location.pathname.startsWith(`${path}/`);
+  const currentModule = moduleItems.find((item) => isInside(item.to) || (item.matches ?? []).some(isInside));
 
   return (
     <header className="sticky top-0 z-30 border-b border-border-hairline bg-canvas/75 backdrop-blur-[18px]">

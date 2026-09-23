@@ -357,7 +357,7 @@ function CategorySection({
   );
 }
 
-function AllClearHero() {
+function AllClearHero({ scoped = false }: { scoped?: boolean }) {
   return (
     <BentoCard colSpan={12} glow="revenue" className="border border-revenue/25 bg-revenue-bg">
       <div className="flex items-start gap-3.5">
@@ -367,8 +367,9 @@ function AllClearHero() {
         <div>
           <h2 className="font-serif text-[22px] font-medium text-ink">Tudo certo por aqui</h2>
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-ink-muted">
-            Nenhum desvio relevante identificado nesta janela — operação dentro do esperado. Os números de apoio continuam
-            disponíveis logo abaixo, caso queira conferir de qualquer forma.
+            {scoped
+              ? "Nenhum desvio relevante nesta área, nesta janela. Os números de apoio estão logo abaixo, caso queira conferir."
+              : "Nenhum desvio relevante identificado nesta janela — operação dentro do esperado. Os números de apoio continuam disponíveis logo abaixo, caso queira conferir de qualquer forma."}
           </p>
         </div>
       </div>
@@ -388,9 +389,13 @@ export function SmartInsightsFeed({
   dateTo,
   onNavigateTab,
   onFocusAgenda,
+  categories,
 }: {
   dateFrom: string;
   dateTo: string;
+  /** Redesign 2026: cada aba da Sala de Comando mostra só os insights da
+   * sua área (ex: ["agenda"]). Omitido = todos. */
+  categories?: string[];
   /** Ver DECISÃO em InsightActionButton — permite o botão "Ver comparativo
    * completo" trocar de aba dentro da própria Sala de Comando. */
   onNavigateTab?: (tabId: string) => void;
@@ -406,7 +411,7 @@ export function SmartInsightsFeed({
   const [expanded, setExpanded] = useState(false);
   const workflow = useInsightWorkflow();
 
-  const insights = data?.insights ?? [];
+  const insights = (data?.insights ?? []).filter((insight) => !categories || categories.includes(insight.category));
 
   if (isLoading) {
     return (
@@ -418,12 +423,12 @@ export function SmartInsightsFeed({
 
   if (error) return <ErrorState message={getApiErrorMessage(error)} />;
 
-  if (insights.length === 0) return <AllClearHero />;
+  if (insights.length === 0) return <AllClearHero scoped={Boolean(categories)} />;
 
   const [topInsight, ...rest] = insights;
   const visibleRest = expanded ? rest : rest.slice(0, MAX_VISIBLE_SECONDARY_INSIGHTS);
   const hiddenCount = rest.length - visibleRest.length;
-  const faturamentoInsights = visibleRest.filter((insight) => insight.category === "faturamento");
+  const faturamentoInsights = visibleRest.filter((insight) => insight.category === "faturamento" || insight.category === "estrategia");
   const agendaInsights = visibleRest.filter((insight) => insight.category === "agenda");
   const estoqueInsights = visibleRest.filter((insight) => insight.category === "estoque");
   const prontuarioInsights = visibleRest.filter((insight) => insight.category === "prontuario");

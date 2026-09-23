@@ -59,6 +59,25 @@ Canvas "Atribuir", "Equipe" e "Coordenador". Perfis: **gestor** (owner/admin), *
 | Coordenadores por setor em Usuários e permissões | `SectorCoordinatorsPanel` → `PUT /team/sectors/{setor}` | ✅ |
 | "Confirmado pelos dados" | reaproveita a reavaliação de `insight_outcomes` (0 = sumiu, >0 = voltou) | ✅ |
 
+### Fase 2.6 — Enxugamento: módulos e Sala de Comando ✅ entregue
+
+| Antes | Agora |
+|---|---|
+| Sala de Comando com 11 abas | **Hoje · Faturamento · Agenda · Estoque · Prontuário**. Cada aba abre com os insights da área e depois os números |
+| Diagnóstico | Feed + nota de saúde + números → Faturamento; ocupação e faltas → Agenda |
+| CRM | "Pacientes a reativar" (inativos, risco de perder, RFM, upsell) na Agenda. Idade média e aniversariantes: removidos |
+| Oportunidades / Rentabilidade | "Contratos para renegociar" em Faturamento / "Rentabilidade por hora" em Agenda |
+| Comparativo, Simulador, Capital, ROI | Removidos (o comparativo que importa já vem no insight; a simulação existe em Convênios) |
+| Painel | Saiu da barra. A fila de faturamentos de alto risco virou **Fila de correção** (Módulos → Faturamento); `/painel` redireciona |
+| Profissionais & agenda | **Horários de atendimento**, no menu do avatar |
+| Novo paciente / Nova consulta | Removidos — chegam pela importação. O aviso de paciente VIP foi para o seletor de Consultas |
+| Pacientes | Fora da barra do gestor; fica com a coordenação de Agendamento/Assistencial |
+| Faturamento & guias | Só na barra do coordenador de Faturamento |
+| Central de upload + Setup | Um módulo: **Importar dados** (Enviar arquivos / Mapeamento e linhas rejeitadas) |
+| Consolidado da rede | Só aparece para grupo com mais de uma unidade |
+
+Links antigos (`?tab=crm`, `?tab=diagnostico`, `/painel?insurance_plan_id=`) continuam funcionando.
+
 ### Fase 3 — Próximos passos 🔜
 
 - [ ] **Configurar produção**: `ANTHROPIC_API_KEY` (Pergunte ao Insighta / argumento com IA) e `SMTP_*` (envio real do briefing). Sem elas, a tela avisa e nada quebra.
@@ -68,5 +87,4 @@ Canvas "Atribuir", "Equipe" e "Coordenador". Perfis: **gestor** (owner/admin), *
 - [ ] **Histórico do "Pergunte ao Insighta"** (perguntas frequentes da clínica como sugestões).
 - [ ] **Equipe — notificação fora da tela**: e-mail/WhatsApp para o coordenador quando recebe ou é cobrado (hoje: Home + badge).
 - [ ] **Equipe — histórico da demanda** (linha do tempo de atualizações; hoje guarda só a última).
-- [ ] **Enxugar módulos e abas da Sala de Comando** (proposta enviada para aprovação — nada removido ainda).
 - [ ] Revisão de contraste com axe em navegador real (`e2e/`) nas telas novas.

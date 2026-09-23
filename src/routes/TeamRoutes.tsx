@@ -1,5 +1,5 @@
 import { lazy } from "react";
-import { Navigate, Outlet } from "react-router-dom";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { RouteLoadingFallback } from "@/components/RouteLoadingFallback";
 import { isManagerProfile, useTeamProfile } from "@/lib/team";
 
@@ -25,4 +25,11 @@ export function ManagerProfileRoute() {
   if (isLoading || !profile) return <RouteLoadingFallback />;
   if (!isManagerProfile(profile)) return <Navigate to="/" replace />;
   return <Outlet />;
+}
+
+/** Redireciona uma rota que saiu (ex.: "/painel") mantendo a query string
+ * — os insights antigos mandam filtros como `?insurance_plan_id=`. */
+export function LegacyRedirect({ to }: { to: string }) {
+  const { search } = useLocation();
+  return <Navigate to={`${to}${search}`} replace />;
 }

@@ -9,6 +9,7 @@ import { Modal } from "@/components/ui/Modal";
 import { SelectField, TextField } from "@/components/ui/FormField";
 import { Pagination } from "@/components/ui/Pagination";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { ImportDataNav } from "@/components/layout/ImportDataNav";
 import { Tabs, TabPanel } from "@/components/ui/Tabs";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
@@ -503,9 +504,11 @@ export function UploadCenterPage() {
     <div className="space-y-6">
       <PageHeader
         icon={UploadCloud}
-        title="Central de upload"
+        title="Importar dados"
         subtitle="Onde o dado real entra no sistema — lotes operacionais do seu ERP e contratos de convênio, direto pela UI."
       />
+
+      <ImportDataNav />
 
       <Tabs
         groupId={TABS_GROUP}

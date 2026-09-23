@@ -1,18 +1,16 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
-import { Upload, Award, BadgeDollarSign, ClipboardList, HeartHandshake, Landmark, LayoutDashboard, ListChecks, Package, SlidersHorizontal, Target, Users } from "lucide-react";
+import { CalendarCheck2, ClipboardList, ListChecks, Package, Receipt, Upload } from "lucide-react";
 import { KpiCard } from "@/components/ui/KpiCard";
 import { ErrorState, LoadingState } from "@/components/ui/Panel";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PeriodWindowSelect } from "@/components/ui/PeriodWindowSelect";
 import { Tabs, TabPanel } from "@/components/ui/Tabs";
-import { CrmPanel } from "@/components/dashboard/CrmPanel";
 import { ContaStatusFunnelPanel } from "@/components/dashboard/ContaStatusFunnelPanel";
 import { EstoquePanel } from "@/components/dashboard/EstoquePanel";
 import { PepConformidadePanel } from "@/components/dashboard/PepConformidadePanel";
 import { AverageTicketPanel } from "@/components/dashboard/AverageTicketPanel";
-import { BirthdaysPanel } from "@/components/dashboard/BirthdaysPanel";
 import { DataFreshnessBanner } from "@/components/dashboard/DataFreshnessBanner";
 import { EarlyChurnRiskPanel } from "@/components/dashboard/EarlyChurnRiskPanel";
 import { ExecutiveAgendaSummary } from "@/components/dashboard/ExecutiveAgendaSummary";
@@ -23,17 +21,13 @@ import { CommandCenterToday } from "@/components/dashboard/CommandCenterToday";
 import { SmartInsightsFeed } from "@/components/dashboard/SmartInsightsFeed";
 import { HealthScoreWidget } from "@/components/dashboard/HealthScoreWidget";
 import { SatisfactionSummaryWidget } from "@/components/dashboard/SatisfactionSummaryWidget";
-import { NetworkBenchmarkPanel } from "@/components/dashboard/NetworkBenchmarkPanel";
 import { MarketingChannelsPanel } from "@/components/dashboard/MarketingChannelsPanel";
 import { UpsellFunnelPanel } from "@/components/dashboard/UpsellFunnelPanel";
 import { OportunidadesPanel } from "@/components/dashboard/OportunidadesPanel";
-import { PatientDemographicsPanel } from "@/components/dashboard/PatientDemographicsPanel";
 import { PatientRevenueParetoPanel } from "@/components/dashboard/PatientRevenueParetoPanel";
 import { PatientRfmPanel } from "@/components/dashboard/PatientRfmPanel";
 import { ProfitabilityPanel } from "@/components/dashboard/ProfitabilityPanel";
-import { SimuladorPanel } from "@/components/dashboard/SimuladorPanel";
-import { CapitalDecisionPanel } from "@/components/dashboard/CapitalDecisionPanel";
-import { ProductRoiPanel } from "@/components/dashboard/ProductRoiPanel";
+import { AgendaPlanPriorityPanel } from "@/components/dashboard/AgendaPlanPriorityPanel";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useDateWindow } from "@/lib/useDateWindow";
@@ -92,40 +86,48 @@ function formatPct(value: number): string {
 }
 
 const TABS_GROUP = "sala-de-comando";
-type TabId = "hoje" | "diagnostico" | "crm" | "oportunidades" | "comparativo" | "simulador" | "capital" | "rentabilidade" | "roi" | "estoque" | "clinico";
-const TAB_IDS: TabId[] = [
-  "hoje", "diagnostico", "crm", "oportunidades", "comparativo", "simulador", "capital", "rentabilidade", "roi", "estoque", "clinico",
-];
+type TabId = "hoje" | "faturamento" | "agenda" | "estoque" | "prontuario";
+const TAB_IDS: TabId[] = ["hoje", "faturamento", "agenda", "estoque", "prontuario"];
 
-function isTabId(value: string | null): value is TabId {
-  return !!value && (TAB_IDS as string[]).includes(value);
+/** Redesign 2026 (enxugamento aprovado): as 11 abas antigas viraram 5.
+ * Links antigos (Home, insights do backend, favoritos) continuam
+ * funcionando — cada aba antiga cai onde o conteúdo dela foi parar. */
+const LEGACY_TABS: Record<string, TabId> = {
+  diagnostico: "faturamento",
+  oportunidades: "faturamento",
+  comparativo: "faturamento",
+  crm: "agenda",
+  rentabilidade: "agenda",
+  simulador: "hoje",
+  capital: "hoje",
+  roi: "hoje",
+  clinico: "prontuario",
+};
+
+export function normalizeCommandCenterTab(value: string | null): TabId {
+  if (!value) return "hoje";
+  if ((TAB_IDS as string[]).includes(value)) return value as TabId;
+  return LEGACY_TABS[value] ?? "hoje";
 }
 
 /**
- * Sala de Comando 2.0 (ver Roadmap "Sala de Comando 2.0") — a mesma
- * filosofia "menos BI, mais consultor" do redesenho original, agora
- * organizada em abas: Diagnóstico continua sendo o feed de insights +
- * números de apoio (nada mudou aí, só ganhou companhia); Oportunidades/
- * Comparativo/Simulador são views novas, dedicadas, para o que não
- * cabe num card de leitura passiva (lista explorável, comparação com
- * a rede, ferramenta interativa).
+ * Sala de Comando — Redesign 2026, enxugada para as 4 áreas que o
+ * gestor acompanha: Hoje · Faturamento · Agenda · Estoque · Prontuário.
+ * Cada aba abre com os insights daquela área (o "porquê", em frases) e
+ * só depois os números e listas de apoio. Comparativo, Simulador,
+ * Capital, ROI, demografia e aniversariantes saíram (decisão de produto:
+ * sujeira na tela do gestor); CRM virou "Pacientes a reativar" na Agenda,
+ * Oportunidades e Rentabilidade foram para Faturamento e Agenda.
  */
 export function ExecutiveOverviewPage() {
   const { windowDays, setWindowDays, dateFrom, dateTo } = useDateWindow(30);
   const { data: profile } = useCurrentUserProfile();
-  // Deep-link de aba/foco a partir de fora da Sala de Comando (Avaliação
-  // Home/Sala de Comando, Achado 2) — "?tab=" explícito e válido manda
-  // (ex: clique em um card da Home que aponta pra "?tab=crm"); "?tab="
-  // ausente vira "hoje" (Épico F1.1 do Plano Diretor: a fila única já
-  // chega ordenada por impacto, o gestor não escolhe mais aba antes de
-  // saber o que fazer); "?tab=" presente mas inválido cai no fallback
-  // antigo "diagnostico" (nunca quebra a tela por um link velho/errado).
+  // Deep-link de aba a partir de fora da Sala de Comando: "?tab=" válido
+  // manda; aba antiga cai onde o conteúdo foi parar (LEGACY_TABS);
+  // ausente ou inválido abre em "Hoje" (nunca quebra por link velho).
   const [searchParams] = useSearchParams();
-  const [activeTab, setActiveTab] = useState<TabId>(() => {
-    const tab = searchParams.get("tab");
-    if (tab === null) return "hoje";
-    return isTabId(tab) ? tab : "diagnostico";
-  });
+  const [activeTab, setActiveTab] = useState<TabId>(() => normalizeCommandCenterTab(searchParams.get("tab")));
+  const navigateTab = (id: string) => setActiveTab(normalizeCommandCenterTab(id));
   // Foco de agenda (ver AgendaFocus, lib/types.ts) — disparado pelos
   // botões de ação dos insights de queda de agenda/agenda ociosa (ver
   // DECISÃO em SmartInsightsFeed.tsx::InsightActionButton). Mora aqui
@@ -157,7 +159,7 @@ export function ExecutiveOverviewPage() {
   // aba — sem isso, o clique de dentro de "Hoje" focava o paciente certo
   // mas nunca rolava a tela, porque o elemento ainda não tinha montado.
   function handleFocusAgendaFromQueue(focus: AgendaFocus) {
-    setActiveTab("diagnostico");
+    setActiveTab("agenda");
     setAgendaFocus(focus);
     requestAnimationFrame(() => {
       document.getElementById("agenda-resumo")?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -177,9 +179,7 @@ export function ExecutiveOverviewPage() {
         greeting={profile ? `${timeOfDayGreeting()}, ${firstNameFrom(profile.full_name)}.` : undefined}
         action={
           <>
-            {(activeTab === "hoje" || activeTab === "diagnostico" || activeTab === "rentabilidade" || activeTab === "estoque" || activeTab === "clinico") && (
-              <PeriodWindowSelect windowDays={windowDays} onChange={setWindowDays} />
-            )}
+            <PeriodWindowSelect windowDays={windowDays} onChange={setWindowDays} />
             <button
               type="button"
               onClick={() => summary && exportCommandCenterCsv(summary, dateFrom, dateTo)}
@@ -206,16 +206,10 @@ export function ExecutiveOverviewPage() {
         onChange={(id) => setActiveTab(id as TabId)}
         items={[
           { id: "hoje", label: "Hoje", icon: ListChecks },
-          { id: "diagnostico", label: "Diagnóstico", icon: LayoutDashboard },
-          { id: "crm", label: "CRM", icon: HeartHandshake },
-          { id: "oportunidades", label: "Oportunidades", icon: Target },
-          { id: "comparativo", label: "Comparativo", icon: Users },
-          { id: "rentabilidade", label: "Rentabilidade", icon: BadgeDollarSign },
-          { id: "simulador", label: "Simulador", icon: SlidersHorizontal },
-          { id: "capital", label: "Capital", icon: Landmark },
-          { id: "roi", label: "ROI", icon: Award },
+          { id: "faturamento", label: "Faturamento", icon: Receipt },
+          { id: "agenda", label: "Agenda", icon: CalendarCheck2 },
           { id: "estoque", label: "Estoque", icon: Package },
-          { id: "clinico", label: "Clínico", icon: ClipboardList },
+          { id: "prontuario", label: "Prontuário", icon: ClipboardList },
         ]}
       />
 
@@ -225,67 +219,30 @@ export function ExecutiveOverviewPage() {
             dateFrom={dateFrom}
             dateTo={dateTo}
             summary={summary}
-            onNavigateTab={(id) => setActiveTab(id as TabId)}
+            onNavigateTab={navigateTab}
             onFocusAgenda={handleFocusAgendaFromQueue}
           />
         </TabPanel>
       )}
 
-      {activeTab === "diagnostico" && (
-        <TabPanel id="diagnostico" groupId={TABS_GROUP}>
+      {activeTab === "faturamento" && (
+        <TabPanel id="faturamento" groupId={TABS_GROUP}>
           <div className="space-y-6">
-            {/* Nota de saúde financeira — widget PERSISTENTE, diferente do
-                feed abaixo (que troca de manchete conforme o que dói mais
-                na semana): é um estado que se acompanha ao longo do tempo. */}
+            {/* Faturamento = glosa, buraco financeiro, funil de contas e
+                oportunidades de preço. Os insights vêm primeiro (o
+                "porquê"), os números logo abaixo, para conferência. */}
+            <SmartInsightsFeed dateFrom={dateFrom} dateTo={dateTo} categories={["faturamento", "estrategia"]} onNavigateTab={navigateTab} onFocusAgenda={setAgendaFocus} />
             <HealthScoreWidget />
-
-            {/* "Equilíbrio Insighta" (Balanced Scorecard, perna Cliente) —
-                mesmo espírito de widget persistente do HealthScoreWidget
-                acima, só que olhando satisfação do paciente em vez de
-                saúde financeira. */}
-            <SatisfactionSummaryWidget />
-
-            {/* Redesenho "menos BI, mais consultor": o diagnóstico em texto
-                vem PRIMEIRO — é a resposta direta à pergunta "onde estamos
-                perdendo dinheiro hoje?". Os números continuam existindo
-                logo abaixo, como evidência de apoio para quem quer
-                conferir, não como o elemento principal da tela. */}
-            <SmartInsightsFeed
-              dateFrom={dateFrom}
-              dateTo={dateTo}
-              onNavigateTab={(id) => setActiveTab(id as TabId)}
-              onFocusAgenda={setAgendaFocus}
-            />
 
             {isLoading && <LoadingState variant="cards" rows={6} />}
             {error && <ErrorState message={getApiErrorMessage(error)} />}
-
             {summary && (
               <section>
                 <h2 className="mb-3 text-2xs font-medium uppercase tracking-wide text-ink-faint">Números do período — para conferência</h2>
                 <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-12">
-                  <KpiCard
-                    size="compact"
-                    colSpan={2}
-                    label="Buraco financeiro"
-                    value={formatCurrency(summary.financial_hole.value)}
-                    numericValue={summary.financial_hole.value}
-                    format={formatCurrency}
-                    tone="denied"
-                    gradient
-                    trend={trendFrom(summary.financial_hole, { invert: true })}
-                  />
-                  <KpiCard
-                    size="compact"
-                    colSpan={2}
-                    label="Caixa protegido"
-                    value={formatCurrency(summary.total_value_saved.value)}
-                    numericValue={summary.total_value_saved.value}
-                    format={formatCurrency}
-                    tone="revenue"
-                    gradient
-                    trend={trendFrom(summary.total_value_saved)}
-                  />
+                  <KpiCard size="compact" colSpan={2} label="Total faturado" value={formatCurrency(summary.total_billed.value)} numericValue={summary.total_billed.value} format={formatCurrency} tone="revenue" trend={trendFrom(summary.total_billed)} />
+                  <KpiCard size="compact" colSpan={2} label="Buraco financeiro" value={formatCurrency(summary.financial_hole.value)} numericValue={summary.financial_hole.value} format={formatCurrency} tone="denied" gradient trend={trendFrom(summary.financial_hole, { invert: true })} />
+                  <KpiCard size="compact" colSpan={2} label="Caixa protegido" value={formatCurrency(summary.total_value_saved.value)} numericValue={summary.total_value_saved.value} format={formatCurrency} tone="revenue" gradient trend={trendFrom(summary.total_value_saved)} />
                   <KpiCard
                     size="compact"
                     colSpan={2}
@@ -295,13 +252,6 @@ export function ExecutiveOverviewPage() {
                     format={summary.margin_vs_contracted_pct !== null ? (n) => `${n.toFixed(1)}%` : undefined}
                     tone="neutral"
                   />
-                  {/* DECISÃO — rótulo corrigido (era "Faturamento retido", dando
-                      a entender que era um valor em R$; o número por baixo
-                      sempre foi uma CONTAGEM de faturamentos travados
-                      esperando revisão de risco, nunca dinheiro — ver
-                      high_risk_pending_count em app/repositories/reporting_repository.py,
-                      backend). O rótulo agora descreve o que o número
-                      realmente é. */}
                   <KpiCard
                     size="compact"
                     colSpan={2}
@@ -311,31 +261,6 @@ export function ExecutiveOverviewPage() {
                     format={(n) => String(Math.round(n))}
                     tone={summary.high_risk_pending_count > 0 ? "pending" : "neutral"}
                   />
-                  <KpiCard
-                    size="compact"
-                    colSpan={2}
-                    label="Total faturado"
-                    value={formatCurrency(summary.total_billed.value)}
-                    numericValue={summary.total_billed.value}
-                    format={formatCurrency}
-                    tone="revenue"
-                    trend={trendFrom(summary.total_billed)}
-                  />
-                  <KpiCard
-                    size="compact"
-                    colSpan={2}
-                    label="Agenda ocupada"
-                    value={summary.avg_capacity_utilization ? formatPct(summary.avg_capacity_utilization.value) : "—"}
-                    numericValue={summary.avg_capacity_utilization ? summary.avg_capacity_utilization.value * 100 : undefined}
-                    format={summary.avg_capacity_utilization ? (n) => `${n.toFixed(1)}%` : undefined}
-                    tone="neutral"
-                    trend={summary.avg_capacity_utilization ? trendFrom(summary.avg_capacity_utilization) : undefined}
-                  />
-                  {/* Achado 2 da auditoria "Veredito do Gestor Clínico": PMR
-                      (Prazo Médio de Recebimento) — billing.created_at/
-                      settled_at sempre existiram no banco, mas nenhum
-                      indicador calculava essa diferença. null quando não
-                      há billing conciliado no período. */}
                   <KpiCard
                     size="compact"
                     colSpan={2}
@@ -350,156 +275,98 @@ export function ExecutiveOverviewPage() {
               </section>
             )}
 
-            {/* Bloco "Contas" (core.contas, migração 076) — primeira
-                superfície analítica agregada dessa camada, que até aqui só
-                existia como dado bruto no banco e na visão por paciente da
-                Ficha. É o destino do action_href="#tab:diagnostico" do
-                insight de conta parada em auditoria (ver DECISÃO em
-                smart_insights_engine.py::_conta_stale_em_auditoria_insight).
-                Sempre "estado agora" — não usa dateFrom/dateTo, igual ao
-                CrmSummary/CrmPanel acima. */}
+            {/* Destino do action_href="#tab:faturamento" do insight de conta
+                parada em auditoria. Sempre "estado agora". */}
             <ContaStatusFunnelPanel />
 
-            {/* id="buraco-financeiro" — destino do botão "Ver contas abaixo
-                do combinado" do insight de cobrança abaixo do contrato (ver
-                DECISÃO em smart_insights_engine.py::_financial_hole_insight).
-                Mesmo período do resto do Diagnóstico (dateFrom/dateTo) —
-                diferente de Carteira de Inativos/Candidatos a recontato, que
-                são sempre "agora". */}
+            {/* id="buraco-financeiro" — destino do botão "Ver contas abaixo do combinado". */}
             <section id="buraco-financeiro">
               <h2 className="mb-3 text-sm font-medium text-ink">Contas abaixo do combinado</h2>
               <FinancialHoleBillingsPanel dateFrom={dateFrom} dateTo={dateTo} />
             </section>
 
-            {/* id="agenda-resumo" — destino dos botões "Ver ocupação por
-                profissional"/"Ver quem está em risco"/"Ver volume de
-                consultas" dos insights de agenda acima (ver DECISÃO em
-                InsightActionButton, SmartInsightsFeed.tsx): rola até aqui
-                em vez de deixar o usuário procurar sozinho. */}
-            <section id="agenda-resumo">
-              <h2 className="mb-3 text-sm font-medium text-ink">Agenda & Capacidade Operacional</h2>
-              <ExecutiveAgendaSummary
-                dateFrom={dateFrom}
-                dateTo={dateTo}
-                focus={agendaFocus}
-                onClearFocus={() => setAgendaFocus(null)}
-              />
+            {/* Antiga aba Oportunidades: contratos com preço abaixo da
+                mediana de clínicas parecidas — argumento de renegociação. */}
+            <section id="oportunidades">
+              <h2 className="mb-3 text-sm font-medium text-ink">Contratos para renegociar</h2>
+              <OportunidadesPanel />
             </section>
 
-            {/* id="carteira-inativa" — destino do botão "Ver quem não
-                voltou" do insight de meta anual atrasada (ver DECISÃO em
-                smart_insights_engine.py::_annual_goal_insight). Sem
-                janela de período (mesmo espírito da Nota de Saúde): é
-                sempre "quem não volta há mais de 1 ano a partir de
-                hoje", não um recorte dos últimos 7 dias. */}
-            <section id="carteira-inativa" className="space-y-4">
-              <InactivePatientsPanel />
-              {/* Raio-X da Receita, frente "Prevendo movimentos" — alerta
-                  ANTECIPADO, mesma âncora: as duas listas respondem "quem
-                  está indo embora", em estágios diferentes (ver DECISÃO
-                  em smart_insights_engine.py::_early_churn_insight). */}
-              <EarlyChurnRiskPanel />
-              {/* Gaps Dossiê Insighta RCM, item 4 — RFM completo. Mesma
-                  âncora das duas listas acima (quem precisa de
-                  reativação), agora com a dimensão de Valor combinada:
-                  não é só "quem sumiu", é "quem sumiu E valia mais a
-                  pena reativar primeiro". */}
-              <PatientRfmPanel />
+            <section id="origem-receita" className="space-y-4">
+              <h2 className="text-sm font-medium text-ink">De onde vem a receita</h2>
+              <AverageTicketPanel dateFrom={dateFrom} dateTo={dateTo} />
+              <MarketingChannelsPanel dateFrom={dateFrom} dateTo={dateTo} />
+              <PatientRevenueParetoPanel dateFrom={dateFrom} dateTo={dateTo} />
             </section>
+          </div>
+        </TabPanel>
+      )}
 
-            {/* Achado do Dossiê Insighta RCM — mesma seção de
-                relacionamento com o paciente das duas listas acima,
-                só que olhando pra quem fica (retenção proativa), não
-                pra quem já foi embora. */}
-            <section id="aniversariantes" className="space-y-4">
-              <div>
-                <h2 className="mb-3 text-sm font-medium text-ink">Aniversariantes do mês</h2>
-                <BirthdaysPanel />
+      {activeTab === "agenda" && (
+        <TabPanel id="agenda" groupId={TABS_GROUP}>
+          <div className="space-y-6">
+            <SmartInsightsFeed dateFrom={dateFrom} dateTo={dateTo} categories={["agenda"]} onNavigateTab={navigateTab} onFocusAgenda={setAgendaFocus} />
+
+            {summary?.avg_capacity_utilization && (
+              <div className="grid grid-cols-2 gap-4 lg:grid-cols-12">
+                <KpiCard
+                  size="compact"
+                  colSpan={3}
+                  label="Agenda ocupada"
+                  value={formatPct(summary.avg_capacity_utilization.value)}
+                  numericValue={summary.avg_capacity_utilization.value * 100}
+                  format={(n) => `${n.toFixed(1)}%`}
+                  tone="neutral"
+                  trend={trendFrom(summary.avg_capacity_utilization)}
+                />
               </div>
-              {/* Achado do Dossiê Insighta RCM — mesma seção de "quem são
-                  nossos pacientes", complementando aniversário com o
-                  perfil etário da carteira ativa. */}
-              <PatientDemographicsPanel dateFrom={dateFrom} dateTo={dateTo} />
+            )}
+
+            {/* id="agenda-resumo" — destino dos botões dos insights de agenda
+                ("Ver ocupação por profissional", "Ver quem está em risco"…). */}
+            <section id="agenda-resumo">
+              <h2 className="mb-3 text-sm font-medium text-ink">Ocupação e faltas</h2>
+              <ExecutiveAgendaSummary dateFrom={dateFrom} dateTo={dateTo} focus={agendaFocus} onClearFocus={() => setAgendaFocus(null)} />
+            </section>
+
+            <AgendaPlanPriorityPanel dateFrom={dateFrom} dateTo={dateTo} />
+
+            {/* Antiga aba Rentabilidade: receita por hora de agenda ocupada. */}
+            <section id="rentabilidade">
+              <h2 className="mb-3 text-sm font-medium text-ink">Rentabilidade por hora de agenda</h2>
+              <ProfitabilityPanel dateFrom={dateFrom} dateTo={dateTo} />
+            </section>
+
+            <SatisfactionSummaryWidget />
+
+            {/* id="carteira-inativa" — pacientes a reativar (antigo CRM),
+                em estágios: quem já sumiu, quem está indo, quem vale mais. */}
+            <section id="carteira-inativa" className="space-y-4">
+              <h2 className="text-sm font-medium text-ink">Pacientes a reativar</h2>
+              <InactivePatientsPanel />
+              <EarlyChurnRiskPanel />
+              <PatientRfmPanel />
+              <UpsellFunnelPanel dateFrom={dateFrom} dateTo={dateTo} />
             </section>
           </div>
         </TabPanel>
       )}
 
-      {activeTab === "crm" && (
-        <TabPanel id="crm" groupId={TABS_GROUP}>
-          <CrmPanel />
-        </TabPanel>
-      )}
-
-      {activeTab === "oportunidades" && (
-        <TabPanel id="oportunidades" groupId={TABS_GROUP}>
-          <OportunidadesPanel />
-        </TabPanel>
-      )}
-
-      {activeTab === "comparativo" && (
-        <TabPanel id="comparativo" groupId={TABS_GROUP}>
-          <NetworkBenchmarkPanel />
-        </TabPanel>
-      )}
-
-      {activeTab === "rentabilidade" && (
-        <TabPanel id="rentabilidade" groupId={TABS_GROUP}>
-          <div className="space-y-4">
-            <ProfitabilityPanel dateFrom={dateFrom} dateTo={dateTo} />
-            {/* Achado do Dossiê Insighta RCM — cálculo simples sobre
-                Billing.charged_value, nenhuma agregação existia. */}
-            <AverageTicketPanel dateFrom={dateFrom} dateTo={dateTo} />
-            <MarketingChannelsPanel dateFrom={dateFrom} dateTo={dateTo} />
-            {/* "Equilíbrio Insighta" (Balanced Scorecard, perna Cliente) —
-                complementa o CAC/LTV acima (aquisição) com expansão de
-                receita em paciente já conquistado. */}
-            <UpsellFunnelPanel dateFrom={dateFrom} dateTo={dateTo} />
-            {/* Achado do Dossiê Insighta RCM — dimensão de concentração
-                de receita diferente da que já existe por convênio. */}
-            <PatientRevenueParetoPanel dateFrom={dateFrom} dateTo={dateTo} />
-          </div>
-        </TabPanel>
-      )}
-
-      {activeTab === "simulador" && (
-        <TabPanel id="simulador" groupId={TABS_GROUP}>
-          <SimuladorPanel />
-        </TabPanel>
-      )}
-
-      {activeTab === "capital" && (
-        <TabPanel id="capital" groupId={TABS_GROUP}>
-          <CapitalDecisionPanel />
-        </TabPanel>
-      )}
-
-      {activeTab === "roi" && (
-        <TabPanel id="roi" groupId={TABS_GROUP}>
-          <ProductRoiPanel />
-        </TabPanel>
-      )}
-
-      {/* Achado do Comitê de Liderança Tecnológica ("5 pernas", Sala de
-          Comando 3.0) — os 3 insights de BI mais profundos de Estoque
-          (curva ABC, desvio de consumo por médico, margem de
-          contribuição real) que só existiam no dicionário de dados,
-          nunca em tela. Ruptura/vencimento continuam no feed da aba
-          Diagnóstico (ver DECISÃO em _stock_stockout_risk_insight/
-          _stock_expiring_lot_value_insight, backend). */}
       {activeTab === "estoque" && (
         <TabPanel id="estoque" groupId={TABS_GROUP}>
-          <EstoquePanel dateFrom={dateFrom} dateTo={dateTo} />
+          <div className="space-y-6">
+            <SmartInsightsFeed dateFrom={dateFrom} dateTo={dateTo} categories={["estoque"]} onNavigateTab={navigateTab} onFocusAgenda={setAgendaFocus} />
+            <EstoquePanel dateFrom={dateFrom} dateTo={dateTo} />
+          </div>
         </TabPanel>
       )}
 
-      {/* Primeira aba dedicada ao PEP (Prontuário Eletrônico do
-          Paciente) — antes só existia por paciente, na Ficha (ver
-          DECISÃO em _pep_documentation_gap_insight/
-          _pep_cid_completeness_insight, backend). */}
-      {activeTab === "clinico" && (
-        <TabPanel id="clinico" groupId={TABS_GROUP}>
-          <PepConformidadePanel dateFrom={dateFrom} dateTo={dateTo} />
+      {activeTab === "prontuario" && (
+        <TabPanel id="prontuario" groupId={TABS_GROUP}>
+          <div className="space-y-6">
+            <SmartInsightsFeed dateFrom={dateFrom} dateTo={dateTo} categories={["prontuario"]} onNavigateTab={navigateTab} onFocusAgenda={setAgendaFocus} />
+            <PepConformidadePanel dateFrom={dateFrom} dateTo={dateTo} />
+          </div>
         </TabPanel>
       )}
     </div>

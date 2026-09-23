@@ -18,20 +18,16 @@ const STEP_CONTENT: Partial<Record<string, { title: string; description: string 
     title: "Início",
     description: "Um resumo escrito por IA do que importa hoje, com até 3 prioridades — por onde começar, sem precisar ler o painel inteiro.",
   },
-  // "Junta Técnica Insighta": NAV_ITEMS mudou de "/" para "/painel" (ver
-  // Sidebar.tsx) — a chave aqui precisa acompanhar, senão este passo some
-  // do tour sem nenhum erro de build (STEP_CONTENT[item.to] vira
-  // undefined silenciosamente).
-  "/painel": {
-    title: "Painel",
-    description: "KPIs e tabelas detalhadas para quem já sabe o que está procurando — acessível a qualquer momento pelo menu, sem precisar ser o ponto de partida do seu dia.",
+  "/equipe": {
+    title: "Equipe",
+    description: "Você atribui cada problema ao coordenador do setor e acompanha aqui até a resolução — com o placar de metas de cada um.",
   },
   "/decisao": {
     title: "Sala de Comando",
-    description: "Indicadores financeiros e operacionais consolidados — para decisão da liderança, não para a operação do dia a dia.",
+    description: "Hoje, Faturamento, Agenda, Estoque e Prontuário — o que está custando dinheiro em cada área e o que fazer primeiro.",
   },
   "/upload": {
-    title: "Central de upload",
+    title: "Importar dados",
     description: "É por aqui que entram os dados do seu ERP/sistema de gestão: planilhas de agenda, faturamento e convênios.",
   },
   "/appointments": {
