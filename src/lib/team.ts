@@ -70,6 +70,8 @@ export interface DemandCreate {
   title: string;
   message: string;
   financial_impact: number | null;
+  rule_id?: string | null;
+  fact_key?: string | null;
   sector: TeamSector;
   due_date: string | null;
   manager_note: string | null;

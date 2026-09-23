@@ -173,6 +173,51 @@ export function InsightActionButton({
   );
 }
 
+/** "Nota 9": o rótulo diz o que o número é — perda, tamanho de referência
+ * ou dinheiro protegido — para "R$ 183 mil de faturamento da Unimed" nunca
+ * ser lido como prejuízo. */
+function impactLabel(insight: SmartInsight, sentenceCase = false): string {
+  const label =
+    insight.impact_kind === "ganho" ? "Valor protegido" : insight.impact_kind === "referencia" ? "Valor envolvido" : "Impacto estimado";
+  return sentenceCase ? label : label.toUpperCase();
+}
+
+function impactTone(insight: SmartInsight, fallback: string): string {
+  if (insight.impact_kind === "ganho") return "text-revenue";
+  if (insight.impact_kind === "referencia") return "text-ink";
+  return fallback;
+}
+
+function GuidanceBox({ label, text }: { label: string; text?: string | null }) {
+  if (!text) return null;
+  return (
+    <div className="flex flex-col gap-1.5 rounded-[14px] border border-border-hairline bg-canvas/50 p-3.5">
+      <span className="text-xs font-semibold text-ink">{label}</span>
+      <span className="text-[13px] leading-normal text-ink-muted">{text}</span>
+    </div>
+  );
+}
+
+/** Base do número + histórico de acerto nesta clínica — o gestor sabe de
+ * onde vem o alerta e quanto confiar nele. */
+export function InsightBasis({ insight, compact = false }: { insight: SmartInsight; compact?: boolean }) {
+  if (!insight.evidence && !insight.track_record) return null;
+  return (
+    <div className={cn("flex flex-col gap-1 text-xs leading-relaxed text-ink-faint", compact && "mt-2")}>
+      {insight.evidence && (
+        <span>
+          <span className="font-medium text-ink-muted">De onde vem:</span> {insight.evidence}
+        </span>
+      )}
+      {insight.track_record && (
+        <span>
+          <span className="font-medium text-ink-muted">Histórico:</span> {insight.track_record}
+        </span>
+      )}
+    </div>
+  );
+}
+
 export function HeroInsight({
   insight,
   onNavigateTab,
@@ -210,8 +255,8 @@ export function HeroInsight({
           </div>
           {insight.financial_impact !== null && (
             <div className={cn("flex flex-col gap-1.5 md:border-l md:pl-6", cfg.border)}>
-              <span className="text-[11px] font-medium uppercase tracking-[0.06em] text-ink-faint">Impacto estimado</span>
-              <div className={cn("tabular text-[34px] font-semibold tracking-[-0.02em]", cfg.text)}>
+              <span className="text-[11px] font-medium uppercase tracking-[0.06em] text-ink-faint">{impactLabel(insight)}</span>
+              <div className={cn("tabular text-[34px] font-semibold tracking-[-0.02em]", impactTone(insight, cfg.text))}>
                 <AnimatedNumber value={insight.financial_impact} format={formatCurrencyWhole} durationSeconds={1.2} />
               </div>
             </div>
@@ -219,20 +264,23 @@ export function HeroInsight({
         </div>
         {(insight.why_now || insight.what_to_do || insight.if_ignored) && (
           <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-            {[
-              ["Por que agora", insight.why_now],
-              ["O que fazer", insight.what_to_do],
-              ["Se não fizer nada", insight.if_ignored],
-            ].map(([label, text]) =>
-              text ? (
-                <div key={label} className="flex flex-col gap-1.5 rounded-[14px] border border-border-hairline bg-canvas/50 p-3.5">
-                  <span className="text-xs font-semibold text-ink">{label}</span>
-                  <span className="text-[13px] leading-normal text-ink-muted">{text}</span>
-                </div>
-              ) : null
-            )}
+            <GuidanceBox label="Por que agora" text={insight.why_now} />
+            <div className="flex flex-col gap-1.5 rounded-[14px] border border-border-hairline bg-canvas/50 p-3.5">
+              <span className="text-xs font-semibold text-ink">O que fazer</span>
+              {insight.playbook && insight.playbook.length > 1 ? (
+                <ol className="flex list-decimal flex-col gap-1 pl-4 text-[13px] leading-normal text-ink-muted">
+                  {insight.playbook.map((step) => (
+                    <li key={step}>{step}</li>
+                  ))}
+                </ol>
+              ) : (
+                <span className="text-[13px] leading-normal text-ink-muted">{insight.what_to_do}</span>
+              )}
+            </div>
+            <GuidanceBox label="Se não fizer nada" text={insight.if_ignored} />
           </div>
         )}
+        <InsightBasis insight={insight} />
         <div className="flex flex-wrap items-center gap-2.5">
           <InsightActionButton insight={insight} onNavigateTab={onNavigateTab} onFocusAgenda={onFocusAgenda} toneClass={cfg.text} primary />
           <InsightWorkflowButtons
@@ -275,8 +323,16 @@ export function SecondaryInsightCard({
           <p className="mt-2.5 text-[15px] font-semibold leading-snug text-ink">{insight.title}</p>
           <p className="mt-2 text-[13px] leading-relaxed text-ink-muted">{insight.message}</p>
           {insight.financial_impact !== null && (
-            <p className={cn("mt-2 text-[13px] font-semibold", cfg.text)}>Impacto estimado: {formatCurrency(insight.financial_impact)}</p>
+            <p className={cn("mt-2 text-[13px] font-semibold", impactTone(insight, cfg.text))}>
+              {impactLabel(insight, true)}: {formatCurrency(insight.financial_impact)}
+            </p>
           )}
+          {insight.playbook && insight.playbook.length > 0 && (
+            <p className="mt-2 text-xs leading-relaxed text-ink-soft">
+              <span className="font-semibold text-ink">Primeiro passo:</span> {insight.playbook[0]}
+            </p>
+          )}
+          <InsightBasis insight={insight} compact />
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <InsightActionButton insight={insight} onNavigateTab={onNavigateTab} onFocusAgenda={onFocusAgenda} toneClass={cfg.text} />
             <ActionedBadge actioned={actioned} />

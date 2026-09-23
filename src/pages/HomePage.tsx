@@ -181,10 +181,17 @@ function Headline({ insight, onAssign, canAssign }: { insight: SmartInsight; onA
           {insight.message}
         </p>
         <p className="font-serif text-[19px] leading-[1.6] text-ink-soft">
-          {insight.financial_impact !== null && <>São {formatCurrency(insight.financial_impact)} em jogo. </>}
+          {impactSentence(insight)}
           {insight.why_now} {insight.what_to_do}
         </p>
       </div>
+      {(insight.evidence || insight.track_record) && (
+        <p className="text-xs leading-relaxed text-ink-faint">
+          {insight.evidence}
+          {insight.evidence && insight.track_record ? " · " : ""}
+          {insight.track_record}
+        </p>
+      )}
       <div className="flex flex-wrap items-center gap-5 pt-1.5">
         {insight.action_href && (
           <Button
@@ -213,6 +220,15 @@ function Headline({ insight, onAssign, canAssign }: { insight: SmartInsight; onA
   );
 }
 
+/** "Nota 9": a frase do valor respeita o que ele é — perda, referência ou ganho. */
+function impactSentence(insight: SmartInsight): string {
+  if (insight.financial_impact === null) return "";
+  const value = formatCurrency(insight.financial_impact);
+  if (insight.impact_kind === "ganho") return `São ${value} a seu favor. `;
+  if (insight.impact_kind === "referencia") return `Envolve ${value}. `;
+  return `São ${value} em jogo. `;
+}
+
 function CalmHeadline() {
   return (
     <article className="flex flex-col gap-[18px] lg:pr-12">
@@ -221,7 +237,7 @@ function CalmHeadline() {
         Nada pegando fogo hoje. Bom dia para adiantar o que costuma ficar para depois.
       </h2>
       <p className="font-serif text-[21px] leading-[1.55] text-ink-soft">Nenhuma prioridade urgente agora — tudo dentro do esperado.</p>
-      <Link to="/decisao?tab=crm" className="self-start text-[15px] font-medium text-accent-muted hover:underline">
+      <Link to="/decisao?tab=agenda" className="self-start text-[15px] font-medium text-accent-muted hover:underline">
         Ver a fila de reativação →
       </Link>
     </article>
@@ -237,7 +253,7 @@ function SecondaryStory({ insight }: { insight: SmartInsight }) {
       <h3 className="font-serif text-[26px] font-semibold leading-[1.2] text-ink">{insight.title}</h3>
       <p className="text-[15px] leading-[1.6] text-ink-soft">
         {insight.message}
-        {insight.financial_impact !== null && <> São {formatCurrency(insight.financial_impact)} em jogo.</>}
+        {insight.financial_impact !== null && <> {impactSentence(insight).trim()}</>}
       </p>
       {insight.action_label && insight.action_href && (
         <button

@@ -831,6 +831,21 @@ export interface SmartInsight {
   why_now?: string | null;
   what_to_do?: string | null;
   if_ignored?: string | null;
+  // "Nota 9" do motor (ver finalize_insights no backend).
+  rule_id?: string | null;
+  /** Chave estável da situação (regra + sujeito) — usada ao atribuir/resolver. */
+  fact_key?: string | null;
+  /** Quem/onde: convênio, profissional, dia, material. */
+  subject?: string | null;
+  /** "perda" ordena a fila; "referencia" é tamanho de algo; "ganho" é dinheiro protegido. */
+  impact_kind?: "perda" | "referencia" | "ganho";
+  /** Base do número ("Baseado em 42 atendimentos"). */
+  evidence?: string | null;
+  /** Histórico de acerto desta regra nesta clínica. */
+  track_record?: string | null;
+  /** Passos concretos, na ordem. */
+  playbook?: string[];
+  demoted?: boolean;
 }
 
 export interface SmartInsights {
@@ -892,6 +907,8 @@ export interface InsightOutcomeCreateRequest {
   title: string;
   message: string;
   financial_impact?: number | null;
+  rule_id?: string | null;
+  fact_key?: string | null;
   assigned_to?: string | null;
   due_date?: string | null;
 }

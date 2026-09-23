@@ -45,6 +45,11 @@ export function BillingRiskQueuePage() {
   const { dateFrom, dateTo } = useDateWindow(30);
   const [searchParams, setSearchParams] = useSearchParams();
   const filterPlanId = searchParams.get("insurance_plan_id");
+  // Insight "profissional fora do padrão de glosa" abre a fila já nas guias dele.
+  const filterProfessionalId = searchParams.get("professional_id");
+  const filterQuery =
+    (filterPlanId ? `&insurance_plan_id=${filterPlanId}` : "") + (filterProfessionalId ? `&professional_id=${filterProfessionalId}` : "");
+  const isFiltered = Boolean(filterPlanId || filterProfessionalId);
 
   const {
     data: highRiskPage,
@@ -52,16 +57,17 @@ export function BillingRiskQueuePage() {
     error,
     refetch,
   } = useQuery({
-    queryKey: ["billing", "high-risk", offset, filterPlanId],
+    queryKey: ["billing", "high-risk", offset, filterPlanId, filterProfessionalId],
     queryFn: () =>
       apiClient.get<PaginatedResponse<BillingResponse>>(
-        `/api/v1/billing/high-risk?limit=${PAGE_SIZE}&offset=${offset}${filterPlanId ? `&insurance_plan_id=${filterPlanId}` : ""}`
+        `/api/v1/billing/high-risk?limit=${PAGE_SIZE}&offset=${offset}${filterQuery}`
       ),
   });
 
   function clearPlanFilter() {
     setSearchParams((params) => {
       params.delete("insurance_plan_id");
+      params.delete("professional_id");
       return params;
     });
     setOffset(0);
@@ -117,11 +123,11 @@ export function BillingRiskQueuePage() {
           subtitle="Do maior valor para o menor — corrija antes de enviar ao convênio."
           glow={(highRiskPage?.total ?? 0) > 0 ? "pending" : "revenue"}
         >
-          {filterPlanId && (
+          {isFiltered && (
             <div className="mb-3 flex items-center justify-between gap-2 rounded-md border border-tier1/25 bg-tier1-bg px-3 py-2 text-xs text-ink">
               <span className="flex items-center gap-1.5">
                 <Filter aria-hidden size={12} />
-                Filtrando por 1 convênio — veio de um card da Sala de Comando.
+                {filterProfessionalId ? "Filtrando pelas guias de 1 profissional" : "Filtrando por 1 convênio"} — veio de um alerta da Sala de Comando.
               </span>
               <button
                 type="button"
@@ -139,8 +145,8 @@ export function BillingRiskQueuePage() {
             <EmptyState
               icon={<CheckCircle2 size={17} strokeWidth={1.5} />}
               message={
-                filterPlanId
-                  ? "Nenhum faturamento de alto risco deste convênio no momento."
+                isFiltered
+                  ? "Nenhum faturamento de alto risco neste filtro no momento."
                   : "Nenhum faturamento de alto risco no momento — a fila está limpa."
               }
             />
