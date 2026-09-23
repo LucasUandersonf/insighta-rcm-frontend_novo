@@ -78,7 +78,7 @@ describe("DenialAppealsPage — rascunho de justificativa via IA (Parecer Técni
     const modalTitle = await screen.findByText("Justificativa do recurso");
     const dialog = (modalTitle.closest('[role="dialog"]') ?? modalTitle.parentElement!) as HTMLElement;
 
-    fireEvent.click(within(dialog).getByRole("button", { name: /Gerar rascunho com IA/i }));
+    fireEvent.click(within(dialog).getByRole("button", { name: /Gerar rascunho/i }));
 
     await waitFor(() =>
       expect(apiClient.post).toHaveBeenCalledWith("/api/v1/denial-appeals/appeal-1/draft-justification")
