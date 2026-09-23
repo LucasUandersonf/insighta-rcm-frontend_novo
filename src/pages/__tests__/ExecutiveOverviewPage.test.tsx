@@ -27,7 +27,7 @@ vi.mock("@/context/AuthContext", async (importOriginal) => {
  * ao mesmo tempo (executive-summary, smart-insights, health-score,
  * agenda-metrics, network-benchmark); este teste foca na ESTRUTURA de
  * abas, não no conteúdo detalhado de cada painel (já coberto pelos
- * testes próprios de HealthScoreWidget/NetworkBenchmarkPanel/SimuladorPanel).
+ * testes próprios de cada painel).
  */
 function mockAllEndpoints() {
   vi.mocked(apiClient.get).mockImplementation((url: string) => {
@@ -126,7 +126,7 @@ function mockAllEndpoints() {
 }
 
 describe("ExecutiveOverviewPage", () => {
-  it("abre na aba Hoje (fila priorizada) e troca para Diagnóstico/Oportunidades/Comparativo/Simulador ao clicar", async () => {
+  it("tem só as 5 abas enxutas (Hoje, Faturamento, Agenda, Estoque, Prontuário) e troca entre elas", async () => {
     vi.mocked(useAuth).mockReturnValue({
       user: { tenant_id: "t1", id: "u1", role: "owner" } as unknown as CurrentUser,
     } as unknown as ReturnType<typeof useAuth>);
@@ -134,44 +134,38 @@ describe("ExecutiveOverviewPage", () => {
     const user = userEvent.setup();
     renderWithProviders(<ExecutiveOverviewPage />);
 
-    // Épico F1.1 do Plano Diretor: "Hoje" é a página inicial agora — o
-    // gestor não escolhe mais aba antes de saber o que fazer.
     expect(await screen.findByText(/Nenhuma ação prioritária agora/)).toBeInTheDocument();
+    expect(screen.getAllByRole("tab").map((t) => t.textContent?.trim())).toEqual(["Hoje", "Faturamento", "Agenda", "Estoque", "Prontuário"]);
+    for (const removed of [/Diagnóstico/, /CRM/, /Comparativo/, /Simulador/, /Capital/, /ROI/]) {
+      expect(screen.queryByRole("tab", { name: removed })).not.toBeInTheDocument();
+    }
 
-    await user.click(screen.getByRole("tab", { name: /Diagnóstico/ }));
-    expect(await screen.findByText("Agenda & Capacidade Operacional")).toBeInTheDocument();
+    await user.click(screen.getByRole("tab", { name: "Faturamento" }));
+    expect(await screen.findByRole("heading", { name: "Contratos para renegociar" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Contas abaixo do combinado" })).toBeInTheDocument();
 
-    await user.click(screen.getByRole("tab", { name: "CRM" }));
-    await waitFor(() => expect(screen.getByText("Nenhum paciente parado há mais de 1 ano — sua carteira está ativa.")).toBeInTheDocument());
-    expect(screen.queryByText("Agenda & Capacidade Operacional")).not.toBeInTheDocument();
-
-    await user.click(screen.getByRole("tab", { name: /Oportunidades/ }));
-    await waitFor(() => expect(screen.getByText(/Nenhuma oportunidade de renegociação/)).toBeInTheDocument());
-
-    await user.click(screen.getByRole("tab", { name: /Comparativo/ }));
-    await waitFor(() => expect(screen.queryByText("Agenda & Capacidade Operacional")).not.toBeInTheDocument());
-
-    await user.click(screen.getByRole("tab", { name: /Simulador/ }));
-    await waitFor(() => expect(screen.getByText(/Ajuste os cenários/)).toBeInTheDocument());
-
-    // Épico F3.4 do Plano Diretor ("Decisões de capital").
-    await user.click(screen.getByRole("tab", { name: /Capital/ }));
-    await waitFor(() => expect(screen.getByText(/Payback de uma nova contratação/)).toBeInTheDocument());
+    await user.click(screen.getByRole("tab", { name: "Agenda" }));
+    expect(await screen.findByRole("heading", { name: "Ocupação e faltas" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Pacientes a reativar" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Contratos para renegociar" })).not.toBeInTheDocument();
   });
 
-  it("com ?tab=crm na URL, já abre direto na aba CRM (Achado 2 da Avaliação Home/Sala de Comando)", async () => {
+  it("links antigos (?tab=crm) caem na aba nova onde o conteúdo foi parar (Agenda)", async () => {
     mockAllEndpoints();
     renderWithProviders(<ExecutiveOverviewPage />, { route: "/decisao?tab=crm" });
 
     await waitFor(() => expect(screen.getByText("Nenhum paciente parado há mais de 1 ano — sua carteira está ativa.")).toBeInTheDocument());
-    expect(screen.queryByText("Agenda & Capacidade Operacional")).not.toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Agenda" })).toHaveAttribute("aria-selected", "true");
   });
 
-  it("com ?tab= inválido ou ausente, abre no Diagnóstico (fallback seguro)", async () => {
+  it("?tab=diagnostico vira Faturamento; ?tab= inválido abre em Hoje (fallback seguro)", async () => {
     mockAllEndpoints();
-    renderWithProviders(<ExecutiveOverviewPage />, { route: "/decisao?tab=algo-que-nao-existe" });
+    const { unmount } = renderWithProviders(<ExecutiveOverviewPage />, { route: "/decisao?tab=diagnostico" });
+    expect(await screen.findByRole("heading", { name: "Contas abaixo do combinado" })).toBeInTheDocument();
+    unmount();
 
-    expect(await screen.findByText("Agenda & Capacidade Operacional")).toBeInTheDocument();
+    renderWithProviders(<ExecutiveOverviewPage />, { route: "/decisao?tab=algo-que-nao-existe" });
+    expect(await screen.findByRole("tab", { name: "Hoje" })).toHaveAttribute("aria-selected", "true");
   });
 
   it("com ?weekday=/?professional=/?scrollTo= na URL, carrega sem quebrar", async () => {

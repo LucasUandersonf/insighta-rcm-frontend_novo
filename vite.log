@@ -1,0 +1,6 @@
+
+  VITE v5.4.21  ready in 452 ms
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: use --host to expose
+5:17:29 PM [vite] hmr update /src/components/layout/TopBar.tsx, /src/index.css

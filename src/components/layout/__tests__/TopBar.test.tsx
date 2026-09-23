@@ -108,6 +108,23 @@ describe("TopBar", () => {
     expect(screen.queryByRole("link", { name: /Usuários/ })).not.toBeInTheDocument();
   });
 
+  it("gestor: sem Painel/Pacientes na barra, módulos enxutos e Consolidado só para rede", async () => {
+    mockUser("owner");
+    renderWithProviders(<TopBar />);
+    const nav = screen.getByRole("navigation", { name: "Navegação principal" });
+    expect(within(nav).getByRole("link", { name: /Equipe/ })).toBeInTheDocument();
+    expect(within(nav).queryByRole("link", { name: /Painel/ })).not.toBeInTheDocument();
+    expect(within(nav).queryByRole("link", { name: /Pacientes/ })).not.toBeInTheDocument();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: /Módulos/ }));
+    expect(screen.getByRole("link", { name: /Fila de correção/ })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Importar dados/ })).toBeInTheDocument();
+    for (const gone of [/Central de upload/, /Setup de importação/, /Profissionais/, /Faturamento & guias/, /Consolidado da rede/]) {
+      expect(screen.queryByRole("link", { name: gone })).not.toBeInTheDocument();
+    }
+  });
+
   it("'Sair' fica dentro do menu do avatar e chama logout", async () => {
     mockUser("financeiro");
     renderWithProviders(<TopBar />);

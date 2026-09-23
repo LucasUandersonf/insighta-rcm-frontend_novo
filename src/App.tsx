@@ -10,7 +10,7 @@ import { PlatformProtectedRoute } from "@/routes/PlatformProtectedRoute";
 import { isApiConfigured } from "@/lib/api-client";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { RouteLoadingFallback } from "@/components/RouteLoadingFallback";
-import { HomeRouter, ManagerProfileRoute } from "@/routes/TeamRoutes";
+import { HomeRouter, LegacyRedirect, ManagerProfileRoute } from "@/routes/TeamRoutes";
 
 // Achado do Laudo de Vistoria Técnica (parecer UX): o pacote baixado
 // pelo navegador crescia sem divisão por tela (quase 1MB) — pesado numa
@@ -29,7 +29,7 @@ const TeamPage = lazy(() => import("@/pages/TeamPage").then((m) => ({ default: m
 const SatisfactionRatingPage = lazy(() =>
   import("@/pages/SatisfactionRatingPage").then((m) => ({ default: m.SatisfactionRatingPage }))
 );
-const DashboardPage = lazy(() => import("@/pages/DashboardPage").then((m) => ({ default: m.DashboardPage })));
+const BillingRiskQueuePage = lazy(() => import("@/pages/BillingRiskQueuePage").then((m) => ({ default: m.BillingRiskQueuePage })));
 const AgendaRiscoPage = lazy(() => import("@/pages/AgendaRiscoPage").then((m) => ({ default: m.AgendaRiscoPage })));
 const PatientFichaPage = lazy(() => import("@/pages/PatientFichaPage").then((m) => ({ default: m.PatientFichaPage })));
 const ExecutiveOverviewPage = lazy(() => import("@/pages/ExecutiveOverviewPage").then((m) => ({ default: m.ExecutiveOverviewPage })));
@@ -125,15 +125,13 @@ export default function App() {
               </Route>
             <Route element={<ProtectedRoute />}>
               <Route element={<AppShell />}>
-                {/* Home estilo Jarvis (Roadmap "Rumo à Nota 9", Fase 1) — nova
-                    primeira tela: texto dinâmico gerado por IA + até 3
-                    prioridades, nunca o feed/KPIs inteiros (isso migrou pra
-                    /painel). Sem RoleProtectedRoute de propósito: mesma
-                    visibilidade que "/" sempre teve. */}
+                {/* Home: briefing do gestor ou "Minhas demandas" do
+                    coordenador (ver HomeRouter). Sem RoleProtectedRoute de
+                    propósito: todo papel autenticado tem uma Home. */}
                 <Route path="/" element={<HomeRouter />} />
-                <Route element={<ManagerProfileRoute />}>
-                  <Route path="/painel" element={<DashboardPage />} />
-                </Route>
+                {/* O antigo Painel saiu (Redesign 2026) — o que ele tinha de
+                    trabalho virou a Fila de correção. Links antigos seguem valendo. */}
+                <Route path="/painel" element={<LegacyRedirect to="/fila-correcao" />} />
                 <Route path="/appointments" element={<AppointmentsPage />} />
                 {/* Ficha do Paciente (Roadmap "Rumo à Nota 9", Fase 4) — mesmo
                     RBAC de GET /patients/search e /patients/{id}/ficha
@@ -204,6 +202,7 @@ export default function App() {
                       /upload: ação de escrita financeira, fora do alcance de
                       "atendimento" e de "auditor" (leitura só). */}
                   <Route path="/faturamento" element={<BillingOperationsPage />} />
+                  <Route path="/fila-correcao" element={<BillingRiskQueuePage />} />
                   {/* Destino que o próprio toast de sucesso da Central de Upload já
                       promete ("veja a tela de Setup") — mesmo RBAC de /upload
                       (ingestion.py/_CAN_MANAGE: owner/admin/financeiro). */}

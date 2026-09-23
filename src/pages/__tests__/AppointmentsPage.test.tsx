@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { screen, waitFor, within } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { AppointmentsPage } from "@/pages/AppointmentsPage";
 import { apiClient } from "@/lib/api-client";
@@ -66,41 +66,15 @@ function mockGet(patients: Patient[], appointments: Appointment[] = []) {
   });
 }
 
-// "Mapa de Dados Insighta" — Domínio Paciente (Onda 1): não existia
-// nenhuma tela de cadastro manual de paciente; estes testes cobrem o
-// ponto de captura novo (cadastro + edição de contato) junto do
-// seletor de paciente já existente nesta página.
-describe("AppointmentsPage — cadastro e edição de dados do paciente", () => {
-  it("cadastra um novo paciente com os campos relacionais e seleciona ele na lista", async () => {
-    mockGet([makePatient({ id: "existing", full_name: "Paciente Existente" })]);
-    vi.mocked(apiClient.post).mockResolvedValue(makePatient({ id: "new-1", full_name: "Paciente Novo" }));
-    const user = userEvent.setup();
-
+// Pacientes e consultas chegam pela importação da agenda (Redesign 2026:
+// cadastro manual removido). Continua a edição dos dados de contato.
+describe("AppointmentsPage — dados do paciente", () => {
+  it("não tem mais cadastro manual de paciente nem de consulta — a agenda chega pela importação", async () => {
+    mockGet([makePatient()]);
     renderWithProviders(<AppointmentsPage />);
-    await waitFor(() => expect(screen.getByRole("button", { name: /Novo paciente/ })).not.toBeDisabled());
-    await user.click(screen.getByRole("button", { name: /Novo paciente/ }));
-
-    // Regex, não string exata: TextField com `required` acrescenta um
-    // "*" dentro do próprio <label>, então o nome acessível de verdade
-    // é "Nome completo *", não "Nome completo".
-    await user.type(await screen.findByLabelText(/Nome completo/), "Paciente Novo");
-    await user.selectOptions(screen.getByLabelText(/Quem indicou/), "existing");
-    await user.selectOptions(screen.getByLabelText(/Horário preferido/), "manha");
-    await user.type(screen.getByLabelText(/CEP/), "01310100");
-    await user.click(screen.getByLabelText(/autoriza contato/i));
-
-    await user.click(screen.getByRole("button", { name: "Cadastrar paciente" }));
-
-    await waitFor(() =>
-      expect(apiClient.post).toHaveBeenCalledWith("/api/v1/patients", {
-        full_name: "Paciente Novo",
-        cpf: null,
-        referred_by_patient_id: "existing",
-        communication_consent: true,
-        preferred_time_window: "manha",
-        zip_code: "01310100",
-      })
-    );
+    await waitFor(() => expect(screen.getByLabelText("Ver consultas do paciente")).not.toBeDisabled());
+    expect(screen.queryByRole("button", { name: /Novo paciente/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Nova consulta/ })).not.toBeInTheDocument();
   });
 
   it("edita os dados de contato de um paciente já existente via PATCH", async () => {
@@ -135,33 +109,6 @@ describe("AppointmentsPage — cadastro e edição de dados do paciente", () => 
   });
 });
 
-// "Mapa de Dados Insighta" — Domínio Pós-atendimento (Onda 1): motivo
-// estruturado do agendamento.
-describe("AppointmentsPage — nova consulta com motivo estruturado", () => {
-  it("envia visit_intent_tag ao agendar uma nova consulta", async () => {
-    mockGet([makePatient()]);
-    vi.mocked(apiClient.post).mockResolvedValue({ id: "a1", patient_id: "p1", no_show_risk_level: null });
-    const user = userEvent.setup();
-
-    renderWithProviders(<AppointmentsPage />);
-    await waitFor(() => expect(screen.getByRole("button", { name: /Nova consulta/ })).not.toBeDisabled());
-    await user.click(screen.getByRole("button", { name: /Nova consulta/ }));
-
-    await user.selectOptions(await screen.findByLabelText(/Paciente/), "p1");
-    await user.type(screen.getByLabelText(/Data e horário/), "2026-06-01T10:00");
-    await user.selectOptions(screen.getByLabelText(/Motivo do agendamento/), "urgencia");
-
-    await user.click(screen.getByRole("button", { name: "Agendar consulta" }));
-
-    await waitFor(() =>
-      expect(apiClient.post).toHaveBeenCalledWith(
-        "/api/v1/appointments",
-        expect.objectContaining({ visit_intent_tag: "urgencia" })
-      )
-    );
-  });
-});
-
 // "Equilíbrio Insighta" (Balanced Scorecard, perna Cliente, mecanismo 1)
 // — a recepção precisa ver o selo de paciente de alto valor no exato
 // momento de marcar a consulta, não só depois de criar (ver DECISÃO em
@@ -175,22 +122,17 @@ describe("AppointmentsPage — aviso de paciente de alto valor (VIP)", () => {
     const user = userEvent.setup();
 
     renderWithProviders(<AppointmentsPage />);
-    await waitFor(() => expect(screen.getByRole("button", { name: /Nova consulta/ })).not.toBeDisabled());
-    await user.click(screen.getByRole("button", { name: /Nova consulta/ }));
-
-    const dialog = screen.getByRole("dialog");
-    const patientSelect = await within(dialog).findByLabelText(/^Paciente/);
-    expect(within(dialog).getByRole("option", { name: "Maria VIP ★ VIP" })).toBeInTheDocument();
-    expect(within(dialog).getByRole("option", { name: "João Comum" })).toBeInTheDocument();
-    expect(within(dialog).queryByText(/Paciente de alto valor/)).not.toBeInTheDocument();
+    const patientSelect = await screen.findByLabelText("Ver consultas do paciente");
+    await waitFor(() => expect(patientSelect).not.toBeDisabled());
+    expect(screen.getByRole("option", { name: "Maria VIP ★ VIP" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "João Comum" })).toBeInTheDocument();
+    expect(screen.queryByText(/Paciente de alto valor/)).not.toBeInTheDocument();
 
     await user.selectOptions(patientSelect, "p1");
-    expect(
-      await within(dialog).findByText(/Paciente de alto valor \(frequente, indicou outros pacientes\)/)
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/Paciente de alto valor \(frequente, indicou outros pacientes\)/)).toBeInTheDocument();
 
     await user.selectOptions(patientSelect, "p2");
-    await waitFor(() => expect(within(dialog).queryByText(/Paciente de alto valor/)).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByText(/Paciente de alto valor/)).not.toBeInTheDocument());
   });
 });
 

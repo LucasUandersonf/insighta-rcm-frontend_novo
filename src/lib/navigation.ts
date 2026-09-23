@@ -1,14 +1,15 @@
 import {
   Building2,
+  Clock,
   CalendarCheck,
   Gauge,
   Home,
   Inbox,
   ListOrdered,
-  LayoutDashboard,
   Plug,
   ScrollText,
   Send,
+  ShieldAlert,
   UserRound,
   Users,
   UsersRound,
@@ -53,6 +54,10 @@ export interface NavItem {
   roles?: UserRole[];
   placement: "primary" | "modules";
   group?: ModuleGroupId;
+  /** Outras rotas que contam como "dentro" deste item (ex.: /setup em Importar dados). */
+  matches?: string[];
+  /** Só faz sentido para grupo com mais de uma unidade. */
+  requiresNetwork?: boolean;
 }
 
 const LEADERSHIP: UserRole[] = ["owner", "admin", "financeiro", "auditor"];
@@ -66,28 +71,31 @@ export const NAV_ITEMS: NavItem[] = [
   // coordenadores. "Meus insights" saiu da barra — virou "Minhas
   // demandas", a Home do coordenador (ver COORDINATOR_NAV abaixo).
   { to: "/equipe", label: "Equipe", icon: UsersRound, roles: ["owner", "admin", "auditor"], placement: "primary" },
-  { to: "/painel", label: "Painel", icon: LayoutDashboard, placement: "primary" },
+  // Painel saiu (virou a Fila de correção, em Módulos → Faturamento) e
+  // Pacientes saiu da barra do gestor — é ferramenta de quem atende
+  // (coordenação de Agendamento/Assistencial, ver SECTOR_NAV).
   { to: "/appointments", label: "Consultas", icon: CalendarCheck, placement: "primary" },
-  { to: "/pacientes", label: "Pacientes", icon: UserRound, placement: "primary" },
 
   // Faturamento
-  { to: "/faturamento", label: "Faturamento & guias", description: "Registrar pagamento e emitir guias TISS", roles: FINANCE_WRITE, placement: "modules", group: "faturamento" },
+  // "Faturamento & guias" (lançamento manual) ficou só na barra do
+  // coordenador de Faturamento, como exceção à importação.
+  { to: "/fila-correcao", label: "Fila de correção", description: "Guias com risco de glosa, antes do envio", roles: FINANCE_WRITE, placement: "modules", group: "faturamento" },
   { to: "/lotes", label: "Lotes de faturamento", description: "Agrupar guias antes de virar fatura", roles: LEADERSHIP, placement: "modules", group: "faturamento" },
   { to: "/denial-appeals", label: "Recurso de glosa", description: "Contestar recusas dentro do prazo", roles: LEADERSHIP, placement: "modules", group: "faturamento" },
   { to: "/contracts", label: "Convênios e contratos", description: "Tabelas de repasse e vigências", roles: LEADERSHIP, placement: "modules", group: "faturamento" },
 
   // Agenda & operação
   { to: "/waitlist", label: "Lista de espera", description: "Encaixar pacientes nos horários vagos", placement: "modules", group: "operacao" },
-  { to: "/professionals", label: "Profissionais & agenda", description: "Grade semanal que alimenta a capacidade", roles: ADMINS, placement: "modules", group: "operacao" },
-  { to: "/consolidado", label: "Consolidado da rede", description: "Visão multiunidade do grupo", roles: LEADERSHIP, placement: "modules", group: "operacao" },
+  // Só aparece para grupo com mais de uma unidade (ver TopBar).
+  { to: "/consolidado", label: "Consolidado da rede", description: "Visão multiunidade do grupo", roles: LEADERSHIP, placement: "modules", group: "operacao", requiresNetwork: true },
 
   // Custos & crescimento
   { to: "/custos", label: "Custos", description: "Margem real por procedimento", roles: LEADERSHIP, placement: "modules", group: "custos" },
   { to: "/marketing-spend", label: "Gasto de marketing", description: "Quanto cada canal traz de volta", roles: LEADERSHIP, placement: "modules", group: "custos" },
 
   // Dados
-  { to: "/upload", label: "Central de upload", description: "Enviar planilhas e exportações", roles: FINANCE_WRITE, placement: "modules", group: "dados" },
-  { to: "/setup", label: "Setup de importação", description: "Mapeamento e linhas rejeitadas", roles: FINANCE_WRITE, placement: "modules", group: "dados" },
+  // Upload + Setup eram dois módulos para uma tarefa só.
+  { to: "/upload", label: "Importar dados", description: "Enviar arquivos, mapear e corrigir linhas rejeitadas", roles: FINANCE_WRITE, placement: "modules", group: "dados", matches: ["/setup"] },
 ];
 
 export const MODULE_GROUPS: { id: ModuleGroupId; label: string }[] = [
@@ -101,6 +109,9 @@ export const MODULE_GROUPS: { id: ModuleGroupId; label: string }[] = [
 export const ADMIN_NAV_ITEMS: NavItem[] = [
   { to: "/admin/tenant", label: "Minha clínica", icon: Building2, roles: ADMINS, placement: "modules" },
   { to: "/admin/users", label: "Usuários e permissões", icon: Users, roles: ADMINS, placement: "modules" },
+  // Profissionais chegam pela importação; o que falta é só a grade
+  // semanal (nenhum arquivo traz), que alimenta ocupação e horários vagos.
+  { to: "/professionals", label: "Horários de atendimento", icon: Clock, roles: ADMINS, placement: "modules" },
   { to: "/admin/integrations", label: "Integrações e webhooks", icon: Plug, roles: ADMINS, placement: "modules" },
   { to: "/admin/report-recipients", label: "Destinatários de relatórios", icon: Send, roles: ADMINS, placement: "modules" },
   // Auditor também precisa ver a trilha de auditoria — papel de
@@ -124,12 +135,13 @@ const SECTOR_NAV: Record<TeamSector, NavItem[]> = {
   ],
   faturamento: [
     { to: "/faturamento", label: "Faturamento", icon: Receipt, roles: FINANCE_WRITE, placement: "primary" },
+    { to: "/fila-correcao", label: "Fila de correção", icon: ShieldAlert, roles: FINANCE_WRITE, placement: "primary" },
     { to: "/lotes", label: "Lotes", icon: Layers, roles: LEADERSHIP, placement: "primary" },
     { to: "/denial-appeals", label: "Recursos de glosa", icon: FileWarning, roles: LEADERSHIP, placement: "primary" },
     { to: "/contracts", label: "Convênios", icon: Handshake, roles: LEADERSHIP, placement: "primary" },
-    { to: "/upload", label: "Upload", icon: UploadCloud, roles: FINANCE_WRITE, placement: "primary" },
+    { to: "/upload", label: "Importar dados", icon: UploadCloud, roles: FINANCE_WRITE, placement: "primary", matches: ["/setup"] },
   ],
-  estoque: [{ to: "/upload", label: "Upload", icon: UploadCloud, roles: FINANCE_WRITE, placement: "primary" }],
+  estoque: [{ to: "/upload", label: "Importar dados", icon: UploadCloud, roles: FINANCE_WRITE, placement: "primary", matches: ["/setup"] }],
   assistencial: [{ to: "/pacientes", label: "Pacientes", icon: UserRound, placement: "primary" }],
   gestao: [],
 };
