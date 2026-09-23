@@ -141,17 +141,27 @@ export function ExecutiveOverviewPage() {
     return null;
   });
 
-  // Mesmo achado do Achado 2 — rola até a seção certa quando a Home
-  // manda pra cá com `?scrollTo=` (ex: "#agenda-resumo"/"#buraco-financeiro",
-  // os mesmos anchors que o InsightActionButton já resolve localmente
-  // dentro da própria Sala de Comando). Só na montagem, uma vez.
+  // Rola até a seção certa quando um link manda pra cá com `?tab=` e
+  // `?scrollTo=` (ex.: alerta "material usado e não cobrado" →
+  // ?tab=estoque&scrollTo=nao-cobrado). Reage também quando a URL muda
+  // com a Sala de Comando já aberta (um botão de insight dentro dela).
+  // A seção só existe depois de a aba renderizar, então tenta algumas vezes.
+  const tabParam = searchParams.get("tab");
+  const scrollParam = searchParams.get("scrollTo");
   useEffect(() => {
-    const scrollTo = searchParams.get("scrollTo");
-    if (scrollTo) {
-      document.getElementById(scrollTo)?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (tabParam) setActiveTab(normalizeCommandCenterTab(tabParam));
+  }, [tabParam]);
+  useEffect(() => {
+    if (!scrollParam) return;
+    let attempts = 0;
+    const timer = window.setInterval(() => {
+      const target = document.getElementById(scrollParam);
+      attempts += 1;
+      if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+      if (target || attempts >= 10) window.clearInterval(timer);
+    }, 120);
+    return () => window.clearInterval(timer);
+  }, [scrollParam, tabParam]);
 
   // A fila "Hoje" pode disparar um foco de agenda (#weekday:/#professional:)
   // de FORA da aba Diagnóstico, onde a seção agenda-resumo (destino do

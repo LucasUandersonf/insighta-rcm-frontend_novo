@@ -84,6 +84,8 @@ Links antigos (`?tab=crm`, `?tab=diagnostico`, `/painel?insurance_plan_id=`) con
 - Rótulo do valor respeita o que ele é: "Impacto estimado" (perda), "Valor envolvido" (referência), "Valor protegido" (ganho). A Home diz "em jogo" só para perda.
 - Atribuir e resolver enviam `rule_id` + chave estável → o motor aprende e a reavaliação não se perde quando um número do título muda.
 - Fila de correção aceita `?professional_id=` (vindo do alerta "profissional fora do padrão de glosa").
+- Destinos exatos: Faturamento & guias abre na aba pedida (`?tab=coparticipacao`, `?tab=auditoria-opme`); a Sala de Comando troca de aba e rola até a seção quando a URL muda (`?tab=estoque&scrollTo=nao-cobrado`).
+- Aba Estoque ganhou a lista **Material usado e não cobrado** e âncoras para os alertas de estoque.
 
 ### Fase 3 — Próximos passos 🔜
 

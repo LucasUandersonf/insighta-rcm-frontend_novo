@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSearchParams } from "react-router-dom";
 import { FileStack, Search, Wallet } from "lucide-react";
 import { Panel, EmptyState, LoadingState, ErrorState } from "@/components/ui/Panel";
 import { Button } from "@/components/ui/Button";
@@ -667,8 +668,14 @@ function GuiasTab() {
 
 const TABS_GROUP = "faturamento-operacoes";
 
+const TAB_IDS: Tab[] = ["pagamento", "coparticipacao", "auditoria-opme", "guias"];
+
 export function BillingOperationsPage() {
-  const [tab, setTab] = useState<Tab>("pagamento");
+  // Os alertas de coparticipação e de OPME abrem direto na aba certa
+  // (?tab=coparticipacao / ?tab=auditoria-opme).
+  const [searchParams] = useSearchParams();
+  const requested = searchParams.get("tab") as Tab | null;
+  const [tab, setTab] = useState<Tab>(requested && TAB_IDS.includes(requested) ? requested : "pagamento");
 
   return (
     <div className="space-y-6">

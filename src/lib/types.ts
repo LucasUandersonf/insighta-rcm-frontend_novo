@@ -2411,3 +2411,21 @@ export interface BriefingEmailResult {
   sent_to: string;
   delivered: boolean;
 }
+
+// GET /analytics/unbilled-consumption — lista por trás do alerta
+// "material usado e não cobrado" (aba Estoque da Sala de Comando).
+export interface UnbilledConsumptionItem {
+  appointment_id: string;
+  scheduled_at: string;
+  patient_name: string | null;
+  professional_name: string | null;
+  materials: string;
+  cost: number;
+}
+
+export interface UnbilledConsumption {
+  period_start: string;
+  period_end: string;
+  total_cost: number;
+  items: UnbilledConsumptionItem[];
+}
