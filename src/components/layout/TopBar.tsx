@@ -2,13 +2,15 @@ import { useEffect, useId, useMemo, useRef, useState, type RefObject } from "rea
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
-import { Activity, Building2, ChevronDown, CircleHelp, LogOut, Menu, Moon, Search, Sun } from "lucide-react";
+import { Activity, Building2, Check, ChevronDown, CircleHelp, LogOut, Menu, Moon, Sparkles, Sun } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
 import { useOnboardingTour } from "@/context/OnboardingTourContext";
 import { UserAvatar } from "@/components/ui/UserAvatar";
 import { useCurrentUserProfile } from "@/lib/useCurrentUserProfile";
 import { apiClient } from "@/lib/api-client";
+import { getApiErrorMessage } from "@/lib/query-client";
+import { useAskInsighta } from "@/lib/useAskInsighta";
 import { cn } from "@/lib/cn";
 import {
   ACCOUNT_TOUR_ID,
@@ -19,7 +21,7 @@ import {
   visibleItems,
   type NavItem,
 } from "@/lib/navigation";
-import type { Tenant } from "@/lib/types";
+import type { ModuleAlert, NavigationSummary, OrganizationSummary, Tenant } from "@/lib/types";
 import { NotificationBell } from "./NotificationBell";
 import { HelpCenterModal } from "./HelpCenterModal";
 
@@ -78,10 +80,12 @@ function normalize(text: string): string {
 }
 
 /**
- * Busca rápida de módulos — digite parte do nome ("glosa", "lotes") e
- * Enter leva direto à tela. ⌘K / Ctrl+K foca o campo de qualquer lugar.
+ * "Pergunte ao Insighta" (canvas Redesign 2026) — o campo da barra faz
+ * duas coisas: pergunta em linguagem natural à IA (POST /analytics/ask,
+ * que só narra números já calculados) e, enquanto se digita, sugere os
+ * módulos com aquele nome para ir direto. ⌘K / Ctrl+K foca de qualquer lugar.
  */
-function QuickJump({ items }: { items: NavItem[] }) {
+function AskInsightaField({ items, canAsk }: { items: NavItem[]; canAsk: boolean }) {
   const navigate = useNavigate();
   const listId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -89,12 +93,19 @@ function QuickJump({ items }: { items: NavItem[] }) {
   const [query, setQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
+  const ask = useAskInsighta();
 
   const matches = useMemo(() => {
     const q = normalize(query.trim());
     if (!q) return [];
-    return items.filter((item) => normalize(`${item.label} ${item.description ?? ""}`).includes(q)).slice(0, 6);
+    return items.filter((item) => normalize(`${item.label} ${item.description ?? ""}`).includes(q)).slice(0, 5);
   }, [items, query]);
+
+  const trimmed = query.trim();
+  const options: ({ kind: "ask" } | { kind: "module"; item: NavItem })[] = [
+    ...(canAsk && trimmed.length >= 3 ? [{ kind: "ask" as const }] : []),
+    ...matches.map((item) => ({ kind: "module" as const, item })),
+  ];
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -110,82 +121,107 @@ function QuickJump({ items }: { items: NavItem[] }) {
   const refs = useMemo(() => [wrapperRef as RefObject<HTMLElement>], []);
   useDismiss(refs, isOpen, () => setIsOpen(false));
 
-  function go(item: NavItem) {
-    navigate(item.to);
+  function choose(option: (typeof options)[number]) {
+    if (option.kind === "ask") {
+      ask.mutate(trimmed);
+      return;
+    }
+    navigate(option.item.to);
     setQuery("");
     setIsOpen(false);
+    ask.reset();
     inputRef.current?.blur();
   }
 
-  const showList = isOpen && query.trim().length > 0;
+  const showPanel = isOpen && (trimmed.length > 0 || ask.isPending || !!ask.data || !!ask.error);
 
   return (
     <div ref={wrapperRef} className="relative ml-3 hidden max-w-[520px] flex-1 md:block">
       <label className="flex h-[38px] items-center gap-2.5 rounded-[11px] border border-border-hairline bg-canvas-raised/40 px-3 focus-within:border-accent/50">
-        <Search aria-hidden size={15} className="shrink-0 text-accent-muted" />
+        <Sparkles aria-hidden size={15} className="shrink-0 text-accent-muted" />
         <input
           ref={inputRef}
           type="text"
           role="combobox"
-          aria-label="Ir para um módulo"
-          aria-expanded={showList}
+          aria-label="Pergunte ao Insighta"
+          aria-expanded={showPanel}
           aria-controls={listId}
           aria-autocomplete="list"
-          placeholder="Ir para… (ex.: recurso de glosa, lotes, custos)"
+          placeholder={canAsk ? "Pergunte ao Insighta: “por que a glosa subiu este mês?”" : "Ir para um módulo (ex.: lista de espera, consultas)"}
           value={query}
           onChange={(e) => {
             setQuery(e.target.value);
             setActiveIndex(0);
             setIsOpen(true);
+            if (ask.data || ask.error) ask.reset();
           }}
           onFocus={() => setIsOpen(true)}
           onKeyDown={(e) => {
             if (e.key === "ArrowDown") {
               e.preventDefault();
-              setActiveIndex((i) => Math.min(i + 1, Math.max(matches.length - 1, 0)));
+              setActiveIndex((i) => Math.min(i + 1, Math.max(options.length - 1, 0)));
             } else if (e.key === "ArrowUp") {
               e.preventDefault();
               setActiveIndex((i) => Math.max(i - 1, 0));
-            } else if (e.key === "Enter" && matches[activeIndex]) {
+            } else if (e.key === "Enter" && options[activeIndex]) {
               e.preventDefault();
-              go(matches[activeIndex]);
+              choose(options[activeIndex]);
             }
           }}
           className="min-w-0 flex-1 bg-transparent text-[13px] text-ink outline-none placeholder:text-ink-faint"
         />
         <kbd className="shrink-0 rounded-md border border-border-hairline px-1.5 py-0.5 font-sans text-[11px] text-ink-faint">⌘K</kbd>
       </label>
-      {showList && (
-        <ul
-          id={listId}
-          role="listbox"
-          aria-label="Módulos encontrados"
-          className="absolute inset-x-0 top-full z-40 mt-2 overflow-hidden rounded-2xl border border-border-hairline bg-canvas-overlay p-1.5 shadow-elevated-lg backdrop-blur-2xl"
-        >
-          {matches.length === 0 ? (
-            <li className="px-3 py-3 text-[13px] text-ink-faint">Nenhum módulo com esse nome.</li>
-          ) : (
-            matches.map((item, index) => (
+      {showPanel && (
+        <div className="absolute inset-x-0 top-full z-40 mt-2 overflow-hidden rounded-2xl border border-border-hairline bg-canvas-overlay p-1.5 shadow-elevated-lg">
+          {(ask.isPending || ask.data || ask.error) && (
+            <div role="status" aria-live="polite" className="flex gap-3 border-b border-border-hairline p-3">
+              <span aria-hidden className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-brand/20">
+                <Sparkles size={15} className="text-accent-muted" />
+              </span>
+              <div className="flex min-w-0 flex-col gap-1.5">
+                {ask.isPending && <p className="text-sm text-ink-muted">Consultando os números da clínica…</p>}
+                {ask.data && (
+                  <>
+                    <p className="text-sm leading-relaxed text-ink">{ask.data.answer}</p>
+                    <p className="text-xs text-ink-faint">{ask.data.sources}</p>
+                  </>
+                )}
+                {ask.error && <p className="text-sm text-denied">{getApiErrorMessage(ask.error)}</p>}
+              </div>
+            </div>
+          )}
+          <ul id={listId} role="listbox" aria-label="Sugestões">
+            {options.map((option, index) => (
               <li
-                key={item.to}
+                key={option.kind === "ask" ? "ask" : option.item.to}
                 role="option"
                 aria-selected={index === activeIndex}
                 onMouseDown={(e) => {
                   e.preventDefault();
-                  go(item);
+                  choose(option);
                 }}
                 onMouseEnter={() => setActiveIndex(index)}
-                className={cn(
-                  "flex cursor-pointer flex-col gap-0.5 rounded-[10px] px-3 py-2.5",
-                  index === activeIndex && "bg-canvas-raised/70"
-                )}
+                className={cn("flex cursor-pointer flex-col gap-0.5 rounded-[10px] px-3 py-2.5", index === activeIndex && "bg-canvas-raised/70")}
               >
-                <span className="text-[13px] font-medium text-ink">{item.label}</span>
-                {item.description && <span className="text-xs text-ink-muted">{item.description}</span>}
+                {option.kind === "ask" ? (
+                  <span className="flex items-center gap-2 text-[13px] font-medium text-ink">
+                    <Sparkles aria-hidden size={13} className="text-accent-muted" />
+                    Perguntar ao Insighta: “{trimmed}”
+                  </span>
+                ) : (
+                  <>
+                    <span className="text-[13px] font-medium text-ink">Ir para {option.item.label}</span>
+                    {option.item.description && <span className="text-xs text-ink-muted">{option.item.description}</span>}
+                  </>
+                )}
               </li>
-            ))
-          )}
-        </ul>
+            ))}
+            {options.length === 0 && !ask.data && !ask.isPending && (
+              <li className="px-3 py-3 text-[13px] text-ink-faint">Digite pelo menos 3 letras.</li>
+            )}
+          </ul>
+        </div>
       )}
     </div>
   );
@@ -275,7 +311,7 @@ function AccountMenu({ onOpenHelp }: { onOpenHelp: () => void }) {
             <button type="button" onClick={toggle} className={itemClass}>
               {isDark ? <Moon aria-hidden size={15} className="text-ink-muted" /> : <Sun aria-hidden size={15} className="text-ink-muted" />}
               {isDark ? "Tema escuro" : "Tema claro"}
-              <span className="ml-auto text-[11px] text-ink-faint">{isDark ? "Mudar para claro" : "Mudar para escuro"}</span>
+              <span className="ml-auto text-[11px] text-ink-faint">Ativo</span>
             </button>
             <button
               type="button"
@@ -299,15 +335,101 @@ function AccountMenu({ onOpenHelp }: { onOpenHelp: () => void }) {
   );
 }
 
+const ALERT_TONE: Record<ModuleAlert["tone"], string> = {
+  critical: "text-denied",
+  warning: "text-pending",
+  positive: "text-revenue",
+  neutral: "text-ink-muted",
+};
+
+function relativeTime(iso: string): string {
+  const minutes = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+  if (minutes < 1) return "agora";
+  if (minutes < 60) return `há ${minutes} min`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `há ${hours}h`;
+  return `há ${Math.round(hours / 24)}d`;
+}
+
+/** Seletor da clínica (canvas: nome da clínica + chevron). Mostra a
+ * clínica atual e, quando ela faz parte de uma rede, as outras unidades
+ * com atalho para o Consolidado. */
+function ClinicMenu({ tradeName, canViewNetwork }: { tradeName: string; canViewNetwork: boolean }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const menuId = useId();
+  const location = useLocation();
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const refs = useMemo(() => [buttonRef as RefObject<HTMLElement>, panelRef as RefObject<HTMLElement>], []);
+  useDismiss(refs, isOpen, () => setIsOpen(false));
+  useEffect(() => setIsOpen(false), [location.pathname]);
+
+  const { data: org } = useQuery({
+    queryKey: ["analytics", "organization-summary"],
+    queryFn: () => apiClient.get<OrganizationSummary>("/api/v1/analytics/organization-summary"),
+    enabled: isOpen && canViewNetwork,
+    retry: false,
+  });
+
+  return (
+    <div className="relative hidden md:block">
+      <button
+        ref={buttonRef}
+        type="button"
+        aria-haspopup="true"
+        aria-expanded={isOpen}
+        aria-controls={menuId}
+        onClick={() => setIsOpen((open) => !open)}
+        className="flex h-9 max-w-[240px] items-center gap-2 rounded-[10px] border border-border-hairline px-3 text-[13px] text-ink transition-colors hover:bg-canvas-raised/60"
+      >
+        <Building2 aria-hidden size={15} className="shrink-0 text-ink-muted" />
+        <span className="truncate">{tradeName}</span>
+        <ChevronDown aria-hidden size={14} className={cn("shrink-0 text-ink-muted transition-transform", isOpen && "rotate-180")} />
+      </button>
+      {isOpen && (
+        <div
+          ref={panelRef}
+          id={menuId}
+          className="absolute left-0 top-full z-40 mt-2 flex w-[280px] flex-col gap-0.5 rounded-2xl border border-border-hairline bg-canvas-overlay p-2 shadow-elevated-lg"
+        >
+          <p className="px-2.5 pb-1 pt-1.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-ink-faint">
+            {org?.belongs_to_organization && org.organization_name ? org.organization_name : "Clínica"}
+          </p>
+          <span className="flex items-center gap-2.5 rounded-[9px] bg-brand/15 px-2.5 py-2 text-[13px] text-ink">
+            <Check aria-hidden size={14} className="text-accent-muted" />
+            <span className="truncate">{tradeName}</span>
+          </span>
+          {org?.belongs_to_organization &&
+            org.units
+              .filter((unit) => unit.trade_name !== tradeName)
+              .map((unit) => (
+                <span key={unit.tenant_id} className="flex items-center gap-2.5 px-2.5 py-2 pl-[34px] text-[13px] text-ink-muted">
+                  <span className="truncate">{unit.trade_name}</span>
+                </span>
+              ))}
+          {canViewNetwork && (
+            <NavLink to="/consolidado" className="mt-1 rounded-[9px] px-2.5 py-2 text-[13px] font-medium text-accent-muted hover:bg-canvas-raised/70">
+              {org?.belongs_to_organization ? "Ver consolidado da rede →" : "Adicionar unidade à rede →"}
+            </NavLink>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ModulesPanel({
   id,
   items,
+  alerts,
   panelRef,
 }: {
   id: string;
   items: NavItem[];
+  alerts: ModuleAlert[];
   panelRef: RefObject<HTMLDivElement>;
 }) {
+  const alertByRoute = new Map(alerts.map((alert) => [alert.route, alert]));
   const groups = MODULE_GROUPS.map((group) => ({ ...group, items: items.filter((item) => item.group === group.id) })).filter(
     (group) => group.items.length > 0
   );
@@ -322,7 +444,7 @@ function ModulesPanel({
       transition={{ duration: 0.14 }}
       className="absolute inset-x-3 top-full z-40 mt-2 grid max-h-[70vh] grid-cols-1 gap-6 overflow-y-auto rounded-[18px] border border-border-hairline bg-canvas-overlay p-6 shadow-elevated-lg backdrop-blur-2xl sm:grid-cols-2 lg:left-8 lg:right-auto lg:w-[min(1060px,calc(100vw-4rem))] lg:grid-cols-4"
     >
-      {groups.map((group) => (
+      {groups.map((group, index) => (
         <nav key={group.id} aria-label={group.label} className="flex flex-col gap-1">
           <p className="px-2.5 pb-1.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-ink-faint">{group.label}</p>
           {group.items.map((item) => (
@@ -334,9 +456,21 @@ function ModulesPanel({
               }
             >
               <span className="text-[13px] font-medium text-ink">{item.label}</span>
-              {item.description && <span className="text-xs leading-snug text-ink-muted">{item.description}</span>}
+              {alertByRoute.get(item.to) ? (
+                <span className={cn("text-xs leading-snug", ALERT_TONE[alertByRoute.get(item.to)!.tone])}>{alertByRoute.get(item.to)!.text}</span>
+              ) : (
+                item.description && <span className="text-xs leading-snug text-ink-muted">{item.description}</span>
+              )}
             </NavLink>
           ))}
+          {index === groups.length - 1 && (
+            <div className="mt-auto flex flex-col gap-1.5 rounded-xl border border-accent/25 bg-brand/[0.12] p-3.5">
+              <span className="text-xs font-semibold text-accent-muted">Dica</span>
+              <span className="text-xs leading-snug text-ink-soft">
+                Cada módulo mostra aqui o alerta mais urgente dele — você sabe onde entrar antes de abrir.
+              </span>
+            </div>
+          )}
         </nav>
       ))}
     </motion.div>
@@ -358,6 +492,14 @@ export function TopBar() {
     []
   );
   useDismiss(modulesRefs, isModulesOpen, () => setIsModulesOpen(false));
+
+  const canViewFinance = !!user && ["owner", "admin", "financeiro", "auditor"].includes(user.role);
+  const { data: navSummary } = useQuery({
+    queryKey: ["analytics", "navigation-summary"],
+    queryFn: () => apiClient.get<NavigationSummary>("/api/v1/analytics/navigation-summary"),
+    refetchInterval: 5 * 60 * 1000,
+    retry: false,
+  });
 
   // Mesma queryKey ["tenant"] de TenantPage.tsx — cache compartilhado.
   const { data: tenant } = useQuery({
@@ -400,14 +542,11 @@ export function TopBar() {
         {tenant?.trade_name && (
           <>
             <span aria-hidden className="hidden h-[22px] w-px bg-border-default md:block" />
-            <span className="hidden h-9 max-w-[220px] items-center gap-2 rounded-[10px] border border-border-hairline px-3 text-[13px] text-ink md:flex">
-              <Building2 aria-hidden size={15} className="shrink-0 text-ink-muted" />
-              <span className="truncate">{tenant.trade_name}</span>
-            </span>
+            <ClinicMenu tradeName={tenant.trade_name} canViewNetwork={canViewFinance} />
           </>
         )}
 
-        <QuickJump items={jumpItems} />
+        <AskInsightaField items={jumpItems} canAsk={canViewFinance} />
 
         <div className="ml-auto flex shrink-0 items-center gap-2.5">
           <NotificationBell />
@@ -417,7 +556,7 @@ export function TopBar() {
 
       {/* Linha 2 — navegação principal + Módulos */}
       <div className="relative border-t border-border-hairline">
-        <nav aria-label="Navegação principal" className="flex h-14 items-center gap-1 overflow-x-auto px-3 sm:px-7">
+        <nav aria-label="Navegação principal" className="relative flex h-14 items-center gap-1 overflow-x-auto px-3 sm:px-7">
           {primaryItems.map((item) => {
             const Icon = item.icon!;
             return (
@@ -439,6 +578,12 @@ export function TopBar() {
                   <>
                     <Icon aria-hidden size={15} className={isActive ? "text-accent-muted" : undefined} />
                     {item.label}
+                    {item.to === "/meus-insights" && !!navSummary?.my_open_insights && (
+                      <span className="rounded-md bg-brand px-1.5 py-px text-[10px] font-semibold text-white">
+                        {navSummary.my_open_insights}
+                        <span className="sr-only"> em aberto</span>
+                      </span>
+                    )}
                   </>
                 )}
               </NavLink>
@@ -479,12 +624,18 @@ export function TopBar() {
 
           <span className="ml-auto hidden shrink-0 items-center gap-2 pl-4 text-xs text-ink-faint lg:flex">
             <span aria-hidden className={cn("h-[7px] w-[7px] rounded-full", STATUS_CONFIG[status].dot)} />
-            {STATUS_CONFIG[status].label}
+            {status === "degraded" || !navSummary?.last_import_at
+              ? STATUS_CONFIG[status].label
+              : `Dados atualizados ${relativeTime(navSummary.last_import_at)}${
+                  navSummary.last_import_source ? ` · última importação de ${navSummary.last_import_source}` : ""
+                }`}
           </span>
         </nav>
 
         <AnimatePresence>
-          {isModulesOpen && <ModulesPanel id={modulesId} items={moduleItems} panelRef={modulesPanelRef} />}
+          {isModulesOpen && (
+            <ModulesPanel id={modulesId} items={moduleItems} alerts={navSummary?.module_alerts ?? []} panelRef={modulesPanelRef} />
+          )}
         </AnimatePresence>
       </div>
 

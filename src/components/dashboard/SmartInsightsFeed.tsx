@@ -58,6 +58,10 @@ export const SEVERITY_CONFIG: Record<
   comparativo: { label: "Comparativo", icon: Users, text: "text-tier1", border: "border-tier1/25", bg: "bg-tier1-bg", dot: "bg-tier1", glow: "comparativo", badgeTone: "comparativo" },
 };
 
+function formatCurrencyWhole(value: number): string {
+  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(value);
+}
+
 export function formatCurrency(value: number): string {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
 }
@@ -67,13 +71,21 @@ export function formatCurrency(value: number): string {
  * botões de atribuir/resolver — cada card resolve o `actioned`/`queueItem`
  * do SEU insight sozinho, então só passamos a fatia compartilhada
  * (estado + mutation), não o item já resolvido. */
-type InsightWorkflowSlice = Pick<
+export type InsightWorkflowSlice = Pick<
   ReturnType<typeof useInsightWorkflow>,
   "canManage" | "actionedKeys" | "resolveMutation" | "setAssigningItem"
 >;
 
 // Fundo do card manchete — degradê diagonal na cor da severidade, igual
 // ao "O que atacar primeiro" do canvas de design (Redesign 2026).
+const CATEGORY_LABEL_SHORT: Partial<Record<string, string>> = {
+  faturamento: "Convênios",
+  agenda: "Agenda",
+  estoque: "Estoque",
+  prontuario: "Prontuário",
+  estrategia: "Estratégia",
+};
+
 const HERO_TINT: Record<InsightSeverity, string> = {
   critical: "bg-[linear-gradient(160deg,hsl(var(--denied)/0.12),hsl(var(--denied)/0.02)_60%)]",
   warning: "bg-[linear-gradient(160deg,hsl(var(--pending)/0.11),hsl(var(--pending)/0.02)_60%)]",
@@ -112,11 +124,14 @@ export function InsightActionButton({
   onNavigateTab,
   onFocusAgenda,
   toneClass,
+  primary = false,
 }: {
   insight: SmartInsight;
   onNavigateTab?: (tabId: string) => void;
   onFocusAgenda?: (focus: AgendaFocus) => void;
   toneClass: string;
+  /** Manchete do canvas Redesign 2026: botão cheio (violeta), não o link de apoio. */
+  primary?: boolean;
 }) {
   const navigate = useNavigate();
   if (!insight.action_label || !insight.action_href) return null;
@@ -147,18 +162,18 @@ export function InsightActionButton({
   return (
     <Button
       type="button"
-      variant="secondary"
-      size="xs"
+      variant={primary ? "primary" : "secondary"}
+      size={primary ? "md" : "xs"}
       onClick={handleClick}
-      className={cn("mt-3 inline-flex items-center gap-1", toneClass)}
+      className={cn("inline-flex items-center gap-1.5", !primary && "mt-3", !primary && toneClass)}
     >
       {insight.action_label}
-      <ArrowRight aria-hidden size={11} />
+      <ArrowRight aria-hidden size={primary ? 14 : 11} />
     </Button>
   );
 }
 
-function HeroInsight({
+export function HeroInsight({
   insight,
   onNavigateTab,
   onFocusAgenda,
@@ -182,10 +197,13 @@ function HeroInsight({
           <ActionedBadge actioned={actioned} />
           <span className="ml-auto flex items-center gap-1.5 text-xs text-ink-faint">
             <Icon aria-hidden size={13} className={cfg.text} />
-            O que atacar primeiro
+            {CATEGORY_LABEL_SHORT[insight.category] ?? "Destaque"}
+            {insight.detected_days_ago != null && insight.detected_days_ago >= 1
+              ? ` · detectado há ${insight.detected_days_ago} ${insight.detected_days_ago === 1 ? "dia" : "dias"}`
+              : " · detectado hoje"}
           </span>
         </div>
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,1fr)_220px] md:gap-8">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,1fr)_minmax(220px,auto)] md:gap-8">
           <div className="flex flex-col gap-3">
             <h2 className="font-serif text-[26px] font-medium leading-tight text-ink">{insight.title}</h2>
             <p className="max-w-3xl text-[15px] leading-relaxed text-ink-soft">{insight.message}</p>
@@ -194,13 +212,29 @@ function HeroInsight({
             <div className={cn("flex flex-col gap-1.5 md:border-l md:pl-6", cfg.border)}>
               <span className="text-[11px] font-medium uppercase tracking-[0.06em] text-ink-faint">Impacto estimado</span>
               <div className={cn("tabular text-[34px] font-semibold tracking-[-0.02em]", cfg.text)}>
-                <AnimatedNumber value={insight.financial_impact} format={formatCurrency} durationSeconds={1.2} />
+                <AnimatedNumber value={insight.financial_impact} format={formatCurrencyWhole} durationSeconds={1.2} />
               </div>
             </div>
           )}
         </div>
+        {(insight.why_now || insight.what_to_do || insight.if_ignored) && (
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+            {[
+              ["Por que agora", insight.why_now],
+              ["O que fazer", insight.what_to_do],
+              ["Se não fizer nada", insight.if_ignored],
+            ].map(([label, text]) =>
+              text ? (
+                <div key={label} className="flex flex-col gap-1.5 rounded-[14px] border border-border-hairline bg-canvas/50 p-3.5">
+                  <span className="text-xs font-semibold text-ink">{label}</span>
+                  <span className="text-[13px] leading-normal text-ink-muted">{text}</span>
+                </div>
+              ) : null
+            )}
+          </div>
+        )}
         <div className="flex flex-wrap items-center gap-2.5">
-          <InsightActionButton insight={insight} onNavigateTab={onNavigateTab} onFocusAgenda={onFocusAgenda} toneClass={cfg.text} />
+          <InsightActionButton insight={insight} onNavigateTab={onNavigateTab} onFocusAgenda={onFocusAgenda} toneClass={cfg.text} primary />
           <InsightWorkflowButtons
             item={queueItem}
             canManage={workflow.canManage}
@@ -216,7 +250,7 @@ function HeroInsight({
   );
 }
 
-function SecondaryInsightCard({
+export function SecondaryInsightCard({
   insight,
   onNavigateTab,
   onFocusAgenda,

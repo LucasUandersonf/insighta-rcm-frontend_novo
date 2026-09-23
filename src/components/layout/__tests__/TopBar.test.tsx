@@ -10,7 +10,7 @@ import type { CurrentUser } from "@/lib/types";
 
 vi.mock("@/lib/api-client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api-client")>();
-  return { ...actual, apiClient: { ...actual.apiClient, get: vi.fn() } };
+  return { ...actual, apiClient: { ...actual.apiClient, get: vi.fn(), post: vi.fn() } };
 });
 
 vi.mock("@/context/AuthContext", () => ({ useAuth: vi.fn() }));
@@ -117,13 +117,51 @@ describe("TopBar", () => {
     expect(screen.getByRole("button", { name: /Módulos.*Convênios e contratos/ })).toBeInTheDocument();
   });
 
-  it("busca rápida sugere o módulo pelo nome digitado", async () => {
+  it("'Pergunte ao Insighta' oferece a pergunta à IA e os módulos com aquele nome", async () => {
     mockUser("owner");
+    vi.mocked(apiClient.post).mockResolvedValue({ question: "glosa", answer: "A glosa subiu por causa da Unimed.", sources: "Baseado em: os insights ativos." } as never);
     renderWithProviders(<TopBar />);
     const user = userEvent.setup();
 
-    await user.type(screen.getByRole("combobox", { name: "Ir para um módulo" }), "glosa");
-    expect(screen.getByRole("option", { name: /Recurso de glosa/ })).toBeInTheDocument();
+    await user.type(screen.getByRole("combobox", { name: "Pergunte ao Insighta" }), "glosa");
+    expect(screen.getByRole("option", { name: /Ir para Recurso de glosa/ })).toBeInTheDocument();
+    await user.click(screen.getByRole("option", { name: /Perguntar ao Insighta: “glosa”/ }));
+    expect(apiClient.post).toHaveBeenCalledWith("/api/v1/analytics/ask", { question: "glosa" });
+    expect(await screen.findByText("A glosa subiu por causa da Unimed.")).toBeInTheDocument();
+  });
+
+  it("atendimento não vê a pergunta à IA (sem acesso aos números), só o atalho de módulos", async () => {
+    mockUser("atendimento");
+    renderWithProviders(<TopBar />);
+    const user = userEvent.setup();
+    await user.type(screen.getByRole("combobox", { name: "Pergunte ao Insighta" }), "espera");
+    expect(screen.getByRole("option", { name: /Ir para Lista de espera/ })).toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: /Perguntar ao Insighta/ })).not.toBeInTheDocument();
+  });
+
+  it("mostra alertas reais dos módulos, o contador de 'Meus insights' e a última importação", async () => {
+    mockUser("owner");
+    vi.mocked(apiClient.get).mockImplementation((url: string) => {
+      if (url.includes("navigation-summary"))
+        return Promise.resolve({
+          module_alerts: [{ route: "/denial-appeals", text: "4 prazos vencem nos próximos 7 dias", tone: "critical" }],
+          my_open_insights: 3,
+          last_import_at: new Date(Date.now() - 12 * 60000).toISOString(),
+          last_import_source: "agenda_setembro.xlsx",
+          urgent: null,
+        } as never);
+      if (url.includes("/tenant")) return Promise.resolve({ trade_name: "Clínica Vila Mariana" } as never);
+      if (url.includes("users/me")) return Promise.resolve({ id: "u1", full_name: "Marina Souza", email: "m@c.com" } as never);
+      return Promise.resolve({ items: [], unread_count: 0 } as never);
+    });
+    renderWithProviders(<TopBar />);
+
+    expect(await screen.findByText(/Dados atualizados há 12 min · última importação de agenda_setembro.xlsx/)).toBeInTheDocument();
+    expect(await screen.findByText("3", { selector: "a[href='/meus-insights'] span" })).toBeInTheDocument();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: /Módulos/ }));
+    expect(screen.getByText("4 prazos vencem nos próximos 7 dias")).toBeInTheDocument();
+    expect(screen.getByText("Dica")).toBeInTheDocument();
   });
 
   it("não tem violações de acessibilidade com o menu do avatar aberto", async () => {

@@ -65,7 +65,7 @@ describe("ContractsPage — plan_type (Onda 3 do Plano de Ação)", () => {
       "/api/v1/contracts": EMPTY_CONTRACTS,
     });
 
-    renderWithProviders(<ContractsPage />);
+    renderWithProviders(<ContractsPage />, { route: "/contracts?tab=contratos" });
 
     await waitFor(() => expect(screen.getByText("Convênio Particular")).toBeInTheDocument());
     expect(screen.getByText("Particular")).toBeInTheDocument();
@@ -81,7 +81,7 @@ describe("ContractsPage — plan_type (Onda 3 do Plano de Ação)", () => {
     });
     vi.mocked(apiClient.post).mockResolvedValue(makePlan({ plan_type: "particular" }));
 
-    renderWithProviders(<ContractsPage />);
+    renderWithProviders(<ContractsPage />, { route: "/contracts?tab=contratos" });
     await waitFor(() => expect(screen.getByText("Nenhum plano cadastrado.")).toBeInTheDocument());
 
     fireEvent.click(screen.getByRole("button", { name: /novo plano/i }));
@@ -114,7 +114,7 @@ describe("ContractsPage — plan_type (Onda 3 do Plano de Ação)", () => {
       "/api/v1/contracts": EMPTY_CONTRACTS,
     });
 
-    const { container } = renderWithProviders(<ContractsPage />);
+    const { container } = renderWithProviders(<ContractsPage />, { route: "/contracts?tab=contratos" });
     await waitFor(() => expect(screen.getByText("Convênio Particular")).toBeInTheDocument());
 
     await expectNoA11yViolations(container);

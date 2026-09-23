@@ -1,12 +1,11 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { UserPlus } from "lucide-react";
+import { Check, UserPlus } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { SelectField, TextField } from "@/components/ui/FormField";
 import { apiClient } from "@/lib/api-client";
-import { cn } from "@/lib/cn";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
@@ -168,7 +167,6 @@ export function InsightWorkflowButtons({
   onResolve,
   onAssign,
   resolvePending,
-  toneClass,
 }: {
   item: PriorityQueueItem;
   canManage: boolean;
@@ -176,17 +174,19 @@ export function InsightWorkflowButtons({
   onResolve: (item: PriorityQueueItem) => void;
   onAssign: (item: PriorityQueueItem) => void;
   resolvePending: boolean;
+  /** Mantido por compatibilidade — os botões seguem o estilo neutro do canvas Redesign 2026. */
   toneClass?: string;
 }) {
   if (!canManage || actioned) return null;
   return (
     <>
-      <Button type="button" variant="ghost" size="xs" className={toneClass} onClick={() => onResolve(item)} disabled={resolvePending}>
-        Marcar como resolvido
-      </Button>
-      <Button type="button" variant="ghost" size="xs" className={cn("flex items-center gap-1", toneClass)} onClick={() => onAssign(item)}>
-        <UserPlus size={12} />
+      <Button type="button" variant="secondary" size="sm" className="flex items-center gap-1.5" onClick={() => onAssign(item)}>
+        <UserPlus aria-hidden size={13} className="text-ink-muted" />
         Atribuir
+      </Button>
+      <Button type="button" variant="secondary" size="sm" className="flex items-center gap-1.5 bg-transparent" onClick={() => onResolve(item)} disabled={resolvePending}>
+        <Check aria-hidden size={13} className="text-revenue" />
+        Marcar como resolvido
       </Button>
     </>
   );
