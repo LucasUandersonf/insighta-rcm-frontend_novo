@@ -2105,6 +2105,8 @@ export interface ExtractionPreview {
   items: ExtractedItem[];
   warnings: string[];
   pages_total?: number | null;
+  /** Leitura em camadas: quantas páginas precisaram de IA. */
+  pages_sent_to_ai?: number | null;
   /** Páginas que a IA não leu por inteiro — conferir à mão. */
   incomplete_pages?: number[];
 }
