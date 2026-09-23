@@ -10,7 +10,7 @@ import { UserAvatar } from "@/components/ui/UserAvatar";
 import { useCurrentUserProfile } from "@/lib/useCurrentUserProfile";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
-import { useAskInsighta } from "@/lib/useAskInsighta";
+import { askQuotaNote, useAiUsage, useAskInsighta } from "@/lib/useAskInsighta";
 import { cn } from "@/lib/cn";
 import { isManagerProfile, useCoordinatorSummary, useTeamOverview, useTeamProfile } from "@/lib/team";
 import {
@@ -96,6 +96,8 @@ function AskInsightaField({ items, canAsk }: { items: NavItem[]; canAsk: boolean
   const [isOpen, setIsOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const ask = useAskInsighta();
+  const { data: aiUsage } = useAiUsage(Boolean(ask.data));
+  const quotaNote = askQuotaNote(aiUsage);
 
   const matches = useMemo(() => {
     const q = normalize(query.trim());
@@ -187,6 +189,7 @@ function AskInsightaField({ items, canAsk }: { items: NavItem[]; canAsk: boolean
                   <>
                     <p className="text-sm leading-relaxed text-ink">{ask.data.answer}</p>
                     <p className="text-xs text-ink-faint">{ask.data.sources}</p>
+                    {quotaNote && <p className="text-2xs text-ink-faint">{quotaNote}</p>}
                   </>
                 )}
                 {ask.error && <p className="text-sm text-denied">{getApiErrorMessage(ask.error)}</p>}

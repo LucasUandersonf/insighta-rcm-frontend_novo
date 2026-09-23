@@ -10,7 +10,7 @@ import { AssignModal, insightItemKey, toQueueItem, useInsightWorkflow } from "@/
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { describeTrend } from "@/lib/narrative";
-import { useAskInsighta } from "@/lib/useAskInsighta";
+import { askQuotaNote, useAiUsage, useAskInsighta } from "@/lib/useAskInsighta";
 import { firstNameFrom, useCurrentUserProfile } from "@/lib/useCurrentUserProfile";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
@@ -359,6 +359,8 @@ function CompareSelect({ value, onChange }: { value: CompareId; onChange: (id: C
 function AskBox() {
   const [question, setQuestion] = useState("");
   const ask = useAskInsighta();
+  const { data: aiUsage } = useAiUsage(Boolean(ask.data));
+  const quotaNote = askQuotaNote(aiUsage);
   function submit(e: FormEvent) {
     e.preventDefault();
     if (question.trim().length >= 3) ask.mutate(question.trim());
@@ -394,6 +396,7 @@ function AskBox() {
             <>
               <p className="text-ink">{ask.data.answer}</p>
               <p className="text-xs text-ink-faint">{ask.data.sources}</p>
+              {quotaNote && <p className="text-2xs text-ink-faint">{quotaNote}</p>}
             </>
           )}
           {ask.error && <p className="text-denied">{getApiErrorMessage(ask.error)}</p>}

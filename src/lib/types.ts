@@ -2468,3 +2468,18 @@ export interface DenialModelStatus {
   min_samples: number;
   min_class_samples: number;
 }
+
+/** GET /analytics/ai-usage — Bloco 3: cota e custo de IA do mês. */
+export interface AiQuotaItem {
+  kind: "ask" | "appeal_draft" | "contract_extraction";
+  label: string;
+  used: number;
+  limit: number;
+}
+
+export interface AiUsageSummary {
+  month_start: string;
+  renews_on: string;
+  cost_usd: number;
+  items: AiQuotaItem[];
+}
