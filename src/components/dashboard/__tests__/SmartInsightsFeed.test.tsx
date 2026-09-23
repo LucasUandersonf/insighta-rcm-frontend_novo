@@ -332,7 +332,7 @@ describe("SmartInsightsFeed", () => {
       expect(await screen.findByText("Marcado como resolvido")).toBeInTheDocument();
     });
 
-    it("owner atribui um card secundário (SecondaryInsightCard) a um colega", async () => {
+    it("owner atribui um card secundário (SecondaryInsightCard) ao coordenador do setor", async () => {
       mockUser("owner");
       const data: SmartInsights = {
         period_start: "2026-01-01",
@@ -344,10 +344,14 @@ describe("SmartInsightsFeed", () => {
       };
       vi.mocked(apiClient.get).mockImplementation((path: string) => {
         if (path.includes("smart-insights")) return Promise.resolve(data as never);
-        if (path.includes("/users")) return Promise.resolve([{ id: "user-2", full_name: "Faturista Ana", role: "financeiro" }] as never);
+        if (path.includes("/team/sectors"))
+          return Promise.resolve([
+            { sector: "agendamento", label: "Agendamento", coordinator: { id: "user-2", full_name: "Carla Mendes" }, is_mine: false },
+            { sector: "faturamento", label: "Faturamento", coordinator: null, is_mine: false },
+          ] as never);
         return Promise.reject(new Error(`sem mock para ${path}`));
       });
-      vi.mocked(apiClient.post).mockResolvedValue({ id: "outcome-2", status: "pendente" });
+      vi.mocked(apiClient.post).mockResolvedValue({ id: "demand-2", status: "pendente", coordinator: { id: "user-2", full_name: "Carla Mendes" } });
       const user = userEvent.setup();
 
       renderWithProviders(<SmartInsightsFeed dateFrom="2026-01-01" dateTo="2026-01-07" />);
@@ -356,16 +360,15 @@ describe("SmartInsightsFeed", () => {
       const secondaryCard = screen.getByText("Quarta-feira com menos consultas").closest("[data-insight-card]") as HTMLElement;
       await user.click(within(secondaryCard).getByRole("button", { name: /Atribuir/ }));
 
-      const modalTitle = await screen.findByText("Atribuir insight");
+      const modalTitle = await screen.findByText("Atribuir ao coordenador");
       const dialog = modalTitle.closest('[role="dialog"]') as HTMLElement;
-      await waitFor(() => expect(within(dialog).getByText(/Faturista Ana/)).toBeInTheDocument());
-      await user.selectOptions(within(dialog).getByLabelText(/Atribuir para/), "user-2");
-      await user.click(within(dialog).getByRole("button", { name: "Atribuir" }));
+      await waitFor(() => expect(within(dialog).getByText(/Coordenação: Carla Mendes/)).toBeInTheDocument());
+      await user.click(within(dialog).getByRole("button", { name: "Atribuir a Carla" }));
 
       await waitFor(() =>
         expect(apiClient.post).toHaveBeenCalledWith(
-          "/api/v1/insight-outcomes",
-          expect.objectContaining({ assigned_to: "user-2", title: "Quarta-feira com menos consultas" })
+          "/api/v1/team/demands",
+          expect.objectContaining({ sector: "agendamento", title: "Quarta-feira com menos consultas" })
         )
       );
       expect(within(secondaryCard).getByText("Atribuído")).toBeInTheDocument();

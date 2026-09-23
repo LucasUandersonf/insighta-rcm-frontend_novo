@@ -15,6 +15,8 @@ import { firstNameFrom, useCurrentUserProfile } from "@/lib/useCurrentUserProfil
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
 import { cn } from "@/lib/cn";
+import { useTeamOverview } from "@/lib/team";
+import { TeamUpdatesStrip } from "@/components/team/TeamUpdatesStrip";
 import type {
   BriefingEmailResult,
   ExecutiveNarrative,
@@ -390,6 +392,9 @@ export function HomePage() {
   const { showSuccess, showError } = useToast();
   const { data: profile } = useCurrentUserProfile();
   const workflow = useInsightWorkflow();
+  const isManager = !!user && ["owner", "admin", "auditor"].includes(user.role);
+  const canManageTeam = !!user && ["owner", "admin"].includes(user.role);
+  const { data: teamOverview } = useTeamOverview(isManager);
   const canViewAnalytics = !!user && _CAN_VIEW_ANALYTICS.includes(user.role);
   const canUpload = !!user && _CAN_UPLOAD_ROLES.includes(user.role);
   const [compare, setCompare] = useState<CompareId>("mes");
@@ -562,8 +567,9 @@ export function HomePage() {
 
   return (
     <div className="flex flex-col">
+      <div className="-mt-8 mb-2 flex flex-col">
       {urgentText && (
-        <div role="status" className="-mx-4 -mt-8 mb-2 flex flex-wrap items-center gap-3.5 border-b border-denied/20 bg-denied/[0.09] px-4 py-2.5 sm:-mx-8 sm:px-8">
+        <div role="status" className="-mx-4 flex flex-wrap items-center gap-3.5 border-b border-denied/20 bg-denied/[0.09] px-4 py-2.5 sm:-mx-8 sm:px-8">
           <span className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.12em] text-denied">
             <span aria-hidden className="h-[7px] w-[7px] rounded-full bg-denied" />
             Urgente
@@ -574,6 +580,11 @@ export function HomePage() {
           </Link>
         </div>
       )}
+      {/* Equipe (Redesign 2026): "quando a situação é resolvida, o gestor
+          recebe o aviso na tela de Home" — resolvida, devolvida,
+          confirmada pelos dados ou que voltou. */}
+      {isManager && <TeamUpdatesStrip updates={Array.isArray(teamOverview?.updates) ? teamOverview.updates : []} canAcknowledge={canManageTeam} max={3} />}
+      </div>
 
       {/* Cabeçalho executivo */}
       <header className="flex flex-col gap-6 border-b border-border-hairline pb-7 pt-4 lg:flex-row lg:items-end">

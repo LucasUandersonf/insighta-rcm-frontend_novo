@@ -1,18 +1,26 @@
 import {
   Building2,
   CalendarCheck,
-  ClipboardList,
   Gauge,
   Home,
+  Inbox,
+  ListOrdered,
   LayoutDashboard,
   Plug,
   ScrollText,
   Send,
   UserRound,
   Users,
+  UsersRound,
+  Receipt,
+  Layers,
+  FileWarning,
+  Handshake,
+  UploadCloud,
   type LucideIcon,
 } from "lucide-react";
 import type { CurrentUser } from "@/lib/types";
+import type { TeamSector } from "@/lib/team";
 
 /**
  * DECISÃO — Redesign 2026 ("sem sidebar"): a navegação deixou de ser uma
@@ -54,10 +62,13 @@ const ADMINS: UserRole[] = ["owner", "admin"];
 export const NAV_ITEMS: NavItem[] = [
   { to: "/", label: "Início", icon: Home, placement: "primary" },
   { to: "/decisao", label: "Sala de Comando", icon: Gauge, roles: LEADERSHIP, placement: "primary" },
+  // Equipe (Redesign 2026): o gestor acompanha o que atribuiu aos
+  // coordenadores. "Meus insights" saiu da barra — virou "Minhas
+  // demandas", a Home do coordenador (ver COORDINATOR_NAV abaixo).
+  { to: "/equipe", label: "Equipe", icon: UsersRound, roles: ["owner", "admin", "auditor"], placement: "primary" },
   { to: "/painel", label: "Painel", icon: LayoutDashboard, placement: "primary" },
   { to: "/appointments", label: "Consultas", icon: CalendarCheck, placement: "primary" },
   { to: "/pacientes", label: "Pacientes", icon: UserRound, placement: "primary" },
-  { to: "/meus-insights", label: "Meus insights", icon: ClipboardList, placement: "primary" },
 
   // Faturamento
   { to: "/faturamento", label: "Faturamento & guias", description: "Registrar pagamento e emitir guias TISS", roles: FINANCE_WRITE, placement: "modules", group: "faturamento" },
@@ -96,6 +107,42 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
   // leitura/compliance (mesmo critério de analytics.py).
   { to: "/admin/audit-log", label: "Logs de auditoria", icon: ScrollText, roles: ["owner", "admin", "auditor"], placement: "modules" },
 ];
+
+/**
+ * Equipe (Redesign 2026 — canvas "Coordenador"): o coordenador não vê a
+ * visão geral do gestor. A barra dele é "Minhas demandas" + as telas do
+ * PRÓPRIO setor, sem Sala de Comando, Painel nem o dropdown "Módulos".
+ * O RBAC por papel continua valendo por cima (roles de cada item).
+ */
+const MY_DEMANDS: NavItem = { to: "/", label: "Minhas demandas", icon: Inbox, placement: "primary" };
+
+const SECTOR_NAV: Record<TeamSector, NavItem[]> = {
+  agendamento: [
+    { to: "/appointments", label: "Consultas", icon: CalendarCheck, placement: "primary" },
+    { to: "/pacientes", label: "Pacientes", icon: UserRound, placement: "primary" },
+    { to: "/waitlist", label: "Lista de espera", icon: ListOrdered, placement: "primary" },
+  ],
+  faturamento: [
+    { to: "/faturamento", label: "Faturamento", icon: Receipt, roles: FINANCE_WRITE, placement: "primary" },
+    { to: "/lotes", label: "Lotes", icon: Layers, roles: LEADERSHIP, placement: "primary" },
+    { to: "/denial-appeals", label: "Recursos de glosa", icon: FileWarning, roles: LEADERSHIP, placement: "primary" },
+    { to: "/contracts", label: "Convênios", icon: Handshake, roles: LEADERSHIP, placement: "primary" },
+    { to: "/upload", label: "Upload", icon: UploadCloud, roles: FINANCE_WRITE, placement: "primary" },
+  ],
+  estoque: [{ to: "/upload", label: "Upload", icon: UploadCloud, roles: FINANCE_WRITE, placement: "primary" }],
+  assistencial: [{ to: "/pacientes", label: "Pacientes", icon: UserRound, placement: "primary" }],
+  gestao: [],
+};
+
+export function coordinatorNavItems(sectors: TeamSector[], role: UserRole | undefined): NavItem[] {
+  const seen = new Set<string>();
+  const items = [MY_DEMANDS, ...sectors.flatMap((s) => SECTOR_NAV[s])].filter((item) => {
+    if (seen.has(item.to)) return false;
+    seen.add(item.to);
+    return true;
+  });
+  return visibleItems(items, role);
+}
 
 export function isVisibleFor(role: UserRole | undefined, roles: UserRole[] | undefined): boolean {
   return !roles || (!!role && roles.includes(role));

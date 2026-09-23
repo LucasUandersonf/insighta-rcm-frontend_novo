@@ -45,6 +45,20 @@ uma rota real do backend, e um dado ausente some da tela em vez de virar
 | **Convênios**: veredictos, desempenho com leitura por linha, abas Glosas / Prazos / Contratos e tabelas | `ContractsPage.tsx` + `PayerOverviewPanel.tsx` + `payer-overview` | ✅ |
 | **Simulação de decisão** + **Gerar argumento de renegociação** | cálculo na tela + `POST /analytics/payer-negotiation-argument` (IA, com texto padrão quando a IA não está configurada) | ✅ |
 
+### Fase 2.5 — Equipe: o gestor atribui, o coordenador resolve ✅ entregue
+
+Canvas "Atribuir", "Equipe" e "Coordenador". Perfis: **gestor** (owner/admin), **gestor somente leitura** (auditor) e **coordenador** (um por setor: Agendamento, Faturamento, Estoque, Assistencial).
+
+| Campo do canvas | Implementação | Status |
+|---|---|---|
+| **Atribuir ao coordenador** (setor sugerido pela área do insight, setor sem coordenador desabilitado, prazo Hoje/Amanhã/Sexta/Escolher data, observação) | `AssignDemandModal` → `POST /team/demands` | ✅ |
+| Aviso na Home do gestor ("X resolveu… — confirmado pelos dados") + "Ok, visto" | `TeamUpdatesStrip` ← `GET /team/overview` / `POST /team/updates/ack` | ✅ |
+| **Equipe**: resumo em frases, **Metas resolvidas por coordenador**, demandas (Em andamento / Devolvidas / Resolvidas), Cobrar, Reatribuir, Dar mais prazo, Encerrar | `TeamPage.tsx` | ✅ |
+| **Home do coordenador**: Suas demandas (Começar → Marcar como resolvida "O que foi feito?" / Devolver com motivo), Seu placar do mês, Radar do setor, A agenda de hoje | `CoordinatorHomePage.tsx` ← `GET /team/my-summary` | ✅ |
+| Barra do coordenador só com o próprio setor (sem Sala de Comando, Painel, Módulos nem IA da clínica) | `coordinatorNavItems` + `ManagerProfileRoute` | ✅ |
+| Coordenadores por setor em Usuários e permissões | `SectorCoordinatorsPanel` → `PUT /team/sectors/{setor}` | ✅ |
+| "Confirmado pelos dados" | reaproveita a reavaliação de `insight_outcomes` (0 = sumiu, >0 = voltou) | ✅ |
+
 ### Fase 3 — Próximos passos 🔜
 
 - [ ] **Configurar produção**: `ANTHROPIC_API_KEY` (Pergunte ao Insighta / argumento com IA) e `SMTP_*` (envio real do briefing). Sem elas, a tela avisa e nada quebra.
@@ -52,4 +66,7 @@ uma rota real do backend, e um dado ausente some da tela em vez de virar
 - [ ] **Trocar de unidade** no seletor da clínica (hoje ele lista as unidades da rede e leva ao Consolidado; o login continua por clínica).
 - [ ] **Tempo estimado medido**: `estimated_minutes` é referência por área; passar a medir pelo tempo real entre atribuir e resolver.
 - [ ] **Histórico do "Pergunte ao Insighta"** (perguntas frequentes da clínica como sugestões).
+- [ ] **Equipe — notificação fora da tela**: e-mail/WhatsApp para o coordenador quando recebe ou é cobrado (hoje: Home + badge).
+- [ ] **Equipe — histórico da demanda** (linha do tempo de atualizações; hoje guarda só a última).
+- [ ] **Enxugar módulos e abas da Sala de Comando** (proposta enviada para aprovação — nada removido ainda).
 - [ ] Revisão de contraste com axe em navegador real (`e2e/`) nas telas novas.

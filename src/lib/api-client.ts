@@ -207,6 +207,7 @@ export const apiClient = {
   post: <T>(path: string, body?: unknown, options?: { skipAuth?: boolean }) =>
     request<T>(path, { method: "POST", body, skipAuth: options?.skipAuth }),
   patch: <T>(path: string, body?: unknown) => request<T>(path, { method: "PATCH", body }),
+  put: <T>(path: string, body?: unknown) => request<T>(path, { method: "PUT", body }),
   delete: <T>(path: string) => request<T>(path, { method: "DELETE" }),
   /**
    * GET que devolve um arquivo binário (hoje só o PDF do recurso de

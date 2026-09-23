@@ -31,6 +31,14 @@ beforeEach(() => {
     if (url.includes("/tenant")) return Promise.resolve({ trade_name: "Clínica Vila Mariana" } as never);
     if (url.includes("users/me")) return Promise.resolve({ id: "u1", full_name: "Marina Souza", email: "marina@clinica.com" } as never);
     if (url.includes("announcements")) return Promise.resolve({ items: [], unread_count: 0 } as never);
+    if (url.includes("/team/me"))
+      return Promise.resolve({
+        profile: "coordenador",
+        sectors: [{ sector: "agendamento", label: "Agendamento", coordinator: { id: "u1", full_name: "Carla Mendes" }, is_mine: true }],
+      } as never);
+    if (url.includes("/team/my-summary")) return Promise.resolve({ open_count: 2 } as never);
+    if (url.includes("/team/overview")) return Promise.resolve({ updates: [] } as never);
+    if (url.includes("navigation-summary")) return Promise.resolve({ module_alerts: [] } as never);
     return Promise.reject(new Error(`unexpected url in test: ${url}`));
   });
 });
@@ -49,20 +57,20 @@ async function openAccountMenu() {
  * papel, aparece para quem tem.
  */
 describe("TopBar", () => {
-  it("atendimento não vê Sala de Comando, módulos financeiros nem a administração", async () => {
+  it("coordenador (atendimento) vê só Minhas demandas e as telas do próprio setor", async () => {
     mockUser("atendimento");
     renderWithProviders(<TopBar />);
 
     const nav = screen.getByRole("navigation", { name: "Navegação principal" });
-    expect(within(nav).getByRole("link", { name: /Painel/ })).toBeInTheDocument();
+    expect(await within(nav).findByRole("link", { name: /Minhas demandas/ })).toBeInTheDocument();
+    expect(await within(nav).findByText("2", { selector: "a[href='/'] span" })).toBeInTheDocument();
     expect(within(nav).getByRole("link", { name: /Consultas/ })).toBeInTheDocument();
+    expect(within(nav).getByRole("link", { name: /Lista de espera/ })).toBeInTheDocument();
+    // Nada da visão geral do gestor.
     expect(within(nav).queryByRole("link", { name: /Sala de Comando/ })).not.toBeInTheDocument();
-
-    const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: /Módulos/ }));
-    expect(screen.getByRole("link", { name: /Lista de espera/ })).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: /Central de upload/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: /Recurso de glosa/ })).not.toBeInTheDocument();
+    expect(within(nav).queryByRole("link", { name: /Painel/ })).not.toBeInTheDocument();
+    expect(within(nav).queryByRole("link", { name: /Equipe/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Módulos/ })).not.toBeInTheDocument();
 
     await openAccountMenu();
     expect(screen.queryByText("Administração")).not.toBeInTheDocument();
@@ -130,16 +138,17 @@ describe("TopBar", () => {
     expect(await screen.findByText("A glosa subiu por causa da Unimed.")).toBeInTheDocument();
   });
 
-  it("atendimento não vê a pergunta à IA (sem acesso aos números), só o atalho de módulos", async () => {
+  it("coordenador não vê a pergunta à IA (visão geral), só o atalho para as telas do setor", async () => {
     mockUser("atendimento");
     renderWithProviders(<TopBar />);
+    await screen.findByRole("link", { name: /Minhas demandas/ });
     const user = userEvent.setup();
     await user.type(screen.getByRole("combobox", { name: "Pergunte ao Insighta" }), "espera");
     expect(screen.getByRole("option", { name: /Ir para Lista de espera/ })).toBeInTheDocument();
     expect(screen.queryByRole("option", { name: /Perguntar ao Insighta/ })).not.toBeInTheDocument();
   });
 
-  it("mostra alertas reais dos módulos, o contador de 'Meus insights' e a última importação", async () => {
+  it("mostra alertas reais dos módulos, os avisos novos da Equipe e a última importação", async () => {
     mockUser("owner");
     vi.mocked(apiClient.get).mockImplementation((url: string) => {
       if (url.includes("navigation-summary"))
@@ -152,12 +161,20 @@ describe("TopBar", () => {
         } as never);
       if (url.includes("/tenant")) return Promise.resolve({ trade_name: "Clínica Vila Mariana" } as never);
       if (url.includes("users/me")) return Promise.resolve({ id: "u1", full_name: "Marina Souza", email: "m@c.com" } as never);
+      if (url.includes("/team/overview"))
+        return Promise.resolve({
+          updates: [
+            { demand_id: "d1", kind: "resolvido", text: "Carla resolveu", at: new Date().toISOString() },
+            { demand_id: "d2", kind: "devolvido", text: "Rafael devolveu", at: new Date().toISOString() },
+            { demand_id: "d3", kind: "confirmado", text: "Juliana resolveu", at: new Date().toISOString() },
+          ],
+        } as never);
       return Promise.resolve({ items: [], unread_count: 0 } as never);
     });
     renderWithProviders(<TopBar />);
 
     expect(await screen.findByText(/Dados atualizados há 12 min · última importação de agenda_setembro.xlsx/)).toBeInTheDocument();
-    expect(await screen.findByText("3", { selector: "a[href='/meus-insights'] span" })).toBeInTheDocument();
+    expect(await screen.findByText("3", { selector: "a[href='/equipe'] span" })).toBeInTheDocument();
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: /Módulos/ }));
     expect(screen.getByText("4 prazos vencem nos próximos 7 dias")).toBeInTheDocument();

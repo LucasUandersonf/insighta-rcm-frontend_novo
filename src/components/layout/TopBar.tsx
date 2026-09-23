@@ -12,12 +12,14 @@ import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useAskInsighta } from "@/lib/useAskInsighta";
 import { cn } from "@/lib/cn";
+import { isManagerProfile, useCoordinatorSummary, useTeamOverview, useTeamProfile } from "@/lib/team";
 import {
   ACCOUNT_TOUR_ID,
   ADMIN_NAV_ITEMS,
   MODULES_TOUR_ID,
   MODULE_GROUPS,
   NAV_ITEMS,
+  coordinatorNavItems,
   visibleItems,
   type NavItem,
 } from "@/lib/navigation";
@@ -493,7 +495,14 @@ export function TopBar() {
   );
   useDismiss(modulesRefs, isModulesOpen, () => setIsModulesOpen(false));
 
+  const { profile, sectors } = useTeamProfile();
+  const isManager = isManagerProfile(profile);
+  const isCoordinatorView = !!profile && !isManager;
   const canViewFinance = !!user && ["owner", "admin", "financeiro", "auditor"].includes(user.role);
+  // Equipe: badge "Equipe" = avisos novos (resolvida/devolvida) para o
+  // gestor; badge "Minhas demandas" = abertas para o coordenador.
+  const { data: teamOverview } = useTeamOverview(isManager);
+  const { data: coordinatorSummary } = useCoordinatorSummary(isCoordinatorView);
   const { data: navSummary } = useQuery({
     queryKey: ["analytics", "navigation-summary"],
     queryFn: () => apiClient.get<NavigationSummary>("/api/v1/analytics/navigation-summary"),
@@ -518,15 +527,29 @@ export function TopBar() {
     setIsModulesOpen(false);
   }, [location.pathname]);
 
-  const primaryItems = visibleItems(
-    NAV_ITEMS.filter((item) => item.placement === "primary"),
-    user?.role
-  );
-  const moduleItems = visibleItems(
-    NAV_ITEMS.filter((item) => item.placement === "modules"),
-    user?.role
-  );
-  const jumpItems = [...visibleItems(NAV_ITEMS, user?.role), ...visibleItems(ADMIN_NAV_ITEMS, user?.role)];
+  const primaryItems = isCoordinatorView
+    ? coordinatorNavItems(
+        sectors.map((s) => s.sector),
+        user?.role
+      )
+    : visibleItems(
+        NAV_ITEMS.filter((item) => item.placement === "primary"),
+        user?.role
+      );
+  const moduleItems = isCoordinatorView
+    ? []
+    : visibleItems(
+        NAV_ITEMS.filter((item) => item.placement === "modules"),
+        user?.role
+      );
+  const jumpItems = isCoordinatorView
+    ? primaryItems
+    : [...visibleItems(NAV_ITEMS, user?.role), ...visibleItems(ADMIN_NAV_ITEMS, user?.role)];
+  const badgeFor = (to: string): number => {
+    if (to === "/equipe") return teamOverview?.updates?.length ?? 0;
+    if (to === "/" && isCoordinatorView) return coordinatorSummary?.open_count ?? 0;
+    return 0;
+  };
   const currentModule = moduleItems.find((item) => location.pathname === item.to || location.pathname.startsWith(`${item.to}/`));
 
   return (
@@ -546,7 +569,7 @@ export function TopBar() {
           </>
         )}
 
-        <AskInsightaField items={jumpItems} canAsk={canViewFinance} />
+        <AskInsightaField items={jumpItems} canAsk={canViewFinance && isManager} />
 
         <div className="ml-auto flex shrink-0 items-center gap-2.5">
           <NotificationBell />
@@ -578,10 +601,10 @@ export function TopBar() {
                   <>
                     <Icon aria-hidden size={15} className={isActive ? "text-accent-muted" : undefined} />
                     {item.label}
-                    {item.to === "/meus-insights" && !!navSummary?.my_open_insights && (
+                    {badgeFor(item.to) > 0 && (
                       <span className="rounded-md bg-brand px-1.5 py-px text-[10px] font-semibold text-white">
-                        {navSummary.my_open_insights}
-                        <span className="sr-only"> em aberto</span>
+                        {badgeFor(item.to)}
+                        <span className="sr-only">{item.to === "/equipe" ? " avisos novos" : " em aberto"}</span>
                       </span>
                     )}
                   </>
