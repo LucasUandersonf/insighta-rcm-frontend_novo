@@ -57,6 +57,28 @@ describe("HomePage", () => {
     expect(await screen.findByRole("heading", { level: 1, name: /, Marina$/ })).toBeInTheDocument();
   });
 
+  it("com o jornal da manhã pronto, mostra a manchete e a abertura escritas pela IA", async () => {
+    mockEndpoints({
+      period_start: "2026-09-10",
+      period_end: "2026-09-16",
+      narrative: "Abertura do jornal.",
+      generated_at: null,
+      top_priorities: [],
+      recently_resolved: [],
+      edition: {
+        headline: "Mês forte, mas a Unimed pesa",
+        lead: "A clínica faturou R$ 482.000 em 30 dias. A Unimed segue glosando acima do normal.",
+        cards: { faturado: "R$ 482.000 em 30 dias, 6% acima do mês anterior." },
+      },
+    });
+
+    renderWithProviders(<HomePage />);
+
+    expect(await screen.findByText("Jornal da manhã")).toBeInTheDocument();
+    expect(screen.getByText("Mês forte, mas a Unimed pesa")).toBeInTheDocument();
+    expect(screen.getByText("A clínica faturou R$ 482.000 em 30 dias. A Unimed segue glosando acima do normal.")).toBeInTheDocument();
+  });
+
   it("mostra até 3 cards de prioridade com botão de ação real", async () => {
     mockEndpoints({
       period_start: "2026-09-10",

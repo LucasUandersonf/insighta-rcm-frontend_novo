@@ -667,6 +667,15 @@ export interface ExecutiveNarrative {
   // presentes mesmo quando `narrative` é null (Avaliação Home/Sala de
   // Comando, Achado 3): não depende do texto da IA mencionar.
   recently_resolved: string[];
+  /** Jornal da manhã escrito pela IA com os números do sistema (null = edição do dia não pronta). */
+  edition?: MorningEdition | null;
+}
+
+export interface MorningEdition {
+  headline: string;
+  lead: string;
+  /** Só os cards aprovados pela checagem de números: faturado, recebimento, agenda, saude. */
+  cards: Partial<Record<"faturado" | "recebimento" | "agenda" | "saude", string>>;
 }
 
 // Taxa de confirmação real do motor de risco de glosa (GET
