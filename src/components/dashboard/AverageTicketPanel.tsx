@@ -71,7 +71,7 @@ export function AverageTicketPanel({ dateFrom, dateTo }: { dateFrom: string; dat
         <div>
           <div className="flex items-center gap-2">
             <Receipt size={20} className="text-revenue" />
-            <span className="font-serif text-xl font-medium text-ink">
+            <span className="text-xl font-semibold text-ink">
               <AnimatedNumber value={overall.value} format={formatCurrency} durationSeconds={0.8} />
             </span>
             {overall.delta_pct !== null && (

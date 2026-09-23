@@ -11,6 +11,7 @@ import { apiClient, ApiError } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useToast } from "@/context/ToastContext";
 import { useAuth } from "@/context/AuthContext";
+import { SectorCoordinatorsPanel } from "@/components/team/SectorCoordinatorsPanel";
 import type { PasswordResetResponse, PlatformUser, UserCreateRequest, UserRole } from "@/lib/types";
 
 const ROLE_LABELS: Record<UserRole, string> = {
@@ -243,6 +244,8 @@ export function UsersPage() {
           </table>
         )}
       </Panel>
+
+      {(users ?? []).length > 0 && <SectorCoordinatorsPanel users={users ?? []} />}
 
       <CreateUserModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onCreated={setTemporaryPassword} />
       <TemporaryPasswordModal password={temporaryPassword} onClose={() => setTemporaryPassword(null)} />

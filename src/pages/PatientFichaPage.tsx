@@ -153,7 +153,7 @@ export function PatientFichaPage() {
       {patientId && data && (
         <div className="space-y-6">
           <div>
-            <h2 className="font-serif text-xl font-medium tracking-tightest text-ink">{data.patient.full_name}</h2>
+            <h2 className="text-xl font-semibold tracking-[-0.01em] text-ink">{data.patient.full_name}</h2>
             {data.patient.cpf && <p className="mt-0.5 font-mono text-xs text-ink-faint">CPF {data.patient.cpf}</p>}
           </div>
 

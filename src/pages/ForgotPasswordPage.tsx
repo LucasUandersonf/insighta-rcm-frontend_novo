@@ -51,7 +51,7 @@ export function ForgotPasswordPage() {
             <span className="mb-3 inline-flex h-11 w-11 items-center justify-center rounded-full bg-canvas-surface/70 text-revenue">
               <CheckCircle2 size={20} strokeWidth={2} />
             </span>
-            <h1 className="font-serif text-lg font-medium text-ink">Verifique seu e-mail</h1>
+            <h1 className="text-lg font-semibold text-ink">Verifique seu e-mail</h1>
             <p className="mt-2 text-sm leading-relaxed text-ink-muted">
               Se <span className="font-medium text-ink">{email}</span> estiver cadastrado, você vai receber um link para
               criar uma nova senha em instantes.
@@ -90,7 +90,7 @@ export function ForgotPasswordPage() {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="flex w-full items-center justify-center gap-1.5 rounded-md bg-aura-line px-3 py-2.5 text-sm font-medium text-white shadow-elevated transition-all duration-150 hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+                className="flex w-full items-center justify-center gap-1.5 rounded-[11px] bg-brand px-3 py-2.5 text-sm font-medium text-white transition-all duration-150 hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isSubmitting ? "Enviando..." : "Enviar instruções de acesso"}
               </button>

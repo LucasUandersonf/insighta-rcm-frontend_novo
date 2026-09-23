@@ -33,7 +33,7 @@ function TenantSelector() {
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-sm">
       <div className="mb-6 text-center">
-        <h1 className="font-serif text-xl font-medium tracking-tightest text-ink">Qual clínica?</h1>
+        <h1 className="text-xl font-semibold tracking-[-0.01em] text-ink">Qual clínica?</h1>
         <p className="mt-1.5 text-sm text-ink-muted">Seu e-mail está cadastrado em mais de uma clínica. Escolha qual quer acessar.</p>
       </div>
 
@@ -210,7 +210,7 @@ export function LoginPage() {
             <button
               type="submit"
               disabled={isLoggingIn}
-              className="flex w-full items-center justify-center gap-1.5 rounded-md bg-aura-line px-3 py-2.5 text-sm font-medium text-white shadow-elevated transition-all duration-150 hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100"
+              className="flex w-full items-center justify-center gap-1.5 rounded-[11px] bg-brand px-3 py-2.5 text-sm font-medium text-white transition-all duration-150 hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100"
             >
               {isLoggingIn ? "Entrando..." : "Entrar no sistema"}
               {!isLoggingIn && <ArrowRight aria-hidden size={14} />}

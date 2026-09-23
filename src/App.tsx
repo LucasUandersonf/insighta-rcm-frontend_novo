@@ -10,6 +10,7 @@ import { PlatformProtectedRoute } from "@/routes/PlatformProtectedRoute";
 import { isApiConfigured } from "@/lib/api-client";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { RouteLoadingFallback } from "@/components/RouteLoadingFallback";
+import { HomeRouter, ManagerProfileRoute } from "@/routes/TeamRoutes";
 
 // Achado do Laudo de Vistoria Técnica (parecer UX): o pacote baixado
 // pelo navegador crescia sem divisão por tela (quase 1MB) — pesado numa
@@ -24,7 +25,7 @@ const TermsOfServicePage = lazy(() => import("@/pages/TermsOfServicePage").then(
 const PrivacyPolicyPage = lazy(() => import("@/pages/PrivacyPolicyPage").then((m) => ({ default: m.PrivacyPolicyPage })));
 const ForgotPasswordPage = lazy(() => import("@/pages/ForgotPasswordPage").then((m) => ({ default: m.ForgotPasswordPage })));
 const ResetPasswordPage = lazy(() => import("@/pages/ResetPasswordPage").then((m) => ({ default: m.ResetPasswordPage })));
-const HomePage = lazy(() => import("@/pages/HomePage").then((m) => ({ default: m.HomePage })));
+const TeamPage = lazy(() => import("@/pages/TeamPage").then((m) => ({ default: m.TeamPage })));
 const SatisfactionRatingPage = lazy(() =>
   import("@/pages/SatisfactionRatingPage").then((m) => ({ default: m.SatisfactionRatingPage }))
 );
@@ -129,8 +130,10 @@ export default function App() {
                     prioridades, nunca o feed/KPIs inteiros (isso migrou pra
                     /painel). Sem RoleProtectedRoute de propósito: mesma
                     visibilidade que "/" sempre teve. */}
-                <Route path="/" element={<HomePage />} />
-                <Route path="/painel" element={<DashboardPage />} />
+                <Route path="/" element={<HomeRouter />} />
+                <Route element={<ManagerProfileRoute />}>
+                  <Route path="/painel" element={<DashboardPage />} />
+                </Route>
                 <Route path="/appointments" element={<AppointmentsPage />} />
                 {/* Ficha do Paciente (Roadmap "Rumo à Nota 9", Fase 4) — mesmo
                     RBAC de GET /patients/search e /patients/{id}/ficha
@@ -159,13 +162,19 @@ export default function App() {
                 <Route element={<RoleProtectedRoute allowedRoles={["owner", "admin"]} />}>
                   <Route path="/professionals" element={<ProfessionalsPage />} />
                 </Route>
+                {/* Equipe (Redesign 2026): o gestor acompanha as demandas
+                    atribuídas aos coordenadores (mesmo RBAC de /team/overview). */}
+                <Route element={<RoleProtectedRoute allowedRoles={["owner", "admin", "auditor"]} />}>
+                  <Route path="/equipe" element={<TeamPage />} />
+                </Route>
                 <Route element={<RoleProtectedRoute allowedRoles={["owner", "admin", "financeiro", "auditor"]} />}>
-                  <Route path="/decisao" element={<ExecutiveOverviewPage />} />
+                  <Route element={<ManagerProfileRoute />}>
+                    <Route path="/decisao" element={<ExecutiveOverviewPage />} />
+                    <Route path="/consolidado" element={<OrganizationSummaryPage />} />
+                  </Route>
                   {/* Roadmap "Rumo à Nota 9" (Fase 2) — mesmo RBAC de /decisao
                       (o endpoint que alimenta esta tela usa o mesmo _CAN_VIEW). */}
                   <Route path="/agenda-risco" element={<AgendaRiscoPage />} />
-                  {/* Épico F3.2 do Plano Diretor — mesmo RBAC de /decisao acima. */}
-                  <Route path="/consolidado" element={<OrganizationSummaryPage />} />
                   <Route path="/contracts" element={<ContractsPage />} />
                   <Route path="/denial-appeals" element={<DenialAppealsPage />} />
                   {/* Mesmo RBAC do backend em lotes.py/_CAN_READ (owner/admin/

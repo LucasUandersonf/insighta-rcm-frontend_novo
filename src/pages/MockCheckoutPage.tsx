@@ -75,7 +75,7 @@ export function MockCheckoutPage() {
     return (
       <AuthLayout headline="Confirmar assinatura" subheadline="Ative seu novo plano em segundos.">
         <div className="w-full max-w-sm rounded-xl border border-denied/25 bg-denied-bg p-6 text-center shadow-elevated backdrop-blur-xl">
-          <h1 className="font-serif text-lg font-medium text-ink">Checkout não encontrado</h1>
+          <h1 className="text-lg font-semibold text-ink">Checkout não encontrado</h1>
           <p className="mt-2 text-sm leading-relaxed text-ink-muted">
             Este link de checkout não existe mais, ou já foi usado. Volte para Minha Clínica e inicie o upgrade de novo.
           </p>
@@ -94,7 +94,7 @@ export function MockCheckoutPage() {
           <span className="mb-3 inline-flex h-11 w-11 items-center justify-center rounded-full bg-canvas-surface/70 text-revenue">
             <CheckCircle2 aria-hidden size={20} strokeWidth={2} />
           </span>
-          <h1 className="font-serif text-lg font-medium text-ink">Plano {PLAN_LABELS[checkout.plan_tier] ?? checkout.plan_tier} ativado</h1>
+          <h1 className="text-lg font-semibold text-ink">Plano {PLAN_LABELS[checkout.plan_tier] ?? checkout.plan_tier} ativado</h1>
           <p className="mt-2 text-sm leading-relaxed text-ink-muted">
             Sua assinatura foi confirmada com sucesso. O novo plano já está valendo para a sua clínica.
           </p>
@@ -117,7 +117,7 @@ export function MockCheckoutPage() {
 
         <div className="mb-5 flex items-center justify-between rounded-lg border border-border-hairline bg-canvas-raised/60 px-4 py-3">
           <span className="text-sm text-ink-muted">Cobrança mensal</span>
-          <span className="font-serif text-lg font-medium text-ink">{formatCurrency(checkout.amount_cents)}</span>
+          <span className="text-lg font-semibold text-ink">{formatCurrency(checkout.amount_cents)}</span>
         </div>
 
         <form onSubmit={handleSubmit}>

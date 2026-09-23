@@ -132,7 +132,7 @@ export function Modal({ title, isOpen, onClose, children, size = "lg" }: ModalPr
             className={cn("w-full rounded-lg border border-border-hairline bg-glass shadow-elevated-lg backdrop-blur-xl", sizeClasses[size])}
           >
             <div className="flex items-center justify-between border-b border-border-hairline px-5 py-3.5">
-              <h2 className="font-serif text-sm font-medium tracking-premium text-ink">{title}</h2>
+              <h2 className="text-sm font-semibold text-ink">{title}</h2>
               <button
                 onClick={onClose}
                 aria-label="Fechar"

@@ -20,7 +20,7 @@ export function Stepper({ steps, current }: { steps: Step[]; current: number }) 
             <span
               className={cn(
                 "flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-2xs font-medium transition-colors",
-                done ? "bg-aura-line text-white" : active ? "border-2 border-accent text-accent" : "border border-border-default text-ink-faint"
+                done ? "bg-brand text-white" : active ? "border-2 border-accent text-accent" : "border border-border-default text-ink-faint"
               )}
             >
               {done ? <Check size={12} strokeWidth={3} /> : step.id}

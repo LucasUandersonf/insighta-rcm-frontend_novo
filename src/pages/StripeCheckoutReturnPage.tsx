@@ -55,7 +55,7 @@ export function StripeCheckoutReturnPage() {
     return (
       <AuthLayout headline="Checkout cancelado" subheadline="Nenhuma cobrança foi feita.">
         <div className="w-full max-w-sm rounded-xl border border-border-hairline bg-glass p-6 text-center shadow-elevated backdrop-blur-xl">
-          <h1 className="font-serif text-lg font-medium text-ink">Você saiu do checkout</h1>
+          <h1 className="text-lg font-semibold text-ink">Você saiu do checkout</h1>
           <p className="mt-2 text-sm leading-relaxed text-ink-muted">Pode tentar de novo a qualquer momento em Minha Clínica.</p>
           <Button className="mt-4 w-full" onClick={() => navigate("/admin/tenant")}>
             Voltar para Minha Clínica
@@ -79,7 +79,7 @@ export function StripeCheckoutReturnPage() {
     return (
       <AuthLayout headline="Checkout não encontrado" subheadline="Este link não existe mais.">
         <div className="w-full max-w-sm rounded-xl border border-denied/25 bg-denied-bg p-6 text-center shadow-elevated backdrop-blur-xl">
-          <h1 className="font-serif text-lg font-medium text-ink">Checkout não encontrado</h1>
+          <h1 className="text-lg font-semibold text-ink">Checkout não encontrado</h1>
           <p className="mt-2 text-sm leading-relaxed text-ink-muted">
             Este link de checkout não existe mais, ou já foi usado. Volte para Minha Clínica e inicie o upgrade de novo.
           </p>
@@ -98,7 +98,7 @@ export function StripeCheckoutReturnPage() {
           <span className="mb-3 inline-flex h-11 w-11 items-center justify-center rounded-full bg-canvas-surface/70 text-revenue">
             <CheckCircle2 aria-hidden size={20} strokeWidth={2} />
           </span>
-          <h1 className="font-serif text-lg font-medium text-ink">Plano {PLAN_LABELS[checkout.plan_tier] ?? checkout.plan_tier} ativado</h1>
+          <h1 className="text-lg font-semibold text-ink">Plano {PLAN_LABELS[checkout.plan_tier] ?? checkout.plan_tier} ativado</h1>
           <p className="mt-2 text-sm leading-relaxed text-ink-muted">
             Sua assinatura foi confirmada com sucesso. O novo plano já está valendo para a sua clínica.
           </p>
@@ -116,7 +116,7 @@ export function StripeCheckoutReturnPage() {
         <span className="mb-3 inline-flex h-11 w-11 items-center justify-center rounded-full bg-canvas-surface/70 text-denied">
           <AlertTriangle aria-hidden size={20} strokeWidth={2} />
         </span>
-        <h1 className="font-serif text-lg font-medium text-ink">Ainda não conseguimos confirmar</h1>
+        <h1 className="text-lg font-semibold text-ink">Ainda não conseguimos confirmar</h1>
         <p className="mt-2 text-sm leading-relaxed text-ink-muted">
           {confirmMutation.error ? getApiErrorMessage(confirmMutation.error) : "Alguns métodos de pagamento levam mais tempo para confirmar."}
         </p>

@@ -83,10 +83,10 @@ export function Panel({
   return (
     <BentoCard colSpan={colSpan ?? 12} rowSpan={rowSpan} glow={glow} noPadding className={cn("w-full", className)}>
       {(title || subtitle || action || actions || updatedAt) && (
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-hairline px-5 py-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-hairline px-6 py-5">
           <div>
-            {title && <h2 className="font-serif text-base font-medium tracking-premium text-ink">{title}</h2>}
-            {subtitle && <p className="mt-0.5 text-2xs text-ink-faint">{subtitle}</p>}
+            {title && <h2 className="text-base font-semibold text-ink">{title}</h2>}
+            {subtitle && <p className="mt-1 text-[13px] text-ink-muted">{subtitle}</p>}
           </div>
           {(action || actions || updatedAt) && (
             <div className="flex items-center gap-3">

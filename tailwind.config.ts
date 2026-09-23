@@ -42,7 +42,11 @@ export default {
           DEFAULT: withOpacity("--ink"),
           muted: withOpacity("--ink-muted"),
           faint: withOpacity("--ink-faint"),
+          soft: withOpacity("--ink-soft"),
         },
+        // Violeta sólido da marca (#6A57E3 no escuro) — fundo do botão
+        // primário, do item de navegação ativo e do logo (Redesign 2026).
+        brand: withOpacity("--brand"),
         revenue: {
           DEFAULT: withOpacity("--revenue"),
           dim: withOpacity("--revenue-dim"),
@@ -92,7 +96,7 @@ export default {
         glass: "hsl(var(--canvas-surface) / var(--glass-alpha))",
       },
       fontFamily: {
-        sans: ["Inter", "system-ui", "sans-serif"],
+        sans: ["Geist", "system-ui", "sans-serif"],
         serif: ["\"Fraunces\"", "Georgia", "serif"],
         mono: ["ui-monospace", "SFMono-Regular", "Roboto Mono", "monospace"],
       },
@@ -134,7 +138,7 @@ export default {
         // MESMA classe funciona nos dois temas — sutil no claro, vívida
         // no escuro (identidade "Aura Glass", ver DECISÃO v3 em index.css).
         "premium-canvas":
-          "radial-gradient(ellipse 65% 50% at 8% -10%, hsl(var(--aura-1) / var(--glow-alpha)), transparent 60%), radial-gradient(ellipse 60% 45% at 100% 0%, hsl(var(--aura-2) / var(--glow-alpha)), transparent 60%), radial-gradient(ellipse 55% 45% at 50% 105%, hsl(var(--aura-3) / var(--glow-alpha-soft)), transparent 65%), linear-gradient(180deg, hsl(var(--canvas-surface)) 0%, hsl(var(--canvas)) 55%, hsl(var(--canvas-deep)) 100%)",
+          "radial-gradient(ellipse 50% 420px at 18% 0%, hsl(var(--aura-2) / var(--glow-alpha)), transparent 70%), radial-gradient(ellipse 40% 360px at 92% 0%, hsl(var(--aura-1) / var(--glow-alpha-soft)), transparent 70%)",
         "accent-line": "linear-gradient(180deg, hsl(var(--accent)), hsl(var(--accent) / 0))",
         // Gradiente de marca sólido — logo, avatares, botão primário em
         // destaque (ex: CTA de cadastro).

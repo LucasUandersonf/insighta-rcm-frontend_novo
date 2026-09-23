@@ -5,7 +5,7 @@ import { apiClient } from "@/lib/api-client";
 import { useAuth } from "@/context/AuthContext";
 import { renderWithProviders } from "@/test/utils";
 import { expectNoA11yViolations } from "@/test/a11y";
-import type { CurrentUser, InsightOutcome, PlatformUser, PriorityQueue } from "@/lib/types";
+import type { CurrentUser, InsightOutcome, PriorityQueue } from "@/lib/types";
 
 vi.mock("@/lib/api-client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api-client")>();
@@ -119,8 +119,8 @@ describe("PriorityQueuePanel — épico F1.1 do Plano Diretor", () => {
     expect(screen.queryByRole("button", { name: /Atribuir/ })).not.toBeInTheDocument();
   });
 
-  it("épico F1.2: financeiro marca um item como resolvido (cria + resolve o insight_outcome)", async () => {
-    mockUser("financeiro");
+  it("épico F1.2: gestor marca um item como resolvido (cria + resolve o insight_outcome)", async () => {
+    mockUser("admin");
     vi.mocked(apiClient.get).mockResolvedValue({
       period_start: "2026-09-01", period_end: "2026-09-07", total_considered: 1, items: [RAIOX_ITEM],
     } as PriorityQueue);
@@ -146,7 +146,7 @@ describe("PriorityQueuePanel — épico F1.1 do Plano Diretor", () => {
     expect(screen.queryByRole("button", { name: "Marcar como resolvido" })).not.toBeInTheDocument();
   });
 
-  it("épico F1.3: owner atribui um item a um colega com prazo", async () => {
+  it("Equipe: owner atribui um item ao coordenador do setor sugerido, com prazo", async () => {
     mockUser("owner");
     vi.mocked(apiClient.get).mockImplementation((path: string) => {
       if (path.includes("priority-queue")) {
@@ -154,31 +154,49 @@ describe("PriorityQueuePanel — épico F1.1 do Plano Diretor", () => {
           period_start: "2026-09-01", period_end: "2026-09-07", total_considered: 1, items: [RAIOX_ITEM],
         } as never);
       }
-      if (path.includes("/users")) {
-        return Promise.resolve([{ id: "user-2", full_name: "Faturista Ana", role: "financeiro" }] as PlatformUser[] as never);
+      if (path.includes("/team/sectors")) {
+        return Promise.resolve([
+          { sector: "agendamento", label: "Agendamento", coordinator: { id: "user-3", full_name: "Carla Mendes" }, is_mine: false },
+          { sector: "faturamento", label: "Faturamento", coordinator: { id: "user-2", full_name: "Rafael Souza" }, is_mine: false },
+          { sector: "estoque", label: "Estoque", coordinator: null, is_mine: false },
+          { sector: "assistencial", label: "Assistencial", coordinator: null, is_mine: false },
+          { sector: "gestao", label: "Gestão", coordinator: null, is_mine: false },
+        ] as never);
       }
       return Promise.reject(new Error(`sem mock para ${path}`));
     });
-    vi.mocked(apiClient.post).mockResolvedValue({ id: "outcome-2", status: "pendente" } as InsightOutcome);
+    vi.mocked(apiClient.post).mockResolvedValue({ id: "demand-2", status: "pendente", coordinator: { id: "user-2", full_name: "Rafael Souza" } } as never);
 
     renderWithProviders(<PriorityQueuePanel dateFrom="2026-09-01" dateTo="2026-09-07" />);
 
     await waitFor(() => expect(screen.getByRole("button", { name: /Atribuir/ })).toBeInTheDocument());
     fireEvent.click(screen.getByRole("button", { name: /Atribuir/ }));
 
-    const modalTitle = await screen.findByText("Atribuir insight");
+    const modalTitle = await screen.findByText("Atribuir ao coordenador");
     const dialog = (modalTitle.closest('[role="dialog"]') ?? modalTitle.parentElement!) as HTMLElement;
-    await waitFor(() => expect(within(dialog).getByText(/Faturista Ana/)).toBeInTheDocument());
-    fireEvent.change(within(dialog).getByLabelText(/Atribuir para/), { target: { value: "user-2" } });
-    fireEvent.click(within(dialog).getByRole("button", { name: "Atribuir" }));
+    // Faturamento vem primeiro (sugerido pela área do insight) e já selecionado.
+    await waitFor(() => expect(within(dialog).getByText("Sugerido")).toBeInTheDocument());
+    expect(within(dialog).getByRole("button", { name: /Estoque/ })).toBeDisabled();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Amanhã" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Atribuir a Rafael" }));
 
     await waitFor(() =>
       expect(apiClient.post).toHaveBeenCalledWith(
-        "/api/v1/insight-outcomes",
-        expect.objectContaining({ assigned_to: "user-2", title: RAIOX_ITEM.title })
+        "/api/v1/team/demands",
+        expect.objectContaining({ sector: "faturamento", title: RAIOX_ITEM.title, source: "raiox" })
       )
     );
     await waitFor(() => expect(screen.getByText("Atribuído")).toBeInTheDocument());
+  });
+
+  it("financeiro (coordenador) não vê Atribuir/Resolver na fila — quem atribui é o gestor", async () => {
+    mockUser("financeiro");
+    vi.mocked(apiClient.get).mockResolvedValue({
+      period_start: "2026-09-01", period_end: "2026-09-07", total_considered: 1, items: [RAIOX_ITEM],
+    } as PriorityQueue);
+    renderWithProviders(<PriorityQueuePanel dateFrom="2026-09-01" dateTo="2026-09-07" />);
+    await waitFor(() => expect(screen.getByText(RAIOX_ITEM.title)).toBeInTheDocument());
+    expect(screen.queryByRole("button", { name: /Atribuir/ })).not.toBeInTheDocument();
   });
 
   it("não tem violações de acessibilidade", async () => {

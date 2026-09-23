@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSearchParams } from "react-router-dom";
 import { Building2, ClipboardList, FileText, Plus, Sparkles, X } from "lucide-react";
 import { Panel, EmptyState, LoadingState, ErrorState } from "@/components/ui/Panel";
 import { Button } from "@/components/ui/Button";
@@ -8,6 +9,13 @@ import { Modal } from "@/components/ui/Modal";
 import { TextField, SelectField } from "@/components/ui/FormField";
 import { Pagination } from "@/components/ui/Pagination";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { PeriodWindowSelect } from "@/components/ui/PeriodWindowSelect";
+import { Tabs, TabPanel } from "@/components/ui/Tabs";
+import { PayerOverviewPanel } from "@/components/payers/PayerOverviewPanel";
+import { PlanLossRankingPanel } from "@/components/dashboard/PlanLossRankingPanel";
+import { DenialRiskDistributionPanel } from "@/components/dashboard/DenialRiskDistributionPanel";
+import { PaymentLagPanel } from "@/components/dashboard/PaymentLagPanel";
+import { useDateWindow } from "@/lib/useDateWindow";
 import { cn } from "@/lib/cn";
 import { apiClient, ApiError } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
@@ -755,7 +763,29 @@ function ReviewContractModal({
 // Página
 // ---------------------------------------------------------------------
 
+const PAYER_TABS_GROUP = "convenios";
+type PayerTabId = "visao-geral" | "glosas" | "prazos" | "contratos";
+const PAYER_TAB_IDS: PayerTabId[] = ["visao-geral", "glosas", "prazos", "contratos"];
+const PAYER_WINDOW_OPTIONS = [
+  { days: 30, label: "Últimos 30 dias" },
+  { days: 90, label: "Últimos 90 dias" },
+  { days: 180, label: "Últimos 180 dias" },
+];
+
+/**
+ * Convênios (canvas "Insighta RCM — Redesign 2026", artboard "Convênios")
+ * — "Visão geral" (veredictos, desempenho por convênio com leitura,
+ * simulação de prazo), "Glosas", "Prazos de pagamento" e "Contratos e
+ * tabelas" (o cadastro de operadoras/planos/contratos de sempre).
+ * `?tab=` na URL abre direto numa aba.
+ */
 export function ContractsPage() {
+  const [searchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState<PayerTabId>(() => {
+    const tab = searchParams.get("tab");
+    return tab && (PAYER_TAB_IDS as string[]).includes(tab) ? (tab as PayerTabId) : "visao-geral";
+  });
+  const { windowDays, setWindowDays, dateFrom, dateTo } = useDateWindow(90);
   const queryClient = useQueryClient();
   const { showError } = useToast();
   const [isCompanyModalOpen, setIsCompanyModalOpen] = useState(false);
@@ -844,9 +874,49 @@ export function ContractsPage() {
     <div className="space-y-6">
       <PageHeader
         icon={FileText}
-        title="Convênios e contratos"
-        subtitle="Cadastre operadoras, planos e a tabela de preços contratada — a base de comparação do motor anti-glosa e do buraco financeiro."
+        title="Convênios"
+        subtitle="Quem paga bem, quem glosa e quem segura seu caixa."
+        action={
+          activeTab !== "contratos" ? (
+            <PeriodWindowSelect windowDays={windowDays} onChange={setWindowDays} options={PAYER_WINDOW_OPTIONS} />
+          ) : undefined
+        }
       />
+
+      <Tabs
+        groupId={PAYER_TABS_GROUP}
+        active={activeTab}
+        onChange={(id) => setActiveTab(id as PayerTabId)}
+        items={[
+          { id: "visao-geral", label: "Visão geral" },
+          { id: "glosas", label: "Glosas" },
+          { id: "prazos", label: "Prazos de pagamento" },
+          { id: "contratos", label: "Contratos e tabelas" },
+        ]}
+      />
+
+      {activeTab === "visao-geral" && (
+        <TabPanel id="visao-geral" groupId={PAYER_TABS_GROUP}>
+          <PayerOverviewPanel dateFrom={dateFrom} dateTo={dateTo} />
+        </TabPanel>
+      )}
+      {activeTab === "glosas" && (
+        <TabPanel id="glosas" groupId={PAYER_TABS_GROUP}>
+          <div className="space-y-6">
+            <PlanLossRankingPanel dateFrom={dateFrom} dateTo={dateTo} />
+            <DenialRiskDistributionPanel dateFrom={dateFrom} dateTo={dateTo} />
+          </div>
+        </TabPanel>
+      )}
+      {activeTab === "prazos" && (
+        <TabPanel id="prazos" groupId={PAYER_TABS_GROUP}>
+          <PaymentLagPanel dateFrom={dateFrom} dateTo={dateTo} />
+        </TabPanel>
+      )}
+
+      {activeTab === "contratos" && (
+      <TabPanel id="contratos" groupId={PAYER_TABS_GROUP}>
+      <div className="space-y-6">
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
         <div className="lg:col-span-6">
@@ -986,6 +1056,10 @@ export function ContractsPage() {
           />
         )}
       </Panel>
+
+      </div>
+      </TabPanel>
+      )}
 
       <CreateCompanyModal isOpen={isCompanyModalOpen} onClose={() => setIsCompanyModalOpen(false)} />
       <CreatePlanModal isOpen={isPlanModalOpen} onClose={() => setIsPlanModalOpen(false)} companies={companies ?? []} />

@@ -85,7 +85,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
             </p>
             <button
               onClick={this.handleReload}
-              className="mt-4 rounded-md bg-aura-line px-3 py-2 text-sm font-medium text-white shadow-elevated transition-all duration-150 hover:brightness-110 active:scale-[0.98]"
+              className="mt-4 rounded-[11px] bg-brand px-3 py-2 text-sm font-medium text-white transition-all duration-150 hover:brightness-110 active:scale-[0.98]"
             >
               Recarregar página
             </button>

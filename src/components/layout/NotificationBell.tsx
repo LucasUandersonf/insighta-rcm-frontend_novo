@@ -97,13 +97,13 @@ export function NotificationBell() {
         onClick={() => setIsOpen((v) => !v)}
         aria-label={unreadCount > 0 ? `Notificações — ${unreadCount} não lida(s)` : "Notificações"}
         aria-expanded={isOpen}
-        className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border-subtle bg-canvas-raised/60 text-ink-muted transition-colors hover:border-accent/40 hover:text-ink"
+        className="relative flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[11px] border border-border-hairline text-ink transition-colors hover:bg-canvas-raised/70"
       >
         <Bell aria-hidden size={15} strokeWidth={2} />
         {unreadCount > 0 && (
           <span
             aria-hidden
-            className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[9px] font-semibold leading-none text-white"
+            className="absolute -right-[5px] -top-[5px] flex h-[18px] min-w-[18px] items-center justify-center rounded-full border-2 border-canvas bg-brand px-1 text-[10px] font-semibold leading-none text-white"
           >
             {unreadCount > 9 ? "9+" : unreadCount}
           </span>
@@ -117,7 +117,7 @@ export function NotificationBell() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -4, scale: 0.98 }}
             transition={{ duration: 0.15, ease: "easeOut" }}
-            className="absolute right-0 top-10 z-30 w-80 rounded-lg border border-border-hairline bg-glass shadow-elevated-lg backdrop-blur-xl"
+            className="absolute right-0 top-12 z-40 w-80 rounded-2xl border border-border-hairline bg-canvas-overlay shadow-elevated-lg backdrop-blur-2xl"
             // Achado do Laudo de Vistoria Técnica (parecer UX/acessibilidade):
             // `role="menu"` promete o padrão ARIA de menu (setas do
             // teclado, `menuitem` nos filhos) que este componente nunca
@@ -129,7 +129,7 @@ export function NotificationBell() {
             aria-label="Novidades"
           >
             <div className="border-b border-border-hairline px-4 py-3">
-              <p className="font-serif text-sm font-medium tracking-premium text-ink">Novidades</p>
+              <p className="text-sm font-semibold text-ink">Novidades</p>
             </div>
             <div className="max-h-96 overflow-y-auto">
               {error && <p className="px-4 py-6 text-center text-xs text-ink-faint">{getApiErrorMessage(error)}</p>}

@@ -1,16 +1,14 @@
 import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { UserPlus } from "lucide-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Check, UserPlus } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import { Modal } from "@/components/ui/Modal";
-import { SelectField, TextField } from "@/components/ui/FormField";
+import { AssignDemandModal } from "@/components/team/AssignDemandModal";
 import { apiClient } from "@/lib/api-client";
-import { cn } from "@/lib/cn";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
-import type { InsightOutcome, InsightOutcomeCreateRequest, PlatformUser, PriorityQueueItem, SmartInsight } from "@/lib/types";
+import type { InsightOutcome, InsightOutcomeCreateRequest, PriorityQueueItem, SmartInsight } from "@/lib/types";
 
 /**
  * "Junta Técnica Insighta" (reavaliação de mercado da Sala de Comando):
@@ -28,7 +26,10 @@ import type { InsightOutcome, InsightOutcomeCreateRequest, PlatformUser, Priorit
  * duplicar o modal e a mutation arriscaria os dois divergirem quando um
  * dos dois for ajustado no futuro.
  */
-export const INSIGHT_MANAGER_ROLES = new Set(["owner", "admin", "financeiro"]);
+// Equipe (Redesign 2026): só o GESTOR (owner/admin) atribui e marca
+// resolvido direto — financeiro virou coordenador de Faturamento e
+// resolve pelas próprias demandas (ver CoordinatorHomePage).
+export const INSIGHT_MANAGER_ROLES = new Set(["owner", "admin"]);
 
 export function insightItemKey(item: { category: string; title: string }): string {
   return `${item.category}:${item.title}`;
@@ -78,84 +79,11 @@ export function useInsightWorkflow() {
 }
 
 /**
- * Épico F1.3: modal de atribuição — escolhe um colega (GET /users) e um
- * prazo, cria o insight_outcome já atribuído (status "pendente"). Quem
- * foi atribuído vê isso depois em "Meus insights" (MyInsightsPage.tsx).
+ * Redesign 2026 (canvas "Atribuir"): o gestor atribui ao COORDENADOR DO
+ * SETOR, não a uma pessoa avulsa — ver AssignDemandModal. Mantido com o
+ * nome antigo para os consumidores (Home, Hoje, Diagnóstico, fila).
  */
-export function AssignModal({
-  item,
-  onClose,
-  onAssigned,
-}: {
-  item: PriorityQueueItem | null;
-  onClose: () => void;
-  onAssigned: (item: PriorityQueueItem) => void;
-}) {
-  const { showSuccess, showError } = useToast();
-  const [assignedTo, setAssignedTo] = useState("");
-  const [dueDate, setDueDate] = useState("");
-
-  const { data: users } = useQuery({
-    queryKey: ["users"],
-    queryFn: () => apiClient.get<PlatformUser[]>("/api/v1/users"),
-    enabled: Boolean(item),
-  });
-
-  const mutation = useMutation({
-    mutationFn: (payload: InsightOutcomeCreateRequest) => apiClient.post<InsightOutcome>("/api/v1/insight-outcomes", payload),
-    onSuccess: () => {
-      showSuccess("Insight atribuído.");
-      if (item) onAssigned(item);
-      handleClose();
-    },
-    onError: (err) => showError(getApiErrorMessage(err)),
-  });
-
-  function handleClose() {
-    setAssignedTo("");
-    setDueDate("");
-    onClose();
-  }
-
-  if (!item) return null;
-
-  function handleSubmit() {
-    if (!item || !assignedTo) return;
-    mutation.mutate({
-      source: item.source,
-      category: item.category,
-      severity: item.severity,
-      title: item.title,
-      message: item.message,
-      financial_impact: item.financial_impact,
-      assigned_to: assignedTo,
-      due_date: dueDate || null,
-    });
-  }
-
-  return (
-    <Modal title="Atribuir insight" isOpen={Boolean(item)} onClose={handleClose}>
-      <p className="mb-4 text-xs text-ink-faint">{item.title}</p>
-      <SelectField label="Atribuir para" required value={assignedTo} onChange={(e) => setAssignedTo(e.target.value)}>
-        <option value="">Selecione...</option>
-        {(users ?? []).map((u) => (
-          <option key={u.id} value={u.id}>
-            {u.full_name} ({u.role})
-          </option>
-        ))}
-      </SelectField>
-      <TextField label="Prazo (opcional)" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
-      <div className="mt-5 flex justify-end gap-2">
-        <Button type="button" variant="secondary" onClick={handleClose}>
-          Cancelar
-        </Button>
-        <Button onClick={handleSubmit} disabled={!assignedTo || mutation.isPending}>
-          {mutation.isPending ? "Atribuindo..." : "Atribuir"}
-        </Button>
-      </div>
-    </Modal>
-  );
-}
+export const AssignModal = AssignDemandModal;
 
 /** Par de botões "Marcar como resolvido"/"Atribuir" + badge de estado já
  * acionado — reaproveitado nos cards da fila "Hoje" (PriorityQueuePanel)
@@ -168,7 +96,6 @@ export function InsightWorkflowButtons({
   onResolve,
   onAssign,
   resolvePending,
-  toneClass,
 }: {
   item: PriorityQueueItem;
   canManage: boolean;
@@ -176,17 +103,19 @@ export function InsightWorkflowButtons({
   onResolve: (item: PriorityQueueItem) => void;
   onAssign: (item: PriorityQueueItem) => void;
   resolvePending: boolean;
+  /** Mantido por compatibilidade — os botões seguem o estilo neutro do canvas Redesign 2026. */
   toneClass?: string;
 }) {
   if (!canManage || actioned) return null;
   return (
     <>
-      <Button type="button" variant="ghost" size="xs" className={toneClass} onClick={() => onResolve(item)} disabled={resolvePending}>
-        Marcar como resolvido
-      </Button>
-      <Button type="button" variant="ghost" size="xs" className={cn("flex items-center gap-1", toneClass)} onClick={() => onAssign(item)}>
-        <UserPlus size={12} />
+      <Button type="button" variant="secondary" size="sm" className="flex items-center gap-1.5" onClick={() => onAssign(item)}>
+        <UserPlus aria-hidden size={13} className="text-ink-muted" />
         Atribuir
+      </Button>
+      <Button type="button" variant="secondary" size="sm" className="flex items-center gap-1.5 bg-transparent" onClick={() => onResolve(item)} disabled={resolvePending}>
+        <Check aria-hidden size={13} className="text-revenue" />
+        Marcar como resolvido
       </Button>
     </>
   );

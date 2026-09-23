@@ -9,7 +9,7 @@ import type { CurrentUser, ExecutiveNarrative, PlatformUser } from "@/lib/types"
 
 vi.mock("@/lib/api-client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api-client")>();
-  return { ...actual, apiClient: { ...actual.apiClient, get: vi.fn() } };
+  return { ...actual, apiClient: { ...actual.apiClient, get: vi.fn(), post: vi.fn() } };
 });
 
 vi.mock("@/context/AuthContext", () => ({ useAuth: vi.fn() }));
@@ -54,7 +54,7 @@ describe("HomePage", () => {
     renderWithProviders(<HomePage />);
 
     expect(await screen.findByText("A agenda de quinta está mais vazia que o normal — ainda dá pra reverter.")).toBeInTheDocument();
-    expect(await screen.findByText(/, Marina\.$/)).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 1, name: /, Marina$/ })).toBeInTheDocument();
   });
 
   it("mostra até 3 cards de prioridade com botão de ação real", async () => {
@@ -81,7 +81,10 @@ describe("HomePage", () => {
     renderWithProviders(<HomePage />);
 
     expect(await screen.findByText("Convênio recusando mais pagamentos")).toBeInTheDocument();
-    const button = screen.getByRole("button", { name: "Ver faturamentos de alto risco" });
+    // Canvas Redesign 2026: a manchete mostra "Resolver agora" (o rótulo
+    // específico da ação fica no title do botão).
+    const button = screen.getByRole("button", { name: "Resolver agora" });
+    expect(button).toHaveAttribute("title", "Ver faturamentos de alto risco");
     await user.click(button);
     expect(navigateMock).toHaveBeenCalledWith("/painel");
   });
@@ -109,7 +112,7 @@ describe("HomePage", () => {
 
     renderWithProviders(<HomePage />);
 
-    const button = await screen.findByRole("button", { name: "Ver ocupação por profissional" });
+    const button = await screen.findByRole("button", { name: "Resolver agora" });
     await user.click(button);
     expect(navigateMock).toHaveBeenCalledWith("/decisao?scrollTo=agenda-resumo");
   });
@@ -137,7 +140,7 @@ describe("HomePage", () => {
 
     renderWithProviders(<HomePage />);
 
-    const button = await screen.findByRole("button", { name: "Ver quem não voltou" });
+    const button = await screen.findByRole("button", { name: "Resolver agora" });
     await user.click(button);
     expect(navigateMock).toHaveBeenCalledWith("/decisao?tab=crm");
   });
@@ -165,7 +168,7 @@ describe("HomePage", () => {
 
     renderWithProviders(<HomePage />);
 
-    const button = await screen.findByRole("button", { name: "Ver quem costumava vir quarta-feira" });
+    const button = await screen.findByRole("button", { name: "Resolver agora" });
     await user.click(button);
     expect(navigateMock).toHaveBeenCalledWith("/decisao?weekday=3&scrollTo=agenda-resumo");
   });
@@ -217,7 +220,7 @@ describe("HomePage", () => {
     expect(screen.getByText(/Aqui está o resumo de hoje/)).toBeInTheDocument();
   });
 
-  it("botão 'Ver tudo na Sala de Comando' navega pra /decisao", async () => {
+  it("rodapé 'Ir para a Sala de Comando' aponta pra /decisao", async () => {
     mockEndpoints({
       period_start: "2026-09-10",
       period_end: "2026-09-16",
@@ -226,13 +229,10 @@ describe("HomePage", () => {
       top_priorities: [],
       recently_resolved: [],
     });
-    const user = userEvent.setup();
-
     renderWithProviders(<HomePage />);
 
-    const button = await screen.findByRole("button", { name: /Ver tudo na Sala de Comando/ });
-    await user.click(button);
-    expect(navigateMock).toHaveBeenCalledWith("/decisao");
+    const link = await screen.findByRole("link", { name: /Ir para a Sala de Comando/ });
+    expect(link).toHaveAttribute("href", "/decisao");
   });
 
   // Achado ALTO da Auditoria de Prontidão v1: tenant novo (zero arquivo
@@ -279,6 +279,92 @@ describe("HomePage", () => {
 
       await waitFor(() => expect(apiClient.get).toHaveBeenCalled());
       expect(screen.queryByText(/Sua clínica ainda não tem dado importado/)).not.toBeInTheDocument();
+    });
+  });
+
+  describe("Redesign 2026 — campos do canvas", () => {
+    function mockFull(narrative: ExecutiveNarrative) {
+      mockUser();
+      vi.mocked(apiClient.get).mockImplementation((url: string) => {
+        if (url.includes("executive-narrative")) return Promise.resolve(narrative as never);
+        if (url.includes("users/me")) return Promise.resolve(PROFILE as never);
+        if (url.includes("ingestion/files")) return Promise.resolve({ items: [], total: 5, limit: 1, offset: 0 } as never);
+        if (url.includes("today-agenda"))
+          return Promise.resolve({
+            date: "2026-09-23",
+            headline: "42 consultas, manhã cheia e 3 buracos à tarde.",
+            total_appointments: 42,
+            waitlist_waiting: 6,
+            periods: [
+              { label: "08–12h", text: "Tudo ocupado.", tone: "positive", action_label: null, action_href: null },
+              { label: "12–18h", text: "3 horários vagos.", tone: "warning", action_label: "3 pessoas da lista de espera cabem neles.", action_href: "/waitlist" },
+            ],
+          } as never);
+        if (url.includes("navigation-summary"))
+          return Promise.resolve({
+            module_alerts: [],
+            my_open_insights: 0,
+            last_import_at: null,
+            last_import_source: null,
+            urgent: { text: "Prazo para recorrer de 4 guias da Unimed termina amanhã — são R$ 9.200.", action_label: "Abrir recurso", action_href: "/denial-appeals" },
+          } as never);
+        return Promise.reject(new Error(`sem mock: ${url}`));
+      });
+    }
+
+    const NARRATIVE: ExecutiveNarrative = {
+      period_start: "2026-09-10",
+      period_end: "2026-09-16",
+      narrative: "Resumo do dia.",
+      generated_at: "2026-09-16T08:00:00Z",
+      top_priorities: [
+        {
+          severity: "critical",
+          category: "faturamento",
+          title: "A Unimed está recusando mais pagamentos que o normal",
+          message: "A glosa saltou de 6% para 14%.",
+          financial_impact: 28900,
+          action_label: "Ver faturamentos de alto risco",
+          action_href: "/painel",
+          estimated_minutes: 20,
+          why_now: "Está aberto há 2 dias.",
+          what_to_do: "Ver faturamentos de alto risco.",
+          if_ignored: "Continua em risco.",
+        },
+      ],
+      recently_resolved: [],
+    };
+
+    it("mostra a tarja Urgente, a agenda de hoje por turno e o tempo estimado da manchete", async () => {
+      mockFull(NARRATIVE);
+      renderWithProviders(<HomePage />);
+
+      expect(await screen.findByText("Prazo para recorrer de 4 guias da Unimed termina amanhã — são R$ 9.200.")).toBeInTheDocument();
+      expect(await screen.findByText("42 consultas, manhã cheia e 3 buracos à tarde.")).toBeInTheDocument();
+      expect(screen.getByRole("link", { name: "3 pessoas da lista de espera cabem neles." })).toHaveAttribute("href", "/waitlist");
+      expect(screen.getByText(/Leva cerca de 20 minutos/)).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "atribuir a alguém" })).toBeInTheDocument();
+    });
+
+    it("'Enviar por e-mail' manda o briefing para o próprio e-mail", async () => {
+      mockFull(NARRATIVE);
+      vi.mocked(apiClient.post).mockResolvedValue({ sent_to: "marina@clinica.com", delivered: true } as never);
+      const user = userEvent.setup();
+      renderWithProviders(<HomePage />);
+
+      await user.click(await screen.findByRole("button", { name: /Enviar por e-mail/ }));
+      expect(apiClient.post).toHaveBeenCalledWith("/api/v1/analytics/briefing/email", {});
+      expect(await screen.findByText("Briefing enviado para marina@clinica.com.")).toBeInTheDocument();
+    });
+
+    it("'Comparar com' troca a janela do panorama", async () => {
+      mockFull(NARRATIVE);
+      const user = userEvent.setup();
+      renderWithProviders(<HomePage />);
+
+      const select = await screen.findByRole("combobox", { name: "Comparar com" });
+      await user.selectOptions(select, "semana");
+      expect(screen.getByText("Comparar com: semana anterior")).toBeInTheDocument();
     });
   });
 });

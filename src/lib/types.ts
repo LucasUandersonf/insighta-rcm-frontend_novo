@@ -823,6 +823,14 @@ export interface SmartInsight {
   // específica de destino.
   action_label?: string | null;
   action_href?: string | null;
+  // Redesign 2026 — orientação do card "O que atacar primeiro" (ver
+  // app/services/insight_guidance.py no backend). Opcionais para não
+  // quebrar respostas antigas.
+  estimated_minutes?: number | null;
+  detected_days_ago?: number | null;
+  why_now?: string | null;
+  what_to_do?: string | null;
+  if_ignored?: string | null;
 }
 
 export interface SmartInsights {
@@ -2264,4 +2272,125 @@ export interface CheckoutDetail {
   status: "pending" | "completed" | "canceled";
   amount_cents: number;
   created_at: string;
+}
+
+// ---------------------------------------------------------------------
+// Redesign 2026 — rotas de app/api/v1/endpoints/briefing.py (backend).
+// ---------------------------------------------------------------------
+export type BriefingTone = "positive" | "warning" | "critical" | "neutral";
+
+export interface ModuleAlert {
+  route: string;
+  text: string;
+  tone: BriefingTone;
+}
+
+export interface UrgentNotice {
+  text: string;
+  action_label: string;
+  action_href: string;
+}
+
+export interface NavigationSummary {
+  module_alerts: ModuleAlert[];
+  my_open_insights: number;
+  last_import_at: string | null;
+  last_import_source: string | null;
+  urgent: UrgentNotice | null;
+}
+
+export interface AgendaPeriodLine {
+  label: string;
+  text: string;
+  tone: BriefingTone;
+  action_label: string | null;
+  action_href: string | null;
+}
+
+export interface TodayAgenda {
+  date: string;
+  headline: string;
+  total_appointments: number;
+  periods: AgendaPeriodLine[];
+  waitlist_waiting: number;
+}
+
+export interface PayerOverviewRow {
+  insurance_plan_id: string;
+  name: string;
+  plan_type: string;
+  billed: number;
+  share_pct: number;
+  denial_pct: number;
+  denied_value: number;
+  avg_days_to_receive: number | null;
+  awaiting_value: number;
+  read: string;
+  tone: "good" | "warn" | "bad" | "neutral";
+}
+
+export interface PayerVerdict {
+  kind: "best" | "denials" | "slowest";
+  label: string;
+  name: string;
+  text: string;
+}
+
+export interface PayerAttentionItem {
+  tone: "warning" | "critical";
+  title: string;
+  text: string;
+  href: string | null;
+}
+
+export interface PayerOverview {
+  period_start: string;
+  period_end: string;
+  total_billed: number;
+  total_denied: number;
+  avg_days_to_receive: number | null;
+  rows: PayerOverviewRow[];
+  verdicts: PayerVerdict[];
+  concentration_text: string | null;
+  attention: PayerAttentionItem[];
+}
+
+export interface WeeklyTrendPoint {
+  week_start: string;
+  label: string;
+  billed: number;
+  denied: number;
+}
+
+export interface WeeklyTrend {
+  points: WeeklyTrendPoint[];
+  annotation_index: number | null;
+  annotation_title: string | null;
+  annotation_text: string | null;
+  summary: string | null;
+}
+
+export interface RecoveredValue {
+  month_start: string;
+  total: number;
+  resolved_count: number;
+  items: { title: string; value: number | null }[];
+}
+
+export interface AskResponse {
+  question: string;
+  answer: string;
+  sources: string;
+}
+
+export interface NegotiationArgument {
+  plan_name: string;
+  target_days: number;
+  monthly_cash_released: number;
+  argument: string;
+}
+
+export interface BriefingEmailResult {
+  sent_to: string;
+  delivered: boolean;
 }

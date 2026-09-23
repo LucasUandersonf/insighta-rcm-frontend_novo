@@ -30,7 +30,7 @@ const TONE_CLASSES: Record<BadgeTone, string> = {
  */
 export function Badge({ tone, children }: { tone: BadgeTone; children: ReactNode }) {
   return (
-    <span className={cn("inline-flex items-center rounded-full border px-2 py-0.5 text-2xs font-medium", TONE_CLASSES[tone])}>
+    <span className={cn("inline-flex items-center rounded-md border border-transparent px-2 py-[3px] text-2xs font-semibold", TONE_CLASSES[tone])}>
       {children}
     </span>
   );

@@ -58,18 +58,9 @@ export const SEVERITY_CONFIG: Record<
   comparativo: { label: "Comparativo", icon: Users, text: "text-tier1", border: "border-tier1/25", bg: "bg-tier1-bg", dot: "bg-tier1", glow: "comparativo", badgeTone: "comparativo" },
 };
 
-// Valor de destaque em texto-gradiente + leve brilho (drop-shadow na cor
-// do próprio tom) — ver canvas de design, Main.dc.html: o número de
-// impacto do card de manchete usa `grad-text-tone grad-denied` com
-// `filter:drop-shadow(0 0 24px hsl(var(--denied)/.35))`, nunca cor
-// sólida. Esse é justamente o elemento que o pedido original chamou de
-// "números de destaque... com gradiente e leve brilho, não cor sólida".
-const IMPACT_GRADIENT_CLASSES: Record<InsightSeverity, string> = {
-  critical: "bg-grad-denied bg-clip-text text-transparent drop-shadow-[0_0_24px_hsl(var(--denied)/0.35)]",
-  warning: "bg-grad-pending bg-clip-text text-transparent drop-shadow-[0_0_24px_hsl(var(--pending)/0.35)]",
-  positive: "bg-grad-revenue bg-clip-text text-transparent drop-shadow-[0_0_24px_hsl(var(--revenue)/0.35)]",
-  comparativo: "bg-grad-tier1 bg-clip-text text-transparent drop-shadow-[0_0_24px_hsl(var(--tier1)/0.35)]",
-};
+function formatCurrencyWhole(value: number): string {
+  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(value);
+}
 
 export function formatCurrency(value: number): string {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
@@ -80,16 +71,26 @@ export function formatCurrency(value: number): string {
  * botões de atribuir/resolver — cada card resolve o `actioned`/`queueItem`
  * do SEU insight sozinho, então só passamos a fatia compartilhada
  * (estado + mutation), não o item já resolvido. */
-type InsightWorkflowSlice = Pick<
+export type InsightWorkflowSlice = Pick<
   ReturnType<typeof useInsightWorkflow>,
   "canManage" | "actionedKeys" | "resolveMutation" | "setAssigningItem"
 >;
 
-const MESH_CSS_VAR: Record<InsightSeverity, string> = {
-  critical: "--denied",
-  warning: "--pending",
-  positive: "--revenue",
-  comparativo: "--tier1",
+// Fundo do card manchete — degradê diagonal na cor da severidade, igual
+// ao "O que atacar primeiro" do canvas de design (Redesign 2026).
+const CATEGORY_LABEL_SHORT: Partial<Record<string, string>> = {
+  faturamento: "Convênios",
+  agenda: "Agenda",
+  estoque: "Estoque",
+  prontuario: "Prontuário",
+  estrategia: "Estratégia",
+};
+
+const HERO_TINT: Record<InsightSeverity, string> = {
+  critical: "bg-[linear-gradient(160deg,hsl(var(--denied)/0.12),hsl(var(--denied)/0.02)_60%)]",
+  warning: "bg-[linear-gradient(160deg,hsl(var(--pending)/0.11),hsl(var(--pending)/0.02)_60%)]",
+  positive: "bg-[linear-gradient(160deg,hsl(var(--revenue)/0.1),hsl(var(--revenue)/0.02)_60%)]",
+  comparativo: "bg-[linear-gradient(160deg,hsl(var(--tier1)/0.12),hsl(var(--tier1)/0.02)_60%)]",
 };
 
 /**
@@ -123,11 +124,14 @@ export function InsightActionButton({
   onNavigateTab,
   onFocusAgenda,
   toneClass,
+  primary = false,
 }: {
   insight: SmartInsight;
   onNavigateTab?: (tabId: string) => void;
   onFocusAgenda?: (focus: AgendaFocus) => void;
   toneClass: string;
+  /** Manchete do canvas Redesign 2026: botão cheio (violeta), não o link de apoio. */
+  primary?: boolean;
 }) {
   const navigate = useNavigate();
   if (!insight.action_label || !insight.action_href) return null;
@@ -158,18 +162,18 @@ export function InsightActionButton({
   return (
     <Button
       type="button"
-      variant="secondary"
-      size="xs"
+      variant={primary ? "primary" : "secondary"}
+      size={primary ? "md" : "xs"}
       onClick={handleClick}
-      className={cn("mt-3 inline-flex items-center gap-1", toneClass)}
+      className={cn("inline-flex items-center gap-1.5", !primary && "mt-3", !primary && toneClass)}
     >
       {insight.action_label}
-      <ArrowRight aria-hidden size={11} />
+      <ArrowRight aria-hidden size={primary ? 14 : 11} />
     </Button>
   );
 }
 
-function HeroInsight({
+export function HeroInsight({
   insight,
   onNavigateTab,
   onFocusAgenda,
@@ -182,61 +186,71 @@ function HeroInsight({
 }) {
   const cfg = SEVERITY_CONFIG[insight.severity];
   const Icon = cfg.icon;
-  const meshVar = MESH_CSS_VAR[insight.severity];
   const queueItem = toQueueItem(insight);
   const actioned = workflow.actionedKeys[insightItemKey(insight)];
   return (
-    <BentoCard colSpan={8} glow={cfg.glow} className={cn("border", cfg.border, cfg.bg)}>
-      {/* Malha de gradiente decorativa — respira suavemente ao fundo do
-          card, dando o card de manchete peso visual de "elemento de
-          assinatura" em vez de mais um retângulo entre outros. Puramente
-          decorativo: não compete com o texto (baixíssima opacidade). */}
-      <motion.div
-        aria-hidden
-        className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full blur-3xl"
-        style={{ background: `radial-gradient(circle, hsl(var(${meshVar}) / 0.28), transparent 70%)` }}
-        animate={{ scale: [1, 1.15, 1], opacity: [0.6, 0.9, 0.6] }}
-        transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-      />
-      <div className="relative flex items-start gap-3.5">
-        <span aria-hidden className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-canvas-surface/70", cfg.text)}>
-          <Icon size={17} strokeWidth={2.25} />
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge tone={cfg.badgeTone}>{cfg.label}</Badge>
-            {insight.is_new && <Badge tone="novo">Novo</Badge>}
-            <h2 className="font-serif text-lg font-medium tracking-premium text-ink sm:text-xl">{insight.title}</h2>
-            <ActionedBadge actioned={actioned} />
+    <BentoCard colSpan={12} glow={cfg.glow} className={cn("border p-7", cfg.border, HERO_TINT[insight.severity])}>
+      <div className="relative flex flex-col gap-[18px]">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <Badge tone={cfg.badgeTone}>{cfg.label}</Badge>
+          {insight.is_new && <Badge tone="novo">Novo</Badge>}
+          <ActionedBadge actioned={actioned} />
+          <span className="ml-auto flex items-center gap-1.5 text-xs text-ink-faint">
+            <Icon aria-hidden size={13} className={cfg.text} />
+            {CATEGORY_LABEL_SHORT[insight.category] ?? "Destaque"}
+            {insight.detected_days_ago != null && insight.detected_days_ago >= 1
+              ? ` · detectado há ${insight.detected_days_ago} ${insight.detected_days_ago === 1 ? "dia" : "dias"}`
+              : " · detectado hoje"}
+          </span>
+        </div>
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,1fr)_minmax(220px,auto)] md:gap-8">
+          <div className="flex flex-col gap-3">
+            <h2 className="font-serif text-[26px] font-medium leading-tight text-ink">{insight.title}</h2>
+            <p className="max-w-3xl text-[15px] leading-relaxed text-ink-soft">{insight.message}</p>
           </div>
-          <p className="mt-2.5 max-w-2xl text-sm leading-relaxed text-ink-muted sm:text-[0.95rem]">{insight.message}</p>
           {insight.financial_impact !== null && (
-            <div className="mt-4">
-              <span className="text-2xs font-medium uppercase tracking-wide text-ink-faint">Impacto estimado</span>
-              <div className={cn("tabular font-sans text-3xl font-semibold tracking-tightest sm:text-4xl", IMPACT_GRADIENT_CLASSES[insight.severity])}>
-                <AnimatedNumber value={insight.financial_impact} format={formatCurrency} durationSeconds={1.2} />
+            <div className={cn("flex flex-col gap-1.5 md:border-l md:pl-6", cfg.border)}>
+              <span className="text-[11px] font-medium uppercase tracking-[0.06em] text-ink-faint">Impacto estimado</span>
+              <div className={cn("tabular text-[34px] font-semibold tracking-[-0.02em]", cfg.text)}>
+                <AnimatedNumber value={insight.financial_impact} format={formatCurrencyWhole} durationSeconds={1.2} />
               </div>
             </div>
           )}
-          <div className="mt-3 flex flex-wrap items-center gap-3">
-            <InsightActionButton insight={insight} onNavigateTab={onNavigateTab} onFocusAgenda={onFocusAgenda} toneClass={cfg.text} />
-            <InsightWorkflowButtons
-              item={queueItem}
-              canManage={workflow.canManage}
-              actioned={actioned}
-              onResolve={(i) => workflow.resolveMutation.mutate(i)}
-              onAssign={workflow.setAssigningItem}
-              resolvePending={workflow.resolveMutation.isPending}
-              toneClass={cfg.text}
-            />
+        </div>
+        {(insight.why_now || insight.what_to_do || insight.if_ignored) && (
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+            {[
+              ["Por que agora", insight.why_now],
+              ["O que fazer", insight.what_to_do],
+              ["Se não fizer nada", insight.if_ignored],
+            ].map(([label, text]) =>
+              text ? (
+                <div key={label} className="flex flex-col gap-1.5 rounded-[14px] border border-border-hairline bg-canvas/50 p-3.5">
+                  <span className="text-xs font-semibold text-ink">{label}</span>
+                  <span className="text-[13px] leading-normal text-ink-muted">{text}</span>
+                </div>
+              ) : null
+            )}
           </div>
+        )}
+        <div className="flex flex-wrap items-center gap-2.5">
+          <InsightActionButton insight={insight} onNavigateTab={onNavigateTab} onFocusAgenda={onFocusAgenda} toneClass={cfg.text} primary />
+          <InsightWorkflowButtons
+            item={queueItem}
+            canManage={workflow.canManage}
+            actioned={actioned}
+            onResolve={(i) => workflow.resolveMutation.mutate(i)}
+            onAssign={workflow.setAssigningItem}
+            resolvePending={workflow.resolveMutation.isPending}
+            toneClass={cfg.text}
+          />
         </div>
       </div>
     </BentoCard>
   );
 }
 
-function SecondaryInsightCard({
+export function SecondaryInsightCard({
   insight,
   onNavigateTab,
   onFocusAgenda,
@@ -251,20 +265,17 @@ function SecondaryInsightCard({
   const queueItem = toQueueItem(insight);
   const actioned = workflow.actionedKeys[insightItemKey(insight)];
   return (
-    <BentoCard colSpan={4} glow={cfg.glow} className="p-4">
-      <div className="flex items-start gap-2.5">
-        <span aria-hidden className={cn("mt-1 h-1.5 w-1.5 shrink-0 rounded-full", cfg.dot)} />
+    <BentoCard colSpan={4} glow={cfg.glow} data-insight-card="secondary" className={cn("border p-5", cfg.border)}>
+      <div className="flex items-start">
         <div className="min-w-0 flex-1">
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-sm font-medium text-ink">{insight.title}</p>
-            <span className="flex shrink-0 items-center gap-1.5">
-              {insight.is_new && <Badge tone="novo">Novo</Badge>}
-              <Badge tone={cfg.badgeTone}>{cfg.label}</Badge>
-            </span>
-          </div>
-          <p className="mt-1 text-xs leading-relaxed text-ink-muted">{insight.message}</p>
+          <span className="flex items-center gap-1.5">
+            <Badge tone={cfg.badgeTone}>{cfg.label}</Badge>
+            {insight.is_new && <Badge tone="novo">Novo</Badge>}
+          </span>
+          <p className="mt-2.5 text-[15px] font-semibold leading-snug text-ink">{insight.title}</p>
+          <p className="mt-2 text-[13px] leading-relaxed text-ink-muted">{insight.message}</p>
           {insight.financial_impact !== null && (
-            <p className="mt-1.5 font-mono text-2xs text-ink-faint">Impacto estimado: {formatCurrency(insight.financial_impact)}</p>
+            <p className={cn("mt-2 text-[13px] font-semibold", cfg.text)}>Impacto estimado: {formatCurrency(insight.financial_impact)}</p>
           )}
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <InsightActionButton insight={insight} onNavigateTab={onNavigateTab} onFocusAgenda={onFocusAgenda} toneClass={cfg.text} />
@@ -333,7 +344,7 @@ function CategorySection({
   const { label, icon: Icon } = CATEGORY_CONFIG[category];
   return (
     <div>
-      <h3 className="mb-3 flex items-center gap-1.5 text-2xs font-medium uppercase tracking-wide text-ink-faint">
+      <h3 className="mb-3 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.06em] text-ink-faint">
         <Icon aria-hidden size={13} />
         {label}
       </h3>
@@ -354,7 +365,7 @@ function AllClearHero() {
           <CheckCircle2 size={17} strokeWidth={2.25} />
         </span>
         <div>
-          <h2 className="font-serif text-lg font-medium tracking-premium text-ink">Tudo certo por aqui</h2>
+          <h2 className="font-serif text-[22px] font-medium text-ink">Tudo certo por aqui</h2>
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-ink-muted">
             Nenhum desvio relevante identificado nesta janela — operação dentro do esperado. Os números de apoio continuam
             disponíveis logo abaixo, caso queira conferir de qualquer forma.

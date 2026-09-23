@@ -27,8 +27,8 @@ export function NarrativeInsight({ text, tone = "neutral" }: NarrativeInsightPro
   const cfg = toneConfig[tone];
   const Icon = cfg.icon;
   return (
-    <p className="flex items-start gap-1.5 text-2xs leading-relaxed text-ink-muted">
-      <Icon aria-hidden size={11} className={cn("mt-0.5 shrink-0", cfg.className)} />
+    <p className="flex items-start gap-1.5 text-[13px] leading-relaxed text-ink-soft">
+      <Icon aria-hidden size={12} className={cn("mt-1 shrink-0", cfg.className)} />
       <span>{text}</span>
     </p>
   );

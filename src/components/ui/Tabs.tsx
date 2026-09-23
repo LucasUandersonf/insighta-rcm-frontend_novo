@@ -117,7 +117,7 @@ export function Tabs({
         role="tablist"
         aria-orientation="horizontal"
         className={cn(
-          "inline-flex gap-1 whitespace-nowrap rounded-xl border border-border-hairline bg-canvas-raised/60 p-1 backdrop-blur-xl",
+          "flex min-w-full gap-6 whitespace-nowrap border-b border-border-hairline",
           className
         )}
       >
@@ -138,14 +138,14 @@ export function Tabs({
               onClick={() => onChange(item.id)}
               onKeyDown={(e) => handleKeyDown(e, index)}
               className={cn(
-                "relative flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors",
-                isActive ? "text-accent" : "text-ink-faint hover:text-ink"
+                "relative -mb-px flex items-center gap-1.5 pb-3 text-[13px] font-medium transition-colors",
+                isActive ? "text-ink" : "text-ink-faint hover:text-ink"
               )}
             >
               {isActive && (
                 <motion.span
                   layoutId={`tabs-active-pill-${groupId}`}
-                  className="absolute inset-0 rounded-lg bg-glass shadow-card"
+                  className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-accent"
                   transition={{ type: "spring", stiffness: 420, damping: 34 }}
                 />
               )}

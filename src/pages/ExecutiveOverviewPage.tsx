@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
-import { Award, BadgeDollarSign, ClipboardList, HeartHandshake, Landmark, LayoutDashboard, ListChecks, Package, SlidersHorizontal, Target, Users } from "lucide-react";
+import { Upload, Award, BadgeDollarSign, ClipboardList, HeartHandshake, Landmark, LayoutDashboard, ListChecks, Package, SlidersHorizontal, Target, Users } from "lucide-react";
 import { KpiCard } from "@/components/ui/KpiCard";
 import { ErrorState, LoadingState } from "@/components/ui/Panel";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -13,14 +13,13 @@ import { EstoquePanel } from "@/components/dashboard/EstoquePanel";
 import { PepConformidadePanel } from "@/components/dashboard/PepConformidadePanel";
 import { AverageTicketPanel } from "@/components/dashboard/AverageTicketPanel";
 import { BirthdaysPanel } from "@/components/dashboard/BirthdaysPanel";
-import { DailySummaryPanel } from "@/components/dashboard/DailySummaryPanel";
 import { DataFreshnessBanner } from "@/components/dashboard/DataFreshnessBanner";
 import { EarlyChurnRiskPanel } from "@/components/dashboard/EarlyChurnRiskPanel";
 import { ExecutiveAgendaSummary } from "@/components/dashboard/ExecutiveAgendaSummary";
 import { ExecutiveNarrativeBanner } from "@/components/dashboard/ExecutiveNarrativeBanner";
 import { FinancialHoleBillingsPanel } from "@/components/dashboard/FinancialHoleBillingsPanel";
 import { InactivePatientsPanel } from "@/components/dashboard/InactivePatientsPanel";
-import { PriorityQueuePanel } from "@/components/dashboard/PriorityQueuePanel";
+import { CommandCenterToday } from "@/components/dashboard/CommandCenterToday";
 import { SmartInsightsFeed } from "@/components/dashboard/SmartInsightsFeed";
 import { HealthScoreWidget } from "@/components/dashboard/HealthScoreWidget";
 import { SatisfactionSummaryWidget } from "@/components/dashboard/SatisfactionSummaryWidget";
@@ -59,6 +58,35 @@ function formatCurrency(value: number): string {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
 }
 
+/** "Exportar relatório" (ícone do canvas ao lado do período) — baixa um
+ * CSV com os indicadores do período, pronto para abrir no Excel. */
+function exportCommandCenterCsv(summary: ExecutiveSummary, dateFrom: string, dateTo: string) {
+  const rows: (string | number)[][] = [
+    ["Indicador", "Valor", "Período anterior", "Variação (%)"],
+    ["Total faturado", summary.total_billed.value, summary.total_billed.previous_value, summary.total_billed.delta_pct ?? ""],
+    ["Buraco financeiro", summary.financial_hole.value, summary.financial_hole.previous_value, summary.financial_hole.delta_pct ?? ""],
+    ["Caixa protegido", summary.total_value_saved.value, summary.total_value_saved.previous_value, summary.total_value_saved.delta_pct ?? ""],
+    ["Divergência de recebimento", summary.payment_gap.value, summary.payment_gap.previous_value, summary.payment_gap.delta_pct ?? ""],
+    ["Você faturou do que podia (%)", summary.margin_vs_contracted_pct ?? "", "", ""],
+    ["Faturamentos travados por risco", summary.high_risk_pending_count, "", ""],
+    ["Recursos com prazo vencendo", summary.appeals_due_soon_count, "", ""],
+  ];
+  if (summary.avg_days_to_receive) {
+    rows.push(["Prazo médio de recebimento (dias)", summary.avg_days_to_receive.value, summary.avg_days_to_receive.previous_value, summary.avg_days_to_receive.delta_pct ?? ""]);
+  }
+  if (summary.avg_capacity_utilization) {
+    rows.push(["Agenda ocupada (%)", summary.avg_capacity_utilization.value * 100, summary.avg_capacity_utilization.previous_value * 100, summary.avg_capacity_utilization.delta_pct ?? ""]);
+  }
+  const csv = rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(";")).join("\n");
+  const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `sala-de-comando_${dateFrom}_${dateTo}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 function formatPct(value: number): string {
   return `${(value * 100).toFixed(1)}%`;
 }
@@ -83,7 +111,7 @@ function isTabId(value: string | null): value is TabId {
  * a rede, ferramenta interativa).
  */
 export function ExecutiveOverviewPage() {
-  const { windowDays, setWindowDays, dateFrom, dateTo } = useDateWindow(7);
+  const { windowDays, setWindowDays, dateFrom, dateTo } = useDateWindow(30);
   const { data: profile } = useCurrentUserProfile();
   // Deep-link de aba/foco a partir de fora da Sala de Comando (Avaliação
   // Home/Sala de Comando, Achado 2) — "?tab=" explícito e válido manda
@@ -145,12 +173,24 @@ export function ExecutiveOverviewPage() {
     <div className="space-y-6">
       <PageHeader
         title="Sala de Comando"
-        subtitle="Onde estamos perdendo dinheiro hoje?"
+        subtitle="Onde estamos perdendo dinheiro hoje — e o que fazer primeiro."
         greeting={profile ? `${timeOfDayGreeting()}, ${firstNameFrom(profile.full_name)}.` : undefined}
         action={
-          activeTab === "hoje" || activeTab === "diagnostico" || activeTab === "rentabilidade" || activeTab === "estoque" || activeTab === "clinico" ? (
-            <PeriodWindowSelect windowDays={windowDays} onChange={setWindowDays} />
-          ) : undefined
+          <>
+            {(activeTab === "hoje" || activeTab === "diagnostico" || activeTab === "rentabilidade" || activeTab === "estoque" || activeTab === "clinico") && (
+              <PeriodWindowSelect windowDays={windowDays} onChange={setWindowDays} />
+            )}
+            <button
+              type="button"
+              onClick={() => summary && exportCommandCenterCsv(summary, dateFrom, dateTo)}
+              disabled={!summary}
+              aria-label="Exportar relatório"
+              title="Exportar relatório (CSV)"
+              className="flex h-[38px] w-[38px] items-center justify-center rounded-[11px] border border-border-hairline bg-canvas-raised/40 text-ink transition-colors hover:bg-canvas-raised/70 disabled:opacity-50"
+            >
+              <Upload aria-hidden size={15} />
+            </button>
+          </>
         }
       />
 
@@ -181,14 +221,10 @@ export function ExecutiveOverviewPage() {
 
       {activeTab === "hoje" && (
         <TabPanel id="hoje" groupId={TABS_GROUP}>
-          {/* Onda 6 do Plano de Ação, item 18 — primeira coisa que
-              aparece na aba "Hoje", antes da fila de ação. */}
-          <div className="mb-4">
-            <DailySummaryPanel />
-          </div>
-          <PriorityQueuePanel
+          <CommandCenterToday
             dateFrom={dateFrom}
             dateTo={dateTo}
+            summary={summary}
             onNavigateTab={(id) => setActiveTab(id as TabId)}
             onFocusAgenda={handleFocusAgendaFromQueue}
           />
