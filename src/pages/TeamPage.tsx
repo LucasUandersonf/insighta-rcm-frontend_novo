@@ -25,6 +25,7 @@ import {
   type CoordinatorScore,
   type Demand,
   type TeamSector,
+  reevaluationNote,
 } from "@/lib/team";
 
 type TabId = "andamento" | "devolvidas" | "resolvidas";
@@ -396,6 +397,7 @@ export function TeamPage() {
             Metas resolvidas por coordenador
           </h2>
           <span className="text-xs text-ink-faint">{month}</span>
+          <span className="ml-auto text-xs text-ink-faint">{reevaluationNote(o)}</span>
         </div>
         {o.scoreboard.length === 0 ? (
           <p className="text-sm text-ink-muted">Nenhum setor tem coordenador ainda — cadastre em Usuários e permissões para começar a atribuir.</p>

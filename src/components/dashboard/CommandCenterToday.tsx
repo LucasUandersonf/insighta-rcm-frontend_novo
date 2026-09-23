@@ -107,12 +107,17 @@ function KpiStrip({ summary, payers }: { summary: ExecutiveSummary; payers?: Pay
   );
 }
 
+/** Frente 1 — no máximo 5 prioridades por vez: mais que isso vira ruído. */
+export const MAX_TODAY_PRIORITIES = 5;
+
 function TodayQueue({ dateFrom, dateTo, workflow }: { dateFrom: string; dateTo: string; workflow: ReturnType<typeof useInsightWorkflow> }) {
   const { data, isLoading } = useQuery({
     queryKey: ["analytics", "priority-queue", dateFrom, dateTo],
     queryFn: () => apiClient.get<PriorityQueue>(`/api/v1/analytics/priority-queue?date_from=${dateFrom}&date_to=${dateTo}`),
   });
-  const items = (data?.items ?? []).slice(0, 6);
+  const all = data?.items ?? [];
+  const items = all.slice(0, MAX_TODAY_PRIORITIES);
+  const hidden = all.length - items.length;
   const done = items.filter((item) => workflow.actionedKeys[insightItemKey(item)]).length;
 
   return (
@@ -163,6 +168,12 @@ function TodayQueue({ dateFrom, dateTo, workflow }: { dateFrom: string; dateTo: 
           </div>
         );
       })}
+      {hidden > 0 && (
+        <p className="text-xs text-ink-muted">
+          Mais {hidden} {hidden === 1 ? "item espera" : "itens esperam"} na fila — {hidden === 1 ? "entra" : "entram"} aqui conforme você
+          conclui estes.
+        </p>
+      )}
       <p className="mt-1 text-xs leading-normal text-ink-faint">
         A fila junta insights e itens do Raio-X, na ordem que mais devolve dinheiro por minuto de trabalho.
       </p>

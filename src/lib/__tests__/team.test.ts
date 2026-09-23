@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { deadlineOptions, dueLabel } from "@/lib/team";
+import { deadlineOptions, dueLabel, reevaluationNote } from "@/lib/team";
 
 describe("team — textos de prazo", () => {
   const tuesday = new Date(2026, 8, 23, 10, 0); // terça, 23/09/2026
@@ -17,5 +17,16 @@ describe("team — textos de prazo", () => {
     const thursday = new Date(2026, 8, 24, 10, 0);
     // Sexta = amanhã -> pula para a sexta seguinte.
     expect(deadlineOptions(thursday)[2]!.label).toBe("Sexta (02/10)");
+  });
+});
+
+describe("reevaluationNote", () => {
+  it("diz quando os dados conferiram e quantas aguardam", () => {
+    expect(reevaluationNote({ last_reevaluated_at: "2026-09-22T12:00:00", awaiting_confirmation_count: 2 })).toBe(
+      "Conferido pelos dados em 22/09. 2 demandas resolvidas aguardam conferência."
+    );
+    expect(reevaluationNote({ last_reevaluated_at: null, awaiting_confirmation_count: 1 })).toBe(
+      "Os dados ainda não conferiram nenhuma demanda resolvida. 1 demanda resolvida aguarda conferência."
+    );
   });
 });
