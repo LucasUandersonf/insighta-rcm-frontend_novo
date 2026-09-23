@@ -2458,3 +2458,13 @@ export interface NoShowAccuracy {
   history_days: number;
   days_until_calibration: number;
 }
+
+/** GET /analytics/denial-model-status — Frente 1: modelo de ML de glosa. */
+export interface DenialModelStatus {
+  status: "aprendendo" | "pronto_para_treinar" | "ativo";
+  samples: number;
+  denied: number;
+  not_denied: number;
+  min_samples: number;
+  min_class_samples: number;
+}

@@ -1,3 +1,4 @@
+import { DenialModelStatusNote } from "@/components/dashboard/DenialModelStatusNote";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
@@ -907,6 +908,7 @@ export function ContractsPage() {
       {activeTab === "glosas" && (
         <TabPanel id="glosas" groupId={PAYER_TABS_GROUP}>
           <div className="space-y-6">
+            <DenialModelStatusNote />
             <PlanLossRankingPanel dateFrom={dateFrom} dateTo={dateTo} />
             <DenialRiskDistributionPanel dateFrom={dateFrom} dateTo={dateTo} />
           </div>
