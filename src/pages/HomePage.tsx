@@ -394,6 +394,7 @@ function AskBox() {
           {ask.isPending && <p className="text-ink-muted">Consultando os números da clínica…</p>}
           {ask.data && (
             <>
+              {ask.data.understood && <p className="text-2xs text-ink-faint">{ask.data.understood}</p>}
               <p className="text-ink">{ask.data.answer}</p>
               <p className="text-xs text-ink-faint">{ask.data.sources}</p>
               {quotaNote && <p className="text-2xs text-ink-faint">{quotaNote}</p>}

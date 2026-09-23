@@ -187,6 +187,7 @@ function AskInsightaField({ items, canAsk }: { items: NavItem[]; canAsk: boolean
                 {ask.isPending && <p className="text-sm text-ink-muted">Consultando os números da clínica…</p>}
                 {ask.data && (
                   <>
+                    {ask.data.understood && <p className="text-2xs text-ink-faint">{ask.data.understood}</p>}
                     <p className="text-sm leading-relaxed text-ink">{ask.data.answer}</p>
                     <p className="text-xs text-ink-faint">{ask.data.sources}</p>
                     {quotaNote && <p className="text-2xs text-ink-faint">{quotaNote}</p>}

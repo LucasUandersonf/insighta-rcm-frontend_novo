@@ -2403,6 +2403,10 @@ export interface AskResponse {
   question: string;
   answer: string;
   sources: string;
+  /** "insighta" = resposta pronta (sem IA, custo zero); "ia" = redigida pela IA. */
+  answered_by?: "insighta" | "ia";
+  /** "Entendi: qual convênio mais glosa." — só nas respostas prontas. */
+  understood?: string | null;
 }
 
 export interface NegotiationArgument {
