@@ -149,7 +149,40 @@ function FirstRunWizard({ canUpload }: { canUpload: boolean }) {
           <ArrowRight aria-hidden size={13} />
         </Button>
       )}
+      {canUpload && <OnboardingSteps />}
     </motion.div>
+  );
+}
+
+/**
+ * Bloco 2 (autonomia) — os 3 passos que deixam a clínica funcionando sem
+ * suporte: dados, coordenadores (quem recebe cada alerta) e a checagem
+ * completa em Saúde da conta.
+ */
+const ONBOARDING_STEPS = [
+  { n: 1, title: "Importe os dados", text: "Baixe o modelo de cada área na Central de Upload, ou mapeie as colunas do seu sistema.", to: "/upload" },
+  {
+    n: 2,
+    title: "Defina os coordenadores",
+    text: "Quem cuida de Agendamento, Faturamento, Estoque e Assistencial recebe os alertas do setor. Convide por e-mail.",
+    to: "/admin/users",
+  },
+  { n: 3, title: "Confira a saúde da conta", text: "Contratos, meta, grade dos profissionais e o que mais faltar — com o atalho para resolver.", to: "/admin/saude-da-conta" },
+];
+
+function OnboardingSteps() {
+  return (
+    <ol className="mt-2 grid w-full gap-3 sm:grid-cols-3">
+      {ONBOARDING_STEPS.map((step) => (
+        <li key={step.n}>
+          <Link to={step.to} className="flex h-full flex-col gap-1 rounded-[14px] border border-border-hairline bg-canvas-surface/60 p-3.5 hover:border-accent/40">
+            <span className="text-2xs font-semibold uppercase tracking-[0.08em] text-accent-muted">Passo {step.n}</span>
+            <span className="text-sm font-medium text-ink">{step.title}</span>
+            <span className="text-xs leading-relaxed text-ink-muted">{step.text}</span>
+          </Link>
+        </li>
+      ))}
+    </ol>
   );
 }
 
@@ -190,6 +223,11 @@ function Headline({ insight, onAssign, canAssign }: { insight: SmartInsight; onA
           {insight.evidence}
           {insight.evidence && insight.track_record ? " · " : ""}
           {insight.track_record}
+        </p>
+      )}
+      {insight.method && (
+        <p className="text-xs leading-relaxed text-ink-faint">
+          <span className="font-medium text-ink-muted">Como calculamos:</span> {insight.method}
         </p>
       )}
       <div className="flex flex-wrap items-center gap-5 pt-1.5">

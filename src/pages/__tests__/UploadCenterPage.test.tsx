@@ -123,7 +123,7 @@ describe("UploadCenterPage — aba Lotes Operacionais", () => {
     expect((formData.get("file") as File).name).toBe("faturamento.csv");
 
     expect(
-      await screen.findByText("Arquivo processado: 98 linha(s) importada(s), 2 rejeitada(s) — veja a tela de Setup para resolver.")
+      await screen.findByText("Arquivo processado: 98 linha(s) lida(s), 2 rejeitada(s). Veja o motivo de cada uma no relatório.")
     ).toBeInTheDocument();
   });
 

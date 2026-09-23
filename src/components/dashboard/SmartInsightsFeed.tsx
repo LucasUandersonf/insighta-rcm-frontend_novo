@@ -201,12 +201,17 @@ function GuidanceBox({ label, text }: { label: string; text?: string | null }) {
 /** Base do número + histórico de acerto nesta clínica — o gestor sabe de
  * onde vem o alerta e quanto confiar nele. */
 export function InsightBasis({ insight, compact = false }: { insight: SmartInsight; compact?: boolean }) {
-  if (!insight.evidence && !insight.track_record) return null;
+  if (!insight.evidence && !insight.track_record && !insight.method) return null;
   return (
     <div className={cn("flex flex-col gap-1 text-xs leading-relaxed text-ink-faint", compact && "mt-2")}>
       {insight.evidence && (
         <span>
           <span className="font-medium text-ink-muted">De onde vem:</span> {insight.evidence}
+        </span>
+      )}
+      {insight.method && (
+        <span>
+          <span className="font-medium text-ink-muted">Como calculamos:</span> {insight.method}
         </span>
       )}
       {insight.track_record && (

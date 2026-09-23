@@ -262,6 +262,17 @@ describe("HomePage", () => {
   // normalmente — sem nenhuma pista de que o primeiro passo é subir dado
   // na Central de Upload.
   describe("primeiro uso (tenant sem dado importado)", () => {
+    it("owner vê os 3 passos: dados, coordenadores e saúde da conta", async () => {
+      mockEndpoints(
+        { period_start: "2026-09-10", period_end: "2026-09-16", narrative: null, generated_at: null, top_priorities: [], recently_resolved: [] },
+        0
+      );
+      renderWithProviders(<HomePage />);
+
+      expect(await screen.findByRole("link", { name: /Defina os coordenadores/ })).toHaveAttribute("href", "/admin/users");
+      expect(screen.getByRole("link", { name: /Confira a saúde da conta/ })).toHaveAttribute("href", "/admin/saude-da-conta");
+    });
+
     it("owner vê o convite pra Central de Upload em vez de 'tudo tranquilo'", async () => {
       mockEndpoints(
         { period_start: "2026-09-10", period_end: "2026-09-16", narrative: null, generated_at: null, top_priorities: [], recently_resolved: [] },
