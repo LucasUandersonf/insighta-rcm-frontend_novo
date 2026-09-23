@@ -400,3 +400,48 @@ describe("SmartInsightsFeed", () => {
     await expectNoA11yViolations(container);
   });
 });
+
+describe("SmartInsightsFeed — Nota 9 (roteiro, base do número, tipo de valor)", () => {
+  it("mostra o passo a passo da regra, de onde vem o número e o histórico de acerto", async () => {
+    mockUser("owner");
+    vi.mocked(apiClient.get).mockResolvedValue({
+      period_start: "2026-01-01",
+      period_end: "2026-01-07",
+      insights: [
+        {
+          severity: "critical",
+          category: "faturamento",
+          title: "Unimed está recusando mais pagamentos que o normal",
+          message: "A Unimed passou a recusar…",
+          financial_impact: 9000,
+          impact_kind: "perda",
+          why_now: "Cada guia enviada com o mesmo erro volta recusada.",
+          what_to_do: "Abra a Fila de correção filtrada por Unimed.",
+          playbook: ["Abra a Fila de correção filtrada por Unimed.", "Avise a recepção do erro que se repete."],
+          evidence: "Baseado em 12 atendimentos com risco de recusa.",
+          track_record: "Nesta clínica, este alerta se confirmou nos dados 8 de 10 vezes.",
+        },
+        {
+          severity: "warning",
+          category: "faturamento",
+          title: "Boa parte da sua receita depende de um único convênio: Unimed",
+          message: "…",
+          financial_impact: 183000,
+          impact_kind: "referencia",
+        },
+      ],
+    } as SmartInsights);
+    renderWithProviders(<SmartInsightsFeed dateFrom="2026-01-01" dateTo="2026-01-07" />);
+
+    const steps = await screen.findAllByRole("listitem");
+    expect(steps.map((s) => s.textContent)).toEqual([
+      "Abra a Fila de correção filtrada por Unimed.",
+      "Avise a recepção do erro que se repete.",
+    ]);
+    expect(screen.getByText("Baseado em 12 atendimentos com risco de recusa.")).toBeInTheDocument();
+    expect(screen.getByText("Nesta clínica, este alerta se confirmou nos dados 8 de 10 vezes.")).toBeInTheDocument();
+    expect(screen.getByText("IMPACTO ESTIMADO")).toBeInTheDocument();
+    // Faturamento de um convênio não é prejuízo: rótulo neutro.
+    expect(screen.getByText(/Valor envolvido:/)).toBeInTheDocument();
+  });
+});

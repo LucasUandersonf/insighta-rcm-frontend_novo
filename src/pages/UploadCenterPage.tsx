@@ -237,11 +237,13 @@ const DATA_TYPE_LABELS: Record<string, string> = {
 // aceitam CSV e JSON (mesmo dicionário de campos nos dois); Agenda é o
 // único com XML também (ver DECISÃO em app/sql/019_agenda_ingestion.sql).
 const ACCEPTED_FORMATS_BY_DATA_TYPE: Record<string, string[]> = {
-  faturamento: [".csv", ".json"],
-  agenda: [".csv", ".xml", ".json"],
-  atendimento: [".csv", ".json"],
-  estoque: [".csv", ".json"],
-  pep: [".csv", ".json"],
+  // .xlsx em todas as pernas: o backend converte a planilha para o CSV
+  // do template (ver app/services/spreadsheet_conversion.py).
+  faturamento: [".xlsx", ".csv", ".json"],
+  agenda: [".xlsx", ".csv", ".xml", ".json"],
+  atendimento: [".xlsx", ".csv", ".json"],
+  estoque: [".xlsx", ".csv", ".json"],
+  pep: [".xlsx", ".csv", ".json"],
 };
 
 function BatchUploadTab() {
@@ -328,13 +330,13 @@ function BatchUploadTab() {
           )}
           <Dropzone
             accept={ACCEPTED_FORMATS_BY_DATA_TYPE[dataType]}
-            hint={dataType === "agenda" ? "CSV, XML ou JSON — até 20MB" : "CSV ou JSON — até 20MB"}
+            hint={dataType === "agenda" ? "Excel (.xlsx), CSV, XML ou JSON — até 20MB" : "Excel (.xlsx), CSV ou JSON — até 20MB"}
             file={file}
             onFileSelected={setFile}
             isUploading={mutation.isPending}
           />
           <div className="mt-4 flex justify-end gap-2">
-            {dataType === "faturamento" && file?.name.toLowerCase().endsWith(".csv") && (
+            {dataType === "faturamento" && /\.(csv|xlsx)$/.test(file?.name.toLowerCase() ?? "") && (
               <Button type="button" variant="secondary" onClick={() => setIsMappingModalOpen(true)} className="flex items-center gap-1.5">
                 <Wand2 size={14} />
                 Mapear colunas

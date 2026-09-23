@@ -78,6 +78,15 @@ Canvas "Atribuir", "Equipe" e "Coordenador". Perfis: **gestor** (owner/admin), *
 
 Links antigos (`?tab=crm`, `?tab=diagnostico`, `/painel?insurance_plan_id=`) continuam funcionando.
 
+### Fase 2.7 — Insights "nota 9" ✅ entregue
+
+- Card mostra o **passo a passo** da regra, **de onde vem o número** e o **histórico de acerto** nesta clínica.
+- Rótulo do valor respeita o que ele é: "Impacto estimado" (perda), "Valor envolvido" (referência), "Valor protegido" (ganho). A Home diz "em jogo" só para perda.
+- Atribuir e resolver enviam `rule_id` + chave estável → o motor aprende e a reavaliação não se perde quando um número do título muda.
+- Fila de correção aceita `?professional_id=` (vindo do alerta "profissional fora do padrão de glosa").
+- Destinos exatos: Faturamento & guias abre na aba pedida (`?tab=coparticipacao`, `?tab=auditoria-opme`); a Sala de Comando troca de aba e rola até a seção quando a URL muda (`?tab=estoque&scrollTo=nao-cobrado`).
+- Aba Estoque ganhou a lista **Material usado e não cobrado** e âncoras para os alertas de estoque.
+
 ### Fase 3 — Próximos passos 🔜
 
 - [ ] **Configurar produção**: `ANTHROPIC_API_KEY` (Pergunte ao Insighta / argumento com IA) e `SMTP_*` (envio real do briefing). Sem elas, a tela avisa e nada quebra.

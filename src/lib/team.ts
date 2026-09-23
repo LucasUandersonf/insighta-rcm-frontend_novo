@@ -70,6 +70,8 @@ export interface DemandCreate {
   title: string;
   message: string;
   financial_impact: number | null;
+  rule_id?: string | null;
+  fact_key?: string | null;
   sector: TeamSector;
   due_date: string | null;
   manager_note: string | null;
@@ -104,6 +106,9 @@ export interface TeamOverview {
   open_by_sector: Record<string, number>;
   scoreboard: CoordinatorScore[];
   updates: TeamUpdate[];
+  /** Última conferência das demandas resolvidas pelos dados (job de reavaliação). */
+  last_reevaluated_at?: string | null;
+  awaiting_confirmation_count?: number;
 }
 
 export interface RadarItem {
@@ -332,4 +337,13 @@ export function brlWhole(value: number): string {
 
 export function firstName(fullName: string): string {
   return fullName.trim().split(/\s+/)[0] ?? fullName;
+}
+
+/** Linha do placar: quando os dados conferiram as demandas pela última vez. */
+export function reevaluationNote(o: Pick<TeamOverview, "last_reevaluated_at" | "awaiting_confirmation_count">): string {
+  const waiting = o.awaiting_confirmation_count ?? 0;
+  const waitingText = waiting > 0 ? ` ${waiting} ${waiting === 1 ? "demanda resolvida aguarda" : "demandas resolvidas aguardam"} conferência.` : "";
+  if (!o.last_reevaluated_at) return `Os dados ainda não conferiram nenhuma demanda resolvida.${waitingText}`;
+  const d = new Date(o.last_reevaluated_at);
+  return `Conferido pelos dados em ${ddmm(d)}.${waitingText}`;
 }

@@ -1,3 +1,4 @@
+import { DenialModelStatusNote } from "@/components/dashboard/DenialModelStatusNote";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
@@ -651,6 +652,7 @@ function ReviewContractModal({
   if (!contract) return null;
 
   const warningByCode = new Map((preview?.items ?? []).map((i) => [i.tuss_code, i.warning]));
+  const pageByCode = new Map((preview?.items ?? []).map((i) => [i.tuss_code, i.source_page ?? null]));
 
   return (
     <Modal
@@ -683,12 +685,14 @@ function ReviewContractModal({
             </div>
           )}
           <p className="mb-3 text-xs text-ink-faint">
+            {preview.pages_total ? `A IA leu ${preview.pages_total} ${preview.pages_total === 1 ? "página" : "páginas"} do PDF. ` : ""}
             Confira e corrija os itens abaixo antes de homologar — só depois de “Salvar e homologar” a tabela passa a
             valer para o motor anti-glosa.
           </p>
           <div className="max-h-80 space-y-3 overflow-y-auto">
             {reviewItems.map((item, index) => {
               const warning = warningByCode.get(item.tuss_code);
+              const page = pageByCode.get(item.tuss_code);
               return (
                 <div
                   key={index}
@@ -724,6 +728,7 @@ function ReviewContractModal({
                       <X size={13} strokeWidth={2} />
                     </button>
                   </div>
+                  {page && <p className="mt-1 text-2xs text-ink-faint">Página {page} do PDF</p>}
                   {warning && <p className="mt-1 text-2xs text-pending">⚠ {warning}</p>}
                 </div>
               );
@@ -903,6 +908,7 @@ export function ContractsPage() {
       {activeTab === "glosas" && (
         <TabPanel id="glosas" groupId={PAYER_TABS_GROUP}>
           <div className="space-y-6">
+            <DenialModelStatusNote />
             <PlanLossRankingPanel dateFrom={dateFrom} dateTo={dateTo} />
             <DenialRiskDistributionPanel dateFrom={dateFrom} dateTo={dateTo} />
           </div>

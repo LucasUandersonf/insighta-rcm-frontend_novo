@@ -93,6 +93,8 @@ export function AssignDemandModal({
       title: item.title,
       message: item.message,
       financial_impact: item.financial_impact,
+      rule_id: item.rule_id ?? null,
+      fact_key: item.fact_key ?? null,
       sector,
       due_date: dueDate,
       manager_note: note.trim() || null,

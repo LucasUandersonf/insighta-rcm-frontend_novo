@@ -429,3 +429,17 @@ describe("BillingOperationsPage — aba Guias", () => {
     await expectNoA11yViolations(container);
   });
 });
+
+describe("BillingOperationsPage — destino dos alertas", () => {
+  it("abre direto na aba pedida pelo link (?tab=coparticipacao)", async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({ items: [], total: 0, limit: 20, offset: 0 } as never);
+    renderWithProviders(<BillingOperationsPage />, { route: "/faturamento?tab=coparticipacao" });
+    expect(await screen.findByRole("tab", { name: "Coparticipação" })).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("aba desconhecida cai no padrão", async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({ items: [], total: 0, limit: 20, offset: 0 } as never);
+    renderWithProviders(<BillingOperationsPage />, { route: "/faturamento?tab=xyz" });
+    expect(await screen.findByRole("tab", { name: "Registrar pagamento" })).toHaveAttribute("aria-selected", "true");
+  });
+});

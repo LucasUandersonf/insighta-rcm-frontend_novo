@@ -63,6 +63,8 @@ export function useInsightWorkflow() {
         title: item.title,
         message: item.message,
         financial_impact: item.financial_impact,
+        rule_id: item.rule_id ?? null,
+        fact_key: item.fact_key ?? null,
       } satisfies InsightOutcomeCreateRequest);
       await apiClient.patch<InsightOutcome>(`/api/v1/insight-outcomes/${outcome.id}`, { status: "resolvido" });
       return item;

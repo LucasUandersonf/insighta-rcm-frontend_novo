@@ -831,6 +831,21 @@ export interface SmartInsight {
   why_now?: string | null;
   what_to_do?: string | null;
   if_ignored?: string | null;
+  // "Nota 9" do motor (ver finalize_insights no backend).
+  rule_id?: string | null;
+  /** Chave estável da situação (regra + sujeito) — usada ao atribuir/resolver. */
+  fact_key?: string | null;
+  /** Quem/onde: convênio, profissional, dia, material. */
+  subject?: string | null;
+  /** "perda" ordena a fila; "referencia" é tamanho de algo; "ganho" é dinheiro protegido. */
+  impact_kind?: "perda" | "referencia" | "ganho";
+  /** Base do número ("Baseado em 42 atendimentos"). */
+  evidence?: string | null;
+  /** Histórico de acerto desta regra nesta clínica. */
+  track_record?: string | null;
+  /** Passos concretos, na ordem. */
+  playbook?: string[];
+  demoted?: boolean;
 }
 
 export interface SmartInsights {
@@ -892,6 +907,8 @@ export interface InsightOutcomeCreateRequest {
   title: string;
   message: string;
   financial_impact?: number | null;
+  rule_id?: string | null;
+  fact_key?: string | null;
   assigned_to?: string | null;
   due_date?: string | null;
 }
@@ -2078,6 +2095,8 @@ export interface ExtractedItem {
   procedure_name: string | null;
   agreed_price: number;
   warning: string | null;
+  /** Página do PDF onde a linha foi lida (Frente 1). */
+  source_page?: number | null;
 }
 
 export interface ExtractionPreview {
@@ -2085,6 +2104,9 @@ export interface ExtractionPreview {
   status: ContractStatus;
   items: ExtractedItem[];
   warnings: string[];
+  pages_total?: number | null;
+  /** Páginas que a IA não leu por inteiro — conferir à mão. */
+  incomplete_pages?: number[];
 }
 
 export interface HomologateRequest {
@@ -2393,4 +2415,71 @@ export interface NegotiationArgument {
 export interface BriefingEmailResult {
   sent_to: string;
   delivered: boolean;
+}
+
+// GET /analytics/unbilled-consumption — lista por trás do alerta
+// "material usado e não cobrado" (aba Estoque da Sala de Comando).
+export interface UnbilledConsumptionItem {
+  appointment_id: string;
+  scheduled_at: string;
+  patient_name: string | null;
+  professional_name: string | null;
+  materials: string;
+  cost: number;
+}
+
+export interface UnbilledConsumption {
+  period_start: string;
+  period_end: string;
+  total_cost: number;
+  items: UnbilledConsumptionItem[];
+}
+
+/** GET /analytics/no-show-accuracy — Frente 1: acerto da previsão de falta. */
+export interface NoShowLevelOutcome {
+  risk_level: "baixo" | "medio" | "alto";
+  appointments: number;
+  no_shows: number;
+  no_show_rate: number | null;
+}
+
+export interface NoShowAccuracy {
+  window_days: number;
+  evaluated: number;
+  no_shows: number;
+  flagged_no_shows: number;
+  hit_rate: number | null;
+  lift: number | null;
+  by_level: NoShowLevelOutcome[];
+  low_threshold: number;
+  medium_threshold: number;
+  calibration_status: "aprendendo" | "padrao" | "auto" | "manual";
+  calibrated_at: string | null;
+  history_days: number;
+  days_until_calibration: number;
+}
+
+/** GET /analytics/denial-model-status — Frente 1: modelo de ML de glosa. */
+export interface DenialModelStatus {
+  status: "aprendendo" | "pronto_para_treinar" | "ativo";
+  samples: number;
+  denied: number;
+  not_denied: number;
+  min_samples: number;
+  min_class_samples: number;
+}
+
+/** GET /analytics/ai-usage — Bloco 3: cota e custo de IA do mês. */
+export interface AiQuotaItem {
+  kind: "ask" | "appeal_draft" | "contract_extraction";
+  label: string;
+  used: number;
+  limit: number;
+}
+
+export interface AiUsageSummary {
+  month_start: string;
+  renews_on: string;
+  cost_usd: number;
+  items: AiQuotaItem[];
 }

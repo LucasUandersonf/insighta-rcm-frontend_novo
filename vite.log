@@ -4,3 +4,12 @@
   ➜  Local:   http://localhost:5173/
   ➜  Network: use --host to expose
 5:17:29 PM [vite] hmr update /src/components/layout/TopBar.tsx, /src/index.css
+5:47:29 PM [vite] page reload src/lib/types.ts
+5:47:29 PM [vite] hmr update /src/components/dashboard/SmartInsightsFeed.tsx, /src/index.css
+5:47:54 PM [vite] page reload src/lib/types.ts
+5:47:54 PM [vite] hmr update /src/index.css, /src/routes/TeamRoutes.tsx, /src/components/layout/TopBar.tsx, /src/components/team/AssignDemandModal.tsx
+5:47:54 PM [vite] hmr update /src/components/team/AssignDemandModal.tsx, /src/index.css
+5:47:54 PM [vite] hmr update /src/components/dashboard/InsightWorkflowActions.tsx, /src/index.css
+5:48:22 PM [vite] hmr update /src/index.css, /src/routes/TeamRoutes.tsx
+5:48:47 PM [vite] hmr update /src/pages/BillingRiskQueuePage.tsx, /src/index.css
+5:50:42 PM [vite] page reload src/components/dashboard/__tests__/SmartInsightsFeed.test.tsx
