@@ -13,6 +13,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { ImportDataNav } from "@/components/layout/ImportDataNav";
 import { Tabs, TabPanel } from "@/components/ui/Tabs";
 import { apiClient } from "@/lib/api-client";
+import { uploadViaS3 } from "@/lib/directUpload";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useToast } from "@/context/ToastContext";
 import type {
@@ -383,7 +384,10 @@ function BatchUploadTab() {
   const template = Array.isArray(templates) ? templates.find((t) => t.data_type === dataType) : undefined;
 
   const mutation = useMutation({
-    mutationFn: (f: File) => {
+    mutationFn: async (f: File) => {
+      // Bloco 4: direto ao S3 quando o servidor permite; senão, pela API.
+      const direct = await uploadViaS3(f, dataType);
+      if (direct) return direct;
       const formData = new FormData();
       formData.append("file", f);
       formData.append("data_type", dataType);
