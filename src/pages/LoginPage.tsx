@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowRight, Building2, LineChart, Lock, Mail, ShieldCheck } from "lucide-react";
+import { ArrowRight, Building2, Calculator, Lock, Mail, Sparkles, Users } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { AuthLayout, AuthFormHeader } from "@/components/layout/AuthLayout";
 import { AuthTextField } from "@/components/ui/AuthTextField";
@@ -75,8 +75,9 @@ function TenantSelector() {
 const POST_LOGIN_ROUTE = "/decisao";
 
 const BRAND_HIGHLIGHTS = [
-  { icon: LineChart, text: "Sala de Comando com diagnóstico automático de onde a receita está vazando." },
-  { icon: ShieldCheck, text: "Motor anti-glosa audita cada faturamento antes do envio à operadora." },
+  { icon: Sparkles, text: "Pergunte em português — “qual convênio mais glosa?” — e receba a resposta com os números da sua clínica." },
+  { icon: Calculator, text: "Cada alerta traz o “Como calculamos”: você vê de onde veio o número antes de agir." },
+  { icon: Users, text: "Do alerta à solução: cada setor tem seu coordenador, e a demanda volta resolvida para você." },
 ];
 
 export function LoginPage() {
@@ -126,8 +127,9 @@ export function LoginPage() {
 
   return (
     <AuthLayout
-      headline="Identifique gargalos financeiros antes que virem glosas."
-      subheadline="Diagnósticos automáticos diários de faturamento e risco de glosa."
+      eyebrow="Inteligência para clínicas"
+      headline="A sua clínica inteira, explicada todo dia."
+      subheadline="O Insighta cruza faturamento, agenda, pacientes, estoque e prontuário e mostra o que mudou, por quê e o que fazer — com a conta à vista."
       highlights={BRAND_HIGHLIGHTS}
     >
       {tenantSelection ? (

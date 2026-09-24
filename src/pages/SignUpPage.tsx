@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, ArrowRight, Building2, Check, CircleUserRound, IdCard, Lock, Mail, TrendingUp, User } from "lucide-react";
+import { ArrowLeft, ArrowRight, Building2, Check, CircleUserRound, IdCard, Lock, Mail, Sparkles, Upload, User } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { AuthLayout, AuthFormHeader } from "@/components/layout/AuthLayout";
 import { AuthTextField } from "@/components/ui/AuthTextField";
@@ -49,10 +49,9 @@ const PLANS: { id: PlanTier; name: string; recommended?: boolean; description: s
 ];
 
 const HIGHLIGHTS = [
-  {
-    icon: TrendingUp,
-    text: "Recomendado pelo motor anti-glosa: clínicas no plano Professional recuperam, em média, 4,2% a mais de receita já no primeiro trimestre.",
-  },
+  { icon: Building2, text: "1. Cadastre a clínica e escolha o plano." },
+  { icon: Upload, text: "2. Envie faturamento, agenda, atendimento, estoque e prontuário — há um modelo pronto para cada um." },
+  { icon: Sparkles, text: "3. Receba o jornal da manhã e os alertas com o que merece sua atenção." },
 ];
 
 interface FieldErrors {
@@ -163,8 +162,9 @@ export function SignUpPage() {
 
   return (
     <AuthLayout
-      headline="Assuma o controle do faturamento da sua clínica"
-      subheadline="Cadastre a clínica, escolha um plano e entre direto na Sala de Comando — sem espera de aprovação."
+      eyebrow="Inteligência para clínicas"
+      headline="Comece a enxergar sua clínica por inteiro."
+      subheadline="Crie a conta, envie as planilhas que seu sistema já exporta e receba os primeiros insights no mesmo dia — sem espera de aprovação."
       highlights={HIGHLIGHTS}
     >
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="w-full max-w-md">
