@@ -2,10 +2,11 @@ import { useEffect, useId, useMemo, useRef, useState, type RefObject } from "rea
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
-import { Activity, Building2, Check, ChevronDown, CircleHelp, LogOut, Menu, Moon, Sparkles, Sun } from "lucide-react";
+import { Building2, Check, ChevronDown, CircleHelp, LogOut, Menu, Moon, Sparkles, Sun } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
 import { useOnboardingTour } from "@/context/OnboardingTourContext";
+import { BrandMark } from "@/components/ui/BrandMark";
 import { UserAvatar } from "@/components/ui/UserAvatar";
 import { useCurrentUserProfile } from "@/lib/useCurrentUserProfile";
 import { apiClient } from "@/lib/api-client";
@@ -572,11 +573,8 @@ export function TopBar() {
     <header className="sticky top-0 z-30 border-b border-border-hairline bg-canvas/75 backdrop-blur-[18px]">
       {/* Linha 1 — marca, clínica, busca rápida, notificações e conta */}
       <div className="flex h-16 items-center gap-3 px-4 sm:gap-5 sm:px-8">
-        <NavLink to="/" className="flex shrink-0 items-center gap-2.5" aria-label="Insighta RCM — Início">
-          <span aria-hidden className="flex h-[30px] w-[30px] items-center justify-center rounded-[9px] bg-brand">
-            <Activity size={16} strokeWidth={2.4} className="text-white" />
-          </span>
-          <span className="text-base font-semibold tracking-[-0.01em] text-ink">Insighta RCM</span>
+        <NavLink to="/" className="flex shrink-0 items-center" aria-label="Insighta RCM — Início">
+          <BrandMark size="sm" />
         </NavLink>
         {tenant?.trade_name && (
           <>

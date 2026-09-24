@@ -40,7 +40,7 @@ export function AuthLayout({
           flutuantes como assinatura visual da marca (ver AuraPreviewCards). */}
       <div className="relative hidden overflow-hidden border-r border-border-hairline lg:flex lg:flex-col lg:justify-between lg:p-12">
         <motion.div initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.4 }}>
-          <BrandMark />
+          <BrandMark size="lg" />
         </motion.div>
 
         <div className="flex items-center gap-10">
