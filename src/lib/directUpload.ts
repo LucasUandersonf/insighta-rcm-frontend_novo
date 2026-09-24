@@ -41,7 +41,9 @@ export async function uploadViaS3(
       content_type: file.type || null,
     });
   } catch (err) {
-    if (err instanceof ApiError && err.status === 409) return null; // desligado: upload pela API
+    // 409: desligado no servidor; 404/405: API ainda sem o recurso (front e
+    // back publicados em momentos diferentes) — nos dois casos, upload pela API.
+    if (err instanceof ApiError && [404, 405, 409].includes(err.status)) return null;
     throw err;
   }
 

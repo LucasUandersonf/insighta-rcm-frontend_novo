@@ -10,8 +10,8 @@ vi.mock("@/lib/api-client", async (importOriginal) => {
 const file = new File(["a;b\n1;2\n"], "estoque.csv", { type: "text/csv" });
 
 describe("uploadViaS3", () => {
-  it("devolve null quando o servidor desligou o upload direto (409)", async () => {
-    vi.mocked(apiClient.post).mockRejectedValueOnce(new ApiError(409, { detail: "desligado" } as never));
+  it.each([409, 404, 405])("devolve null quando o servidor não oferece upload direto (%i)", async (status) => {
+    vi.mocked(apiClient.post).mockRejectedValueOnce(new ApiError(status, { detail: "x" } as never));
     expect(await uploadViaS3(file, "estoque")).toBeNull();
   });
 
