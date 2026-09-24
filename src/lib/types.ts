@@ -667,6 +667,15 @@ export interface ExecutiveNarrative {
   // presentes mesmo quando `narrative` é null (Avaliação Home/Sala de
   // Comando, Achado 3): não depende do texto da IA mencionar.
   recently_resolved: string[];
+  /** Jornal da manhã escrito pela IA com os números do sistema (null = edição do dia não pronta). */
+  edition?: MorningEdition | null;
+}
+
+export interface MorningEdition {
+  headline: string;
+  lead: string;
+  /** Só os cards aprovados pela checagem de números: faturado, recebimento, agenda, saude. */
+  cards: Partial<Record<"faturado" | "recebimento" | "agenda" | "saude", string>>;
 }
 
 // Taxa de confirmação real do motor de risco de glosa (GET
@@ -841,6 +850,8 @@ export interface SmartInsight {
   impact_kind?: "perda" | "referencia" | "ganho";
   /** Base do número ("Baseado em 42 atendimentos"). */
   evidence?: string | null;
+  /** "Como calculamos": fonte, período e fórmula em uma linha (Bloco 2). */
+  method?: string | null;
   /** Histórico de acerto desta regra nesta clínica. */
   track_record?: string | null;
   /** Passos concretos, na ordem. */
@@ -2105,6 +2116,8 @@ export interface ExtractionPreview {
   items: ExtractedItem[];
   warnings: string[];
   pages_total?: number | null;
+  /** Leitura em camadas: quantas páginas precisaram de IA. */
+  pages_sent_to_ai?: number | null;
   /** Páginas que a IA não leu por inteiro — conferir à mão. */
   incomplete_pages?: number[];
 }
@@ -2403,6 +2416,10 @@ export interface AskResponse {
   question: string;
   answer: string;
   sources: string;
+  /** "insighta" = resposta pronta (sem IA, custo zero); "ia" = redigida pela IA. */
+  answered_by?: "insighta" | "ia";
+  /** "Entendi: qual convênio mais glosa." — só nas respostas prontas. */
+  understood?: string | null;
 }
 
 export interface NegotiationArgument {
@@ -2482,4 +2499,49 @@ export interface AiUsageSummary {
   renews_on: string;
   cost_usd: number;
   items: AiQuotaItem[];
+}
+
+/** GET /ingestion/templates — Bloco 2: modelo de importação por perna. */
+export interface IngestionTemplateColumn {
+  header: string;
+  label: string;
+  required: boolean;
+  example: string;
+  hint: string;
+}
+
+export interface IngestionTemplate {
+  data_type: string;
+  title: string;
+  description: string;
+  columns: IngestionTemplateColumn[];
+}
+
+/** GET /ingestion/files/{id}/report — o que entrou e o que ficou de fora, e por quê. */
+export interface IngestionValidationReport {
+  ingestion_file_id: string;
+  original_filename: string | null;
+  data_type: string;
+  total_rows: number;
+  accepted_rows: number;
+  rejected_rows: number;
+  pending_rows: number;
+  reasons: { reason: string; count: number; rows: number[] }[];
+}
+
+/** GET /tenant/account-health — Bloco 2: Saúde da conta. */
+export interface AccountHealthCheck {
+  key: string;
+  group: "dados" | "equipe" | "configuracao";
+  label: string;
+  status: "ok" | "atencao" | "pendente";
+  detail: string;
+  action_label: string | null;
+  action_href: string | null;
+}
+
+export interface AccountHealth {
+  ok_count: number;
+  attention_count: number;
+  checks: AccountHealthCheck[];
 }

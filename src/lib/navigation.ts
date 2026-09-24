@@ -1,5 +1,6 @@
 import {
   Building2,
+  HeartPulse,
   Clock,
   CalendarCheck,
   Gauge,
@@ -108,6 +109,7 @@ export const MODULE_GROUPS: { id: ModuleGroupId; label: string }[] = [
 /** Administração da conta SaaS — só no menu do avatar, nunca na barra. */
 export const ADMIN_NAV_ITEMS: NavItem[] = [
   { to: "/admin/tenant", label: "Minha clínica", icon: Building2, roles: ADMINS, placement: "modules" },
+  { to: "/admin/saude-da-conta", label: "Saúde da conta", icon: HeartPulse, roles: ADMINS, placement: "modules" },
   { to: "/admin/users", label: "Usuários e permissões", icon: Users, roles: ADMINS, placement: "modules" },
   // Profissionais chegam pela importação; o que falta é só a grade
   // semanal (nenhum arquivo traz), que alimenta ocupação e horários vagos.

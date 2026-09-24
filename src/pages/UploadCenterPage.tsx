@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { UploadCloud, Wand2 } from "lucide-react";
+import { Download, FileSpreadsheet, UploadCloud, Wand2 } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
 import { Panel, EmptyState, LoadingState, ErrorState } from "@/components/ui/Panel";
 import { Button } from "@/components/ui/Button";
 import { Badge, type BadgeTone } from "@/components/ui/Badge";
@@ -12,9 +13,12 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { ImportDataNav } from "@/components/layout/ImportDataNav";
 import { Tabs, TabPanel } from "@/components/ui/Tabs";
 import { apiClient } from "@/lib/api-client";
+import { uploadViaS3 } from "@/lib/directUpload";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useToast } from "@/context/ToastContext";
 import type {
+  IngestionTemplate,
+  IngestionValidationReport,
   ColumnMappingPreview,
   Contract,
   IngestionFileEntry,
@@ -121,16 +125,28 @@ function formatDateTime(iso: string): string {
  * pros campos obrigatórios ainda não reconhecidos e confirma — depois
  * disso, todo upload FUTURO deste tenant aplica o mapeamento sozinho.
  */
-function ColumnMappingModal({ file, isOpen, onClose }: { file: File | null; isOpen: boolean; onClose: () => void }) {
+function ColumnMappingModal({
+  file,
+  dataType,
+  template,
+  isOpen,
+  onClose,
+}: {
+  file: File | null;
+  dataType: string;
+  template: IngestionTemplate | undefined;
+  isOpen: boolean;
+  onClose: () => void;
+}) {
   const { showSuccess, showError } = useToast();
   const [assignments, setAssignments] = useState<Record<string, string>>({});
 
   const previewQuery = useQuery({
-    queryKey: ["ingestion-column-mapping-preview", file?.name, file?.size],
+    queryKey: ["ingestion-column-mapping-preview", dataType, file?.name, file?.size],
     queryFn: async () => {
       const formData = new FormData();
       formData.append("file", file as File);
-      formData.append("data_type", "faturamento");
+      formData.append("data_type", dataType);
       const result = await apiClient.upload<ColumnMappingPreview>("/api/v1/ingestion/preview-headers", formData);
       // Pré-preenche com a sugestão automática — invertida (campo -> cabeçalho)
       // pra alimentar um select por campo obrigatório.
@@ -144,7 +160,7 @@ function ColumnMappingModal({ file, isOpen, onClose }: { file: File | null; isOp
 
   const saveMutation = useMutation({
     mutationFn: (mapping: Record<string, string>) =>
-      apiClient.post("/api/v1/ingestion/column-aliases", { data_type: "faturamento", mapping }),
+      apiClient.post("/api/v1/ingestion/column-aliases", { data_type: dataType, mapping }),
     onSuccess: () => {
       showSuccess("Mapeamento salvo — todo upload futuro deste template já aplica sozinho. Pode enviar o arquivo agora.");
       onClose();
@@ -192,7 +208,7 @@ function ColumnMappingModal({ file, isOpen, onClose }: { file: File | null; isOp
           {fieldsToReview.map((field) => (
             <SelectField
               key={field}
-              label={CANONICAL_FIELD_LABELS[field] ?? field}
+              label={CANONICAL_FIELD_LABELS[field] ?? template?.columns.find((c) => c.header === field)?.label ?? field}
               value={assignments[field] ?? ""}
               onChange={(e) => setAssignments((a) => ({ ...a, [field]: e.target.value }))}
             >
@@ -223,7 +239,109 @@ function ColumnMappingModal({ file, isOpen, onClose }: { file: File | null; isOp
   );
 }
 
+async function saveBlob(path: string, filename: string): Promise<void> {
+  const blob = await apiClient.getBlob(path);
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+}
+
+/**
+ * Bloco 2 (autonomia) — antes do upload: o que o modelo pede (colunas
+ * obrigatórias) e o botão para baixar o .xlsx pronto, com exemplo e aba
+ * de instruções. A clínica nunca precisa perguntar "qual é o formato?".
+ */
+function TemplateGuide({ template }: { template: IngestionTemplate | undefined }) {
+  const { showError } = useToast();
+  if (!template) return null;
+  const required = template.columns.filter((c) => c.required);
+  return (
+    <div className="mb-4 flex flex-col gap-2 rounded-md border border-border-hairline bg-canvas-raised/40 p-3 sm:flex-row sm:items-center">
+      <div className="flex-1">
+        <p className="text-xs text-ink-muted">{template.description}</p>
+        <p className="mt-1 text-2xs text-ink-faint">
+          Obrigatórias: {required.map((c) => c.label).join(", ")}.
+        </p>
+      </div>
+      <Button
+        type="button"
+        variant="secondary"
+        size="sm"
+        className="flex shrink-0 items-center gap-1.5"
+        onClick={() =>
+          saveBlob(`/api/v1/ingestion/templates/${template.data_type}.xlsx`, `modelo-${template.data_type}-insighta.xlsx`).catch((err) =>
+            showError(getApiErrorMessage(err))
+          )
+        }
+      >
+        <FileSpreadsheet size={14} />
+        Baixar modelo (.xlsx)
+      </Button>
+    </div>
+  );
+}
+
+/** Bloco 2 — relatório de validação de um upload: o que entrou e o que ficou de fora, e por quê. */
+export function UploadReportModal({ fileId, onClose }: { fileId: string | null; onClose: () => void }) {
+  const { showError } = useToast();
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["ingestion-report", fileId],
+    queryFn: () => apiClient.get<IngestionValidationReport>(`/api/v1/ingestion/files/${fileId}/report`),
+    enabled: fileId !== null,
+  });
+  return (
+    <Modal title="Relatório da importação" isOpen={fileId !== null} onClose={onClose}>
+      {isLoading && <LoadingState rows={3} />}
+      {error && <ErrorState message={getApiErrorMessage(error)} />}
+      {data && Array.isArray(data.reasons) && (
+        <div className="flex flex-col gap-4">
+          <p className="text-sm text-ink">
+            {data.original_filename ?? "Arquivo"}: <strong>{data.accepted_rows}</strong> de {data.total_rows}{" "}
+            {data.total_rows === 1 ? "linha entrou" : "linhas entraram"}
+            {data.rejected_rows > 0 ? `; ${data.rejected_rows} ficaram de fora.` : " — nenhuma rejeitada."}
+          </p>
+          {data.reasons.length > 0 && (
+            <ul className="flex flex-col gap-2.5">
+              {data.reasons.map((r) => (
+                <li key={r.reason} className="rounded-md border border-pending/30 bg-pending/[6%] px-3 py-2">
+                  <p className="text-xs text-ink">{r.reason}</p>
+                  <p className="mt-0.5 text-2xs text-ink-faint">
+                    {r.count} {r.count === 1 ? "linha" : "linhas"} — {r.rows.length < r.count ? "por exemplo, " : ""}
+                    {r.rows.length === 1 ? "linha" : "linhas"} {r.rows.join(", ")}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+          {data.rejected_rows > 0 && (
+            <div className="flex justify-end">
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                className="flex items-center gap-1.5"
+                onClick={() =>
+                  saveBlob(`/api/v1/ingestion/files/${data.ingestion_file_id}/report.csv`, `linhas-rejeitadas-${data.ingestion_file_id}.csv`).catch((err) =>
+                    showError(getApiErrorMessage(err))
+                  )
+                }
+              >
+                <Download size={14} />
+                Baixar linhas rejeitadas (CSV)
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+    </Modal>
+  );
+}
+
 type DataType = "faturamento" | "agenda" | "atendimento" | "estoque" | "pep";
+const DATA_TYPES: DataType[] = ["faturamento", "agenda", "atendimento", "estoque", "pep"];
 
 const DATA_TYPE_LABELS: Record<string, string> = {
   faturamento: "Faturamento",
@@ -250,12 +368,26 @@ function BatchUploadTab() {
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
   const [file, setFile] = useState<File | null>(null);
-  const [dataType, setDataType] = useState<DataType>("faturamento");
+  const [searchParams] = useSearchParams();
+  const initialType = searchParams.get("tipo");
+  const [dataType, setDataType] = useState<DataType>(
+    DATA_TYPES.includes(initialType as DataType) ? (initialType as DataType) : "faturamento"
+  );
   const [offset, setOffset] = useState(0);
   const [isMappingModalOpen, setIsMappingModalOpen] = useState(false);
+  const [reportFileId, setReportFileId] = useState<string | null>(null);
+  const { data: templates } = useQuery({
+    queryKey: ["ingestion-templates"],
+    queryFn: () => apiClient.get<IngestionTemplate[]>("/api/v1/ingestion/templates"),
+    staleTime: 60 * 60 * 1000,
+  });
+  const template = Array.isArray(templates) ? templates.find((t) => t.data_type === dataType) : undefined;
 
   const mutation = useMutation({
-    mutationFn: (f: File) => {
+    mutationFn: async (f: File) => {
+      // Bloco 4: direto ao S3 quando o servidor permite; senão, pela API.
+      const direct = await uploadViaS3(f, dataType);
+      if (direct) return direct;
       const formData = new FormData();
       formData.append("file", f);
       formData.append("data_type", dataType);
@@ -267,9 +399,8 @@ function BatchUploadTab() {
       if (result.already_processed) {
         showSuccess(result.message ?? "Este arquivo já havia sido processado antes — nada foi duplicado.");
       } else if (result.error_row_count > 0) {
-        showSuccess(
-          `Arquivo processado: ${result.row_count} linha(s) importada(s), ${result.error_row_count} rejeitada(s) — veja a tela de Setup para resolver.`
-        );
+        showSuccess(`Arquivo processado: ${result.row_count} linha(s) lida(s), ${result.error_row_count} rejeitada(s). Veja o motivo de cada uma no relatório.`);
+        setReportFileId(result.id);
       } else {
         showSuccess(`Arquivo processado com sucesso: ${result.row_count} linha(s) importada(s).`);
       }
@@ -328,6 +459,7 @@ function BatchUploadTab() {
               atendimento precisa já existir no sistema (via Agenda ou Atendimento) antes desta linha chegar.
             </p>
           )}
+          <TemplateGuide template={template} />
           <Dropzone
             accept={ACCEPTED_FORMATS_BY_DATA_TYPE[dataType]}
             hint={dataType === "agenda" ? "Excel (.xlsx), CSV, XML ou JSON — até 20MB" : "Excel (.xlsx), CSV ou JSON — até 20MB"}
@@ -336,7 +468,7 @@ function BatchUploadTab() {
             isUploading={mutation.isPending}
           />
           <div className="mt-4 flex justify-end gap-2">
-            {dataType === "faturamento" && /\.(csv|xlsx)$/.test(file?.name.toLowerCase() ?? "") && (
+            {/\.(csv|xlsx)$/.test(file?.name.toLowerCase() ?? "") && (
               <Button type="button" variant="secondary" onClick={() => setIsMappingModalOpen(true)} className="flex items-center gap-1.5">
                 <Wand2 size={14} />
                 Mapear colunas
@@ -353,7 +485,14 @@ function BatchUploadTab() {
         </div>
       </Panel>
 
-      <ColumnMappingModal file={file} isOpen={isMappingModalOpen} onClose={() => setIsMappingModalOpen(false)} />
+      <ColumnMappingModal
+        file={file}
+        dataType={dataType}
+        template={template}
+        isOpen={isMappingModalOpen}
+        onClose={() => setIsMappingModalOpen(false)}
+      />
+      <UploadReportModal fileId={reportFileId} onClose={() => setReportFileId(null)} />
 
       <Panel
         title="Histórico de importações"
@@ -376,6 +515,9 @@ function BatchUploadTab() {
                   <th className="px-4 py-2.5 font-medium">Linhas importadas</th>
                   <th className="px-4 py-2.5 font-medium">Linhas rejeitadas</th>
                   <th className="px-4 py-2.5 font-medium">Recebido em</th>
+                  <th className="px-4 py-2.5 font-medium">
+                    <span className="sr-only">Relatório</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -392,6 +534,13 @@ function BatchUploadTab() {
                       {f.error_row_count > 0 ? f.error_row_count : "—"}
                     </td>
                     <td className="px-4 py-2.5 text-ink-muted">{formatDateTime(f.received_at)}</td>
+                    <td className="px-4 py-2.5">
+                      {f.status === "processed" && (
+                        <button type="button" className="text-xs font-medium text-accent-muted hover:underline" onClick={() => setReportFileId(f.id)}>
+                          Relatório
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>

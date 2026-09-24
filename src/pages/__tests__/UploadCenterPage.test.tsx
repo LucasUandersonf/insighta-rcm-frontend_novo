@@ -11,6 +11,9 @@ import type { Contract, IngestionFileEntry, InsurancePlan, PaginatedResponse, Up
 // de entrada de dado real do produto (lotes operacionais + contratos de
 // convênio) — sem nenhum teste de página até aqui, apesar de ser a
 // espinha dorsal de tudo que a Sala de Comando depois analisa.
+// Upload direto ao S3 desligado no servidor (409): a tela usa o upload pela API.
+vi.mock("@/lib/directUpload", () => ({ uploadViaS3: vi.fn().mockResolvedValue(null) }));
+
 vi.mock("@/lib/api-client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api-client")>();
   return {
@@ -123,7 +126,7 @@ describe("UploadCenterPage — aba Lotes Operacionais", () => {
     expect((formData.get("file") as File).name).toBe("faturamento.csv");
 
     expect(
-      await screen.findByText("Arquivo processado: 98 linha(s) importada(s), 2 rejeitada(s) — veja a tela de Setup para resolver.")
+      await screen.findByText("Arquivo processado: 98 linha(s) lida(s), 2 rejeitada(s). Veja o motivo de cada uma no relatório.")
     ).toBeInTheDocument();
   });
 

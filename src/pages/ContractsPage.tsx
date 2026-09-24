@@ -685,7 +685,7 @@ function ReviewContractModal({
             </div>
           )}
           <p className="mb-3 text-xs text-ink-faint">
-            {preview.pages_total ? `A IA leu ${preview.pages_total} ${preview.pages_total === 1 ? "página" : "páginas"} do PDF. ` : ""}
+            {preview.pages_total ? `${extractionPagesNote(preview.pages_total, preview.pages_sent_to_ai)} ` : ""}
             Confira e corrija os itens abaixo antes de homologar — só depois de “Salvar e homologar” a tabela passa a
             valer para o motor anti-glosa.
           </p>
@@ -762,6 +762,14 @@ function ReviewContractModal({
       )}
     </Modal>
   );
+}
+
+/** "12 páginas lidas; 3 precisaram de IA." — leitura em camadas (estudo de IA de baixo custo). */
+export function extractionPagesNote(total: number, sentToAi: number | null | undefined): string {
+  const read = `${total} ${total === 1 ? "página lida" : "páginas lidas"}`;
+  if (sentToAi === null || sentToAi === undefined) return `${read}.`;
+  if (sentToAi === 0) return `${read}, sem precisar de IA.`;
+  return `${read}; ${sentToAi} ${sentToAi === 1 ? "precisou" : "precisaram"} de IA.`;
 }
 
 // ---------------------------------------------------------------------

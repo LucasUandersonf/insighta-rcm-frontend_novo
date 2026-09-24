@@ -355,7 +355,7 @@ function JustificationModal({ appeal, onClose }: { appeal: DenialAppeal | null; 
     if (job.status === "completed" && job.result) {
       setJustification(job.result.draft);
     } else if (job.status === "failed") {
-      showError(job.error ?? "Falha ao gerar rascunho com IA.");
+      showError(job.error ?? "Falha ao gerar o rascunho.");
     }
     setDraftJobId(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -386,8 +386,9 @@ function JustificationModal({ appeal, onClose }: { appeal: DenialAppeal | null; 
   return (
     <Modal title="Justificativa do recurso" isOpen={Boolean(appeal)} onClose={handleClose}>
       <p className="mb-4 text-xs text-ink-faint">
-        A IA rascunha um ponto de partida usando SÓ os dados factuais deste caso (motivo da negativa, guia,
-        procedimento, convênio) — nunca inventa mérito clínico ou jurídico. Revise e complete antes de protocolar.
+        O Insighta rascunha um ponto de partida usando SÓ os dados deste caso (motivo da negativa, guia,
+        procedimento, convênio) — nunca inventa mérito clínico ou jurídico. Complete os trechos entre colchetes e
+        revise antes de protocolar.
       </p>
       <Button
         type="button"
@@ -398,7 +399,7 @@ function JustificationModal({ appeal, onClose }: { appeal: DenialAppeal | null; 
         disabled={isDrafting}
       >
         <Sparkles size={14} />
-        {isDrafting ? "Gerando rascunho..." : "Gerar rascunho com IA"}
+        {isDrafting ? "Gerando rascunho..." : "Gerar rascunho"}
       </Button>
       <TextareaField
         label="Justificativa"

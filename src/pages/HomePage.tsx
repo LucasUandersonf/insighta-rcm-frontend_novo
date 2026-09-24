@@ -149,7 +149,40 @@ function FirstRunWizard({ canUpload }: { canUpload: boolean }) {
           <ArrowRight aria-hidden size={13} />
         </Button>
       )}
+      {canUpload && <OnboardingSteps />}
     </motion.div>
+  );
+}
+
+/**
+ * Bloco 2 (autonomia) — os 3 passos que deixam a clínica funcionando sem
+ * suporte: dados, coordenadores (quem recebe cada alerta) e a checagem
+ * completa em Saúde da conta.
+ */
+const ONBOARDING_STEPS = [
+  { n: 1, title: "Importe os dados", text: "Baixe o modelo de cada área na Central de Upload, ou mapeie as colunas do seu sistema.", to: "/upload" },
+  {
+    n: 2,
+    title: "Defina os coordenadores",
+    text: "Quem cuida de Agendamento, Faturamento, Estoque e Assistencial recebe os alertas do setor. Convide por e-mail.",
+    to: "/admin/users",
+  },
+  { n: 3, title: "Confira a saúde da conta", text: "Contratos, meta, grade dos profissionais e o que mais faltar — com o atalho para resolver.", to: "/admin/saude-da-conta" },
+];
+
+function OnboardingSteps() {
+  return (
+    <ol className="mt-2 grid w-full gap-3 sm:grid-cols-3">
+      {ONBOARDING_STEPS.map((step) => (
+        <li key={step.n}>
+          <Link to={step.to} className="flex h-full flex-col gap-1 rounded-[14px] border border-border-hairline bg-canvas-surface/60 p-3.5 hover:border-accent/40">
+            <span className="text-2xs font-semibold uppercase tracking-[0.08em] text-accent-muted">Passo {step.n}</span>
+            <span className="text-sm font-medium text-ink">{step.title}</span>
+            <span className="text-xs leading-relaxed text-ink-muted">{step.text}</span>
+          </Link>
+        </li>
+      ))}
+    </ol>
   );
 }
 
@@ -190,6 +223,11 @@ function Headline({ insight, onAssign, canAssign }: { insight: SmartInsight; onA
           {insight.evidence}
           {insight.evidence && insight.track_record ? " · " : ""}
           {insight.track_record}
+        </p>
+      )}
+      {insight.method && (
+        <p className="text-xs leading-relaxed text-ink-faint">
+          <span className="font-medium text-ink-muted">Como calculamos:</span> {insight.method}
         </p>
       )}
       <div className="flex flex-wrap items-center gap-5 pt-1.5">
@@ -269,6 +307,8 @@ function SecondaryStory({ insight }: { insight: SmartInsight }) {
 }
 
 interface PanoramaRow {
+  /** Chave do card no jornal da manhã (texto escrito pela IA). */
+  key?: "faturado" | "recebimento" | "agenda" | "saude";
   label: string;
   value: string;
   delta: string;
@@ -394,6 +434,7 @@ function AskBox() {
           {ask.isPending && <p className="text-ink-muted">Consultando os números da clínica…</p>}
           {ask.data && (
             <>
+              {ask.data.understood && <p className="text-2xs text-ink-faint">{ask.data.understood}</p>}
               <p className="text-ink">{ask.data.answer}</p>
               <p className="text-xs text-ink-faint">{ask.data.sources}</p>
               {quotaNote && <p className="text-2xs text-ink-faint">{quotaNote}</p>}
@@ -494,6 +535,7 @@ export function HomePage() {
   const rows: PanoramaRow[] = [];
   if (summary) {
     rows.push({
+      key: "faturado",
       label: "Faturado",
       value: compactCurrency.format(summary.total_billed.value),
       ...kpiDelta(summary.total_billed, true),
@@ -521,6 +563,7 @@ export function HomePage() {
     const kpi = summary.avg_days_to_receive;
     const slow = payers?.verdicts.find((v) => v.kind === "slowest");
     rows.push({
+      key: "recebimento",
       label: "Recebido no prazo",
       value: `${kpi.value.toFixed(0)} dias`,
       ...kpiDelta(kpi, false),
@@ -530,6 +573,7 @@ export function HomePage() {
   if (summary?.avg_capacity_utilization) {
     const kpi = summary.avg_capacity_utilization;
     rows.push({
+      key: "agenda",
       label: "Agenda ocupada",
       value: `${(kpi.value * 100).toFixed(0)}%`,
       ...kpiDelta(kpi, true),
@@ -539,6 +583,7 @@ export function HomePage() {
   if (health?.score !== null && health?.score !== undefined) {
     const trend = health.trend;
     rows.push({
+      key: "saude",
       label: "Saúde do faturamento",
       value: `${Math.round(health.score)}/100`,
       delta: trend ? `${trend.delta >= 0 ? "▲" : "▼"} ${Math.abs(Math.round(trend.delta))}` : "—",
@@ -547,6 +592,17 @@ export function HomePage() {
         ? `${trend.delta >= 0 ? "Subiu" : "Caiu"} ${Math.abs(Math.round(trend.delta))} pontos desde ${new Date(trend.reference_month).toLocaleDateString("pt-BR", { month: "long" })}.`
         : "Nota combinando glosa, faltas e recursos dos últimos meses.",
     });
+  }
+
+  // Jornal da manhã: o texto de cada card escrito pela IA (com os números do
+  // sistema) substitui a leitura automática — só na janela de 30 dias, a
+  // mesma dos fatos que a IA recebeu.
+  const edition = data?.edition ?? null;
+  if (edition && compare === "mes") {
+    for (const row of rows) {
+      const written = row.key ? edition.cards?.[row.key] : undefined;
+      if (written) row.read = written;
+    }
   }
 
   // ---- boas notícias ----
@@ -630,7 +686,14 @@ export function HomePage() {
               <p className="text-[15px] leading-relaxed text-ink-muted">
                 {!isFirstRun && !error ? `Resumo de ${tenant?.trade_name ?? "sua clínica"}: ${countsSentence}` : subtitle}
               </p>
-              {!isFirstRun && !error && (
+              {!isFirstRun && !error && edition && (
+                <div className="flex max-w-3xl flex-col gap-1.5">
+                  <span className="text-2xs font-semibold uppercase tracking-[0.08em] text-accent-muted">Jornal da manhã</span>
+                  <p className="text-lg font-semibold leading-snug text-ink">{edition.headline}</p>
+                  <p className="text-[15px] leading-relaxed text-ink-soft">{edition.lead}</p>
+                </div>
+              )}
+              {!isFirstRun && !error && !edition && (
                 <p className="max-w-3xl text-[15px] leading-relaxed text-ink-soft">{data?.narrative ?? subtitle}</p>
               )}
             </>

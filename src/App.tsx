@@ -49,6 +49,7 @@ const SetupPage = lazy(() => import("@/pages/SetupPage").then((m) => ({ default:
 const UsersPage = lazy(() => import("@/pages/admin/UsersPage").then((m) => ({ default: m.UsersPage })));
 const IntegrationsPage = lazy(() => import("@/pages/admin/IntegrationsPage").then((m) => ({ default: m.IntegrationsPage })));
 const TenantPage = lazy(() => import("@/pages/admin/TenantPage").then((m) => ({ default: m.TenantPage })));
+const AccountHealthPage = lazy(() => import("@/pages/admin/AccountHealthPage").then((m) => ({ default: m.AccountHealthPage })));
 const ReportRecipientsPage = lazy(() => import("@/pages/admin/ReportRecipientsPage").then((m) => ({ default: m.ReportRecipientsPage })));
 const AuditLogPage = lazy(() => import("@/pages/admin/AuditLogPage").then((m) => ({ default: m.AuditLogPage })));
 const PlatformLoginPage = lazy(() => import("@/pages/platform/PlatformLoginPage").then((m) => ({ default: m.PlatformLoginPage })));
@@ -212,6 +213,7 @@ export default function App() {
                   <Route path="/admin/users" element={<UsersPage />} />
                   <Route path="/admin/integrations" element={<IntegrationsPage />} />
                   <Route path="/admin/tenant" element={<TenantPage />} />
+                  <Route path="/admin/saude-da-conta" element={<AccountHealthPage />} />
                   <Route path="/admin/report-recipients" element={<ReportRecipientsPage />} />
                 </Route>
                 {/* auditor também acessa a trilha de auditoria (RBAC igual ao backend em audit_log.py) */}
