@@ -10,8 +10,8 @@ vi.mock("@/lib/api-client", async (importOriginal) => {
 const file = new File(["a;b\n1;2\n"], "estoque.csv", { type: "text/csv" });
 
 describe("uploadViaS3", () => {
-  it("devolve null quando o servidor desligou o upload direto (409)", async () => {
-    vi.mocked(apiClient.post).mockRejectedValueOnce(new ApiError(409, { detail: "desligado" } as never));
+  it.each([409, 404, 405])("devolve null quando o servidor não oferece upload direto (%i)", async (status) => {
+    vi.mocked(apiClient.post).mockRejectedValueOnce(new ApiError(status, { detail: "x" } as never));
     expect(await uploadViaS3(file, "estoque")).toBeNull();
   });
 
@@ -41,5 +41,12 @@ describe("uploadViaS3", () => {
       .mockResolvedValueOnce({ upload_id: "u2", status: "falhou", error: "Planilha vazia.", ingestion_file_id: null, row_count: null, error_row_count: null });
     const put = vi.fn().mockResolvedValue({ ok: true });
     await expect(uploadViaS3(file, "estoque", { sleep: async () => undefined, put: put as unknown as typeof fetch })).rejects.toThrow("Planilha vazia.");
+  });
+
+  it("cai no upload pela API quando o armazenamento recusa ou a rede/CORS bloqueia", async () => {
+    for (const put of [vi.fn().mockResolvedValue({ ok: false }), vi.fn().mockRejectedValue(new TypeError("Failed to fetch"))]) {
+      vi.mocked(apiClient.post).mockResolvedValueOnce({ upload_id: "u3", upload_url: "https://s3/z", method: "PUT", headers: {} });
+      expect(await uploadViaS3(file, "estoque", { sleep: async () => undefined, put: put as unknown as typeof fetch })).toBeNull();
+    }
   });
 });
