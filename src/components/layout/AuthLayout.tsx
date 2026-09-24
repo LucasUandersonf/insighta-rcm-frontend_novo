@@ -19,11 +19,13 @@ interface Highlight {
  * "Aura Glass", ver DECISÃO v3 em index.css).
  */
 export function AuthLayout({
+  eyebrow,
   headline,
   subheadline,
   highlights,
   children,
 }: {
+  eyebrow?: string;
   headline: string;
   subheadline: string;
   highlights?: Highlight[];
@@ -45,6 +47,7 @@ export function AuthLayout({
 
         <div className="flex items-center gap-10">
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }} className="max-w-sm">
+            {eyebrow && <p className="mb-3 text-2xs font-semibold uppercase tracking-[0.14em] text-accent">{eyebrow}</p>}
             <h2 className="font-serif text-3xl font-medium leading-tight tracking-tightest text-ink">{headline}</h2>
             <p className="mt-3 text-sm leading-relaxed text-ink-muted">{subheadline}</p>
             {highlights && (
@@ -68,7 +71,7 @@ export function AuthLayout({
           <AuraPreviewCards className="hidden xl:block" />
         </div>
 
-        <p className="text-2xs text-ink-faint">© {new Date().getFullYear()} Insighta RCM — Auditoria de Faturamento</p>
+        <p className="text-2xs text-ink-faint">© {new Date().getFullYear()} Insighta — Inteligência para clínicas</p>
       </div>
 
       {/* Formulário */}

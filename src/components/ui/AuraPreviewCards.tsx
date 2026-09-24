@@ -1,48 +1,71 @@
 import { motion } from "framer-motion";
+import { Sparkles } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 /**
- * Composição decorativa para o painel de marca das telas públicas
- * (login/cadastro/recuperação de senha) — dois cartões de vidro
- * sobrepostos e levemente inclinados, exatamente como em Login.dc.html
- * (2 cards, sem ícone, tamanho/posição/rotação fixos). Só um leve
- * balanço vertical foi adicionado por cima do estado de repouso (o
- * canvas é uma foto estática, não proíbe um detalhe de movimento sutil).
+ * Composição decorativa do painel de marca das telas públicas
+ * (login/cadastro/recuperação de senha): três cartões de vidro sobrepostos
+ * mostrando o que o Insighta faz — uma pergunta respondida com números, o
+ * insight do dia e uma tendência. Leve balanço vertical por cima do repouso.
  *
  * Números ILUSTRATIVOS de propósito — diferente das telas do produto
  * (que seguem "zero mocks" à risca, ver DashboardPage.tsx), esta é arte
- * de marca numa tela pública, sem sessão nem tenant nenhum ainda para
- * ter dado real para mostrar. Mesmo raciocínio das frases estáticas em
- * BRAND_HIGHLIGHTS (LoginPage.tsx).
+ * de marca numa tela pública, sem sessão nem tenant para ter dado real.
  */
-const PREVIEW_CARDS = [
+const CARDS = [
   {
-    label: "Caixa protegido",
-    value: "R$ 61.900",
-    tone: "text-revenue",
-    rotate: -6,
-    className: "left-2.5 top-[30px] h-[110px] w-[180px]",
+    key: "pergunta",
+    rotate: -5,
+    className: "left-0 top-[112px] w-[244px]",
+    body: (
+      <>
+        <p className="flex items-center gap-1.5 text-2xs font-medium uppercase tracking-wide text-ink-faint">
+          <Sparkles aria-hidden size={11} className="text-accent" />
+          Pergunte ao Insighta
+        </p>
+        <p className="mt-2 text-xs text-ink-muted">“Qual convênio mais glosa?”</p>
+        <p className="mt-1.5 whitespace-nowrap text-sm font-semibold text-ink">
+          Amil <span className="font-normal text-ink-muted">— 5% das cobranças</span>
+        </p>
+      </>
+    ),
   },
   {
-    label: "Risco de glosa",
-    value: "4,6%",
-    tone: "text-pending",
-    rotate: 7,
-    className: "right-0 top-0 h-24 w-[150px]",
+    key: "insight",
+    rotate: 6,
+    className: "right-0 top-0 w-[176px]",
+    body: (
+      <>
+        <p className="text-2xs font-medium uppercase tracking-wide text-ink-faint">Insight de hoje</p>
+        <p className="tabular mt-1.5 text-lg font-semibold tracking-tightest text-pending">+18%</p>
+        <p className="mt-0.5 text-2xs leading-snug text-ink-muted">faltas às segundas de manhã</p>
+      </>
+    ),
+  },
+  {
+    key: "tendencia",
+    rotate: -2,
+    className: "right-2 top-[232px] w-[150px]",
+    body: (
+      <>
+        <p className="text-2xs font-medium uppercase tracking-wide text-ink-faint">Receita do mês</p>
+        <p className="tabular mt-1.5 text-lg font-semibold tracking-tightest text-revenue">+6,2%</p>
+      </>
+    ),
   },
 ] as const;
 
 export function AuraPreviewCards({ className }: { className?: string }) {
   return (
-    <div className={cn("relative h-[230px] w-[220px]", className)} aria-hidden>
-      {PREVIEW_CARDS.map((card, i) => (
+    <div className={cn("relative h-[320px] w-[290px]", className)} aria-hidden>
+      {CARDS.map((card, i) => (
         <motion.div
-          key={card.label}
+          key={card.key}
           className={cn(
             "absolute rounded-[16px] border border-border-hairline bg-glass p-3.5 shadow-elevated-lg backdrop-blur-xl",
             card.className
           )}
-          style={{ zIndex: PREVIEW_CARDS.length - i }}
+          style={{ zIndex: CARDS.length - i }}
           initial={{ opacity: 0, rotate: card.rotate }}
           animate={{ opacity: 1, y: [0, -6, 0], rotate: card.rotate }}
           transition={{
@@ -50,8 +73,7 @@ export function AuraPreviewCards({ className }: { className?: string }) {
             y: { duration: 5 + i, repeat: Infinity, ease: "easeInOut", delay: i * 0.4 },
           }}
         >
-          <p className="text-2xs font-medium uppercase tracking-wide text-ink-faint">{card.label}</p>
-          <p className={cn("tabular mt-1.5 text-lg font-semibold tracking-tightest", card.tone)}>{card.value}</p>
+          {card.body}
         </motion.div>
       ))}
     </div>
