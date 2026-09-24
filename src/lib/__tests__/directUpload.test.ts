@@ -42,4 +42,11 @@ describe("uploadViaS3", () => {
     const put = vi.fn().mockResolvedValue({ ok: true });
     await expect(uploadViaS3(file, "estoque", { sleep: async () => undefined, put: put as unknown as typeof fetch })).rejects.toThrow("Planilha vazia.");
   });
+
+  it("cai no upload pela API quando o armazenamento recusa ou a rede/CORS bloqueia", async () => {
+    for (const put of [vi.fn().mockResolvedValue({ ok: false }), vi.fn().mockRejectedValue(new TypeError("Failed to fetch"))]) {
+      vi.mocked(apiClient.post).mockResolvedValueOnce({ upload_id: "u3", upload_url: "https://s3/z", method: "PUT", headers: {} });
+      expect(await uploadViaS3(file, "estoque", { sleep: async () => undefined, put: put as unknown as typeof fetch })).toBeNull();
+    }
+  });
 });

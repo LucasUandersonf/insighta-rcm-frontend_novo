@@ -5,7 +5,8 @@ import type { UploadIngestionFileResponse } from "@/lib/types";
  * Bloco 4 — upload direto do navegador para o S3 (URL pré-assinada): a
  * API nunca segura o arquivo, e lote grande não estoura timeout. O worker
  * processa e a tela acompanha o status. Quando o recurso está desligado no
- * servidor (409), devolve `null` e a tela usa o upload pela API de sempre.
+ * servidor (409) ou o envio ao armazenamento falha, devolve `null` e a tela
+ * usa o upload pela API de sempre.
  */
 interface DirectUploadCreated {
   upload_id: string;
@@ -44,8 +45,15 @@ export async function uploadViaS3(
     throw err;
   }
 
-  const sent = await put(created.upload_url, { method: created.method, headers: created.headers, body: file });
-  if (!sent.ok) throw new Error("Não foi possível enviar o arquivo para o armazenamento. Tente de novo.");
+  // Armazenamento recusou ou ficou inalcançável (CORS do bucket, rede): a
+  // tela cai no upload pela API de sempre em vez de travar o usuário.
+  let sent: Response | null = null;
+  try {
+    sent = await put(created.upload_url, { method: created.method, headers: created.headers, body: file });
+  } catch {
+    sent = null;
+  }
+  if (!sent?.ok) return null;
 
   let status = await apiClient.post<DirectUploadStatus>(`/api/v1/ingestion/direct-uploads/${created.upload_id}/complete`);
   const started = Date.now();
