@@ -14,6 +14,7 @@ import { useDateWindow } from "@/lib/useDateWindow";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import type { BillingResponse, PaginatedResponse } from "@/lib/types";
+import { denialReasonsText } from "@/lib/denialReasons";
 
 /**
  * Fila de correção (Redesign 2026 — o antigo "Painel" saiu da barra).
@@ -178,7 +179,7 @@ export function BillingRiskQueuePage() {
                       <td className="px-4 py-2.5">
                         <RiskBadge level={billing.denial_risk_level} />
                       </td>
-                      <td className="px-4 py-2.5 text-ink-muted">{billing.denial_reasons.join(", ")}</td>
+                      <td className="px-4 py-2.5 text-ink-muted">{denialReasonsText(billing.denial_reasons)}</td>
                       <td className="px-4 py-2.5 text-ink-muted">{billing.status}</td>
                       <td className="tabular px-4 py-2.5 text-right font-mono text-revenue">
                         {billing.value_saved_by_correction > 0 ? formatCurrency(billing.value_saved_by_correction) : "—"}
