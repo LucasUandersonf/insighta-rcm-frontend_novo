@@ -31,10 +31,10 @@ describe("landing page", () => {
     expect(faq.mainEntity.length).toBe(doc.querySelectorAll(".faq details").length);
   });
 
-  it("todo CTA de demonstração usa o marcador de contato e toda âncora interna existe", () => {
-    const ctas = [...doc.querySelectorAll("[data-cta]")].filter((a) => a.textContent?.match(/demonstra|parceira/i));
-    expect(ctas.length).toBeGreaterThanOrEqual(4);
-    ctas.forEach((a) => expect(a.getAttribute("href")).toBe("__CONTACT_URL__"));
+  it("todo CTA aponta para o cadastro ou para o contato, e toda âncora interna existe", () => {
+    const ctas = [...doc.querySelectorAll("[data-cta]")];
+    ctas.forEach((a) => expect(["__APP_URL__/signup", "__CONTACT_URL__"]).toContain(a.getAttribute("href")));
+    expect(ctas.filter((a) => a.getAttribute("href") === "__APP_URL__/signup").length).toBeGreaterThanOrEqual(4);
     [...doc.querySelectorAll('a[href^="#"]')].forEach((a) => {
       const id = a.getAttribute("href")!.slice(1);
       expect(doc.getElementById(id), `âncora #${id}`).not.toBeNull();
