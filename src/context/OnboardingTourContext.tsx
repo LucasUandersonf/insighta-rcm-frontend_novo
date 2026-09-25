@@ -66,7 +66,7 @@ function useTourSteps(): TourStep[] {
   return useMemo(() => {
     const steps: TourStep[] = [
       {
-        title: "Bem-vindo à Insighta RCM",
+        title: "Bem-vindo ao Insighta",
         description:
           "Um tour rápido pelos módulos principais — menos de um minuto. Dá para pular a qualquer momento e reabrir depois pela Central de Ajuda.",
       },

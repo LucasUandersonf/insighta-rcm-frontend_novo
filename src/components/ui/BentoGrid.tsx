@@ -110,6 +110,7 @@ export function BentoCard({
         !noPadding && "p-5",
         className
       )}
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- props de <div> repassados ao motion.div (tipos de evento incompatíveis entre os dois)
       {...(props as any)}
     >
       {children}

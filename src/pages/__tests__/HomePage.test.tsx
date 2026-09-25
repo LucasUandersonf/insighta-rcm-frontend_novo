@@ -379,6 +379,29 @@ describe("HomePage", () => {
       expect(screen.getByRole("button", { name: "atribuir a alguém" })).toBeInTheDocument();
     });
 
+    it("sem retorno dos convênios no período, glosa e prazo zerados não viram boa notícia", async () => {
+      mockFull(NARRATIVE);
+      const base = vi.mocked(apiClient.get).getMockImplementation()!;
+      const kpi = (value: number, previous: number) => ({ value, previous_value: previous, delta_pct: null });
+      vi.mocked(apiClient.get).mockImplementation((url: string) => {
+        if (url.includes("executive-summary"))
+          return Promise.resolve({
+            total_billed: kpi(219390, 222366),
+            avg_days_to_receive: null,
+            avg_capacity_utilization: null,
+          } as never);
+        if (url.includes("payer-overview"))
+          return Promise.resolve({ total_billed: 219390, total_denied: 0, avg_days_to_receive: null, rows: [], verdicts: [], attention: [] } as never);
+        return base(url);
+      });
+      renderWithProviders(<HomePage />);
+
+      expect(await screen.findByText("Os convênios ainda não devolveram o retorno das cobranças deste período.")).toBeInTheDocument();
+      expect(screen.getByText("Nenhum convênio pagou cobranças deste período ainda.")).toBeInTheDocument();
+      expect(screen.queryByText("Nenhuma recusa de convênio no período.")).not.toBeInTheDocument();
+      expect(screen.queryByText("Agenda ocupada")).not.toBeInTheDocument();
+    });
+
     it("'Enviar por e-mail' manda o briefing para o próprio e-mail", async () => {
       mockFull(NARRATIVE);
       vi.mocked(apiClient.post).mockResolvedValue({ sent_to: "marina@clinica.com", delivered: true } as never);

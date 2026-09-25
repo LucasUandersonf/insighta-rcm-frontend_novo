@@ -50,10 +50,26 @@ function DeltaLine({ kpi, higherIsBetter }: { kpi: PeriodKpi; higherIsBetter: bo
   );
 }
 
+/** Percentual com 1 casa perto de 100% — "100%" com R$ 323 abaixo do
+ * contratado no card ao lado contradizia a própria tela. */
+function formatShare(value: number): string {
+  const nearEdge = (value >= 99 && value < 100) || (value > 0 && value < 1);
+  return `${value.toLocaleString("pt-BR", { maximumFractionDigits: nearEdge ? 1 : 0 })}%`;
+}
+
 function KpiStrip({ summary, payers }: { summary: ExecutiveSummary; payers?: PayerOverview }) {
   const topLoss = payers?.rows.slice().sort((a, b) => b.denied_value - a.denied_value)[0];
   const slowest = payers?.verdicts.find((v) => v.kind === "slowest");
-  const cells = [
+  const margin = summary.margin_vs_contracted_pct;
+  const shortfall = margin !== null ? 100 - margin : null;
+  const cells: {
+    label: string;
+    value: string;
+    kpi: PeriodKpi | null;
+    higherIsBetter: boolean;
+    note?: string;
+    text: string;
+  }[] = [
     {
       label: "Buraco financeiro",
       value: formatCurrency(summary.financial_hole.value),
@@ -70,24 +86,32 @@ function KpiStrip({ summary, payers }: { summary: ExecutiveSummary; payers?: Pay
     },
     {
       label: "Você faturou do que podia",
-      value: summary.margin_vs_contracted_pct !== null ? `${summary.margin_vs_contracted_pct.toFixed(0)}%` : "—",
+      value: margin !== null ? formatShare(margin) : "—",
       kpi: null,
       higherIsBetter: true,
+      note: "do valor contratado",
       text:
-        summary.margin_vs_contracted_pct !== null
-          ? `Os ${(100 - summary.margin_vs_contracted_pct).toFixed(0)}% restantes ficaram abaixo do valor contratado.`
-          : "Precisa de contrato homologado para comparar com o faturado.",
+        shortfall === null
+          ? "Precisa de contrato homologado para comparar com o faturado."
+          : shortfall <= 0
+            ? "Tudo foi cobrado pelo valor contratado."
+            : shortfall < 0.05
+              ? "Menos de 0,1% ficou abaixo do valor contratado."
+              : `Os ${formatShare(shortfall)} restantes ficaram abaixo do valor contratado.`,
     },
     {
       label: "Prazo médio de recebimento",
       value: summary.avg_days_to_receive ? `${summary.avg_days_to_receive.value.toFixed(0)} dias` : "—",
       kpi: summary.avg_days_to_receive,
       higherIsBetter: false,
-      text: slowest
-        ? `${slowest.name} ainda leva mais que a média — é quem segura seu caixa.`
-        : topLoss
-          ? `Nenhum convênio fora do padrão de prazo nesta janela.`
-          : "Sem pagamentos conciliados no período ainda.",
+      note: "sem pagamento de convênio no período",
+      text: !summary.avg_days_to_receive
+        ? "Nenhum convênio pagou cobranças deste período ainda."
+        : slowest
+          ? `${slowest.name} ainda leva mais que a média — é quem segura seu caixa.`
+          : topLoss
+            ? `Nenhum convênio fora do padrão de prazo nesta janela.`
+            : "Sem pagamentos conciliados no período ainda.",
     },
   ];
   return (
@@ -99,7 +123,7 @@ function KpiStrip({ summary, payers }: { summary: ExecutiveSummary; payers?: Pay
         >
           <span className="text-[13px] text-ink-muted">{cell.label}</span>
           <span className="tabular text-[30px] font-semibold leading-tight tracking-[-0.02em] text-ink">{cell.value}</span>
-          {cell.kpi ? <DeltaLine kpi={cell.kpi} higherIsBetter={cell.higherIsBetter} /> : <span className="text-xs text-pending">do valor contratado</span>}
+          {cell.kpi ? <DeltaLine kpi={cell.kpi} higherIsBetter={cell.higherIsBetter} /> : <span className="text-xs text-pending">{cell.note ?? ""}</span>}
           <p className="text-[13px] leading-normal text-ink-soft">{cell.text}</p>
         </div>
       ))}

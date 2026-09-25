@@ -89,3 +89,18 @@ describe("CommandCenterToday (Sala de Comando → Hoje)", () => {
     expect(screen.getByText("Recuperado com o Insighta este mês")).toBeInTheDocument();
   });
 });
+
+describe("CommandCenterToday — indicadores sem dado ou perto de 100%", () => {
+  it("sem pagamento de convênio mostra o motivo; 99,93% não vira '100%' nem '0% abaixo'", () => {
+    vi.mocked(useAuth).mockReturnValue({ user: { tenant_id: "t1", sub: "u1", role: "owner" } } as unknown as ReturnType<typeof useAuth>);
+    vi.mocked(apiClient.get).mockImplementation(() => new Promise(() => undefined));
+    const summary = { ...SUMMARY, margin_vs_contracted_pct: 99.93, avg_days_to_receive: null } as ExecutiveSummary;
+
+    renderWithProviders(<CommandCenterToday dateFrom="2026-08-25" dateTo="2026-09-23" summary={summary} onNavigateTab={vi.fn()} onFocusAgenda={vi.fn()} />);
+
+    expect(screen.getByText("99,9%")).toBeInTheDocument();
+    expect(screen.getByText("Os 0,1% restantes ficaram abaixo do valor contratado.")).toBeInTheDocument();
+    expect(screen.getByText("sem pagamento de convênio no período")).toBeInTheDocument();
+    expect(screen.getByText("Nenhum convênio pagou cobranças deste período ainda.")).toBeInTheDocument();
+  });
+});
