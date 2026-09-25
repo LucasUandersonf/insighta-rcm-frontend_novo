@@ -1,5 +1,7 @@
 # Landing page — Insighta
 
+Estratégia, comprovação de cada promessa no código, funil, CRO, tráfego e SEO: [`ESTRATEGIA.md`](ESTRATEGIA.md).
+
 Site estático (HTML + CSS puros, sem framework) servido por `nginx:alpine`. É separado do app React para o Google ler a página inteira e para carregar rápido.
 
 ```
@@ -23,7 +25,8 @@ landing/
 Trocar o domínio ou o WhatsApp é só mudar a variável. Não precisa mexer no HTML nem fazer rebuild.
 
 ## Regras de conteúdo
-- **Nada inventado:** sem depoimentos, logos de clientes ou números de resultado que não existam. A demonstração do painel é marcada como "exemplo ilustrativo com dados fictícios".
+- **Nada inventado:** sem depoimentos, logos de clientes ou números de resultado que não existam. As demonstrações são marcadas como dados fictícios.
+- **Toda promessa tem lastro no código** (tabela da seção 1 do `ESTRATEGIA.md`). Mudou o produto (horário de job, número de análises, preço), atualize a página e a tabela.
 - Toda promessa precisa corresponder a algo que o produto faz hoje.
 - `src/__tests__/landing.test.ts` protege o SEO (título, descrição, canonical, h1 único, JSON-LD), os CTAs e as âncoras.
 
