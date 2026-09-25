@@ -18,7 +18,7 @@ function makeBilling(overrides: Partial<BillingResponse> = {}): BillingResponse 
     charged_value: 150,
     status: "pending",
     denial_risk_level: "medium",
-    denial_reasons: ["no_contract_reference"],
+    denial_reasons: ["value_below_contract_revenue_leak"],
     value_saved_by_correction: 0,
     received_value: null,
     settled_at: null,
@@ -39,7 +39,7 @@ describe("MediumRiskBillingsPanel", () => {
 
     expect(screen.getByText("Contas que valem revisão — risco médio de glosa")).toBeInTheDocument();
     expect(apiClient.get).toHaveBeenCalledWith(expect.stringContaining("/billing/medium-risk"));
-    expect(await screen.findByText("no_contract_reference")).toBeInTheDocument();
+    expect(await screen.findByText("Abaixo do valor do contrato")).toBeInTheDocument();
   });
 
   it("lista vazia mostra estado de 'nada precisando de revisão'", async () => {
@@ -57,7 +57,7 @@ describe("MediumRiskBillingsPanel", () => {
 
     const { container } = renderWithProviders(<MediumRiskBillingsPanel />);
 
-    expect(await screen.findByText("no_contract_reference")).toBeInTheDocument();
+    expect(await screen.findByText("Abaixo do valor do contrato")).toBeInTheDocument();
     await expectNoA11yViolations(container);
   });
 });

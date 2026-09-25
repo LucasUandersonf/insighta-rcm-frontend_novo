@@ -7,6 +7,7 @@ import { RiskBadge } from "@/components/ui/RiskBadge";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import type { BillingResponse, PaginatedResponse } from "@/lib/types";
+import { denialReasonsText } from "@/lib/denialReasons";
 
 const PAGE_SIZE = 20;
 
@@ -83,7 +84,7 @@ export function MediumRiskBillingsPanel() {
                   <td className="px-4 py-2.5">
                     <RiskBadge level={billing.denial_risk_level} />
                   </td>
-                  <td className="px-4 py-2.5 text-ink-muted">{billing.denial_reasons.join(", ")}</td>
+                  <td className="px-4 py-2.5 text-ink-muted">{denialReasonsText(billing.denial_reasons)}</td>
                 </tr>
               ))}
             </tbody>
