@@ -1,0 +1,43 @@
+# Landing page do Insighta (servida pelo nginx:alpine; ver landing/README.md).
+# As variáveis ${...} abaixo são trocadas no start pelo envsubst da imagem.
+server {
+    listen ${PORT};
+    listen [::]:${PORT};
+    server_name _;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # Troca os marcadores __SITE_URL__ etc. do HTML pelos valores do ambiente
+    # (domínio da Railway hoje, domínio próprio depois — sem rebuild).
+    sub_filter_once off;
+    sub_filter_types text/plain application/xml text/xml;
+    sub_filter '__SITE_URL__' '${SITE_URL}';
+    sub_filter '__APP_URL__' '${APP_URL}';
+    sub_filter '__CONTACT_URL__' '${CONTACT_URL}';
+
+    add_header X-Robots-Tag "${ROBOTS}" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "DENY" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Strict-Transport-Security "max-age=63072000; includeSubDomains" always;
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'" always;
+
+    gzip on;
+    gzip_types text/css application/javascript image/svg+xml application/xml text/plain;
+
+    location = /health { access_log off; default_type text/plain; return 200 "ok"; }
+
+    location ~* \.(png|jpg|svg|woff2)$ {
+        expires 30d;
+        add_header Cache-Control "public, max-age=2592000, immutable";
+        add_header X-Content-Type-Options "nosniff" always;
+    }
+    location ~* \.(css|js)$ {
+        expires 1h;
+        add_header Cache-Control "public, max-age=3600";
+        add_header X-Content-Type-Options "nosniff" always;
+    }
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}

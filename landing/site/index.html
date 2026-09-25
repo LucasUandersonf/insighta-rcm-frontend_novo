@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Insighta — Inteligência financeira para clínicas | Glosas, convênios e agenda</title>
+  <meta name="description" content="O Insighta mostra onde sua clínica perde dinheiro: glosas, cobranças abaixo do contrato dos convênios e faltas na agenda. Com os dados que você já tem." />
+  <link rel="canonical" href="__SITE_URL__/" />
+  <meta name="theme-color" content="#0B1020" />
+
+  <meta property="og:type" content="website" />
+  <meta property="og:locale" content="pt_BR" />
+  <meta property="og:site_name" content="Insighta" />
+  <meta property="og:title" content="Insighta — descubra quanto dinheiro sua clínica está deixando na mesa" />
+  <meta property="og:description" content="Glosas, cobranças abaixo do contrato e faltas, em linguagem simples, a partir dos dados que a clínica já tem." />
+  <meta property="og:url" content="__SITE_URL__/" />
+  <meta property="og:image" content="__SITE_URL__/assets/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta name="twitter:card" content="summary_large_image" />
+
+  <link rel="icon" type="image/png" href="/assets/favicon.png" />
+  <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap" />
+  <link rel="stylesheet" href="/styles.css" />
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "name": "Insighta",
+        "url": "__SITE_URL__/",
+        "logo": "__SITE_URL__/assets/insighta-logo.png"
+      },
+      {
+        "@type": "SoftwareApplication",
+        "name": "Insighta",
+        "applicationCategory": "BusinessApplication",
+        "operatingSystem": "Web",
+        "description": "Inteligência financeira e operacional para clínicas: glosas, cobranças abaixo do contrato dos convênios, agenda e faltas.",
+        "inLanguage": "pt-BR",
+        "url": "__SITE_URL__/"
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          { "@type": "Question", "name": "Preciso trocar o sistema que a clínica já usa?", "acceptedAnswer": { "@type": "Answer", "text": "Não. O Insighta trabalha com os relatórios que seu sistema atual já exporta, em CSV ou Excel. Oferecemos modelos prontos e um relatório que aponta linha por linha o que precisa de ajuste." } },
+          { "@type": "Question", "name": "Em quanto tempo vejo os primeiros resultados?", "acceptedAnswer": { "@type": "Answer", "text": "Assim que os arquivos são importados, normalmente em minutos, o painel já mostra faturamento, glosas por convênio, faltas e os primeiros alertas." } },
+          { "@type": "Question", "name": "Meus dados e os dos pacientes ficam seguros?", "acceptedAnswer": { "@type": "Answer", "text": "Cada clínica fica isolada das outras no próprio banco de dados, o tráfego é criptografado, há backup diário testado e, quando a inteligência artificial é usada, os nomes dos pacientes são mascarados antes. O tratamento segue a LGPD." } },
+          { "@type": "Question", "name": "O Insighta substitui o faturista?", "acceptedAnswer": { "@type": "Answer", "text": "Não. Ele mostra onde agir primeiro e explica cada cálculo, para a equipe resolver mais rápido e com menos retrabalho." } },
+          { "@type": "Question", "name": "Quanto custa?", "acceptedAnswer": { "@type": "Answer", "text": "O valor depende do porte da clínica. Fale com a gente para uma proposta e para saber das vagas do programa de clínicas parceiras." } }
+        ]
+      }
+    ]
+  }
+  </script>
+</head>
+<body>
+  <a class="skip" href="#conteudo">Pular para o conteúdo</a>
+
+  <header class="nav" id="topo">
+    <div class="container nav__inner">
+      <a href="/" class="nav__brand" aria-label="Insighta — início">
+        <img src="/assets/insighta-logo-dark.png" alt="Insighta" width="132" height="37" />
+      </a>
+      <nav class="nav__links" aria-label="Principal">
+        <a href="#como-funciona">Como funciona</a>
+        <a href="#recursos">Recursos</a>
+        <a href="#seguranca">Segurança</a>
+        <a href="#perguntas">Perguntas</a>
+      </nav>
+      <div class="nav__actions">
+        <a href="__APP_URL__/login" class="link-muted">Entrar</a>
+        <a href="__CONTACT_URL__" class="btn btn--primary btn--sm" data-cta="nav">Agendar demonstração</a>
+      </div>
+      <button class="nav__toggle" type="button" aria-expanded="false" aria-controls="menu-mobile" aria-label="Abrir menu">
+        <span></span><span></span>
+      </button>
+    </div>
+    <div class="nav__mobile" id="menu-mobile" hidden>
+      <a href="#como-funciona">Como funciona</a>
+      <a href="#recursos">Recursos</a>
+      <a href="#seguranca">Segurança</a>
+      <a href="#perguntas">Perguntas</a>
+      <a href="__APP_URL__/login">Entrar</a>
+      <a href="__CONTACT_URL__" class="btn btn--primary" data-cta="nav-mobile">Agendar demonstração</a>
+    </div>
+  </header>
+
+  <main id="conteudo">
+    <!-- HERO -->
+    <section class="hero">
+      <div class="hero__glow" aria-hidden="true"></div>
+      <div class="container hero__grid">
+        <div class="hero__copy">
+          <p class="eyebrow eyebrow--light"><span class="dot"></span> Inteligência para clínicas</p>
+          <h1>Descubra quanto dinheiro sua clínica está <em>deixando na mesa.</em></h1>
+          <p class="lead">O Insighta lê o que a clínica já tem — faturamento, agenda, atendimentos e os contratos com os convênios — e mostra, em português claro, onde estão as glosas, as cobranças abaixo do contrato e as faltas que custam caro.</p>
+          <div class="hero__ctas">
+            <a href="__CONTACT_URL__" class="btn btn--primary btn--lg" data-cta="hero">Agendar demonstração</a>
+            <a href="#como-funciona" class="btn btn--ghost btn--lg">Ver como funciona</a>
+          </div>
+          <ul class="hero__trust" aria-label="Garantias">
+            <li>Sem trocar de sistema</li>
+            <li>Dados isolados por clínica</li>
+            <li>Pensado para a LGPD</li>
+          </ul>
+        </div>
+
+        <figure class="mock" aria-label="Exemplo ilustrativo do painel do Insighta, com dados fictícios">
+          <div class="mock__bar"><span></span><span></span><span></span><p>Insighta · Resumo da semana</p></div>
+          <div class="mock__body">
+            <div class="mock__kpis">
+              <div class="kpi">
+                <p class="kpi__label">Cobrado abaixo do contrato</p>
+                <p class="kpi__value kpi__value--denied">R$ 857</p>
+                <p class="kpi__hint">Bradesco · 90 dias</p>
+              </div>
+              <div class="kpi">
+                <p class="kpi__label">Guias com risco de glosa</p>
+                <p class="kpi__value kpi__value--pending">12</p>
+                <p class="kpi__hint">antes do envio</p>
+              </div>
+              <div class="kpi">
+                <p class="kpi__label">Faltas previstas amanhã</p>
+                <p class="kpi__value">7</p>
+                <p class="kpi__hint">de 58 consultas</p>
+              </div>
+            </div>
+            <div class="mock__insight">
+              <span class="tag">Prioridade</span>
+              <p><strong>Amil glosou 5,5% do faturado</strong> — o maior índice entre seus convênios. 3 motivos concentram a maior parte.</p>
+              <p class="mock__how">Como calculamos →</p>
+            </div>
+            <div class="mock__bars" aria-hidden="true">
+              <div><span style="--h:62%"></span><small>SulAm.</small></div>
+              <div><span style="--h:88%"></span><small>Unimed</small></div>
+              <div class="is-hot"><span style="--h:100%"></span><small>Amil</small></div>
+              <div><span style="--h:74%"></span><small>Bradesco</small></div>
+              <div><span style="--h:40%"></span><small>Porto</small></div>
+            </div>
+          </div>
+          <figcaption>Exemplo ilustrativo com dados fictícios.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- DOR -->
+    <section class="section">
+      <div class="container">
+        <p class="eyebrow">O problema</p>
+        <h2 class="h2">A clínica trabalha bem. O dinheiro é que escapa sem ninguém ver.</h2>
+        <div class="grid grid--4 pains">
+          <article class="card">
+            <h3>Glosa descoberta tarde demais</h3>
+            <p>O convênio recusa, o prazo de recurso passa e o valor vira prejuízo.</p>
+          </article>
+          <article class="card">
+            <h3>Convênio pagando menos que o contrato</h3>
+            <p>Ninguém tem tempo de conferir guia por guia contra a tabela negociada.</p>
+          </article>
+          <article class="card">
+            <h3>Agenda com buracos</h3>
+            <p>Faltas e horários ociosos que se repetem nos mesmos dias, toda semana.</p>
+          </article>
+          <article class="card">
+            <h3>Informação espalhada</h3>
+            <p>Relatórios do sistema, planilhas e PDFs que não conversam entre si.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- COMO FUNCIONA -->
+    <section class="section section--tint" id="como-funciona">
+      <div class="container">
+        <p class="eyebrow">Como funciona</p>
+        <h2 class="h2">Três passos. Nenhuma troca de sistema.</h2>
+        <ol class="steps">
+          <li class="step">
+            <span class="step__n">1</span>
+            <h3>Exporte o que você já tem</h3>
+            <p>Faturamento, agenda, atendimentos e estoque, em CSV ou Excel, direto do seu sistema. Temos modelos prontos, e um relatório aponta linha por linha o que precisa de ajuste.</p>
+          </li>
+          <li class="step">
+            <span class="step__n">2</span>
+            <h3>O Insighta cruza tudo</h3>
+            <p>Cada cobrança é comparada com o contrato do convênio. A agenda é comparada com o histórico de faltas. Os contratos em PDF são lidos página por página.</p>
+          </li>
+          <li class="step">
+            <span class="step__n">3</span>
+            <h3>Você recebe o que fazer</h3>
+            <p>Alertas em ordem de impacto em reais, cada um com o botão “Como calculamos”, e a demanda enviada para o setor certo da equipe.</p>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- RECURSOS -->
+    <section class="section" id="recursos">
+      <div class="container">
+        <p class="eyebrow">Recursos</p>
+        <h2 class="h2">Tudo o que o gestor precisa enxergar, em uma tela.</h2>
+        <div class="grid grid--3 features">
+          <article class="feature">
+            <div class="feature__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3l8 4v5c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V7l8-4z"/><path d="M9 12l2 2 4-4"/></svg></div>
+            <h3>Glosas antes do envio</h3>
+            <p>Guias com risco de recusa aparecem antes de sair, com o motivo provável. Depois do retorno, a glosa por convênio e por motivo.</p>
+          </article>
+          <article class="feature">
+            <div class="feature__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5"/><path d="M10 13h6M10 17h4"/></svg></div>
+            <h3>Cobrado abaixo do contrato</h3>
+            <p>O Insighta lê a tabela de preços do contrato em PDF e mostra cada cobrança feita abaixo do valor negociado.</p>
+          </article>
+          <article class="feature">
+            <div class="feature__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></div>
+            <h3>Agenda e faltas</h3>
+            <p>Risco de falta por consulta, dias fracos da semana e horários ociosos por profissional, para agir antes do buraco.</p>
+          </article>
+          <article class="feature">
+            <div class="feature__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 19h16"/><path d="M6 15l4-4 3 3 5-6"/></svg></div>
+            <h3>Previsão do mês e meta do ano</h3>
+            <p>Onde o faturamento deve fechar o mês e se a clínica está no ritmo da meta anual, com faixa de confiança.</p>
+          </article>
+          <article class="feature">
+            <div class="feature__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12h5"/></svg></div>
+            <h3>Pergunte ao Insighta</h3>
+            <p>“Quem mais glosa?” “Quanto faturei em 30 dias?” Pergunte em português e receba a resposta com os números da clínica.</p>
+          </article>
+          <article class="feature">
+            <div class="feature__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M15 20c0-2 1-4 3.5-4S22 18 22 20"/></svg></div>
+            <h3>Equipe na mesma página</h3>
+            <p>O gestor envia o alerta para o coordenador do setor, que resolve e devolve. Tudo registrado, com o valor recuperado.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- TRANSPARÊNCIA -->
+    <section class="section section--dark">
+      <div class="container split">
+        <div>
+          <p class="eyebrow eyebrow--light">Transparência</p>
+          <h2 class="h2 h2--light">Nenhum número mágico. Cada alerta mostra a conta.</h2>
+          <p class="lead lead--light">Todo indicador tem o botão <strong>“Como calculamos”</strong>: de onde veio o dado, qual período, qual regra. Sua equipe confere, confia e age.</p>
+        </div>
+        <div class="how">
+          <p class="how__title">Como calculamos · Cobrado abaixo do contrato</p>
+          <ol>
+            <li>Cobranças dos últimos 90 dias do convênio</li>
+            <li>Preço de cada procedimento na tabela do contrato homologado</li>
+            <li>Diferença, somada guia por guia, quando a cobrança ficou abaixo</li>
+          </ol>
+          <p class="how__foot">Fonte: arquivos importados pela clínica e contrato em PDF.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SEGURANÇA -->
+    <section class="section" id="seguranca">
+      <div class="container">
+        <p class="eyebrow">Segurança e LGPD</p>
+        <h2 class="h2">Dado de saúde tratado como dado de saúde.</h2>
+        <div class="grid grid--4 security">
+          <article class="card card--line">
+            <h3>Isolamento por clínica</h3>
+            <p>Cada clínica é separada das outras no próprio banco de dados, não só na tela.</p>
+          </article>
+          <article class="card card--line">
+            <h3>Criptografia</h3>
+            <p>Conexões protegidas por HTTPS e tráfego criptografado até o banco de dados.</p>
+          </article>
+          <article class="card card--line">
+            <h3>Backup diário testado</h3>
+            <p>Todo dia o backup é restaurado e conferido automaticamente, não só guardado.</p>
+          </article>
+          <article class="card card--line">
+            <h3>IA sem expor pacientes</h3>
+            <p>Quando a inteligência artificial é usada, os nomes dos pacientes são mascarados antes.</p>
+          </article>
+        </div>
+        <p class="fineprint">Leia os <a href="__APP_URL__/termos">Termos de Uso</a> e a <a href="__APP_URL__/privacidade">Política de Privacidade</a>.</p>
+      </div>
+    </section>
+
+    <!-- PROGRAMA PARCEIRAS -->
+    <section class="section section--tint" id="parceiras">
+      <div class="container">
+        <div class="offer">
+          <div>
+            <p class="eyebrow">Programa de clínicas parceiras</p>
+            <h2 class="h2">Estamos abrindo vagas para um grupo pequeno de clínicas.</h2>
+            <p class="lead">As clínicas parceiras começam com acompanhamento próximo da nossa equipe: ajudamos a exportar os dados, fazemos juntos a primeira importação e revisamos os primeiros resultados.</p>
+            <ul class="checks">
+              <li>Primeira importação feita junto com você</li>
+              <li>Contato direto com quem constrói o produto</li>
+              <li>Suas sugestões entram no que construímos a seguir</li>
+            </ul>
+          </div>
+          <div class="offer__cta">
+            <a href="__CONTACT_URL__" class="btn btn--primary btn--lg btn--block" data-cta="parceiras">Quero ser clínica parceira</a>
+            <a href="__APP_URL__/signup" class="btn btn--outline btn--lg btn--block" data-cta="signup">Criar conta agora</a>
+            <p class="offer__note">Vagas limitadas para garantir o acompanhamento.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FAQ -->
+    <section class="section" id="perguntas">
+      <div class="container container--narrow">
+        <p class="eyebrow">Perguntas frequentes</p>
+        <h2 class="h2">Antes de você perguntar.</h2>
+        <div class="faq">
+          <details>
+            <summary>Preciso trocar o sistema que a clínica já usa?</summary>
+            <p>Não. O Insighta trabalha com os relatórios que seu sistema atual já exporta, em CSV ou Excel. Oferecemos modelos prontos e um relatório que aponta linha por linha o que precisa de ajuste.</p>
+          </details>
+          <details>
+            <summary>Em quanto tempo vejo os primeiros resultados?</summary>
+            <p>Assim que os arquivos são importados, normalmente em minutos, o painel já mostra faturamento, glosas por convênio, faltas e os primeiros alertas.</p>
+          </details>
+          <details>
+            <summary>Meus dados e os dos pacientes ficam seguros?</summary>
+            <p>Cada clínica fica isolada das outras no próprio banco de dados, o tráfego é criptografado, há backup diário testado e, quando a inteligência artificial é usada, os nomes dos pacientes são mascarados antes. O tratamento segue a LGPD.</p>
+          </details>
+          <details>
+            <summary>O Insighta substitui o faturista?</summary>
+            <p>Não. Ele mostra onde agir primeiro e explica cada cálculo, para a equipe resolver mais rápido e com menos retrabalho.</p>
+          </details>
+          <details>
+            <summary>Quanto custa?</summary>
+            <p>O valor depende do porte da clínica. Fale com a gente para uma proposta e para saber das vagas do programa de clínicas parceiras.</p>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA FINAL -->
+    <section class="final">
+      <div class="container final__inner">
+        <h2>Veja o seu próprio número.</h2>
+        <p>Em uma demonstração, mostramos o Insighta funcionando e o que ele encontraria na sua clínica.</p>
+        <a href="__CONTACT_URL__" class="btn btn--light btn--lg" data-cta="final">Agendar demonstração</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container footer__inner">
+      <img src="/assets/insighta-logo.png" alt="Insighta"  width="110" height="31" />
+      <nav aria-label="Rodapé">
+        <a href="__APP_URL__/login">Entrar</a>
+        <a href="__APP_URL__/termos">Termos de Uso</a>
+        <a href="__APP_URL__/privacidade">Privacidade</a>
+      </nav>
+      <p>© <span data-year>2026</span> Insighta — Inteligência para clínicas</p>
+    </div>
+  </footer>
+
+  <script src="/main.js" defer></script>
+</body>
+</html>
