@@ -10,6 +10,7 @@ import { PlatformProtectedRoute } from "@/routes/PlatformProtectedRoute";
 import { isApiConfigured } from "@/lib/api-client";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { RouteLoadingFallback } from "@/components/RouteLoadingFallback";
+import { EnvironmentBanner } from "@/components/layout/EnvironmentBanner";
 import { HomeRouter, LegacyRedirect, ManagerProfileRoute } from "@/routes/TeamRoutes";
 
 // Achado do Laudo de Vistoria Técnica (parecer UX): o pacote baixado
@@ -88,6 +89,7 @@ export default function App() {
 
   return (
     <ErrorBoundary>
+      <EnvironmentBanner />
       <AuthProvider>
         <ToastProvider>
           <ModalStackProvider>
