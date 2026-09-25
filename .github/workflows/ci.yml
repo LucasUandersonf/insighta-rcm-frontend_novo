@@ -8,13 +8,19 @@ name: CI
 # https://docs.railway.com/deployments/github-autodeploys#wait-for-ci):
 # sem essa combinação exata de evento/branch, a opção nem aparece nas
 # configurações do serviço.
+#
+# `develop` é a branch de homologação (ver AMBIENTES.md): o serviço do
+# ambiente `homologacao` na Railway deploya dela com o mesmo "Wait for
+# CI" — por isso o `push` em `develop` também está aqui.
 on:
   push:
     branches:
       - main
+      - develop
   pull_request:
     branches:
       - main
+      - develop
 
 jobs:
   test:
@@ -32,6 +38,9 @@ jobs:
 
       - name: Instalar dependências
         run: npm ci
+
+      - name: Lint (ESLint)
+        run: npm run lint
 
       - name: Rodar suíte de testes (Vitest + Testing Library + axe-core)
         run: npm test
