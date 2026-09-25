@@ -12,6 +12,7 @@ import { getApiErrorMessage } from "@/lib/query-client";
 import { useToast } from "@/context/ToastContext";
 import { cn } from "@/lib/cn";
 import type { SupportRequest, SupportRequestCreateRequest } from "@/lib/types";
+import { SupportContactLinks } from "./SupportContactLinks";
 
 // Perguntas frequentes — conteúdo estático de propósito nesta primeira
 // versão (sem CMS de FAQ ainda): cobre as dúvidas mais prováveis sobre
@@ -205,6 +206,7 @@ export function HelpCenterModal({
           <span className="block text-2xs text-ink-faint">Um passeio guiado pelos módulos principais do sistema.</span>
         </span>
       </button>
+      <SupportContactLinks className="mb-4" />
       <Tabs
         groupId="help-center"
         active={tab}
