@@ -4,6 +4,7 @@ import type { LucideIcon } from "lucide-react";
 import { BrandMark } from "@/components/ui/BrandMark";
 import { AuraPreviewCards } from "@/components/ui/AuraPreviewCards";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import { SupportContactLinks } from "./SupportContactLinks";
 
 interface Highlight {
   icon: LucideIcon;
@@ -75,7 +76,10 @@ export function AuthLayout({
       </div>
 
       {/* Formulário */}
-      <div className="flex items-center justify-center px-4 py-16">{children}</div>
+      <div className="flex flex-col items-center justify-center px-4 py-16">
+        {children}
+        <SupportContactLinks variant="inline" className="mt-6" />
+      </div>
     </div>
   );
 }
