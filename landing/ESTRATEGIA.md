@@ -1,6 +1,6 @@
-# Landing v4: estratégia completa (para aprovação)
+# Landing Insighta: estratégia completa
 
-Status: **proposta, não publicada.** Prévia em `landing/proposta-v4/`.
+Status: **aprovada pelo Lucas em 25/09/2026** e publicada em `landing/site/`. Preços R$ 297 / R$ 697 (catálogo do sistema). Sem oferta de fundadores nem garantia nesta versão.
 
 ## 0. Diagnóstico da v3 (feedback do Lucas + gravações da Hostinger)
 
