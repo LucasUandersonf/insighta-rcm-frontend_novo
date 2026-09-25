@@ -542,7 +542,19 @@ export function HomePage() {
       read: describeTrend("o faturamento", summary.total_billed.value, summary.total_billed.delta_pct, { shape: "currency" }),
     });
   }
-  if (payers) {
+  // Nenhum convênio devolveu retorno ainda (sem recebimento no período):
+  // glosa "zero" aqui é falta de retorno, não boa notícia — antes a Home
+  // mostrava "R$ 0 ▼100%, nenhuma recusa" e contava isso como positivo.
+  const noInsurerReturnYet = !!payers && payers.total_denied === 0 && payers.avg_days_to_receive === null;
+  if (payers && noInsurerReturnYet) {
+    rows.push({
+      label: "Glosado",
+      value: compactCurrency.format(0),
+      delta: "—",
+      favorable: null,
+      read: "Os convênios ainda não devolveram o retorno das cobranças deste período.",
+    });
+  } else if (payers) {
     const prev = previousPayers?.total_denied ?? null;
     const deltaPct = prev ? ((payers.total_denied - prev) / prev) * 100 : null;
     const topDenied = [...payers.rows].sort((a, b) => b.denied_value - a.denied_value)[0];
@@ -559,7 +571,16 @@ export function HomePage() {
             : describeTrend("o valor glosado", payers.total_denied, deltaPct, { shape: "currency" }),
     });
   }
-  if (summary?.avg_days_to_receive) {
+  if (summary && !summary.avg_days_to_receive) {
+    rows.push({
+      key: "recebimento",
+      label: "Recebido no prazo",
+      value: "—",
+      delta: "—",
+      favorable: null,
+      read: "Nenhum convênio pagou cobranças deste período ainda.",
+    });
+  } else if (summary?.avg_days_to_receive) {
     const kpi = summary.avg_days_to_receive;
     const slow = payers?.verdicts.find((v) => v.kind === "slowest");
     rows.push({

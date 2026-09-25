@@ -573,7 +573,7 @@ export function TopBar() {
     <header className="sticky top-0 z-30 border-b border-border-hairline bg-canvas/75 backdrop-blur-[18px]">
       {/* Linha 1 — marca, clínica, busca rápida, notificações e conta */}
       <div className="flex h-16 items-center gap-3 px-4 sm:gap-5 sm:px-8">
-        <NavLink to="/" className="flex shrink-0 items-center" aria-label="Insighta RCM — Início">
+        <NavLink to="/" className="flex shrink-0 items-center" aria-label="Insighta — Início">
           <BrandMark size="sm" />
         </NavLink>
         {tenant?.trade_name && (
