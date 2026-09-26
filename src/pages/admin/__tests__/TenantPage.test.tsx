@@ -10,7 +10,7 @@ import type { Tenant } from "@/lib/types";
 
 vi.mock("@/lib/api-client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api-client")>();
-  return { ...actual, apiClient: { ...actual.apiClient, get: vi.fn(), patch: vi.fn(), post: vi.fn() } };
+  return { ...actual, apiClient: { ...actual.apiClient, get: vi.fn(), patch: vi.fn(), post: vi.fn(), getBlob: vi.fn() } };
 });
 
 vi.mock("@/context/AuthContext", () => ({ useAuth: vi.fn() }));
@@ -342,3 +342,44 @@ describe("TenantPage — vinculação self-service de unidades (Auditoria Estrat
     expect(within(panel).queryByRole("button", { name: "Gerar novo código" })).not.toBeInTheDocument();
   });
 });
+
+describe("TenantPage — exportação dos dados (LGPD, portabilidade)", () => {
+  const routes = {
+    "/api/v1/tenant/plans/available": [],
+    "/api/v1/subscription/plans": [],
+    "/api/v1/subscription": { plan_tier: "starter", pending_checkout_id: null },
+    "/api/v1/tenant": makeTenant(),
+  };
+
+  it("owner baixa o .zip com todos os dados", async () => {
+    vi.mocked(useAuth).mockReturnValue({ user: { tenant_id: "t1", sub: "u1", role: "owner" } } as unknown as ReturnType<
+      typeof useAuth
+    >);
+    mockGetByPath(routes);
+    vi.mocked(apiClient.getBlob).mockResolvedValue(new Blob(["zip"], { type: "application/zip" }));
+    const createObjectURL = vi.fn(() => "blob:x");
+    Object.assign(URL, { createObjectURL, revokeObjectURL: vi.fn() });
+    const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+
+    renderWithProviders(<TenantPage />);
+    const button = await screen.findByRole("button", { name: /Baixar todos os dados/ });
+    await userEvent.click(button);
+
+    await waitFor(() => expect(apiClient.getBlob).toHaveBeenCalledWith("/api/v1/tenant/export"));
+    expect(createObjectURL).toHaveBeenCalled();
+    expect(click).toHaveBeenCalled();
+    click.mockRestore();
+  });
+
+  it("quem não é owner não vê o botão", async () => {
+    vi.mocked(useAuth).mockReturnValue({ user: { tenant_id: "t1", sub: "u1", role: "admin" } } as unknown as ReturnType<
+      typeof useAuth
+    >);
+    mockGetByPath(routes);
+    renderWithProviders(<TenantPage />);
+    await screen.findByText("Exportar dados da clínica");
+    expect(screen.queryByRole("button", { name: /Baixar todos os dados/ })).not.toBeInTheDocument();
+    expect(screen.getByText(/pode exportar os dados da clínica/)).toBeInTheDocument();
+  });
+});
+

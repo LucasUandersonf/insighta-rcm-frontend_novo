@@ -24,6 +24,11 @@ export function PrivacyPolicyPage() {
         com o seu dado além do que a clínica contratou.
       </p>
       <p>
+        <strong>Portabilidade para a clínica</strong>: o dono da conta baixa todos os dados da clínica a qualquer
+        momento em &quot;Minha clínica → Exportar dados da clínica&quot; (um .zip com uma planilha CSV por tabela).
+        Senhas e chaves de acesso não são incluídas, e cada exportação fica registrada na auditoria.
+      </p>
+      <p>
         <strong>Se você é usuário da equipe de uma clínica cliente</strong>, a Insighta trata diretamente seu
         nome, e-mail e senha (hash, nunca em texto puro) para autenticação e controle de acesso — aqui a Insighta
         é controladora desse dado específico de conta de usuário.
@@ -81,8 +86,13 @@ export function PrivacyPolicyPage() {
           de paciente, não CID), enviado a um número da própria equipe da clínica, nunca ao paciente.
         </li>
         <li>
-          <strong>Amazon Web Services</strong> (armazenamento de arquivo) — PDF de contrato, anexo de recurso de
-          glosa, arquivo de ingestão, conforme o que a clínica anexa.
+          <strong>Anthropic</strong> (API de IA) — Pergunte ao Insighta, Jornal da manhã e narrativas: números
+          agregados e textos dos insights da clínica, com nomes de pacientes trocados por apelidos (&quot;Paciente
+          A&quot;) antes do envio. Só quando a chave de IA está ligada.
+        </li>
+        <li>
+          <strong>Railway Buckets</strong> (armazenamento de arquivo, EUA) — PDF de contrato, anexo de recurso de
+          glosa, arquivo de ingestão, conforme o que a clínica anexa, e as cópias de segurança diárias do banco.
         </li>
         <li>
           <strong>Railway</strong> (infraestrutura de hospedagem) — todo o dado acima, em repouso e em trânsito.
@@ -95,6 +105,20 @@ export function PrivacyPolicyPage() {
       <p>
         O único fluxo que envia dado de saúde (CID) para um processador fora da infraestrutura própria é o
         rascunho de recurso de glosa via IA, sempre sob ação explícita de um usuário da clínica.
+      </p>
+
+      <h3>Transferência internacional</h3>
+      <p>
+        Railway, Anthropic, Meta e Sentry processam dados fora do Brasil (EUA). A transferência se apoia nas
+        cláusulas-padrão contratuais da ANPD (Resolução CD/ANPD nº 19/2024), incluídas no contrato de tratamento
+        de dados firmado com cada clínica.
+      </p>
+      <h3>Cookies da página de apresentação</h3>
+      <p>
+        O site de apresentação só usa cookies de medição (Microsoft Clarity e Google Analytics) depois que o
+        visitante clica em &quot;Aceitar&quot; no aviso. Sem aceite, nenhum script de medição é carregado. A escolha
+        pode ser mudada em &quot;Preferências de cookies&quot;, no rodapé. O sistema em si não usa cookies de
+        medição.
       </p>
 
       <h2>6. Segurança técnica</h2>

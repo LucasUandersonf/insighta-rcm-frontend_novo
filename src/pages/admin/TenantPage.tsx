@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Building2, Copy, Link2, Sparkles } from "lucide-react";
+import { Building2, Copy, Download, Link2, Sparkles } from "lucide-react";
 import { Panel, LoadingState, ErrorState } from "@/components/ui/Panel";
 import { Button } from "@/components/ui/Button";
 import { TextField } from "@/components/ui/FormField";
@@ -854,6 +854,54 @@ function OrganizationLinkingPanel({ isOwner }: { isOwner: boolean }) {
   );
 }
 
+/**
+ * LGPD, portabilidade (art. 18, V): o dono baixa todos os dados da clínica
+ * num .zip (um CSV por tabela), sem pedir ao suporte. Senhas e tokens nunca
+ * saem; cada exportação fica na auditoria (GET /tenant/export).
+ */
+function DataExportPanel({ isOwner }: { isOwner: boolean }) {
+  const { showSuccess, showError } = useToast();
+  const [busy, setBusy] = useState(false);
+
+  async function handleExport() {
+    setBusy(true);
+    try {
+      const blob = await apiClient.getBlob("/api/v1/tenant/export");
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `insighta-dados-${new Date().toISOString().slice(0, 10)}.zip`;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+      showSuccess("Exportação pronta. O arquivo foi baixado.");
+    } catch (err) {
+      showError(getApiErrorMessage(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Panel title="Exportar dados da clínica">
+      <div className="space-y-3 p-4">
+        <p className="max-w-xl text-xs leading-relaxed text-ink-faint">
+          Baixe tudo o que a clínica tem na Insighta: pacientes, agenda, faturamento, glosas, contratos, equipe e
+          histórico. Vem um arquivo .zip com uma planilha CSV por tabela e um LEIAME explicando o conteúdo. Senhas
+          e chaves de acesso não são incluídas.
+        </p>
+        {isOwner ? (
+          <Button type="button" variant="secondary" onClick={handleExport} disabled={busy}>
+            <Download className="h-4 w-4" aria-hidden />
+            {busy ? "Preparando o arquivo..." : "Baixar todos os dados (.zip)"}
+          </Button>
+        ) : (
+          <p className="text-2xs text-ink-faint">Só o papel "owner" pode exportar os dados da clínica.</p>
+        )}
+      </div>
+    </Panel>
+  );
+}
+
 export function TenantPage() {
   const { user } = useAuth();
   const isOwner = user?.role === "owner";
@@ -947,6 +995,7 @@ export function TenantPage() {
           <NoShowThresholdsPanel tenant={tenant} isOwner={isOwner} />
           <DenialRiskThresholdsPanel tenant={tenant} isOwner={isOwner} />
           <HealthScoreCeilingsPanel tenant={tenant} isOwner={isOwner} />
+          <DataExportPanel isOwner={isOwner} />
         </div>
       )}
     </div>

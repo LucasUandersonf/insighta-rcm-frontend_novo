@@ -9,7 +9,7 @@ import { ApiError } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { clearStoredPlatformToken, platformApiClient } from "@/lib/platform-api-client";
 import { useToast } from "@/context/ToastContext";
-import type { FeatureUsageKey, PlatformAlertRunResult, PlatformAuditLogEntry, TenantEngagementStatus, TenantUsageSummary } from "@/lib/types";
+import type { FeatureUsageKey, PilotMetrics, PlatformAlertRunResult, PlatformAuditLogEntry, TenantEngagementStatus, TenantUsageSummary } from "@/lib/types";
 
 const ACTION_LABEL: Record<string, string> = {
   login: "Entrou no painel",
@@ -91,6 +91,68 @@ function aggregateFeatureUsage(rows: TenantUsageSummary[]): (readonly [FeatureUs
   return FEATURE_KEYS.map((key) => [key, totals[key]] as const).sort((a, b) => b[1] - a[1]);
 }
 
+const BRL = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+
+/** Um critério do piloto: ok, não atingido, ou ainda sem base (null). */
+function Criterion({ ok, label }: { ok: boolean | null; label: string }) {
+  if (ok === null) return <span className="text-ink-faint">—</span>;
+  return <Badge tone={ok ? "revenue" : "neutral"}>{ok ? "sim" : "não"}<span className="sr-only"> — {label}</span></Badge>;
+}
+
+/**
+ * A9 — critérios de docs/piloto/CRITERIOS_DE_SUCESSO.md por clínica: dados em
+ * até 7 dias, uploads em outros dias (autonomia), 4 semanas ativas, R$
+ * encontrado ≥ 3× a mensalidade Founders e alguma ação tomada.
+ */
+function PilotMetricsPanel({ rows }: { rows: PilotMetrics[] }) {
+  if (rows.length === 0) return null;
+  return (
+    <Panel
+      title="Métricas do piloto"
+      subtitle="Critérios de sucesso por clínica (docs/piloto/CRITERIOS_DE_SUCESSO.md). Valor: R$ dos insights acompanhados; meta 3× a mensalidade (R$ 2.400)."
+    >
+      <div className="overflow-x-auto" tabIndex={0}>
+        <table className="w-full text-left text-sm">
+          <thead>
+            <tr className="border-b border-border-hairline text-2xs uppercase tracking-wide text-ink-faint">
+              <th className="px-4 py-2.5 font-medium">Clínica</th>
+              <th className="px-4 py-2.5 font-medium">Dias até 1º upload</th>
+              <th className="px-4 py-2.5 font-medium">Dias com upload</th>
+              <th className="px-4 py-2.5 font-medium">Semanas ativas (4)</th>
+              <th className="px-4 py-2.5 font-medium">R$ encontrado</th>
+              <th className="px-4 py-2.5 font-medium">R$ recuperado</th>
+              <th className="px-4 py-2.5 font-medium">Dados 7d</th>
+              <th className="px-4 py-2.5 font-medium">Autonomia</th>
+              <th className="px-4 py-2.5 font-medium">Uso semanal</th>
+              <th className="px-4 py-2.5 font-medium">Valor 3×</th>
+              <th className="px-4 py-2.5 font-medium">Ação</th>
+              <th className="px-4 py-2.5 font-medium">Critérios</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.tenant_id} className="border-b border-border-hairline last:border-0">
+                <td className="px-4 py-2.5 text-ink">{r.trade_name}</td>
+                <td className="tabular px-4 py-2.5 text-ink-muted">{r.days_to_first_upload ?? "sem upload"}</td>
+                <td className="tabular px-4 py-2.5 text-ink-muted">{r.upload_days_total}</td>
+                <td className="tabular px-4 py-2.5 text-ink-muted">{r.active_weeks_last_4}</td>
+                <td className="tabular px-4 py-2.5 text-ink-muted">{BRL.format(r.value_found)}</td>
+                <td className="tabular px-4 py-2.5 text-ink-muted">{BRL.format(r.value_recovered)}</td>
+                <td className="px-4 py-2.5"><Criterion ok={r.criterio_dados_em_7_dias} label="dados em 7 dias" /></td>
+                <td className="px-4 py-2.5"><Criterion ok={r.criterio_autonomia} label="autonomia" /></td>
+                <td className="px-4 py-2.5"><Criterion ok={r.criterio_uso_semanal} label="uso semanal" /></td>
+                <td className="px-4 py-2.5"><Criterion ok={r.criterio_valor_3x_mensalidade} label="valor 3x" /></td>
+                <td className="px-4 py-2.5"><Criterion ok={r.criterio_acao_tomada} label="ação tomada" /></td>
+                <td className="tabular px-4 py-2.5 font-medium text-ink">{r.criterios_atingidos} de 5</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Panel>
+  );
+}
+
 export function PlatformDashboardPage() {
   const navigate = useNavigate();
   const { showSuccess, showError } = useToast();
@@ -99,6 +161,11 @@ export function PlatformDashboardPage() {
     queryKey: ["platform", "tenants-usage"],
     queryFn: () => platformApiClient.getTenantsUsage(),
     retry: false,
+  });
+
+  const { data: pilotMetrics } = useQuery({
+    queryKey: ["platform", "pilot-metrics"],
+    queryFn: () => platformApiClient.getPilotMetrics(),
   });
 
   const { data: auditLog, refetch: refetchAuditLog } = useQuery({
@@ -241,6 +308,8 @@ export function PlatformDashboardPage() {
             </div>
           )}
         </Panel>
+
+        <PilotMetricsPanel rows={pilotMetrics ?? []} />
 
         {auditRows.length > 0 && (
           <Panel title="Histórico" subtitle="Quem fez o quê neste painel — login individual, ver core.platform_audit_log.">

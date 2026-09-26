@@ -4,13 +4,13 @@ import { PlatformDashboardPage } from "@/pages/platform/PlatformDashboardPage";
 import { platformApiClient } from "@/lib/platform-api-client";
 import { renderWithProviders } from "@/test/utils";
 import { expectNoA11yViolations } from "@/test/a11y";
-import type { PlatformAuditLogEntry, TenantUsageSummary } from "@/lib/types";
+import type { PilotMetrics, PlatformAuditLogEntry, TenantUsageSummary } from "@/lib/types";
 
 vi.mock("@/lib/platform-api-client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/platform-api-client")>();
   return {
     ...actual,
-    platformApiClient: { getTenantsUsage: vi.fn(), getAuditLog: vi.fn(), runAlerts: vi.fn() },
+    platformApiClient: { getTenantsUsage: vi.fn(), getAuditLog: vi.fn(), runAlerts: vi.fn(), getPilotMetrics: vi.fn() },
     clearStoredPlatformToken: vi.fn(),
   };
 });
@@ -42,7 +42,32 @@ const TENANTS: TenantUsageSummary[] = [
 
 const AUDIT_LOG: PlatformAuditLogEntry[] = [{ id: 1, actor_email: "equipe@insighta-rcm.com", action: "login", created_at: "2026-09-22T09:00:00Z" }];
 
+const PILOT: PilotMetrics[] = [
+  {
+    tenant_id: "t1",
+    trade_name: "Clínica Aurora",
+    tenant_created_at: "2026-09-01T10:00:00Z",
+    first_upload_at: "2026-09-03T10:00:00Z",
+    days_to_first_upload: 2,
+    upload_days_total: 3,
+    upload_days_after_first: 2,
+    active_weeks_last_4: 3,
+    last_login_at: "2026-09-25T10:00:00Z",
+    insights_tracked: 4,
+    value_found: 5200,
+    value_recovered: 1800,
+    appeals_created: 2,
+    criterio_dados_em_7_dias: true,
+    criterio_autonomia: true,
+    criterio_uso_semanal: false,
+    criterio_valor_3x_mensalidade: true,
+    criterio_acao_tomada: true,
+    criterios_atingidos: 4,
+  },
+];
+
 function mockEndpoints() {
+  vi.mocked(platformApiClient.getPilotMetrics).mockResolvedValue(PILOT);
   vi.mocked(platformApiClient.getTenantsUsage).mockResolvedValue(TENANTS);
   vi.mocked(platformApiClient.getAuditLog).mockResolvedValue(AUDIT_LOG);
 }
@@ -53,6 +78,15 @@ describe("PlatformDashboardPage", () => {
     renderWithProviders(<PlatformDashboardPage />);
 
     expect(await screen.findByText("Clínica Vida Plena")).toBeInTheDocument();
+  });
+
+  it("mostra as métricas do piloto por clínica", async () => {
+    mockEndpoints();
+    renderWithProviders(<PlatformDashboardPage />);
+
+    expect(await screen.findByText("Métricas do piloto")).toBeInTheDocument();
+    expect(screen.getByText("4 de 5")).toBeInTheDocument();
+    expect(screen.getByText(/5\.200/)).toBeInTheDocument();
   });
 
   it("não tem violações de acessibilidade", async () => {
