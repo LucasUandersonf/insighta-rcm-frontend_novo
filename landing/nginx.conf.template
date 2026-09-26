@@ -9,18 +9,22 @@ server {
 
     # Troca os marcadores __SITE_URL__ etc. do HTML pelos valores do ambiente
     # (domínio da Railway hoje, domínio próprio depois — sem rebuild).
+# CLARITY_ID/GA4_ID vazios = sem medição e sem aviso de cookies. Os hosts de
+# medição ficam na CSP sempre; o main.js só os carrega após o "Aceitar".
     sub_filter_once off;
     sub_filter_types text/plain application/xml text/xml;
     sub_filter '__SITE_URL__' '${SITE_URL}';
     sub_filter '__APP_URL__' '${APP_URL}';
     sub_filter '__CONTACT_URL__' '${CONTACT_URL}';
+    sub_filter '__CLARITY_ID__' '${CLARITY_ID}';
+    sub_filter '__GA4_ID__' '${GA4_ID}';
 
     add_header X-Robots-Tag "${ROBOTS}" always;
     add_header X-Content-Type-Options "nosniff" always;
     add_header X-Frame-Options "DENY" always;
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
     add_header Strict-Transport-Security "max-age=63072000; includeSubDomains" always;
-    add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; style-src-attr 'unsafe-inline'; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'" always;
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self' https://www.clarity.ms https://*.clarity.ms https://www.googletagmanager.com; style-src 'self' https://fonts.googleapis.com; style-src-attr 'unsafe-inline'; font-src https://fonts.gstatic.com; img-src 'self' data: https://*.clarity.ms https://c.bing.com https://*.google-analytics.com https://www.googletagmanager.com; connect-src 'self' https://*.clarity.ms https://c.bing.com https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'" always;
 
     gzip on;
     gzip_types text/css application/javascript image/svg+xml application/xml text/plain;

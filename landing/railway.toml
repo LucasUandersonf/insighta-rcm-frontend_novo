@@ -1,0 +1,9 @@
+# landing/railway.toml — landing page. O serviço "landing" aponta para este
+# arquivo (Settings → Config-as-code); o railway.toml da raiz é do app.
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "landing/Dockerfile"
+
+[deploy]
+startCommand = "/start.sh"
+healthcheckPath = "/health"

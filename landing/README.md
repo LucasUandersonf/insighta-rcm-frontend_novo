@@ -20,7 +20,13 @@ landing/
 | `APP_URL` | frontend de homologação | frontend de produção (depois: `https://app.insighta.com.br`) |
 | `CONTACT_URL` | igual à produção | link do WhatsApp comercial (`https://wa.me/55DDDNUMERO?text=...`). Sem ele: `APP_URL/signup` |
 | `ROBOTS` | `noindex, nofollow` (padrão) | `index, follow` |
+| `CLARITY_ID` | vazio | ID do projeto no Microsoft Clarity (opcional) |
+| `GA4_ID` | vazio | ID de medição do GA4, `G-XXXXXXX` (opcional) |
 | `RAILWAY_DOCKERFILE_PATH` | `landing/Dockerfile` | `landing/Dockerfile` |
+
+O serviço lê a configuração de `landing/railway.toml` (Settings → Config-as-code → caminho do arquivo). O `railway.toml` da raiz é do app.
+
+Com `CLARITY_ID` e `GA4_ID` vazios, a página não usa cookies e não mostra aviso. Com qualquer um preenchido, aparece o aviso de cookies (LGPD) e a medição só carrega depois do "Aceitar". A escolha fica salva no navegador, e o rodapé ganha o link "Preferências de cookies".
 
 Trocar o domínio ou o WhatsApp é só mudar a variável. Não precisa mexer no HTML nem fazer rebuild.
 
