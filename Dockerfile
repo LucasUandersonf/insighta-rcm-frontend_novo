@@ -5,11 +5,13 @@
 # (CSP com frame-ancestors, HSTS, nosniff, Referrer-Policy, Permissions-Policy),
 # o que a <meta> do HTML não consegue, e cacheia os arquivos com hash.
 #
-# A landing tem o próprio Dockerfile (landing/Dockerfile). No painel da
-# Railway, o serviço do app usa Builder = Dockerfile, caminho `Dockerfile`
-# e healthcheck /health.
+# A landing tem o próprio Dockerfile (landing/Dockerfile). Não há
+# railway.toml na raiz de propósito: a Railway aplicaria o mesmo arquivo
+# aos dois serviços. Cada serviço tem a configuração no painel (app:
+# Dockerfile path `Dockerfile`, healthcheck /health).
 
-FROM node:22-alpine AS build
+# Debian (glibc): o package-lock não traz o binário do Rollup para musl (Alpine).
+FROM node:22-slim AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund
