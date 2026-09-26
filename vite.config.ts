@@ -25,15 +25,10 @@ export default defineConfig({
     // (Railway serve tudo sob *.up.railway.app), então liberamos esse
     // padrão especificamente, em vez de desligar a proteção por inteiro.
     allowedHosts: [".up.railway.app"],
-    // Achado testando a CSP de verdade com um navegador (Playwright,
-    // headless): a diretiva frame-ancestors é IGNORADA pelo próprio
-    // navegador quando entregue via <meta> no HTML — só funciona como
-    // cabeçalho HTTP de verdade (limitação documentada do próprio
-    // padrão CSP, não um bug nosso). Como `vite preview` é quem serve
-    // a resposta em produção (ver railway.toml), X-Frame-Options aqui
-    // é o mecanismo real de proteção contra clickjacking desta parte
-    // do sistema — o resto dos cabeçalhos de segurança (que funcionam
-    // via <meta> sem problema) continua em index.html.
+    // Produção e homologação são servidas pelo nginx (Dockerfile na raiz,
+    // ops/app/nginx.conf.template), que entrega a CSP e os demais
+    // cabeçalhos. O `vite preview` fica só para testes locais (Playwright);
+    // X-Frame-Options aqui mantém o mesmo comportamento nesses testes.
     headers: {
       "X-Frame-Options": "DENY",
     },

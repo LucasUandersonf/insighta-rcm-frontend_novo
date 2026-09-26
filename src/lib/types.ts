@@ -2545,3 +2545,26 @@ export interface AccountHealth {
   attention_count: number;
   checks: AccountHealthCheck[];
 }
+
+/** A9 — GET /platform/pilot-metrics (critérios de docs/piloto/CRITERIOS_DE_SUCESSO.md). */
+export interface PilotMetrics {
+  tenant_id: string;
+  trade_name: string;
+  tenant_created_at: string;
+  first_upload_at: string | null;
+  days_to_first_upload: number | null;
+  upload_days_total: number;
+  upload_days_after_first: number;
+  active_weeks_last_4: number;
+  last_login_at: string | null;
+  insights_tracked: number;
+  value_found: number;
+  value_recovered: number;
+  appeals_created: number;
+  criterio_dados_em_7_dias: boolean | null;
+  criterio_autonomia: boolean;
+  criterio_uso_semanal: boolean;
+  criterio_valor_3x_mensalidade: boolean;
+  criterio_acao_tomada: boolean;
+  criterios_atingidos: number;
+}

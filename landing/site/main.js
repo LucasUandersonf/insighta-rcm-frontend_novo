@@ -94,4 +94,43 @@
   // Menu no celular
   var nav = document.querySelector(".nav"), burger = document.querySelector(".nav__burger");
   if (burger) burger.addEventListener("click", function () { burger.setAttribute("aria-expanded", String(nav.classList.toggle("is-open"))); });
+
+  // Cookies de medição (LGPD): só existem se o ambiente definir CLARITY_ID
+  // e/ou GA4_ID, e só carregam depois do "Aceitar". A escolha fica salva.
+  (function () {
+    var meta = document.querySelector('meta[name="insighta-analytics"]');
+    var ids = (meta ? meta.getAttribute("content") : "|").split("|");
+    var clarity = /^[a-z0-9]{6,20}$/i.test(ids[0] || "") ? ids[0] : "";
+    var ga4 = /^G-[A-Z0-9]{4,20}$/.test(ids[1] || "") ? ids[1] : "";
+    if (!clarity && !ga4) return;
+    var KEY = "insighta_cookies";
+    var banner = document.querySelector(".cookie");
+    var prefs = document.querySelector("[data-cookie-prefs]");
+    function read() { try { return localStorage.getItem(KEY); } catch (e) { return null; } }
+    function save(v) { try { localStorage.setItem(KEY, v); } catch (e) {} }
+    function load(src) { var s = document.createElement("script"); s.async = true; s.src = src; document.head.appendChild(s); }
+    var loaded = false;
+    function start() {
+      if (loaded) return; loaded = true;
+      if (clarity) {
+        window.clarity = window.clarity || function () { (window.clarity.q = window.clarity.q || []).push(arguments); };
+        load("https://www.clarity.ms/tag/" + clarity);
+        window.clarity("consent");
+      }
+      if (ga4) {
+        window.dataLayer = window.dataLayer || [];
+        window.gtag = function () { window.dataLayer.push(arguments); };
+        window.gtag("js", new Date());
+        window.gtag("config", ga4, { anonymize_ip: true });
+        load("https://www.googletagmanager.com/gtag/js?id=" + ga4);
+      }
+    }
+    function choose(v) { save(v); if (banner) banner.hidden = true; if (v === "accept") start(); else if (loaded) location.reload(); }
+    if (prefs) { prefs.hidden = false; prefs.addEventListener("click", function () { if (banner) banner.hidden = false; }); }
+    if (banner) banner.addEventListener("click", function (e) {
+      var b = e.target.closest("[data-cookie]"); if (b) choose(b.getAttribute("data-cookie"));
+    });
+    var choice = read();
+    if (choice === "accept") start(); else if (choice !== "reject" && banner) banner.hidden = false;
+  })();
 })();

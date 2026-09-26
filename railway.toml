@@ -1,14 +1,15 @@
-# railway.toml — frontend
+# railway.toml — referência apenas.
 #
-# Comando de start explícito, versionado — Railway detecta este projeto
-# como Node (tem package.json), mas um app Vite não tem servidor por
-# padrão; sem isso, o Railway pode não saber como servir o resultado do
-# build. `vite preview` é aceitável para o estágio atual (poucos
-# usuários); para tráfego real, trocar por um host estático dedicado
-# (Vercel/Netlify) ou Nginx é o passo seguinte — não escondido, só não
-# prioritário ainda.
+# A Railway descontinuou a configuração por arquivo (config-as-code); os
+# valores valem no painel de cada serviço. Configuração atual do serviço do
+# app (homologação e produção):
+#   Builder: Dockerfile · Dockerfile path: Dockerfile · Healthcheck: /health
+# A landing usa landing/Dockerfile, start /start.sh e healthcheck /health
+# (ver landing/README.md).
 [build]
-buildCommand = "npm run build"
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
 
 [deploy]
-startCommand = "npm run start"
+healthcheckPath = "/health"
+healthcheckTimeout = 60

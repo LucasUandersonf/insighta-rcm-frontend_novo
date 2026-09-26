@@ -1,0 +1,49 @@
+# Sistema (SPA React) — ver Dockerfile na raiz. ${VAR} vem do start.sh.
+server {
+    listen ${PORT};
+    listen [::]:${PORT};
+    server_name _;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # Por que cada origem está liberada:
+    # - accounts.google.com/gsi: botão "Continuar com Google" (script, estilo, iframe e chamadas)
+    # - fonts.googleapis.com / fonts.gstatic.com: fontes Geist e Fraunces
+    # - style 'unsafe-inline': framer-motion e Recharts escrevem style="" em tempo de execução
+    # - API_ORIGIN: a API; CSP_CONNECT_EXTRA: upload direto ao bucket e Sentry
+    set $csp "default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com/gsi/style; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://*.googleusercontent.com; connect-src 'self' ${API_ORIGIN} https://accounts.google.com/gsi/ ${CSP_CONNECT_EXTRA}; frame-src https://accounts.google.com/gsi/; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'";
+
+    add_header Content-Security-Policy $csp always;
+    add_header Strict-Transport-Security "max-age=63072000; includeSubDomains" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "DENY" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()" always;
+    add_header X-Robots-Tag "noindex, nofollow" always;
+
+    gzip on;
+    gzip_types text/css application/javascript application/json image/svg+xml text/plain;
+
+    location = /health { access_log off; default_type text/plain; return 200 "ok"; }
+
+    # Arquivos com hash no nome: cache longo. add_header dentro de location
+    # substitui os de cima, por isso os de segurança são repetidos.
+    location /assets/ {
+        add_header Cache-Control "public, max-age=31536000, immutable";
+        add_header X-Content-Type-Options "nosniff" always;
+        try_files $uri =404;
+    }
+
+    # index.html nunca em cache: cada deploy chega na hora.
+    location / {
+        add_header Cache-Control "no-cache";
+        add_header Content-Security-Policy $csp always;
+        add_header Strict-Transport-Security "max-age=63072000; includeSubDomains" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-Frame-Options "DENY" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        add_header Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()" always;
+        add_header X-Robots-Tag "noindex, nofollow" always;
+        try_files $uri $uri/ /index.html;
+    }
+}

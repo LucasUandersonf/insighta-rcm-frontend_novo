@@ -294,5 +294,19 @@ página).
 ```bash
 npm run build
 ```
-Gera `dist/` — pode ser servido por qualquer host estático (Vercel,
-Netlify, ou o próprio Railway como um segundo serviço).
+Gera `dist/`. Na Railway, o app é construído pelo `Dockerfile` da raiz e
+servido pelo nginx (`ops/app/`), que entrega a Content-Security-Policy,
+HSTS e os demais cabeçalhos de segurança, e responde `/health`.
+
+As variáveis `VITE_*` do serviço entram como build args (lista no
+`Dockerfile`). Uma variável nova precisa ser declarada lá também.
+`CSP_CONNECT_EXTRA` (opcional, em tempo de execução) libera origens extras
+no `connect-src`; o padrão cobre o bucket da Railway e o Sentry.
+
+Testar a imagem localmente:
+
+```bash
+docker build -t insighta-app --build-arg VITE_API_BASE_URL=http://localhost:8000 .
+docker run --rm -p 8080:8080 insighta-app
+curl -sI http://localhost:8080/login   # confere os cabeçalhos
+```
