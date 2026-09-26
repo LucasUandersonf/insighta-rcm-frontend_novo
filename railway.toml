@@ -1,8 +1,11 @@
-# railway.toml — sistema (app React). A landing usa landing/railway.toml.
+# railway.toml — referência apenas.
 #
-# O app é servido pelo nginx (Dockerfile na raiz), não mais pelo
-# `vite preview`: cabeçalhos de segurança de verdade (CSP com
-# frame-ancestors, HSTS) e cache dos arquivos com hash.
+# A Railway descontinuou a configuração por arquivo (config-as-code); os
+# valores valem no painel de cada serviço. Configuração atual do serviço do
+# app (homologação e produção):
+#   Builder: Dockerfile · Dockerfile path: Dockerfile · Healthcheck: /health
+# A landing usa landing/Dockerfile, start /start.sh e healthcheck /health
+# (ver landing/README.md).
 [build]
 builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile"

@@ -24,7 +24,7 @@ landing/
 | `GA4_ID` | vazio | ID de medição do GA4, `G-XXXXXXX` (opcional) |
 | `RAILWAY_DOCKERFILE_PATH` | `landing/Dockerfile` | `landing/Dockerfile` |
 
-O serviço lê a configuração de `landing/railway.toml` (Settings → Config-as-code → caminho do arquivo). O `railway.toml` da raiz é do app.
+A configuração do serviço fica no painel da Railway (Dockerfile `landing/Dockerfile`, start `/start.sh`, healthcheck `/health`, porta 8080).
 
 Com `CLARITY_ID` e `GA4_ID` vazios, a página não usa cookies e não mostra aviso. Com qualquer um preenchido, aparece o aviso de cookies (LGPD) e a medição só carrega depois do "Aceitar". A escolha fica salva no navegador, e o rodapé ganha o link "Preferências de cookies".
 

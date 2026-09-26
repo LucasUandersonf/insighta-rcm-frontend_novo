@@ -5,8 +5,9 @@
 # (CSP com frame-ancestors, HSTS, nosniff, Referrer-Policy, Permissions-Policy),
 # o que a <meta> do HTML não consegue, e cacheia os arquivos com hash.
 #
-# A landing tem o próprio Dockerfile (landing/Dockerfile) e o próprio
-# landing/railway.toml; este arquivo e o railway.toml da raiz são só do app.
+# A landing tem o próprio Dockerfile (landing/Dockerfile). No painel da
+# Railway, o serviço do app usa Builder = Dockerfile, caminho `Dockerfile`
+# e healthcheck /health.
 
 FROM node:22-alpine AS build
 WORKDIR /app
