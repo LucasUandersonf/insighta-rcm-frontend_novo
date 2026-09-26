@@ -27,6 +27,11 @@ const REFRESH_TOKEN_STORAGE_KEY = "insighta_refresh_token";
 // que falta — nunca mais uma tela preta muda.
 export const isApiConfigured = Boolean(API_BASE_URL);
 
+/** Refresh token em cookie httpOnly (backend REFRESH_TOKEN_COOKIE_ENABLED).
+ * Ligar só com domínio próprio: app e API no mesmo site. Nesse modo o
+ * refresh token nunca passa pelo JavaScript nem pelo localStorage. */
+export const REFRESH_COOKIE_MODE = import.meta.env.VITE_REFRESH_TOKEN_COOKIE === "true";
+
 /**
  * Erro tipado que carrega o envelope de erro do backend
  * ({error_code, message, request_id, ...}) — permite à UI mostrar
@@ -96,12 +101,13 @@ async function attemptSilentRefresh(): Promise<boolean> {
 
   refreshInFlight = (async () => {
     const refreshToken = getStoredRefreshToken();
-    if (!refreshToken || !API_BASE_URL) return false;
+    if ((!refreshToken && !REFRESH_COOKIE_MODE) || !API_BASE_URL) return false;
     try {
       const response = await fetch(`${API_BASE_URL}/api/v1/auth/refresh`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ refresh_token: refreshToken }),
+        body: JSON.stringify(REFRESH_COOKIE_MODE ? {} : { refresh_token: refreshToken }),
+        credentials: REFRESH_COOKIE_MODE ? "include" : "same-origin",
       });
       if (!response.ok) return false;
       const body: RefreshTokenApiResponse = await response.json();
@@ -154,6 +160,8 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     method: options.method ?? "GET",
     headers,
     body: options.body ? JSON.stringify(options.body) : undefined,
+    // Modo cookie: login/cadastro/Google/MFA recebem o cookie do refresh token.
+    ...(REFRESH_COOKIE_MODE && path.startsWith("/api/v1/auth") ? { credentials: "include" as const } : {}),
   });
 
   if (!response.ok) {
@@ -354,8 +362,13 @@ export async function confirmPasswordReset(token: string, newPassword: string): 
  * frequentemente o caso quando o usuário finalmente clica "Sair"), e o
  * backend não exige Authorization para este endpoint (ver DECISÃO em
  * POST /auth/logout, que espelha /auth/refresh no mesmo critério). */
-export async function logoutRequest(refreshToken: string): Promise<void> {
-  return apiClient.post<void>("/api/v1/auth/logout", { refresh_token: refreshToken }, { skipAuth: true });
+export async function logoutRequest(refreshToken: string | null): Promise<void> {
+  return apiClient.post<void>("/api/v1/auth/logout", refreshToken ? { refresh_token: refreshToken } : {}, { skipAuth: true });
+}
+
+/** Segunda etapa do login com MFA: token curto do login + código do app. */
+export async function verifyMfaRequest(mfaToken: string, code: string): Promise<TokenResponse> {
+  return apiClient.post<TokenResponse>("/api/v1/auth/mfa/verify", { mfa_token: mfaToken, code }, { skipAuth: true });
 }
 
 /** "Encerrar todas as sessões" — de um dispositivo em que o usuário

@@ -24,6 +24,9 @@ export interface TokenResponse {
   refresh_token?: string;
   requires_tenant_selection: boolean;
   tenant_options: TenantOption[];
+  /** MFA ligado: sem tokens ainda; pedir o código em /auth/mfa/verify. */
+  mfa_required?: boolean;
+  mfa_token?: string | null;
 }
 
 // --- Cadastro público (self-signup) / recuperação de senha
@@ -66,6 +69,8 @@ export interface GoogleAuthResponse {
   requires_tenant_selection: boolean;
   tenant_options: TenantOption[];
   needs_registration: boolean;
+  mfa_required?: boolean;
+  mfa_token?: string | null;
   email?: string;
   suggested_owner_name?: string;
 }
@@ -193,6 +198,8 @@ export interface PlatformUser {
   // Tour de boas-vindas guiado (ver OnboardingTour.tsx) — null = o
   // AppShell ainda deve mostrar o tour nesta sessão.
   onboarding_completed_at: string | null;
+  /** Verificação em duas etapas ligada (null = desligada). */
+  mfa_enabled_at?: string | null;
 }
 
 export interface UserCreateRequest {
@@ -2544,4 +2551,33 @@ export interface AccountHealth {
   ok_count: number;
   attention_count: number;
   checks: AccountHealthCheck[];
+}
+
+/** A9 — GET /platform/pilot-metrics (critérios de docs/piloto/CRITERIOS_DE_SUCESSO.md). */
+export interface PilotMetrics {
+  tenant_id: string;
+  trade_name: string;
+  tenant_created_at: string;
+  first_upload_at: string | null;
+  days_to_first_upload: number | null;
+  upload_days_total: number;
+  upload_days_after_first: number;
+  active_weeks_last_4: number;
+  last_login_at: string | null;
+  insights_tracked: number;
+  value_found: number;
+  value_recovered: number;
+  appeals_created: number;
+  criterio_dados_em_7_dias: boolean | null;
+  criterio_autonomia: boolean;
+  criterio_uso_semanal: boolean;
+  criterio_valor_3x_mensalidade: boolean;
+  criterio_acao_tomada: boolean;
+  criterios_atingidos: number;
+}
+
+export interface MfaStatus {
+  enabled: boolean;
+  enabled_at: string | null;
+  recovery_codes_left: number;
 }

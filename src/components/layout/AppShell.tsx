@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+import { Suspense, useEffect } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { TopBar } from "./TopBar";
@@ -7,6 +7,7 @@ import { RouteLoadingFallback } from "@/components/RouteLoadingFallback";
 import { useIsAnyModalOpen } from "@/context/ModalStackContext";
 import { OnboardingTourProvider } from "@/context/OnboardingTourContext";
 import { cn } from "@/lib/cn";
+import { trackPageView } from "@/lib/telemetry";
 
 /** Casca comum de toda tela autenticada: TopBar (duas linhas, sem sidebar —
  * Redesign 2026) + conteúdo da rota em largura total. */
@@ -16,6 +17,11 @@ export function AppShell() {
   // "preso" mesmo depois do usuário navegar para /appointments, porque
   // o state hasError=true do boundary sobreviveria à troca de children.
   const location = useLocation();
+
+  // Telemetria de navegação (rota normalizada, sem ids) — ver lib/telemetry.ts.
+  useEffect(() => {
+    trackPageView(location.pathname);
+  }, [location.pathname]);
 
   // Ver DECISÃO em ModalStackContext.tsx: com algum <Modal isOpen> aberto
   // em algum lugar da árvore (renderizado via portal em document.body,

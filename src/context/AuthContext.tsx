@@ -4,6 +4,8 @@ import {
   register as registerRequest,
   googleAuth as googleAuthRequest,
   logoutRequest,
+  verifyMfaRequest,
+  REFRESH_COOKIE_MODE,
   storeToken,
   clearStoredToken,
   getStoredToken,
@@ -70,6 +72,10 @@ interface AuthContextValue {
    * o aviso reaparecer se o usuário voltar para /login mais tarde na
    * mesma aba sem um novo 401 ter ocorrido. */
   dismissSessionExpired: () => void;
+  /** MFA ligado: a senha (ou o Google) conferiu e falta o código do app. */
+  mfaChallenge: boolean;
+  verifyMfa: (code: string) => Promise<void>;
+  cancelMfa: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -106,6 +112,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [pendingCredentials, setPendingCredentials] = useState<{ email: string; password: string } | null>(null);
   const [pendingGoogleCredential, setPendingGoogleCredential] = useState<string | null>(null);
   const [sessionExpired, setSessionExpired] = useState(false);
+  const [mfaToken, setMfaToken] = useState<string | null>(null);
+
+  /** true quando a resposta pediu o código do MFA (login para aqui). */
+  const needsMfa = useCallback((response: { mfa_required?: boolean; mfa_token?: string | null }): boolean => {
+    if (response.mfa_required && response.mfa_token) {
+      setMfaToken(response.mfa_token);
+      setTenantSelection(null);
+      return true;
+    }
+    return false;
+  }, []);
 
   const login = useCallback(async (email: string, password: string) => {
     setIsLoggingIn(true);
@@ -119,6 +136,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setTenantSelection(response.tenant_options);
         return;
       }
+      if (needsMfa(response)) return;
       storeTokens(response.access_token!, response.refresh_token);
       setUser(decodeJwtPayload(response.access_token!));
     } catch (err) {
@@ -129,7 +147,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoggingIn(false);
     }
-  }, []);
+  }, [needsMfa]);
 
   const register = useCallback(async (data: RegisterRequest) => {
     setIsRegistering(true);
@@ -165,6 +183,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { needsRegistration: false, requiresTenantSelection: true };
       }
 
+      if (needsMfa(response)) return { needsRegistration: false, requiresTenantSelection: false };
       storeTokens(response.access_token!, response.refresh_token);
       setUser(decodeJwtPayload(response.access_token!));
       return { needsRegistration: false, requiresTenantSelection: false };
@@ -174,7 +193,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoggingInWithGoogle(false);
     }
-  }, []);
+  }, [needsMfa]);
 
   const selectTenant = useCallback(
     async (tenantId: string) => {
@@ -183,6 +202,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setLoginError(null);
         try {
           const response = await googleAuthRequest(pendingGoogleCredential, tenantId);
+          setPendingGoogleCredential(null);
+          if (needsMfa(response)) return;
           storeTokens(response.access_token!, response.refresh_token);
           setUser(decodeJwtPayload(response.access_token!));
           setTenantSelection(null);
@@ -201,6 +222,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoginError(null);
       try {
         const response = await loginRequest(pendingCredentials.email, pendingCredentials.password, tenantId);
+        if (needsMfa(response)) {
+          setPendingCredentials(null);
+          return;
+        }
         storeTokens(response.access_token!, response.refresh_token);
         setUser(decodeJwtPayload(response.access_token!));
         setTenantSelection(null);
@@ -212,8 +237,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setIsLoggingIn(false);
       }
     },
-    [pendingCredentials, pendingGoogleCredential]
+    [pendingCredentials, pendingGoogleCredential, needsMfa]
   );
+
+  const verifyMfa = useCallback(
+    async (code: string) => {
+      if (!mfaToken) return;
+      setIsLoggingIn(true);
+      setLoginError(null);
+      try {
+        const response = await verifyMfaRequest(mfaToken, code);
+        storeTokens(response.access_token!, response.refresh_token);
+        setUser(decodeJwtPayload(response.access_token!));
+        setMfaToken(null);
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 401) setMfaToken(null); // etapa expirou: volta ao login
+        setLoginError(err instanceof ApiError ? err.message : "Não foi possível conferir o código. Tente novamente.");
+        throw err;
+      } finally {
+        setIsLoggingIn(false);
+      }
+    },
+    [mfaToken]
+  );
+
+  const cancelMfa = useCallback(() => {
+    setMfaToken(null);
+    setLoginError(null);
+  }, []);
 
   const cancelTenantSelection = useCallback(() => {
     setTenantSelection(null);
@@ -233,7 +284,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // erro visível (o usuário já está saindo, o refresh token vai
     // expirar sozinho de qualquer forma se esta chamada falhar).
     const refreshToken = getStoredRefreshToken();
-    if (refreshToken) {
+    if (refreshToken || REFRESH_COOKIE_MODE) {
       logoutRequest(refreshToken).catch(() => {});
     }
     clearStoredToken();
@@ -279,6 +330,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         cancelTenantSelection,
         sessionExpired,
         dismissSessionExpired,
+        mfaChallenge: mfaToken !== null,
+        verifyMfa,
+        cancelMfa,
       }}
     >
       {children}

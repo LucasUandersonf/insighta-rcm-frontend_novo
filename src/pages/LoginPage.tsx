@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowRight, Building2, Calculator, Lock, Mail, Sparkles, Users } from "lucide-react";
+import { ArrowRight, Building2, Calculator, Lock, Mail, ShieldCheck, Sparkles, Users } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { AuthLayout, AuthFormHeader } from "@/components/layout/AuthLayout";
 import { AuthTextField } from "@/components/ui/AuthTextField";
@@ -74,6 +74,67 @@ function TenantSelector() {
 // um hop a mais, nunca uma tela quebrada.
 const POST_LOGIN_ROUTE = "/decisao";
 
+/** MFA ligado: senha (ou Google) conferiu; falta o código do aplicativo
+ * autenticador ou um código de recuperação. */
+function MfaChallenge() {
+  const { verifyMfa, cancelMfa, loginError, isLoggingIn } = useAuth();
+  const navigate = useNavigate();
+  const [code, setCode] = useState("");
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    try {
+      await verifyMfa(code);
+      navigate(POST_LOGIN_ROUTE, { replace: true });
+    } catch {
+      // erro já aparece via loginError
+    }
+  }
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-sm">
+      <div className="mb-6 text-center">
+        <span className="mb-3 inline-flex h-11 w-11 items-center justify-center rounded-full bg-accent-bg text-accent">
+          <ShieldCheck aria-hidden size={20} />
+        </span>
+        <h1 className="text-xl font-semibold tracking-[-0.01em] text-ink">Código de verificação</h1>
+        <p className="mt-1.5 text-sm text-ink-muted">Abra o aplicativo autenticador e digite o código de 6 dígitos da Insighta.</p>
+      </div>
+      <form onSubmit={handleSubmit} className="rounded-xl border border-border-hairline bg-glass p-6 shadow-elevated backdrop-blur-xl">
+        <label htmlFor="mfa-code" className="mb-1.5 block text-xs font-medium text-ink-muted">
+          Código
+        </label>
+        <input
+          id="mfa-code"
+          inputMode="numeric"
+          autoComplete="one-time-code"
+          autoFocus
+          value={code}
+          onChange={(e) => setCode(e.target.value)}
+          placeholder="000000"
+          className="w-full rounded-md border border-border-default bg-canvas-raised px-3 py-2.5 text-center font-mono text-lg tracking-[0.3em] text-ink focus:border-accent focus:outline-none"
+        />
+        <p className="mt-2 text-2xs text-ink-faint">Sem o celular? Digite um dos códigos de recuperação (ex.: ABCD-EF23).</p>
+        {loginError && (
+          <div role="alert" className="mt-4 rounded-md border border-denied/25 bg-denied-bg px-3 py-2 text-xs text-denied">
+            {loginError}
+          </div>
+        )}
+        <button
+          type="submit"
+          disabled={isLoggingIn || code.trim().length < 6}
+          className="mt-5 w-full rounded-md bg-accent px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {isLoggingIn ? "Conferindo..." : "Entrar"}
+        </button>
+      </form>
+      <button type="button" onClick={cancelMfa} className="mt-4 w-full text-center text-xs text-ink-faint hover:text-ink-muted">
+        Voltar
+      </button>
+    </motion.div>
+  );
+}
+
 const BRAND_HIGHLIGHTS = [
   { icon: Sparkles, text: "Pergunte em português — “qual convênio mais glosa?” — e receba a resposta com os números da sua clínica." },
   { icon: Calculator, text: "Cada alerta traz o “Como calculamos”: você vê de onde veio o número antes de agir." },
@@ -81,7 +142,7 @@ const BRAND_HIGHLIGHTS = [
 ];
 
 export function LoginPage() {
-  const { login, loginError, isLoggingIn, loginWithGoogle, tenantSelection, sessionExpired, dismissSessionExpired } = useAuth();
+  const { login, loginError, isLoggingIn, loginWithGoogle, tenantSelection, sessionExpired, dismissSessionExpired, mfaChallenge } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -132,7 +193,9 @@ export function LoginPage() {
       subheadline="O Insighta cruza faturamento, agenda, pacientes, estoque e prontuário e mostra o que mudou, por quê e o que fazer — com a conta à vista."
       highlights={BRAND_HIGHLIGHTS}
     >
-      {tenantSelection ? (
+      {mfaChallenge ? (
+        <MfaChallenge />
+      ) : tenantSelection ? (
         <TenantSelector />
       ) : (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="w-full max-w-sm">

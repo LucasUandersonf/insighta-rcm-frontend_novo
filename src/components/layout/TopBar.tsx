@@ -2,7 +2,7 @@ import { useEffect, useId, useMemo, useRef, useState, type RefObject } from "rea
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
-import { Building2, Check, ChevronDown, CircleHelp, LogOut, Menu, Moon, Sparkles, Sun } from "lucide-react";
+import { Building2, Check, ChevronDown, CircleHelp, KeyRound, LogOut, Menu, Moon, Sparkles, Sun } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
 import { useOnboardingTour } from "@/context/OnboardingTourContext";
@@ -315,6 +315,10 @@ function AccountMenu({ onOpenHelp }: { onOpenHelp: () => void }) {
               </>
             )}
 
+            <NavLink to="/conta/seguranca" className={itemClass}>
+              <KeyRound aria-hidden size={15} className="text-ink-muted" />
+              Segurança da conta
+            </NavLink>
             <button type="button" onClick={toggle} className={itemClass}>
               {isDark ? <Moon aria-hidden size={15} className="text-ink-muted" /> : <Sun aria-hidden size={15} className="text-ink-muted" />}
               {isDark ? "Tema escuro" : "Tema claro"}

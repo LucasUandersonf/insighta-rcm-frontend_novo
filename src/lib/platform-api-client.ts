@@ -58,6 +58,7 @@ export const platformApiClient = {
   login: (email: string, password: string) =>
     platformRequest<{ access_token: string; token_type: string }>("/api/v1/platform/login", { method: "POST", body: { email, password } }),
   getTenantsUsage: () => platformRequest<import("./types").TenantUsageSummary[]>("/api/v1/platform/tenants-usage", { auth: true }),
+  getPilotMetrics: () => platformRequest<import("./types").PilotMetrics[]>("/api/v1/platform/pilot-metrics", { auth: true }),
   // Disparo manual dos alertas proativos (ver POST /platform/alerts/run
   // no backend) — útil para checar agora em vez de esperar o agendador
   // externo (mesmo espírito do botão "Enviar agora" do relatório
