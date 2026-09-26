@@ -9,8 +9,9 @@ case "$API_ORIGIN" in http://*|https://*) ;; *) API_ORIGIN="" ;; esac
 export API_ORIGIN
 
 # Origens extras de connect-src, separadas por espaço (ex.: domínio próprio
-# do bucket). Padrão: bucket da Railway (upload direto) e Sentry.
-export CSP_CONNECT_EXTRA="${CSP_CONNECT_EXTRA:-https://*.storageapi.dev https://*.sentry.io}"
+# do bucket). Padrão: bucket da Railway (upload direto) e erros (Sentry ou
+# Better Stack, que recebe o mesmo SDK).
+export CSP_CONNECT_EXTRA="${CSP_CONNECT_EXTRA:-https://*.storageapi.dev https://*.sentry.io https://*.betterstackdata.com}"
 
 export NGINX_ENVSUBST_FILTER="^(PORT|API_ORIGIN|CSP_CONNECT_EXTRA)$"
 exec /docker-entrypoint.sh nginx -g 'daemon off;'
