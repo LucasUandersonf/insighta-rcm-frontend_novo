@@ -36,11 +36,27 @@ const baseAuth = {
   user: null,
   isAuthenticated: false,
   logout: vi.fn(),
+  mfaChallenge: false,
+  verifyMfa: vi.fn(),
+  cancelMfa: vi.fn(),
 };
 
 function mockAuth(overrides: Partial<typeof baseAuth> = {}) {
   vi.mocked(useAuth).mockReturnValue({ ...baseAuth, ...overrides } as unknown as ReturnType<typeof useAuth>);
 }
+
+describe("LoginPage — verificação em duas etapas", () => {
+  it("pede o código e entra quando ele confere", async () => {
+    const verifyMfa = vi.fn().mockResolvedValue(undefined);
+    mockAuth({ mfaChallenge: true, verifyMfa });
+    renderWithProviders(<LoginPage />);
+    expect(screen.getByText("Código de verificação")).toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText("Código"), "123456");
+    await userEvent.click(screen.getByRole("button", { name: "Entrar" }));
+    await waitFor(() => expect(verifyMfa).toHaveBeenCalledWith("123456"));
+    expect(navigateMock).toHaveBeenCalledWith("/decisao", { replace: true });
+  });
+});
 
 describe("LoginPage", () => {
   it("renderiza os campos de e-mail/senha e o botão de entrar", () => {

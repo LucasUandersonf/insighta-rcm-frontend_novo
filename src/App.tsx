@@ -23,6 +23,8 @@ import { HomeRouter, LegacyRedirect, ManagerProfileRoute } from "@/routes/TeamRo
 const LoginPage = lazy(() => import("@/pages/LoginPage").then((m) => ({ default: m.LoginPage })));
 const SignUpPage = lazy(() => import("@/pages/SignUpPage").then((m) => ({ default: m.SignUpPage })));
 const TermsOfServicePage = lazy(() => import("@/pages/TermsOfServicePage").then((m) => ({ default: m.TermsOfServicePage })));
+const AccountSecurityPage = lazy(() => import("@/pages/AccountSecurityPage").then((m) => ({ default: m.AccountSecurityPage })));
+const StatusPage = lazy(() => import("@/pages/StatusPage").then((m) => ({ default: m.StatusPage })));
 const PrivacyPolicyPage = lazy(() => import("@/pages/PrivacyPolicyPage").then((m) => ({ default: m.PrivacyPolicyPage })));
 const ForgotPasswordPage = lazy(() => import("@/pages/ForgotPasswordPage").then((m) => ({ default: m.ForgotPasswordPage })));
 const ResetPasswordPage = lazy(() => import("@/pages/ResetPasswordPage").then((m) => ({ default: m.ResetPasswordPage })));
@@ -111,6 +113,7 @@ export default function App() {
                   ver SignUpPage.tsx) e acessível a qualquer momento. */}
               <Route path="/termos" element={<TermsOfServicePage />} />
               <Route path="/privacidade" element={<PrivacyPolicyPage />} />
+              <Route path="/status" element={<StatusPage />} />
               <Route path="/forgot-password" element={<ForgotPasswordPage />} />
               <Route path="/reset-password" element={<ResetPasswordPage />} />
               {/* "Mapa de Dados Insighta" — Domínio Pós-atendimento (Onda 2):
@@ -211,6 +214,7 @@ export default function App() {
                       (ingestion.py/_CAN_MANAGE: owner/admin/financeiro). */}
                   <Route path="/setup" element={<SetupPage />} />
                 </Route>
+                <Route path="/conta/seguranca" element={<AccountSecurityPage />} />
                 <Route element={<RoleProtectedRoute allowedRoles={["owner", "admin"]} />}>
                   <Route path="/admin/users" element={<UsersPage />} />
                   <Route path="/admin/integrations" element={<IntegrationsPage />} />
