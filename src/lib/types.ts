@@ -24,6 +24,9 @@ export interface TokenResponse {
   refresh_token?: string;
   requires_tenant_selection: boolean;
   tenant_options: TenantOption[];
+  /** MFA ligado: sem tokens ainda; pedir o código em /auth/mfa/verify. */
+  mfa_required?: boolean;
+  mfa_token?: string | null;
 }
 
 // --- Cadastro público (self-signup) / recuperação de senha
@@ -66,6 +69,8 @@ export interface GoogleAuthResponse {
   requires_tenant_selection: boolean;
   tenant_options: TenantOption[];
   needs_registration: boolean;
+  mfa_required?: boolean;
+  mfa_token?: string | null;
   email?: string;
   suggested_owner_name?: string;
 }
@@ -2567,4 +2572,10 @@ export interface PilotMetrics {
   criterio_valor_3x_mensalidade: boolean;
   criterio_acao_tomada: boolean;
   criterios_atingidos: number;
+}
+
+export interface MfaStatus {
+  enabled: boolean;
+  enabled_at: string | null;
+  recovery_codes_left: number;
 }
