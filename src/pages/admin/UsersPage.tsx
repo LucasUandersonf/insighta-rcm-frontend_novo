@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Users } from "lucide-react";
 import { Panel, EmptyState, LoadingState, ErrorState } from "@/components/ui/Panel";
 import { Button } from "@/components/ui/Button";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Modal } from "@/components/ui/Modal";
 import { TextField, SelectField } from "@/components/ui/FormField";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -161,6 +162,17 @@ export function UsersPage() {
     onError: (err) => showError(getApiErrorMessage(err)),
   });
 
+  const [mfaTarget, setMfaTarget] = useState<PlatformUser | null>(null);
+  const resetMfaMutation = useMutation({
+    mutationFn: (id: string) => apiClient.post<void>(`/api/v1/auth/mfa/reset/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      showSuccess("Verificação em duas etapas desligada. A pessoa pode ligar de novo em Segurança da conta.");
+      setMfaTarget(null);
+    },
+    onError: (err) => showError(getApiErrorMessage(err)),
+  });
+
   const resetPasswordMutation = useMutation({
     mutationFn: (id: string) => apiClient.post<PasswordResetResponse>(`/api/v1/users/${id}/reset-password`),
     onSuccess: (reset) => setTemporaryPassword(reset.temporary_password),
@@ -225,6 +237,11 @@ export function UsersPage() {
                         >
                           Redefinir senha
                         </Button>
+                        {!isSelf && u.mfa_enabled_at && (currentUser?.role === "owner" || u.role !== "owner") && (
+                          <Button variant="secondary" size="xs" onClick={() => setMfaTarget(u)}>
+                            Desligar MFA
+                          </Button>
+                        )}
                         {!isSelf && (
                           <Button
                             variant="ghost"
@@ -249,6 +266,15 @@ export function UsersPage() {
 
       <CreateUserModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onCreated={setTemporaryPassword} />
       <TemporaryPasswordModal password={temporaryPassword} onClose={() => setTemporaryPassword(null)} />
+      <ConfirmDialog
+        isOpen={mfaTarget !== null}
+        title="Desligar a verificação em duas etapas?"
+        message={`${mfaTarget?.full_name ?? ""} vai entrar só com a senha até ligar de novo em Segurança da conta. Use quando a pessoa perdeu o celular e os códigos de recuperação.`}
+        confirmLabel="Desligar MFA"
+        onConfirm={() => mfaTarget && resetMfaMutation.mutate(mfaTarget.id)}
+        onCancel={() => setMfaTarget(null)}
+        isConfirming={resetMfaMutation.isPending}
+      />
     </div>
   );
 }
