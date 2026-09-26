@@ -198,6 +198,8 @@ export interface PlatformUser {
   // Tour de boas-vindas guiado (ver OnboardingTour.tsx) — null = o
   // AppShell ainda deve mostrar o tour nesta sessão.
   onboarding_completed_at: string | null;
+  /** Verificação em duas etapas ligada (null = desligada). */
+  mfa_enabled_at?: string | null;
 }
 
 export interface UserCreateRequest {
