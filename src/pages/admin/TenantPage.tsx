@@ -14,6 +14,7 @@ import { useAuth } from "@/context/AuthContext";
 import type {
   AnnualGoalSuggestion,
   CheckoutSession,
+  SubscriptionStatus,
   DenialRiskThresholdSuggestion,
   HealthScoreCeilingSuggestion,
   NoShowThresholdSuggestion,
@@ -62,6 +63,42 @@ function SubscriptionPlanPanel({ tenant, isOwner }: { tenant: Tenant; isOwner: b
     onSuccess: (session) => navigate(`/checkout/mock/${session.checkout_id}`),
     onError: (err) => showError(getApiErrorMessage(err)),
   });
+
+  // Cobrança real (Asaas): a situação e o pagamento ficam na tela Assinatura.
+  const { data: subscription } = useQuery({
+    queryKey: ["subscription", "status"],
+    queryFn: () => apiClient.get<SubscriptionStatus>("/api/v1/subscription"),
+  });
+  if (subscription?.provider === "asaas") {
+    const label: Record<string, string> = {
+      active: "Ativa",
+      past_due: "Cobrança em aberto",
+      pending_payment: "Aguardando pagamento",
+      canceled: "Cancelada",
+    };
+    return (
+      <Panel title="Plano e assinatura">
+        <div className="flex flex-wrap items-center justify-between gap-3 p-4">
+          <div className="flex flex-col gap-1">
+            <span className="text-sm font-medium text-ink">
+              {subscription.founders_member ? "Plano Founders" : "Assinatura mensal"} · {label[subscription.billing_status] ?? subscription.billing_status}
+            </span>
+            {subscription.current_price_cents !== null && (
+              <span className="text-sm text-ink-muted">{formatCurrency(subscription.current_price_cents / 100)}/mês</span>
+            )}
+            {subscription.founders_member && subscription.price_locked_until && (
+              <span className="text-2xs text-ink-faint">
+                Preço garantido até {new Intl.DateTimeFormat("pt-BR", { dateStyle: "long", timeZone: "UTC" }).format(new Date(subscription.price_locked_until))}
+              </span>
+            )}
+          </div>
+          <Button variant="secondary" onClick={() => navigate("/assinatura")}>
+            Ver assinatura
+          </Button>
+        </div>
+      </Panel>
+    );
+  }
 
   return (
     <Panel title="Plano e assinatura">
@@ -859,7 +896,7 @@ function OrganizationLinkingPanel({ isOwner }: { isOwner: boolean }) {
  * num .zip (um CSV por tabela), sem pedir ao suporte. Senhas e tokens nunca
  * saem; cada exportação fica na auditoria (GET /tenant/export).
  */
-function DataExportPanel({ isOwner }: { isOwner: boolean }) {
+export function DataExportPanel({ isOwner }: { isOwner: boolean }) {
   const { showSuccess, showError } = useToast();
   const [busy, setBusy] = useState(false);
 

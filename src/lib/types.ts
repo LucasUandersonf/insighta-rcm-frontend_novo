@@ -32,7 +32,7 @@ export interface TokenResponse {
 // --- Cadastro público (self-signup) / recuperação de senha
 // (app/schemas/token.py::RegisterRequest/PasswordResetRequestRequest/
 // PasswordResetConfirmRequest) ---
-export type PlanTier = "starter" | "professional" | "enterprise";
+export type PlanTier = "starter" | "professional" | "enterprise" | "founders";
 
 // owner_name/email/password OU google_credential — nunca os dois juntos
 // (ver DECISÃO em RegisterRequest.validate_auth_method no backend).
@@ -2296,9 +2296,32 @@ export interface PlanCatalogEntry {
   self_service: boolean;
 }
 
+export type BillingStatus = "pending_payment" | "active" | "past_due" | "canceled";
+
 export interface SubscriptionStatus {
   plan_tier: PlanTier;
   pending_checkout_id: string | null;
+  /** false = o sistema não exige pagamento (BILLING_REQUIRED desligado no backend). */
+  billing_required: boolean;
+  billing_status: BillingStatus;
+  access_allowed: boolean;
+  overdue_since: string | null;
+  grace_days: number;
+  founders_member: boolean;
+  price_locked_until: string | null;
+  current_price_cents: number | null;
+  provider: "asaas" | "stripe" | "mock";
+}
+
+/** Oferta vigente para quem vai assinar agora (GET /api/v1/subscription/offer). */
+export interface SubscriptionOffer {
+  available: boolean;
+  plan_tier: PlanTier | null;
+  price_cents: number | null;
+  founders: boolean;
+  founders_slots_total: number;
+  founders_slots_remaining: number;
+  founders_lock_months: number;
 }
 
 export interface CheckoutSession {

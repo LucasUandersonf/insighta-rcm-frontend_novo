@@ -1,18 +1,21 @@
+import { Link } from "react-router-dom";
 import { LegalDocumentLayout } from "@/components/layout/LegalDocumentLayout";
+import { COMPANY, LEGAL_UPDATED_AT, LEGAL_VERSION } from "@/lib/company";
 
 /**
  * Política de Privacidade — LGPD ("vamos chegar a 9.5"). Conteúdo
  * espelha POLITICA_DE_PRIVACIDADE.md no backend (fonte da verdade do
  * texto, com a tabela completa de dado processado e subprocessadores) —
  * ver DECISÃO lá sobre o que é fato verificado no código vs.
- * `[PENDENTE]`.
+ * Dados da empresa vêm de src/lib/company.ts.
  */
 export function PrivacyPolicyPage() {
   return (
-    <LegalDocumentLayout title="Política de Privacidade" lastUpdated="22/09/2026">
+    <LegalDocumentLayout title="Política de Privacidade" lastUpdated={LEGAL_UPDATED_AT}>
+      <p>Versão {LEGAL_VERSION}.</p>
       <h2>1. Quem somos e o papel que exercemos sobre o seu dado</h2>
       <p>
-        A Insighta ([PENDENTE — razão social completa], CNPJ [PENDENTE]) opera uma plataforma de inteligência de
+        A Insighta ({COMPANY.legalName}, CNPJ {COMPANY.cnpj}, sede em {COMPANY.address}) opera uma plataforma de inteligência de
         dados para clínicas e redes de saúde.
       </p>
       <p>
@@ -33,6 +36,11 @@ export function PrivacyPolicyPage() {
         nome, e-mail e senha (hash, nunca em texto puro) para autenticação e controle de acesso — aqui a Insighta
         é controladora desse dado específico de conta de usuário.
       </p>
+      <p>
+        <strong>Dados de quem contrata</strong>: para cobrar a assinatura, a Insighta trata razão social, CNPJ, nome e
+        e-mail do responsável pela clínica, como controladora, para executar o contrato e emitir nota fiscal (LGPD art. 7º,
+        V e II).
+      </p>
 
       <h2>2. Que dado pessoal passa pela Plataforma</h2>
       <ul>
@@ -50,13 +58,13 @@ export function PrivacyPolicyPage() {
       <ul>
         <li>
           Dado de identificação/financeiro do paciente: tratado pela clínica sob Art. 7º, V (execução de
-          contrato) ou IX (legítimo interesse) da LGPD — <strong>[PENDENTE — jurídico]</strong> qual das duas é a
-          base formal de cada contrato.
+          contrato) ou IX (legítimo interesse) da LGPD. A clínica, como controladora, define e documenta a base de
+          cada tratamento.
         </li>
         <li>
           Dado de saúde (CID, sensível): tratado sob Art. 11º, II, "f" (tutela da saúde, em procedimento
-          realizado por profissionais de saúde) — <strong>[PENDENTE — jurídico]</strong> confirmação formal com o
-          corpo jurídico de cada clínica cliente.
+          realizado por profissionais de saúde) e "d" (exercício regular de direitos em contrato, como o faturamento
+          junto ao convênio), sob responsabilidade da clínica.
         </li>
         <li>Dado de conta de usuário da equipe da clínica: Art. 7º, V (execução de contrato).</li>
       </ul>
@@ -82,8 +90,16 @@ export function PrivacyPolicyPage() {
           procedimento (nunca nome/CPF do paciente), sob demanda explícita de um usuário da clínica.
         </li>
         <li>
-          <strong>Meta WhatsApp Business Platform</strong> — relatório semanal / lista de risco (pode conter nome
-          de paciente, não CID), enviado a um número da própria equipe da clínica, nunca ao paciente.
+          <strong>Meta WhatsApp Business Platform</strong> (quando ligado) — relatório semanal / lista de risco (pode
+          conter nome de paciente, não CID), enviado a um número da própria equipe da clínica, nunca ao paciente.
+        </li>
+        <li>
+          <strong>Asaas</strong> (pagamentos, Brasil) — razão social, CNPJ, nome e e-mail do responsável pela clínica,
+          para cobrar a assinatura e emitir a nota fiscal. Nenhum dado de paciente vai para o Asaas.
+        </li>
+        <li>
+          <strong>Resend</strong> (e-mails do sistema, EUA) — nome e e-mail de usuários da equipe, para recuperação de
+          senha e convites.
         </li>
         <li>
           <strong>Anthropic</strong> (API de IA) — Pergunte ao Insighta, Jornal da manhã e narrativas: números
@@ -98,8 +114,12 @@ export function PrivacyPolicyPage() {
           <strong>Railway</strong> (infraestrutura de hospedagem) — todo o dado acima, em repouso e em trânsito.
         </li>
         <li>
-          <strong>Sentry</strong> (monitoramento de erro, opcional) — rastro técnico de erro, configurado para
-          nunca enviar dado pessoal automaticamente.
+          <strong>Better Stack</strong> (monitoramento de erros e disponibilidade) — rastro técnico de erro,
+          configurado para nunca enviar dado pessoal automaticamente.
+        </li>
+        <li>
+          <strong>Cópia externa de backup</strong> (Cloudflare R2 ou Backblaze B2, quando ligada) — segunda cópia
+          cifrada do backup diário, guardada fora da Railway por 14 dias.
         </li>
       </ul>
       <p>
@@ -109,9 +129,10 @@ export function PrivacyPolicyPage() {
 
       <h3>Transferência internacional</h3>
       <p>
-        Railway, Anthropic, Meta e Sentry processam dados fora do Brasil (EUA). A transferência se apoia nas
-        cláusulas-padrão contratuais da ANPD (Resolução CD/ANPD nº 19/2024), incluídas no contrato de tratamento
-        de dados firmado com cada clínica.
+        Railway, Anthropic, Meta, Resend, Better Stack e o provedor da cópia externa de backup processam dados fora do
+        Brasil. A transferência se apoia nas cláusulas-padrão contratuais da ANPD (Resolução CD/ANPD nº 19/2024),
+        incluídas no <Link to="/contrato-de-dados">Contrato de Tratamento de Dados</Link> aceito por cada clínica, e nos
+        termos de proteção de dados de cada fornecedor.
       </p>
       <h3>Cookies da página de apresentação</h3>
       <p>
@@ -139,14 +160,15 @@ export function PrivacyPolicyPage() {
         de paciente ativo.
       </p>
       <p>
-        <strong>Quando a clínica cancela a assinatura</strong>: um administrador da Insighta pode configurar um
-        prazo de retenção (em dias) específico para aquele cancelamento. Findo esse prazo, todo dado pessoal
-        identificável de paciente daquela clínica é anonimizado automaticamente (nome, CPF, data de nascimento e
-        CEP substituídos por um marcador — nunca excluídos fisicamente, por obrigação legal de retenção
-        fiscal/contábil enquanto a clínica esteve ativa). <strong>[PENDENTE — jurídico/negócio]</strong>: o prazo
-        de retenção padrão em si — o mecanismo já existe e é configurável por clínica cancelada, mas não há um
-        número de dias definido como política padrão da empresa; até essa decisão existir, nenhuma clínica
-        cancelada tem expurgo automático configurado por padrão.
+        <strong>Quando a clínica cancela a assinatura</strong>: por 90 dias ela ainda pode entrar para exportar todos
+        os dados. Passado esse prazo, todo dado pessoal identificável de paciente daquela clínica é anonimizado
+        automaticamente (nome, CPF, data de nascimento e CEP substituídos por um marcador). Os registros financeiros
+        ficam, sem identificação do paciente, pelo prazo que a lei fiscal e contábil exige. As cópias de segurança que
+        contêm os dados são apagadas no ciclo normal de 14 dias.
+      </p>
+      <p>
+        <strong>Registros de acesso</strong>: guardados por 6 meses (Marco Civil da Internet, art. 15). Telemetria de
+        navegação dentro do sistema: 180 dias.
       </p>
 
       <h2>8. Seus direitos como titular do dado</h2>
@@ -166,9 +188,9 @@ export function PrivacyPolicyPage() {
 
       <h2>9. Contato</h2>
       <p>
-        <strong>[PENDENTE — jurídico/negócio]</strong>: canal formal de contato do encarregado de proteção de
-        dados (DPO) da Insighta (e-mail dedicado, prazo de resposta) — obrigatório para publicação desta política
-        (LGPD Art. 41).
+        Encarregado de proteção de dados (LGPD art. 41): <strong>{COMPANY.dpoName}</strong>, pelo e-mail{" "}
+        <strong>{COMPANY.dpoEmail}</strong>. Respondemos em até 15 dias. Pacientes: procurem primeiro a clínica onde são
+        atendidos; se precisarem, a Insighta encaminha o pedido à clínica.
       </p>
     </LegalDocumentLayout>
   );
