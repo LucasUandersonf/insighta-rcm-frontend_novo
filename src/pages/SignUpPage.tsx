@@ -23,33 +23,28 @@ interface SignUpLocationState {
 
 const STEPS = [
   { id: 1, label: "Sua clínica" },
-  { id: 2, label: "Escolha um plano" },
+  { id: 2, label: "Plano e aceite" },
 ];
 
+// Autoatendimento: uma oferta só (Founders). O preço e as vagas restantes
+// aparecem na tela Assinatura, logo depois do cadastro.
 const PLANS: { id: PlanTier; name: string; recommended?: boolean; description: string; features: string[] }[] = [
   {
-    id: "starter",
-    name: "Starter",
-    description: "Para validar a Sala de Comando com dado real, sem compromisso grande de início.",
-    features: ["1 clínica", "Sala de Comando e Painel completos", "Motor anti-glosa", "Upload manual de faturamento"],
-  },
-  {
     id: "professional",
-    name: "Professional",
+    name: "Founders · R$ 800/mês",
     recommended: true,
-    description: "Para operar o dia a dia com o ciclo de glosa fechado, ponta a ponta.",
-    features: ["Tudo do Starter", "Recurso de Glosa (conformidade ANS)", "Central de Integrações & Webhooks", "Relatório semanal automático"],
-  },
-  {
-    id: "enterprise",
-    name: "Enterprise",
-    description: "Para grupos e redes de clínicas com times maiores e governança própria.",
-    features: ["Tudo do Professional", "Usuários ilimitados", "Trilha de auditoria avançada", "Suporte prioritário"],
+    description: "Preço garantido por 24 meses para as 20 primeiras clínicas.",
+    features: [
+      "Sala de Comando e painel completos",
+      "Motor anti-glosa e recurso de glosa",
+      "Faturamento, agenda, estoque e prontuário",
+      "Usuários ilimitados da equipe",
+    ],
   },
 ];
 
 const HIGHLIGHTS = [
-  { icon: Building2, text: "1. Cadastre a clínica e escolha o plano." },
+  { icon: Building2, text: "1. Cadastre a clínica e pague por Pix, boleto ou cartão." },
   { icon: Upload, text: "2. Envie faturamento, agenda, atendimento, estoque e prontuário — há um modelo pronto para cada um." },
   { icon: Sparkles, text: "3. Receba o jornal da manhã e os alertas com o que merece sua atenção." },
 ];
@@ -318,7 +313,7 @@ export function SignUpPage() {
                           <span className="text-sm font-medium text-ink">{plan.name}</span>
                         </div>
                         {plan.recommended && (
-                          <span className="rounded-full bg-aura-line px-2 py-0.5 text-2xs font-medium text-white">Mais escolhido</span>
+                          <span className="rounded-full bg-aura-line px-2 py-0.5 text-2xs font-medium text-white">Oferta de lançamento</span>
                         )}
                       </div>
                       <p className="mt-1.5 pl-6 text-xs text-ink-muted">{plan.description}</p>
@@ -333,7 +328,7 @@ export function SignUpPage() {
               </div>
 
               <p className="mt-4 text-2xs text-ink-faint">
-                Sem necessidade de cartão de crédito no cadastro. A ativação do plano é feita diretamente com a nossa equipe.
+                Depois do cadastro, você paga por Pix, boleto ou cartão e o sistema libera na hora.
               </p>
 
               {/* LGPD ("vamos chegar a 9.5") — aceite explícito, nunca
@@ -356,6 +351,10 @@ export function SignUpPage() {
                   e a{" "}
                   <Link to="/privacidade" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
                     Política de Privacidade
+                  </Link>{" "}
+                  e o{" "}
+                  <Link to="/contrato-de-dados" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
+                    Contrato de Tratamento de Dados
                   </Link>{" "}
                   da Insighta.
                 </span>

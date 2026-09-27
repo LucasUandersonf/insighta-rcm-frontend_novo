@@ -1,137 +1,184 @@
+import { Link } from "react-router-dom";
 import { LegalDocumentLayout } from "@/components/layout/LegalDocumentLayout";
+import { COMPANY, LEGAL_UPDATED_AT, LEGAL_VERSION } from "@/lib/company";
 
 /**
- * Termos de Uso — LGPD ("vamos chegar a 9.5", épico de Termo de Uso/
- * Política de Privacidade real). Conteúdo espelha TERMOS_DE_USO.md no
- * backend (fonte da verdade do texto) — os dois precisam evoluir juntos;
- * ver DECISÃO completa lá sobre o que é fato verificado no código vs.
- * `[PENDENTE]` (decisão jurídica/negócio ainda não tomada).
+ * Termos de Uso. Texto espelhado em TERMOS_DE_USO.md no backend (os dois
+ * mudam juntos, e LEGAL_VERSION/TERMS_VERSION sobem a cada mudança). Dados
+ * da empresa vêm de src/lib/company.ts.
  */
 export function TermsOfServicePage() {
   return (
-    <LegalDocumentLayout title="Termos de Uso" lastUpdated="22/09/2026">
-      <h2>1. Quem oferece o serviço e quem aceita estes termos</h2>
+    <LegalDocumentLayout title="Termos de Uso" lastUpdated={LEGAL_UPDATED_AT}>
+      <p>Versão {LEGAL_VERSION}.</p>
+
+      <h2>1. Quem somos e quem aceita</h2>
       <p>
-        <strong>Insighta</strong> ([PENDENTE — razão social completa], inscrita no CNPJ sob o nº [PENDENTE], com
-        sede em [PENDENTE — endereço]) opera a plataforma Insighta ("Plataforma", "Serviço"), uma central de
-        inteligência de dados da operação de saúde — cruza dado de agenda, faturamento e desfecho
-        clínico-operacional já existentes nos sistemas do cliente para produzir diagnóstico e alertas de gestão.
-        Estes Termos regulam o uso da Plataforma pela clínica, consultório ou rede de saúde que se cadastra
-        ("Cliente", "clínica").
+        A plataforma Insighta ("Plataforma") é oferecida por <strong>{COMPANY.legalName}</strong>, CNPJ {COMPANY.cnpj},
+        com sede em {COMPANY.address} ("Insighta"). Estes Termos valem para a clínica, consultório ou grupo de saúde que
+        se cadastra ("Clínica").
       </p>
       <p>
-        Ao concluir o cadastro, o responsável pelo cadastro declara que tem poderes para vincular a clínica a
-        estes Termos e à Política de Privacidade em nome dela, e que o cadastro só se completa depois desse
-        aceite explícito (ver seção 8).
+        Quem faz o cadastro declara ter poderes para contratar em nome da Clínica. O cadastro só se completa com o aceite
+        destes Termos, da <Link to="/privacidade">Política de Privacidade</Link> e do{" "}
+        <Link to="/contrato-de-dados">Contrato de Tratamento de Dados</Link>, que fazem parte deste contrato. A Insighta
+        registra a data, a hora e a versão aceita.
       </p>
 
-      <h2>2. O que a Plataforma é — e o que ela não é</h2>
-      <p>
-        <strong>O Insighta não é o sistema primário de prontuário eletrônico, agenda ou faturamento da clínica.</strong>{" "}
-        Ele opera sobre dado já existente nesses sistemas, recebido por upload estruturado ou integração
-        automática. Isso significa, na prática:
-      </p>
+      <h2>2. O que a Plataforma faz e o que ela não faz</h2>
       <ul>
         <li>
-          A Insighta nunca é a fonte de verdade do prontuário do paciente — uma correção feita no sistema de
-          origem da clínica só chega à Plataforma no próximo upload/sincronização, nunca o contrário.
+          A Plataforma analisa dados de faturamento, agenda, convênios, estoque e prontuário que a Clínica já tem em seus
+          sistemas e envia por planilha ou integração. Ela mostra indicadores, alertas e recomendações de gestão.
         </li>
         <li>
-          A Insighta produz diagnóstico, alerta e recomendação de gestão a partir do dado recebido — não presta
-          atendimento à saúde, não decide tratamento, não substitui o sistema onde o profissional de saúde
-          registra o atendimento.
+          A Plataforma não é o prontuário eletrônico nem o sistema de faturamento da Clínica, não presta atendimento de
+          saúde e não decide tratamento.
         </li>
         <li>
-          Toda ação sugerida pela Plataforma (inclusive as geradas por inteligência artificial) é uma
-          recomendação para revisão humana, nunca uma ação automática tomada sozinha sobre o negócio ou o
-          paciente do Cliente (ver seção 5).
+          Recomendações, inclusive as escritas por inteligência artificial, são apoio à decisão. Nenhuma ação sobre
+          pacientes, convênios ou pagamentos é tomada sem a confirmação de uma pessoa da Clínica.
         </li>
       </ul>
 
-      <h2>3. Cadastro, plano e conta</h2>
+      <h2>3. Conta e usuários</h2>
       <ul>
+        <li>Quem cadastra a Clínica recebe o perfil Diretoria (owner) e pode convidar a equipe com perfis mais restritos.</li>
         <li>
-          O cadastro cria a clínica e o primeiro usuário, sempre com papel de proprietário (owner) — quem se
-          cadastra não escolhe o próprio papel.
-        </li>
-        <li>
-          A escolha de plano no cadastro registra a intenção de plano; a cobrança em si segue o fluxo de
-          pagamento da Plataforma. <strong>[PENDENTE — jurídico/negócio]</strong>: preço, ciclo de cobrança,
-          política de reajuste e inadimplência de cada plano.
-        </li>
-        <li>O owner pode convidar outros usuários da própria clínica, com papéis mais restritos.</li>
-        <li>
-          A clínica é responsável por manter suas credenciais de acesso em sigilo e por toda atividade realizada
-          com elas, inclusive por usuários que ela mesma convidou.
+          A Clínica guarda o sigilo das senhas e responde pelo que for feito com os acessos que ela mesma criou. Recomendamos
+          ligar a verificação em duas etapas em Segurança da conta.
         </li>
       </ul>
 
-      <h2>4. Dado que a clínica envia — responsabilidade pela origem</h2>
-      <p>A clínica é a única responsável por:</p>
+      <h2>4. Assinatura, preço e pagamento</h2>
       <ul>
         <li>
-          Ter base legal válida (LGPD) para coletar e tratar o dado pessoal e de saúde que envia à Plataforma — a
-          Insighta trata esse dado como <strong>operadora</strong>, a pedido da clínica, nunca como controladora
-          (ver Política de Privacidade, seção 2).
+          A assinatura é mensal e recorrente. O pagamento é feito por Pix, boleto ou cartão na fatura do Asaas, empresa de
+          pagamentos contratada pela Insighta. A Plataforma é liberada quando o pagamento é confirmado.
+        </li>
+        <li>A Insighta emite nota fiscal de serviço a cada pagamento, enviada ao e-mail cadastrado.</li>
+        <li>
+          <strong>Oferta Founders:</strong> as 20 primeiras clínicas a concluir o primeiro pagamento pagam{" "}
+          <strong>R$ 800,00 por mês</strong>, sem reajuste por <strong>24 meses</strong> contados do primeiro pagamento.
+          A vaga é reservada por 48 horas depois de gerada a primeira fatura. Terminados os 24 meses, passa a valer o preço
+          da tabela vigente, com aviso por e-mail pelo menos 30 dias antes.
         </li>
         <li>
-          A exatidão do dado enviado — a Plataforma processa o que recebe; uma inconsistência na origem se
-          reflete no diagnóstico gerado.
-        </li>
-        <li>
-          Garantir que só pessoal autorizado da própria clínica tenha acesso às credenciais de login — a
-          Plataforma aplica controle de acesso por papel e isolamento técnico entre clínicas, mas não controla
-          quem, dentro da clínica, a clínica decide autorizar.
+          Fora da oferta Founders, vale o preço informado na contratação, reajustado uma vez por ano pelo IPCA, com aviso
+          de 30 dias.
         </li>
       </ul>
 
-      <h2>5. Governança de inteligência artificial</h2>
-      <p>
-        A Plataforma usa modelos de linguagem para tarefas específicas e delimitadas — nunca para decidir ou
-        executar ação sozinha sobre o negócio do Cliente ou sobre um paciente: resumo executivo narrado
-        (interpretação de métricas já calculadas, sempre revisável) e rascunho de recurso de glosa (minuta de
-        contestação junto a uma operadora, sempre revisada e enviada por decisão humana da clínica). Nenhuma
-        delas toma uma ação irreversível sem confirmação explícita de um usuário humano da clínica.
-      </p>
-
-      <h2>6. Disponibilidade e suporte</h2>
-      <p>
-        <strong>[PENDENTE — jurídico/negócio]</strong>: SLA formal de disponibilidade, janela de manutenção
-        programada e canal/prazo de suporte por plano.
-      </p>
-
-      <h2>7. Propriedade intelectual</h2>
-      <p>
-        O software, a marca e a metodologia de cálculo dos indicadores da Plataforma pertencem à Insighta. O
-        dado que a clínica envia continua sendo do Cliente — o uso da Plataforma não transfere propriedade sobre
-        esse dado à Insighta.
-      </p>
-
-      <h2>8. Aceite</h2>
-      <p>
-        Estes Termos e a Política de Privacidade são aceitos no momento do cadastro — o cadastro só se completa
-        com esse aceite explícito (checkbox obrigatório na tela de cadastro, nunca marcado por padrão).
-        Alterações materiais a este documento exigirão novo aceite.
-      </p>
-
-      <h2>9. Cancelamento e retenção de dado após o cancelamento</h2>
-      <p>A clínica pode solicitar o cancelamento da assinatura a qualquer momento. Após o cancelamento:</p>
+      <h2>5. Atraso no pagamento</h2>
       <ul>
-        <li>O tenant é marcado como inativo — acesso à Plataforma é suspenso.</li>
         <li>
-          O dado permanece armazenado pelo prazo de retenção configurado para aquele cancelamento — ver Política
-          de Privacidade, seção 6.
+          Vencida a fatura, a Clínica continua usando a Plataforma por <strong>7 dias</strong>, com aviso na tela. Depois
+          disso, o acesso fica suspenso até o pagamento. Durante a suspensão continuam abertas a tela de assinatura, os
+          dados da conta, a exportação dos dados da Clínica e o suporte.
+        </li>
+        <li>A fatura em atraso pode ter multa de até 2% e juros de até 1% ao mês, informados na própria fatura.</li>
+        <li>Depois de 60 dias de suspensão, a Insighta pode cancelar a assinatura, aplicando a seção 12.</li>
+      </ul>
+
+      <h2>6. Cancelamento</h2>
+      <ul>
+        <li>
+          A Clínica pode cancelar quando quiser, sem multa, pelo suporte. O cancelamento vale ao fim do mês já pago; não há
+          devolução proporcional do mês em curso.
+        </li>
+        <li>A clínica Founders que cancela perde o preço Founders. Uma nova assinatura segue o preço da tabela vigente.</li>
+      </ul>
+
+      <h2>7. Dados que a Clínica envia</h2>
+      <ul>
+        <li>
+          A Clínica é a controladora dos dados pessoais e de saúde dos seus pacientes. A Insighta atua como operadora e
+          trata esses dados só para prestar o serviço, conforme o{" "}
+          <Link to="/contrato-de-dados">Contrato de Tratamento de Dados</Link>.
         </li>
         <li>
-          Findo esse prazo, o dado pessoal identificável do paciente é anonimizado automaticamente (nunca
-          excluído fisicamente, por obrigação legal de retenção fiscal/contábil de faturamento).
+          Cabe à Clínica ter base legal para tratar e compartilhar esses dados, informar seus pacientes e cuidar da
+          exatidão do que envia.
         </li>
       </ul>
 
-      <h2>10. Foro e legislação aplicável</h2>
+      <h2>8. Inteligência artificial</h2>
+      <ul>
+        <li>
+          A inteligência artificial escreve textos (resumos, respostas, minutas de recurso) sobre números calculados pela
+          Plataforma. Todo número escrito é conferido com o cálculo; se não bater, o texto é descartado.
+        </li>
+        <li>Os nomes dos pacientes são trocados por códigos antes de qualquer uso de inteligência artificial.</li>
+        <li>
+          Cada Clínica tem um limite mensal de uso de inteligência artificial. Atingido o limite, esses recursos pausam
+          até o mês seguinte e o restante da Plataforma continua funcionando.
+        </li>
+      </ul>
+
+      <h2>9. Disponibilidade e suporte</h2>
+      <ul>
+        <li>
+          A meta é manter a Plataforma no ar 99,5% do tempo em horário comercial (segunda a sexta, 7h às 20h). Manutenções
+          programadas são feitas, sempre que possível, fora desse horário e avisadas com antecedência. A situação atual
+          fica na página de status.
+        </li>
+        <li>Suporte por WhatsApp, e-mail e pela Central de Ajuda do sistema, em dias úteis, das 9h às 18h.</li>
+        <li>A meta de disponibilidade é um compromisso de esforço e não gera desconto automático.</li>
+      </ul>
+
+      <h2>10. Responsabilidade</h2>
+      <ul>
+        <li>
+          A Insighta não responde por decisões tomadas com base nas análises, por dados incorretos enviados pela Clínica nem
+          por falhas dos sistemas de origem da Clínica.
+        </li>
+        <li>
+          A responsabilidade total da Insighta neste contrato fica limitada ao valor pago pela Clínica nos 12 meses
+          anteriores ao fato, exceto nos casos em que a lei não permite limitar, como dolo ou violação da LGPD por culpa da
+          Insighta.
+        </li>
+      </ul>
+
+      <h2>11. Propriedade e dados agregados</h2>
+      <ul>
+        <li>O software, a marca e a metodologia de cálculo pertencem à Insighta. Os dados enviados continuam da Clínica.</li>
+        <li>
+          A Insighta pode usar dados agregados e anonimizados de várias clínicas para gerar comparativos de mercado e
+          melhorar a Plataforma. Esses dados nunca identificam uma clínica ou um paciente.
+        </li>
+        <li>
+          A Insighta guarda os registros de acesso à Plataforma por 6 meses, como exige o Marco Civil da Internet (Lei
+          12.965/2014, art. 15).
+        </li>
+      </ul>
+
+      <h2>12. Fim do contrato e dados</h2>
+      <ul>
+        <li>
+          Enquanto a conta existir, e por 90 dias depois do cancelamento, a Clínica pode exportar todos os seus dados em
+          Minha clínica.
+        </li>
+        <li>
+          Passados os 90 dias, os dados pessoais dos pacientes são anonimizados. As cópias de segurança que os contêm são
+          apagadas no ciclo normal de 14 dias. Ficam guardados só os dados que a lei obriga a manter, pelo prazo legal.
+        </li>
+      </ul>
+
+      <h2>13. Mudanças nestes Termos</h2>
       <p>
-        <strong>[PENDENTE — jurídico]</strong>: foro de eleição e legislação aplicável, a confirmar formalmente
-        pelo corpo jurídico da Insighta antes de publicação.
+        Mudanças importantes são avisadas por e-mail e no sistema com pelo menos 30 dias de antecedência e pedem novo
+        aceite. A Clínica que não concordar pode cancelar sem multa antes da mudança valer.
+      </p>
+
+      <h2>14. Lei e foro</h2>
+      <p>
+        Vale a lei brasileira. Fica eleito o foro da comarca de {COMPANY.forumCity} para resolver qualquer questão sobre
+        este contrato.
+      </p>
+
+      <h2>15. Contato</h2>
+      <p>
+        Suporte pela Central de Ajuda do sistema. Assuntos de privacidade: {COMPANY.dpoName}, {COMPANY.dpoEmail}.
       </p>
     </LegalDocumentLayout>
   );

@@ -4,6 +4,7 @@ import { AuthProvider } from "@/context/AuthContext";
 import { ToastProvider } from "@/context/ToastContext";
 import { ModalStackProvider } from "@/context/ModalStackContext";
 import { ProtectedRoute } from "@/routes/ProtectedRoute";
+import { BillingGate } from "@/components/billing/BillingGate";
 import { AppShell } from "@/components/layout/AppShell";
 import { RoleProtectedRoute } from "@/routes/ProtectedRoute";
 import { PlatformProtectedRoute } from "@/routes/PlatformProtectedRoute";
@@ -25,6 +26,9 @@ const SignUpPage = lazy(() => import("@/pages/SignUpPage").then((m) => ({ defaul
 const TermsOfServicePage = lazy(() => import("@/pages/TermsOfServicePage").then((m) => ({ default: m.TermsOfServicePage })));
 const AccountSecurityPage = lazy(() => import("@/pages/AccountSecurityPage").then((m) => ({ default: m.AccountSecurityPage })));
 const StatusPage = lazy(() => import("@/pages/StatusPage").then((m) => ({ default: m.StatusPage })));
+const DataProcessingAgreementPage = lazy(() =>
+  import("@/pages/DataProcessingAgreementPage").then((m) => ({ default: m.DataProcessingAgreementPage }))
+);
 const PrivacyPolicyPage = lazy(() => import("@/pages/PrivacyPolicyPage").then((m) => ({ default: m.PrivacyPolicyPage })));
 const ForgotPasswordPage = lazy(() => import("@/pages/ForgotPasswordPage").then((m) => ({ default: m.ForgotPasswordPage })));
 const ResetPasswordPage = lazy(() => import("@/pages/ResetPasswordPage").then((m) => ({ default: m.ResetPasswordPage })));
@@ -57,6 +61,7 @@ const ReportRecipientsPage = lazy(() => import("@/pages/admin/ReportRecipientsPa
 const AuditLogPage = lazy(() => import("@/pages/admin/AuditLogPage").then((m) => ({ default: m.AuditLogPage })));
 const PlatformLoginPage = lazy(() => import("@/pages/platform/PlatformLoginPage").then((m) => ({ default: m.PlatformLoginPage })));
 const PlatformDashboardPage = lazy(() => import("@/pages/platform/PlatformDashboardPage").then((m) => ({ default: m.PlatformDashboardPage })));
+const SubscriptionPage = lazy(() => import("@/pages/SubscriptionPage").then((m) => ({ default: m.SubscriptionPage })));
 const MockCheckoutPage = lazy(() => import("@/pages/MockCheckoutPage").then((m) => ({ default: m.MockCheckoutPage })));
 const StripeCheckoutReturnPage = lazy(() =>
   import("@/pages/StripeCheckoutReturnPage").then((m) => ({ default: m.StripeCheckoutReturnPage }))
@@ -113,6 +118,7 @@ export default function App() {
                   ver SignUpPage.tsx) e acessível a qualquer momento. */}
               <Route path="/termos" element={<TermsOfServicePage />} />
               <Route path="/privacidade" element={<PrivacyPolicyPage />} />
+              <Route path="/contrato-de-dados" element={<DataProcessingAgreementPage />} />
               <Route path="/status" element={<StatusPage />} />
               <Route path="/forgot-password" element={<ForgotPasswordPage />} />
               <Route path="/reset-password" element={<ResetPasswordPage />} />
@@ -130,6 +136,10 @@ export default function App() {
                 <Route path="/plataforma" element={<PlatformDashboardPage />} />
               </Route>
             <Route element={<ProtectedRoute />}>
+              {/* Assinatura (autoatendimento): fora do AppShell e da porta de
+                  cobrança, para a clínica bloqueada conseguir pagar. */}
+              <Route path="/assinatura" element={<SubscriptionPage />} />
+              <Route element={<BillingGate />}>
               <Route element={<AppShell />}>
                 {/* Home: briefing do gestor ou "Minhas demandas" do
                     coordenador (ver HomeRouter). Sem RoleProtectedRoute de
@@ -226,6 +236,7 @@ export default function App() {
                 <Route element={<RoleProtectedRoute allowedRoles={["owner", "admin", "auditor"]} />}>
                   <Route path="/admin/audit-log" element={<AuditLogPage />} />
                 </Route>
+              </Route>
               </Route>
               {/* Achado CRÍTICO da Auditoria de Prontidão v1 ("produto não
                   se cobra sozinho") — checkout de upgrade self-service.

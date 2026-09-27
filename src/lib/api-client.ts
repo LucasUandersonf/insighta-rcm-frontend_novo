@@ -195,6 +195,11 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     if (response.status === 401 && !options.skipAuth) {
       window.dispatchEvent(new CustomEvent("auth:unauthorized"));
     }
+    // Assinatura sem pagamento: o backend responde 402 e o BillingGate
+    // leva para a tela Assinatura.
+    if (response.status === 402) {
+      window.dispatchEvent(new CustomEvent("billing:required"));
+    }
 
     // Só 5xx (falha real do backend) vai para o Sentry — 4xx é
     // validação normal do usuário (dado inválido, permissão, etc.) e
