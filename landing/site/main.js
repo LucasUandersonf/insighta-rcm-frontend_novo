@@ -133,4 +133,26 @@
     var choice = read();
     if (choice === "accept") start(); else if (choice !== "reject" && banner) banner.hidden = false;
   })();
+
+  // Vagas Founders ao vivo (GET /api/v1/public/founders). Sem API
+  // configurada ou fora do ar, o número escrito no HTML continua.
+  (function () {
+    var meta = document.querySelector('meta[name="insighta-api"]');
+    var api = meta && meta.getAttribute("content");
+    var remainingEl = document.querySelector("[data-founders-remaining]");
+    if (!api || api.indexOf("__") === 0 || !remainingEl || !window.fetch) return;
+    fetch(api.replace(/\/$/, "") + "/api/v1/public/founders", { credentials: "omit" })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        if (!d) return;
+        var totalEl = document.querySelector("[data-founders-total]");
+        remainingEl.textContent = String(d.slots_remaining);
+        if (totalEl) totalEl.textContent = String(d.slots_total);
+        if (d.slots_remaining === 0) {
+          var tag = document.querySelector("[data-founders-tag]");
+          if (tag) tag.textContent = "Vagas Founders esgotadas";
+        }
+      })
+      .catch(function () {});
+  })();
 })();
