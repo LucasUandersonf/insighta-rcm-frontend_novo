@@ -31,9 +31,9 @@ interface AuthContextValue {
   user: CurrentUser | null;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
-  /** Cadastro público (self-signup) — autentica direto ao concluir
-   * (ver DECISÃO em POST /auth/register no backend: sem etapa de
-   * verificação de e-mail nesta primeira versão). */
+  /** Cadastro público (self-signup) — autentica direto ao concluir; o
+   * e-mail é confirmado depois por link (EmailVerificationBanner), e só a
+   * assinatura espera essa confirmação. */
   register: (data: RegisterRequest) => Promise<void>;
   /** Erro amigável da última tentativa de cadastro (null quando não há erro). */
   registerError: string | null;

@@ -1,8 +1,10 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { UploadCenterPage } from "@/pages/UploadCenterPage";
 import { apiClient, ApiError } from "@/lib/api-client";
+import { useAuth } from "@/context/AuthContext";
+import { uploadViaS3 } from "@/lib/directUpload";
 import { renderWithProviders } from "@/test/utils";
 import { expectNoA11yViolations } from "@/test/a11y";
 import type { Contract, IngestionFileEntry, InsurancePlan, PaginatedResponse, UploadIngestionFileResponse } from "@/lib/types";
@@ -12,7 +14,22 @@ import type { Contract, IngestionFileEntry, InsurancePlan, PaginatedResponse, Up
 // convênio) — sem nenhum teste de página até aqui, apesar de ser a
 // espinha dorsal de tudo que a Sala de Comando depois analisa.
 // Upload direto ao S3 desligado no servidor (409): a tela usa o upload pela API.
-vi.mock("@/lib/directUpload", () => ({ uploadViaS3: vi.fn().mockResolvedValue(null) }));
+vi.mock("@/lib/directUpload", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/directUpload")>();
+  return { ...actual, uploadViaS3: vi.fn().mockResolvedValue(null) };
+});
+
+vi.mock("@/context/AuthContext", () => ({ useAuth: vi.fn() }));
+
+function asRole(role: string) {
+  vi.mocked(useAuth).mockReturnValue({ user: { sub: "u1", tenant_id: "t1", role } } as never);
+}
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  asRole("owner");
+  vi.mocked(uploadViaS3).mockResolvedValue(null);
+});
 
 vi.mock("@/lib/api-client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api-client")>();
@@ -165,6 +182,94 @@ describe("UploadCenterPage — aba Lotes Operacionais", () => {
     expect(screen.getByText("Processado")).toBeInTheDocument();
     expect(screen.getByText("Falhou")).toBeInTheDocument();
     expect(screen.getByText("15")).toBeInTheDocument();
+  });
+
+  it("arquivo acima de 3 MB sem upload direto disponível: avisa sem mandar para a API", async () => {
+    vi.mocked(apiClient.get).mockResolvedValue(emptyHistory() as never);
+    renderWithProviders(<UploadCenterPage />);
+    await screen.findByText(/Nenhum arquivo enviado ainda/);
+
+    const big = new File(["x".repeat(3 * 1024 * 1024 + 10)], "grande.csv", { type: "text/csv" });
+    const user = userEvent.setup();
+    await user.upload(fileInput(), big);
+    fireEvent.click(screen.getByRole("button", { name: "Enviar arquivo" }));
+
+    expect(await screen.findByText(/Arquivos acima de 3 MB são processados em segundo plano/)).toBeInTheDocument();
+    expect(apiClient.upload).not.toHaveBeenCalled();
+  });
+
+  it("upload direto de um arquivo já importado avisa que nada foi duplicado", async () => {
+    vi.mocked(apiClient.get).mockResolvedValue(emptyHistory() as never);
+    vi.mocked(uploadViaS3).mockResolvedValue({
+      id: "file-1",
+      file_format: "csv",
+      data_type: "faturamento",
+      status: "processed",
+      row_count: 0,
+      error_row_count: 0,
+      received_at: "2026-09-01T10:00:00Z",
+      already_processed: true,
+      message: "Este arquivo já foi importado em 01/09/2026. Nada foi duplicado.",
+    });
+    renderWithProviders(<UploadCenterPage />);
+    await screen.findByText(/Nenhum arquivo enviado ainda/);
+
+    const user = userEvent.setup();
+    await user.upload(fileInput(), csvFile());
+    fireEvent.click(screen.getByRole("button", { name: "Enviar arquivo" }));
+
+    expect(await screen.findByText("Este arquivo já foi importado em 01/09/2026. Nada foi duplicado.")).toBeInTheDocument();
+    expect(apiClient.upload).not.toHaveBeenCalled();
+  });
+
+  it("desfaz uma importação depois de mostrar a prévia do que será apagado", async () => {
+    const history: PaginatedResponse<IngestionFileEntry> = { items: [makeFileEntry()], total: 1, limit: 15, offset: 0 };
+    vi.mocked(apiClient.get).mockImplementation(((url: string) =>
+      Promise.resolve(
+        url.includes("undo-preview")
+          ? { ingestion_file_id: "file-1", deleted: { "cobranças": 120, pacientes: 0 }, restored: 3, appeals_removed: 2, message: "" }
+          : history
+      )) as never);
+    vi.mocked(apiClient.post).mockResolvedValue({
+      ingestion_file_id: "file-1",
+      deleted: { "cobranças": 120 },
+      restored: 3,
+      appeals_removed: 2,
+      message: "Importação desfeita: 120 cobranças.",
+    } as never);
+
+    renderWithProviders(<UploadCenterPage />);
+    fireEvent.click(await screen.findByRole("button", { name: "Desfazer importação de faturamento-setembro.csv" }));
+
+    expect(await screen.findByText("cobranças")).toBeInTheDocument();
+    expect(screen.queryByText("pacientes")).not.toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent("2 recurso(s) de glosa");
+    fireEvent.click(screen.getByRole("button", { name: "Desfazer importação" }));
+
+    await waitFor(() => expect(apiClient.post).toHaveBeenCalledWith("/api/v1/ingestion/files/file-1/undo"));
+    expect(await screen.findByText("Importação desfeita: 120 cobranças.")).toBeInTheDocument();
+  });
+
+  it("importação desfeita aparece como 'Desfeita' e sem botão de desfazer", async () => {
+    const history: PaginatedResponse<IngestionFileEntry> = {
+      items: [makeFileEntry({ undone_at: "2026-09-02T10:00:00Z" })],
+      total: 1,
+      limit: 15,
+      offset: 0,
+    };
+    vi.mocked(apiClient.get).mockResolvedValue(history as never);
+    renderWithProviders(<UploadCenterPage />);
+    expect(await screen.findByText("Desfeita")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Desfazer importação de/ })).not.toBeInTheDocument();
+  });
+
+  it("quem não é dono nem administrador não vê o botão de desfazer", async () => {
+    asRole("viewer");
+    const history: PaginatedResponse<IngestionFileEntry> = { items: [makeFileEntry()], total: 1, limit: 15, offset: 0 };
+    vi.mocked(apiClient.get).mockResolvedValue(history as never);
+    renderWithProviders(<UploadCenterPage />);
+    await screen.findByText("faturamento-setembro.csv");
+    expect(screen.queryByRole("button", { name: /Desfazer importação de/ })).not.toBeInTheDocument();
   });
 
   it("não tem violações de acessibilidade", async () => {

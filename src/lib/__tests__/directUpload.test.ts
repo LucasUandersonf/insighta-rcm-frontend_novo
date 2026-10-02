@@ -49,4 +49,22 @@ describe("uploadViaS3", () => {
       expect(await uploadViaS3(file, "estoque", { sleep: async () => undefined, put: put as unknown as typeof fetch })).toBeNull();
     }
   });
+
+  it("repassa o aviso de arquivo já importado (nada duplicado)", async () => {
+    vi.mocked(apiClient.post)
+      .mockResolvedValueOnce({ upload_id: "u4", upload_url: "https://s3/w", method: "PUT", headers: {} })
+      .mockResolvedValueOnce({
+        upload_id: "u4",
+        status: "processado",
+        error: null,
+        ingestion_file_id: "f-antigo",
+        row_count: 10,
+        error_row_count: 0,
+        already_processed: true,
+        message: "Este arquivo já foi importado. Nada foi duplicado.",
+      });
+    const put = vi.fn().mockResolvedValue({ ok: true });
+    const result = await uploadViaS3(file, "estoque", { sleep: async () => undefined, put: put as unknown as typeof fetch });
+    expect(result).toMatchObject({ id: "f-antigo", already_processed: true, message: "Este arquivo já foi importado. Nada foi duplicado." });
+  });
 });

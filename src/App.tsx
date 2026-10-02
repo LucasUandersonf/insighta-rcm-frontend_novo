@@ -32,6 +32,7 @@ const DataProcessingAgreementPage = lazy(() =>
 const PrivacyPolicyPage = lazy(() => import("@/pages/PrivacyPolicyPage").then((m) => ({ default: m.PrivacyPolicyPage })));
 const ForgotPasswordPage = lazy(() => import("@/pages/ForgotPasswordPage").then((m) => ({ default: m.ForgotPasswordPage })));
 const ResetPasswordPage = lazy(() => import("@/pages/ResetPasswordPage").then((m) => ({ default: m.ResetPasswordPage })));
+const ConfirmEmailPage = lazy(() => import("@/pages/ConfirmEmailPage").then((m) => ({ default: m.ConfirmEmailPage })));
 const TeamPage = lazy(() => import("@/pages/TeamPage").then((m) => ({ default: m.TeamPage })));
 const SatisfactionRatingPage = lazy(() =>
   import("@/pages/SatisfactionRatingPage").then((m) => ({ default: m.SatisfactionRatingPage }))
@@ -122,6 +123,7 @@ export default function App() {
               <Route path="/status" element={<StatusPage />} />
               <Route path="/forgot-password" element={<ForgotPasswordPage />} />
               <Route path="/reset-password" element={<ResetPasswordPage />} />
+              <Route path="/confirmar-email" element={<ConfirmEmailPage />} />
               {/* "Mapa de Dados Insighta" — Domínio Pós-atendimento (Onda 2):
                   link público de avaliação de satisfação, sem autenticação
                   (o paciente abre no próprio celular) — ver DECISÃO em

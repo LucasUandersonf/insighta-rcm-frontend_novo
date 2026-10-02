@@ -18,10 +18,9 @@ vi.mock("@/lib/api-client", async (importOriginal) => {
   };
 });
 
-// getApiErrorMessage (query-client.ts) só preserva a mensagem de uma
-// ApiError de verdade — qualquer outro Error vira o fallback genérico
-// "Algo deu errado. Tente novamente." Por isso os testes de erro abaixo
-// usam esta fábrica, não `new Error(...)` cru.
+// Os erros de API chegam como ApiError (getApiErrorMessage em
+// query-client.ts mostra a mensagem do servidor) — por isso os testes de
+// erro abaixo usam esta fábrica, não `new Error(...)` cru.
 function apiError(message: string): ApiError {
   return new ApiError(400, { error_code: "erro_generico", message, request_id: "req-1" });
 }
