@@ -141,6 +141,8 @@ export interface UploadIngestionFileResponse {
   received_at: string;
   already_processed: boolean;
   message: string | null;
+  /** Colunas do arquivo fora do modelo, que não foram importadas. */
+  ignored_columns?: string[];
 }
 
 // --- Tela de Setup: linhas de importação rejeitadas (app/schemas/ingestion.py) ---
