@@ -284,8 +284,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // erro visível (o usuário já está saindo, o refresh token vai
     // expirar sozinho de qualquer forma se esta chamada falhar).
     const refreshToken = getStoredRefreshToken();
-    if (refreshToken || REFRESH_COOKIE_MODE) {
-      logoutRequest(refreshToken).catch(() => {});
+    const accessToken = getStoredToken();
+    if (refreshToken || accessToken || REFRESH_COOKIE_MODE) {
+      logoutRequest(refreshToken, accessToken).catch(() => {});
     }
     clearStoredToken();
     clearStoredRefreshToken();

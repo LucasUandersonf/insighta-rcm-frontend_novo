@@ -595,7 +595,8 @@ export function UndoImportModal({ file, onClose }: { file: IngestionFileEntry | 
     gcTime: 0,
   });
   const undoMutation = useMutation({
-    mutationFn: () => apiClient.post<IngestionUndoResponse>(`/api/v1/ingestion/files/${file?.id}/undo`),
+    // Arquivo com centenas de milhares de linhas leva até ~1 min no servidor.
+    mutationFn: () => apiClient.post<IngestionUndoResponse>(`/api/v1/ingestion/files/${file?.id}/undo`, undefined, { timeoutMs: 5 * 60_000 }),
     onSuccess: (result) => {
       // Os números de todas as telas mudam: recarrega tudo que estiver em cache.
       queryClient.invalidateQueries();

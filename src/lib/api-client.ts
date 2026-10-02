@@ -160,6 +160,9 @@ interface RequestOptions {
   body?: unknown;
   /** Requisições públicas (ex: login) não devem mandar o header Authorization. */
   skipAuth?: boolean;
+  /** Tempo limite desta chamada (padrão 30 s) — ações longas no servidor,
+   * como desfazer uma importação grande, pedem mais. */
+  timeoutMs?: number;
   /** Uso interno — marca que esta chamada já é uma RETENTATIVA pós-refresh,
    * pra nunca entrar num loop (refresh -> 401 de novo -> refresh -> ...). */
   _isRetryAfterRefresh?: boolean;
@@ -194,7 +197,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
       // Modo cookie: login/cadastro/Google/MFA recebem o cookie do refresh token.
       ...(REFRESH_COOKIE_MODE && path.startsWith("/api/v1/auth") ? { credentials: "include" as const } : {}),
     },
-    DEFAULT_TIMEOUT_MS
+    options.timeoutMs ?? DEFAULT_TIMEOUT_MS
   );
 
   if (!response.ok) {
@@ -250,8 +253,8 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 
 export const apiClient = {
   get: <T>(path: string, options?: { skipAuth?: boolean }) => request<T>(path, { method: "GET", skipAuth: options?.skipAuth }),
-  post: <T>(path: string, body?: unknown, options?: { skipAuth?: boolean }) =>
-    request<T>(path, { method: "POST", body, skipAuth: options?.skipAuth }),
+  post: <T>(path: string, body?: unknown, options?: { skipAuth?: boolean; timeoutMs?: number }) =>
+    request<T>(path, { method: "POST", body, skipAuth: options?.skipAuth, timeoutMs: options?.timeoutMs }),
   patch: <T>(path: string, body?: unknown) => request<T>(path, { method: "PATCH", body }),
   put: <T>(path: string, body?: unknown) => request<T>(path, { method: "PUT", body }),
   delete: <T>(path: string) => request<T>(path, { method: "DELETE" }),
@@ -396,8 +399,10 @@ export async function confirmPasswordReset(token: string, newPassword: string): 
  * frequentemente o caso quando o usuário finalmente clica "Sair"), e o
  * backend não exige Authorization para este endpoint (ver DECISÃO em
  * POST /auth/logout, que espelha /auth/refresh no mesmo critério). */
-export async function logoutRequest(refreshToken: string | null): Promise<void> {
-  return apiClient.post<void>("/api/v1/auth/logout", refreshToken ? { refresh_token: refreshToken } : {}, { skipAuth: true });
+export async function logoutRequest(refreshToken: string | null, accessToken: string | null = null): Promise<void> {
+  // access_token: o servidor invalida na hora o token deste aparelho.
+  const body = { ...(refreshToken ? { refresh_token: refreshToken } : {}), ...(accessToken ? { access_token: accessToken } : {}) };
+  return apiClient.post<void>("/api/v1/auth/logout", body, { skipAuth: true });
 }
 
 /** Segunda etapa do login com MFA: token curto do login + código do app. */

@@ -246,7 +246,7 @@ describe("UploadCenterPage — aba Lotes Operacionais", () => {
     expect(screen.getByRole("alert")).toHaveTextContent("2 recurso(s) de glosa");
     fireEvent.click(screen.getByRole("button", { name: "Desfazer importação" }));
 
-    await waitFor(() => expect(apiClient.post).toHaveBeenCalledWith("/api/v1/ingestion/files/file-1/undo"));
+    await waitFor(() => expect(apiClient.post).toHaveBeenCalledWith("/api/v1/ingestion/files/file-1/undo", undefined, { timeoutMs: 300_000 }));
     expect(await screen.findByText("Importação desfeita: 120 cobranças.")).toBeInTheDocument();
   });
 
