@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { UploadCenterPage } from "@/pages/UploadCenterPage";
 import { apiClient, ApiError } from "@/lib/api-client";
 import { useAuth } from "@/context/AuthContext";
-import { uploadViaS3 } from "@/lib/directUpload";
+import { startDirectUpload } from "@/lib/directUpload";
 import { renderWithProviders } from "@/test/utils";
 import { expectNoA11yViolations } from "@/test/a11y";
 import type { Contract, IngestionFileEntry, InsurancePlan, PaginatedResponse, UploadIngestionFileResponse } from "@/lib/types";
@@ -16,7 +16,7 @@ import type { Contract, IngestionFileEntry, InsurancePlan, PaginatedResponse, Up
 // Upload direto ao S3 desligado no servidor (409): a tela usa o upload pela API.
 vi.mock("@/lib/directUpload", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/directUpload")>();
-  return { ...actual, uploadViaS3: vi.fn().mockResolvedValue(null) };
+  return { ...actual, startDirectUpload: vi.fn().mockResolvedValue(null) };
 });
 
 vi.mock("@/context/AuthContext", () => ({ useAuth: vi.fn() }));
@@ -28,7 +28,7 @@ function asRole(role: string) {
 beforeEach(() => {
   vi.clearAllMocks();
   asRole("owner");
-  vi.mocked(uploadViaS3).mockResolvedValue(null);
+  vi.mocked(startDirectUpload).mockResolvedValue(null);
 });
 
 vi.mock("@/lib/api-client", async (importOriginal) => {
@@ -198,18 +198,27 @@ describe("UploadCenterPage — aba Lotes Operacionais", () => {
     expect(apiClient.upload).not.toHaveBeenCalled();
   });
 
-  it("upload direto de um arquivo já importado avisa que nada foi duplicado", async () => {
-    vi.mocked(apiClient.get).mockResolvedValue(emptyHistory() as never);
-    vi.mocked(uploadViaS3).mockResolvedValue({
-      id: "file-1",
-      file_format: "csv",
-      data_type: "faturamento",
-      status: "processed",
-      row_count: 0,
-      error_row_count: 0,
-      received_at: "2026-09-01T10:00:00Z",
-      already_processed: true,
-      message: "Este arquivo já foi importado em 01/09/2026. Nada foi duplicado.",
+  it("upload direto: libera a tela na hora e mostra o progresso do processamento em segundo plano", async () => {
+    let uploads: unknown[] = [];
+    vi.mocked(apiClient.get).mockImplementation(((url: string) =>
+      Promise.resolve(url.includes("direct-uploads") ? uploads : emptyHistory())) as never);
+    vi.mocked(startDirectUpload).mockImplementation(async (_file, _type, options) => {
+      options?.onProgress?.(0.4);
+      uploads = [
+        {
+          upload_id: "u1",
+          status: "processando",
+          error: null,
+          ingestion_file_id: null,
+          row_count: null,
+          error_row_count: null,
+          original_filename: "faturamento.csv",
+          data_type: "faturamento",
+          processed_rows: 15000,
+          total_rows: 60000,
+        },
+      ];
+      return { upload_id: "u1", status: "na_fila", error: null, ingestion_file_id: null, row_count: null, error_row_count: null };
     });
     renderWithProviders(<UploadCenterPage />);
     await screen.findByText(/Nenhum arquivo enviado ainda/);
@@ -218,8 +227,51 @@ describe("UploadCenterPage — aba Lotes Operacionais", () => {
     await user.upload(fileInput(), csvFile());
     fireEvent.click(screen.getByRole("button", { name: "Enviar arquivo" }));
 
-    expect(await screen.findByText("Este arquivo já foi importado em 01/09/2026. Nada foi duplicado.")).toBeInTheDocument();
+    expect(await screen.findByText(/Arquivo recebido. O processamento continua em segundo plano/)).toBeInTheDocument();
+    expect(await screen.findByText("Em processamento")).toBeInTheDocument();
+    expect(screen.getByText("15.000 de 60.000 linhas (25%)")).toBeInTheDocument();
+    expect(screen.getByRole("progressbar", { name: "Progresso de faturamento.csv" })).toHaveAttribute("aria-valuenow", "25");
     expect(apiClient.upload).not.toHaveBeenCalled();
+    // O botão volta a ficar livre: dá para enviar o próximo arquivo.
+    expect(screen.getByRole("button", { name: "Enviar arquivo" })).toBeInTheDocument();
+  });
+
+  it("painel mostra o resultado de uma importação em segundo plano concluída, com relatório", async () => {
+    vi.mocked(apiClient.get).mockImplementation(((url: string) =>
+      Promise.resolve(
+        url.includes("direct-uploads")
+          ? [
+              {
+                upload_id: "u2",
+                status: "processado",
+                error: null,
+                ingestion_file_id: "file-9",
+                row_count: 300000,
+                error_row_count: 12,
+                original_filename: "ano-inteiro.xlsx",
+                data_type: "faturamento",
+                processed_rows: 300000,
+                total_rows: 300000,
+              },
+              {
+                upload_id: "u3",
+                status: "falhou",
+                error: "Faltam colunas obrigatórias do modelo de faturamento: data_atendimento.",
+                ingestion_file_id: null,
+                row_count: null,
+                error_row_count: null,
+                original_filename: "agenda-errada.csv",
+                data_type: "faturamento",
+              },
+            ]
+          : emptyHistory()
+      )) as never);
+    renderWithProviders(<UploadCenterPage />);
+
+    expect(await screen.findByText("300.000 linha(s) lida(s), 12 rejeitada(s).")).toBeInTheDocument();
+    expect(screen.getByText(/Faltam colunas obrigatórias/)).toBeInTheDocument();
+    expect(screen.getByText("Concluído")).toBeInTheDocument();
+    expect(screen.getByText("Falhou")).toBeInTheDocument();
   });
 
   it("desfaz uma importação depois de mostrar a prévia do que será apagado", async () => {
