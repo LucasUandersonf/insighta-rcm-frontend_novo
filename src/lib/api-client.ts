@@ -53,6 +53,35 @@ export class ApiError extends Error {
   }
 }
 
+/** Tempo máximo de espera por resposta (auditoria V1: sem isso a tela
+ * ficava carregando para sempre se a API travasse). */
+const DEFAULT_TIMEOUT_MS = 30_000;
+const BLOB_TIMEOUT_MS = 60_000;
+const UPLOAD_TIMEOUT_MS = 5 * 60_000;
+
+async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: number): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "AbortError") {
+      throw new ApiError(0, {
+        error_code: "tempo_esgotado",
+        message: "O servidor demorou demais para responder. Confira sua conexão e tente de novo.",
+        request_id: "-",
+      });
+    }
+    throw new ApiError(0, {
+      error_code: "sem_conexao",
+      message: "Sem conexão com o servidor. Confira sua internet e tente de novo.",
+      request_id: "-",
+    });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export function getStoredToken(): string | null {
   return localStorage.getItem(TOKEN_STORAGE_KEY);
 }
@@ -131,6 +160,9 @@ interface RequestOptions {
   body?: unknown;
   /** Requisições públicas (ex: login) não devem mandar o header Authorization. */
   skipAuth?: boolean;
+  /** Tempo limite desta chamada (padrão 30 s) — ações longas no servidor,
+   * como desfazer uma importação grande, pedem mais. */
+  timeoutMs?: number;
   /** Uso interno — marca que esta chamada já é uma RETENTATIVA pós-refresh,
    * pra nunca entrar num loop (refresh -> 401 de novo -> refresh -> ...). */
   _isRetryAfterRefresh?: boolean;
@@ -156,13 +188,17 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     if (token) headers["Authorization"] = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    method: options.method ?? "GET",
-    headers,
-    body: options.body ? JSON.stringify(options.body) : undefined,
-    // Modo cookie: login/cadastro/Google/MFA recebem o cookie do refresh token.
-    ...(REFRESH_COOKIE_MODE && path.startsWith("/api/v1/auth") ? { credentials: "include" as const } : {}),
-  });
+  const response = await fetchWithTimeout(
+    `${API_BASE_URL}${path}`,
+    {
+      method: options.method ?? "GET",
+      headers,
+      body: options.body ? JSON.stringify(options.body) : undefined,
+      // Modo cookie: login/cadastro/Google/MFA recebem o cookie do refresh token.
+      ...(REFRESH_COOKIE_MODE && path.startsWith("/api/v1/auth") ? { credentials: "include" as const } : {}),
+    },
+    options.timeoutMs ?? DEFAULT_TIMEOUT_MS
+  );
 
   if (!response.ok) {
     // Achado MÉDIO da Auditoria de Prontidão v1 — antes de desistir e
@@ -217,8 +253,8 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 
 export const apiClient = {
   get: <T>(path: string, options?: { skipAuth?: boolean }) => request<T>(path, { method: "GET", skipAuth: options?.skipAuth }),
-  post: <T>(path: string, body?: unknown, options?: { skipAuth?: boolean }) =>
-    request<T>(path, { method: "POST", body, skipAuth: options?.skipAuth }),
+  post: <T>(path: string, body?: unknown, options?: { skipAuth?: boolean; timeoutMs?: number }) =>
+    request<T>(path, { method: "POST", body, skipAuth: options?.skipAuth, timeoutMs: options?.timeoutMs }),
   patch: <T>(path: string, body?: unknown) => request<T>(path, { method: "PATCH", body }),
   put: <T>(path: string, body?: unknown) => request<T>(path, { method: "PUT", body }),
   delete: <T>(path: string) => request<T>(path, { method: "DELETE" }),
@@ -240,7 +276,7 @@ export const apiClient = {
     const token = getStoredToken();
     if (token) headers["Authorization"] = `Bearer ${token}`;
 
-    const response = await fetch(`${API_BASE_URL}${path}`, { method: "GET", headers });
+    const response = await fetchWithTimeout(`${API_BASE_URL}${path}`, { method: "GET", headers }, BLOB_TIMEOUT_MS);
 
     if (!response.ok) {
       if (response.status === 401 && !_isRetryAfterRefresh && (await attemptSilentRefresh())) {
@@ -285,11 +321,7 @@ export const apiClient = {
     const token = getStoredToken();
     if (token) headers["Authorization"] = `Bearer ${token}`;
 
-    const response = await fetch(`${API_BASE_URL}${path}`, {
-      method: "POST",
-      headers,
-      body: formData,
-    });
+    const response = await fetchWithTimeout(`${API_BASE_URL}${path}`, { method: "POST", headers, body: formData }, UPLOAD_TIMEOUT_MS);
 
     if (!response.ok) {
       if (response.status === 401 && !_isRetryAfterRefresh && (await attemptSilentRefresh())) {
@@ -367,8 +399,10 @@ export async function confirmPasswordReset(token: string, newPassword: string): 
  * frequentemente o caso quando o usuário finalmente clica "Sair"), e o
  * backend não exige Authorization para este endpoint (ver DECISÃO em
  * POST /auth/logout, que espelha /auth/refresh no mesmo critério). */
-export async function logoutRequest(refreshToken: string | null): Promise<void> {
-  return apiClient.post<void>("/api/v1/auth/logout", refreshToken ? { refresh_token: refreshToken } : {}, { skipAuth: true });
+export async function logoutRequest(refreshToken: string | null, accessToken: string | null = null): Promise<void> {
+  // access_token: o servidor invalida na hora o token deste aparelho.
+  const body = { ...(refreshToken ? { refresh_token: refreshToken } : {}), ...(accessToken ? { access_token: accessToken } : {}) };
+  return apiClient.post<void>("/api/v1/auth/logout", body, { skipAuth: true });
 }
 
 /** Segunda etapa do login com MFA: token curto do login + código do app. */
@@ -382,7 +416,14 @@ export async function verifyMfaRequest(mfaToken: string, code: string): Promise<
  * contrário de logoutRequest acima, exige o access_token válido — por
  * isso sem skipAuth. */
 export async function logoutAllSessionsRequest(): Promise<{ revoked_count: number }> {
-  return apiClient.post<{ revoked_count: number }>("/api/v1/auth/logout-all-sessions");
+  const result = await apiClient.post<{ revoked_count: number; access_token?: string | null; refresh_token?: string | null }>(
+    "/api/v1/auth/logout-all-sessions"
+  );
+  // O servidor encerra TODAS as sessões na hora, inclusive esta, e devolve
+  // tokens novos para este aparelho continuar conectado.
+  if (result.access_token) storeToken(result.access_token);
+  if (result.refresh_token) storeRefreshToken(result.refresh_token);
+  return result;
 }
 
 /** Lado público (sem autenticação) do link de avaliação de satisfação

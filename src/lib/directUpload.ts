@@ -22,7 +22,17 @@ interface DirectUploadStatus {
   ingestion_file_id: string | null;
   row_count: number | null;
   error_row_count: number | null;
+  already_processed?: boolean;
+  message?: string | null;
 }
+
+/** Limite do envio pela API (espelha INGESTION_SYNC_MAX_MB do backend):
+ * acima disso o arquivo só é aceito pelo upload direto. */
+export const SYNC_UPLOAD_MAX_BYTES = 3 * 1024 * 1024;
+
+export const LARGE_FILE_UNAVAILABLE_MESSAGE =
+  "Arquivos acima de 3 MB são processados em segundo plano, e esse envio não está disponível agora. " +
+  "Divida o arquivo em partes menores e envie uma de cada vez, ou tente de novo em alguns minutos.";
 
 const POLL_MS = 2000;
 const MAX_WAIT_MS = 10 * 60 * 1000;
@@ -75,7 +85,7 @@ export async function uploadViaS3(
     row_count: status.row_count ?? 0,
     error_row_count: status.error_row_count ?? 0,
     received_at: new Date().toISOString(),
-    already_processed: false,
-    message: null,
+    already_processed: status.already_processed ?? false,
+    message: status.message ?? null,
   } as UploadIngestionFileResponse;
 }

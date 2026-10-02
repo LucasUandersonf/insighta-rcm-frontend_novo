@@ -13,15 +13,17 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { ImportDataNav } from "@/components/layout/ImportDataNav";
 import { Tabs, TabPanel } from "@/components/ui/Tabs";
 import { apiClient } from "@/lib/api-client";
-import { uploadViaS3 } from "@/lib/directUpload";
+import { LARGE_FILE_UNAVAILABLE_MESSAGE, SYNC_UPLOAD_MAX_BYTES, uploadViaS3 } from "@/lib/directUpload";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useToast } from "@/context/ToastContext";
+import { useAuth } from "@/context/AuthContext";
 import type {
   IngestionTemplate,
   IngestionValidationReport,
   ColumnMappingPreview,
   Contract,
   IngestionFileEntry,
+  IngestionUndoResponse,
   InsurancePlan,
   PaginatedResponse,
   UploadIngestionFileResponse,
@@ -376,6 +378,9 @@ function BatchUploadTab() {
   const [offset, setOffset] = useState(0);
   const [isMappingModalOpen, setIsMappingModalOpen] = useState(false);
   const [reportFileId, setReportFileId] = useState<string | null>(null);
+  const [undoFile, setUndoFile] = useState<IngestionFileEntry | null>(null);
+  const { user } = useAuth();
+  const canUndo = !!user && ["owner", "admin"].includes(user.role);
   const { data: templates } = useQuery({
     queryKey: ["ingestion-templates"],
     queryFn: () => apiClient.get<IngestionTemplate[]>("/api/v1/ingestion/templates"),
@@ -388,6 +393,9 @@ function BatchUploadTab() {
       // Bloco 4: direto ao S3 quando o servidor permite; senão, pela API.
       const direct = await uploadViaS3(f, dataType);
       if (direct) return direct;
+      // Sem upload direto, a API só aceita arquivos pequenos: avisa antes de
+      // mandar 20 MB pela rede para receber um 413.
+      if (f.size > SYNC_UPLOAD_MAX_BYTES) throw new Error(LARGE_FILE_UNAVAILABLE_MESSAGE);
       const formData = new FormData();
       formData.append("file", f);
       formData.append("data_type", dataType);
@@ -493,10 +501,11 @@ function BatchUploadTab() {
         onClose={() => setIsMappingModalOpen(false)}
       />
       <UploadReportModal fileId={reportFileId} onClose={() => setReportFileId(null)} />
+      <UndoImportModal file={undoFile} onClose={() => setUndoFile(null)} />
 
       <Panel
         title="Histórico de importações"
-        subtitle="Últimos arquivos enviados por este tenant, mais recente primeiro"
+        subtitle="Últimos arquivos enviados por esta clínica, mais recente primeiro"
         glow={(history?.items ?? []).some((f) => f.error_row_count > 0) ? "pending" : "none"}
       >
         {isLoading && <LoadingState variant="table" rows={4} />}
@@ -516,7 +525,7 @@ function BatchUploadTab() {
                   <th className="px-4 py-2.5 font-medium">Linhas rejeitadas</th>
                   <th className="px-4 py-2.5 font-medium">Recebido em</th>
                   <th className="px-4 py-2.5 font-medium">
-                    <span className="sr-only">Relatório</span>
+                    <span className="sr-only">Ações</span>
                   </th>
                 </tr>
               </thead>
@@ -527,7 +536,11 @@ function BatchUploadTab() {
                     <td className="px-4 py-2.5 text-ink-muted">{DATA_TYPE_LABELS[f.data_type] ?? f.data_type}</td>
                     <td className="px-4 py-2.5 text-ink-muted uppercase">{f.file_format}</td>
                     <td className="px-4 py-2.5">
-                      <Badge tone={STATUS_TONE[f.status] ?? "neutral"}>{STATUS_LABELS[f.status] ?? f.status}</Badge>
+                      {f.undone_at ? (
+                        <Badge tone="neutral">Desfeita</Badge>
+                      ) : (
+                        <Badge tone={STATUS_TONE[f.status] ?? "neutral"}>{STATUS_LABELS[f.status] ?? f.status}</Badge>
+                      )}
                     </td>
                     <td className="tabular px-4 py-2.5 text-ink-muted">{f.row_count}</td>
                     <td className={`tabular px-4 py-2.5 ${f.error_row_count > 0 ? "text-denied" : "text-ink-muted"}`}>
@@ -535,11 +548,23 @@ function BatchUploadTab() {
                     </td>
                     <td className="px-4 py-2.5 text-ink-muted">{formatDateTime(f.received_at)}</td>
                     <td className="px-4 py-2.5">
-                      {f.status === "processed" && (
-                        <button type="button" className="text-xs font-medium text-accent-muted hover:underline" onClick={() => setReportFileId(f.id)}>
-                          Relatório
-                        </button>
-                      )}
+                      <div className="flex items-center gap-3">
+                        {f.status === "processed" && (
+                          <button type="button" className="text-xs font-medium text-accent-muted hover:underline" onClick={() => setReportFileId(f.id)}>
+                            Relatório
+                          </button>
+                        )}
+                        {canUndo && f.status === "processed" && !f.undone_at && (
+                          <button
+                            type="button"
+                            className="text-xs font-medium text-denied hover:underline"
+                            onClick={() => setUndoFile(f)}
+                            aria-label={`Desfazer importação de ${f.original_filename ?? "arquivo"}`}
+                          >
+                            Desfazer
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -551,6 +576,82 @@ function BatchUploadTab() {
         )}
       </Panel>
     </div>
+  );
+}
+
+/**
+ * "Desfazer importação": mostra antes o que vai ser apagado/restaurado e
+ * só então confirma. Depois o mesmo arquivo (ou a versão corrigida) pode
+ * ser enviado de novo.
+ */
+export function UndoImportModal({ file, onClose }: { file: IngestionFileEntry | null; onClose: () => void }) {
+  const queryClient = useQueryClient();
+  const { showSuccess, showError } = useToast();
+  const previewQuery = useQuery({
+    queryKey: ["ingestion-undo-preview", file?.id],
+    queryFn: () => apiClient.get<IngestionUndoResponse>(`/api/v1/ingestion/files/${file?.id}/undo-preview`),
+    enabled: !!file,
+    staleTime: 0,
+    gcTime: 0,
+  });
+  const undoMutation = useMutation({
+    // Arquivo com centenas de milhares de linhas leva até ~1 min no servidor.
+    mutationFn: () => apiClient.post<IngestionUndoResponse>(`/api/v1/ingestion/files/${file?.id}/undo`, undefined, { timeoutMs: 5 * 60_000 }),
+    onSuccess: (result) => {
+      // Os números de todas as telas mudam: recarrega tudo que estiver em cache.
+      queryClient.invalidateQueries();
+      showSuccess(result.message);
+      onClose();
+    },
+    onError: (err) => showError(getApiErrorMessage(err)),
+  });
+  const preview = previewQuery.data;
+  const items = Object.entries(preview?.deleted ?? {}).filter(([, n]) => n > 0);
+
+  return (
+    <Modal title="Desfazer importação" isOpen={!!file} onClose={onClose}>
+      <div className="space-y-3 text-sm">
+        <p className="text-ink-muted">
+          Arquivo <span className="font-medium text-ink">{file?.original_filename ?? "sem nome"}</span>. Tudo o que ele criou é
+          apagado e o que ele alterou volta a ser como era antes. Depois você pode enviar o arquivo corrigido.
+        </p>
+        {previewQuery.isLoading && <LoadingState variant="table" rows={2} />}
+        {previewQuery.error && <p className="text-xs text-denied">{getApiErrorMessage(previewQuery.error)}</p>}
+        {preview && (
+          <>
+            {items.length > 0 ? (
+              <ul className="list-disc space-y-0.5 pl-5 text-ink" aria-label="O que será apagado">
+                {items.map(([label, n]) => (
+                  <li key={label}>
+                    <span className="tabular">{n}</span> {label}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-ink-muted">Nenhum registro deste arquivo continua no sistema.</p>
+            )}
+            {preview.restored > 0 && (
+              <p className="text-ink-muted">
+                <span className="tabular">{preview.restored}</span> registro(s) alterado(s) por este arquivo voltam ao valor anterior.
+              </p>
+            )}
+            {preview.appeals_removed > 0 && (
+              <p role="alert" className="rounded-md border border-denied/30 bg-denied-bg px-3 py-2 text-xs text-denied">
+                Atenção: {preview.appeals_removed} recurso(s) de glosa aberto(s) sobre essas cobranças também serão apagados.
+              </p>
+            )}
+          </>
+        )}
+        <div className="flex justify-end gap-2 pt-2">
+          <Button type="button" variant="secondary" onClick={onClose} disabled={undoMutation.isPending}>
+            Cancelar
+          </Button>
+          <Button type="button" onClick={() => undoMutation.mutate()} disabled={!preview || undoMutation.isPending}>
+            {undoMutation.isPending ? "Desfazendo..." : "Desfazer importação"}
+          </Button>
+        </div>
+      </div>
+    </Modal>
   );
 }
 

@@ -13,6 +13,7 @@ import { cn } from "@/lib/cn";
 import { apiClient, ApiError } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useToast } from "@/context/ToastContext";
+import { useAuth } from "@/context/AuthContext";
 import type {
   AiGenerationJob,
   AiGenerationJobEnqueuedResponse,
@@ -334,6 +335,9 @@ function JustificationModal({ appeal, onClose }: { appeal: DenialAppeal | null; 
   // app/sql/065_ai_generation_jobs.sql no backend) — o POST só devolve
   // um job_id, o texto de verdade vem do polling abaixo.
   const [draftJobId, setDraftJobId] = useState<string | null>(null);
+  // Rascunho por IA: só quem pode editar recursos (auditor só lê).
+  const { user } = useAuth();
+  const canDraft = !!user && ["owner", "admin", "financeiro"].includes(user.role);
 
   const enqueueDraftMutation = useMutation({
     mutationFn: (appealId: string) =>
@@ -390,17 +394,19 @@ function JustificationModal({ appeal, onClose }: { appeal: DenialAppeal | null; 
         procedimento, convênio) — nunca inventa mérito clínico ou jurídico. Complete os trechos entre colchetes e
         revise antes de protocolar.
       </p>
-      <Button
-        type="button"
-        variant="secondary"
-        size="sm"
-        className="mb-4 flex items-center gap-1.5"
-        onClick={() => enqueueDraftMutation.mutate(appeal.id)}
-        disabled={isDrafting}
-      >
-        <Sparkles size={14} />
-        {isDrafting ? "Gerando rascunho..." : "Gerar rascunho"}
-      </Button>
+      {canDraft && (
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          className="mb-4 flex items-center gap-1.5"
+          onClick={() => enqueueDraftMutation.mutate(appeal.id)}
+          disabled={isDrafting}
+        >
+          <Sparkles size={14} />
+          {isDrafting ? "Gerando rascunho..." : "Gerar rascunho"}
+        </Button>
+      )}
       <TextareaField
         label="Justificativa"
         rows={8}

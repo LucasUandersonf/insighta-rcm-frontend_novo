@@ -1,19 +1,14 @@
 import { cn } from "@/lib/cn";
+import { passwordProblem } from "@/lib/password";
 
 /**
- * Medidor de força de senha — só INFORMATIVO. O único requisito que de
- * fato bloqueia o envio é "pelo menos 8 caracteres" (mesma regra
- * validada pelo backend, ver validate_password_strength em
- * app/core/security.py) — os demais critérios (maiúscula/minúscula,
- * número, símbolo) só influenciam o rótulo qualitativo (Razoável/Boa/
- * Forte), nunca impedem o cadastro. Duas listas de regras aqui, uma no
- * backend, mas SEMPRE a mesma regra mínima nas duas — o resto é
- * cosmético de propósito, para nunca divergir do que o backend realmente
- * aceita ou rejeita.
+ * Medidor de força de senha. O que bloqueia o envio é `passwordProblem`
+ * (lib/password.ts), a mesma regra de validate_password_strength no
+ * backend — o medidor mostra esse problema em vermelho, e só quando a
+ * senha já é aceita mostra o rótulo qualitativo (Razoável/Boa/Forte).
  *
- * 4 segmentos (não 5) — número exato de barras do medidor no canvas de
- * design (ver ResetPassword.dc.html), daí as 3 regras de bônus abaixo
- * (1 ponto-base por atingir o mínimo + até 3 de bônus = teto de 4).
+ * 4 segmentos — número exato de barras do medidor no canvas de design
+ * (ver ResetPassword.dc.html): 1 ponto-base por ser aceita + até 3 de bônus.
  */
 const BONUS_RULES: Array<(p: string) => boolean> = [
   (p) => /[a-z]/.test(p) && /[A-Z]/.test(p),
@@ -21,16 +16,14 @@ const BONUS_RULES: Array<(p: string) => boolean> = [
   (p) => /[^\w\s]/.test(p),
 ];
 
-const MIN_LENGTH = 8;
-
 export function PasswordStrengthMeter({ password }: { password: string }) {
   if (!password) return null;
 
-  const meetsMinimum = password.length >= MIN_LENGTH;
-  const score = meetsMinimum ? 1 + BONUS_RULES.filter((rule) => rule(password)).length : 0;
+  const problem = passwordProblem(password);
+  const score = problem ? 0 : 1 + BONUS_RULES.filter((rule) => rule(password)).length;
 
-  const barColor = !meetsMinimum ? "bg-denied" : score <= 1 ? "bg-pending" : score === 2 ? "bg-accent" : "bg-revenue";
-  const label = !meetsMinimum ? "" : score <= 1 ? "Razoável" : score === 2 ? "Boa" : "Forte";
+  const barColor = problem ? "bg-denied" : score <= 1 ? "bg-pending" : score === 2 ? "bg-accent" : "bg-revenue";
+  const label = score <= 1 ? "Razoável" : score === 2 ? "Boa" : "Forte";
 
   return (
     <div className="mb-4 -mt-2.5">
@@ -39,9 +32,7 @@ export function PasswordStrengthMeter({ password }: { password: string }) {
           <span key={i} className={cn("h-[3px] flex-1 rounded-full transition-colors", i < score ? barColor : "bg-border-subtle")} />
         ))}
       </div>
-      <p className={cn("mt-1.5 text-2xs", meetsMinimum ? "text-ink-faint" : "text-denied")}>
-        {meetsMinimum ? `Força da senha: ${label}` : `Faltam ${MIN_LENGTH - password.length} caractere(s) para o mínimo exigido.`}
-      </p>
+      <p className={cn("mt-1.5 text-2xs", problem ? "text-denied" : "text-ink-faint")}>{problem ?? `Força da senha: ${label}`}</p>
     </div>
   );
 }
