@@ -13,7 +13,15 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { ImportDataNav } from "@/components/layout/ImportDataNav";
 import { Tabs, TabPanel } from "@/components/ui/Tabs";
 import { apiClient } from "@/lib/api-client";
-import { LARGE_FILE_UNAVAILABLE_MESSAGE, SYNC_UPLOAD_MAX_BYTES, uploadViaS3 } from "@/lib/directUpload";
+import {
+  ACTIVE_STATES,
+  LARGE_FILE_UNAVAILABLE_MESSAGE,
+  SYNC_UPLOAD_MAX_BYTES,
+  processingPercent,
+  startDirectUpload,
+  type DirectUploadStatus,
+} from "@/lib/directUpload";
+import { DIRECT_UPLOADS_QUERY_KEY, useDirectUploads } from "@/lib/useDirectUploads";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useToast } from "@/context/ToastContext";
 import { useAuth } from "@/context/AuthContext";
@@ -388,22 +396,34 @@ function BatchUploadTab() {
   });
   const template = Array.isArray(templates) ? templates.find((t) => t.data_type === dataType) : undefined;
 
+  const [sendPercent, setSendPercent] = useState<number | null>(null);
   const mutation = useMutation({
-    mutationFn: async (f: File) => {
-      // Bloco 4: direto ao S3 quando o servidor permite; senão, pela API.
-      const direct = await uploadViaS3(f, dataType);
-      if (direct) return direct;
+    mutationFn: async (f: File): Promise<{ queued: DirectUploadStatus } | { result: UploadIngestionFileResponse }> => {
+      setSendPercent(0);
+      // Direto ao armazenamento quando o servidor permite: o arquivo é
+      // processado em segundo plano e a tela fica livre (painel "Em
+      // processamento"). Senão, pela API — só para arquivos pequenos.
+      const queued = await startDirectUpload(f, dataType, { onProgress: (fraction) => setSendPercent(Math.round(fraction * 100)) });
+      if (queued) return { queued };
       // Sem upload direto, a API só aceita arquivos pequenos: avisa antes de
       // mandar 20 MB pela rede para receber um 413.
       if (f.size > SYNC_UPLOAD_MAX_BYTES) throw new Error(LARGE_FILE_UNAVAILABLE_MESSAGE);
+      setSendPercent(null);
       const formData = new FormData();
       formData.append("file", f);
       formData.append("data_type", dataType);
-      return apiClient.upload<UploadIngestionFileResponse>("/api/v1/ingestion/upload", formData);
+      return { result: await apiClient.upload<UploadIngestionFileResponse>("/api/v1/ingestion/upload", formData) };
     },
-    onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ["ingestion-files"] });
+    onSettled: () => setSendPercent(null),
+    onSuccess: (outcome) => {
       setFile(null);
+      if ("queued" in outcome) {
+        queryClient.invalidateQueries({ queryKey: DIRECT_UPLOADS_QUERY_KEY });
+        showSuccess("Arquivo recebido. O processamento continua em segundo plano: você pode seguir usando o Insighta e acompanhar abaixo.");
+        return;
+      }
+      const result = outcome.result;
+      queryClient.invalidateQueries({ queryKey: ["ingestion-files"] });
       if (result.already_processed) {
         showSuccess(result.message ?? "Este arquivo já havia sido processado antes — nada foi duplicado.");
       } else if (result.error_row_count > 0) {
@@ -483,7 +503,7 @@ function BatchUploadTab() {
               </Button>
             )}
             <Button disabled={!file || mutation.isPending} onClick={() => file && mutation.mutate(file)}>
-              {mutation.isPending ? "Enviando..." : "Enviar arquivo"}
+              {mutation.isPending ? (sendPercent !== null && sendPercent > 0 ? `Enviando ${sendPercent}%` : "Enviando...") : "Enviar arquivo"}
             </Button>
           </div>
           <p className="mt-2 text-2xs text-ink-faint">
@@ -502,6 +522,7 @@ function BatchUploadTab() {
       />
       <UploadReportModal fileId={reportFileId} onClose={() => setReportFileId(null)} />
       <UndoImportModal file={undoFile} onClose={() => setUndoFile(null)} />
+      <BackgroundImportsPanel onOpenReport={setReportFileId} />
 
       <Panel
         title="Histórico de importações"
@@ -652,6 +673,97 @@ export function UndoImportModal({ file, onClose }: { file: IngestionFileEntry | 
         </div>
       </div>
     </Modal>
+  );
+}
+
+const UPLOAD_STATE_LABELS: Record<string, string> = {
+  aguardando_envio: "Enviando",
+  na_fila: "Na fila",
+  processando: "Processando",
+  processado: "Concluído",
+  falhou: "Falhou",
+};
+
+/**
+ * Importações em segundo plano (upload direto): progresso de cada arquivo,
+ * atualizado a cada 2 s enquanto houver algum em andamento. A pessoa pode
+ * sair da tela e voltar — o andamento vem do servidor.
+ */
+export function BackgroundImportsPanel({ onOpenReport }: { onOpenReport: (fileId: string) => void }) {
+  const { data } = useDirectUploads();
+  const uploads = data ?? [];
+  if (uploads.length === 0) return null;
+  const activeCount = uploads.filter((u) => ACTIVE_STATES.includes(u.status)).length;
+
+  return (
+    <Panel
+      title="Em processamento"
+      subtitle={
+        activeCount > 0
+          ? "Arquivos grandes são processados em segundo plano. Você pode sair desta tela; avisamos quando terminar."
+          : "Importações em segundo plano concluídas nos últimos 30 minutos."
+      }
+    >
+      <ul className="divide-y divide-border-hairline">
+        {uploads.map((upload) => {
+          const percent = processingPercent(upload);
+          const isActive = ACTIVE_STATES.includes(upload.status);
+          const name = upload.original_filename ?? "Arquivo";
+          return (
+            <li key={upload.upload_id} className="space-y-1.5 px-4 py-3 text-sm">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="min-w-0 truncate font-medium text-ink">{name}</span>
+                <span className="flex items-center gap-2">
+                  <span className="text-2xs text-ink-faint">{DATA_TYPE_LABELS[upload.data_type ?? ""] ?? upload.data_type}</span>
+                  <Badge tone={upload.status === "falhou" ? "denied" : upload.status === "processado" ? "revenue" : "pending"}>
+                    {UPLOAD_STATE_LABELS[upload.status] ?? upload.status}
+                  </Badge>
+                </span>
+              </div>
+              {isActive && (
+                <>
+                  <div
+                    className="h-1.5 w-full overflow-hidden rounded-full bg-border-subtle"
+                    role="progressbar"
+                    aria-label={`Progresso de ${name}`}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={percent ?? undefined}
+                  >
+                    <div
+                      className={percent === null ? "h-full w-1/3 animate-pulse rounded-full bg-accent" : "h-full rounded-full bg-accent transition-all"}
+                      style={percent === null ? undefined : { width: `${percent}%` }}
+                    />
+                  </div>
+                  <p className="text-2xs text-ink-faint">
+                    {upload.status === "na_fila"
+                      ? "Aguardando a vez — começa em instantes."
+                      : percent === null
+                        ? "Lendo a planilha…"
+                        : `${(upload.processed_rows ?? 0).toLocaleString("pt-BR")} de ${(upload.total_rows ?? 0).toLocaleString("pt-BR")} linhas (${percent}%)`}
+                  </p>
+                </>
+              )}
+              {upload.status === "processado" && (
+                <p className="flex flex-wrap items-center gap-3 text-2xs text-ink-muted">
+                  <span>
+                    {upload.already_processed
+                      ? "Conteúdo já importado antes — nada foi duplicado."
+                      : `${(upload.row_count ?? 0).toLocaleString("pt-BR")} linha(s) lida(s), ${(upload.error_row_count ?? 0).toLocaleString("pt-BR")} rejeitada(s).`}
+                  </span>
+                  {upload.ingestion_file_id && !upload.already_processed && (
+                    <button type="button" className="font-medium text-accent-muted hover:underline" onClick={() => onOpenReport(upload.ingestion_file_id!)}>
+                      Relatório
+                    </button>
+                  )}
+                </p>
+              )}
+              {upload.status === "falhou" && <p className="text-2xs text-denied">{upload.error ?? "Não foi possível processar o arquivo."}</p>}
+            </li>
+          );
+        })}
+      </ul>
+    </Panel>
   );
 }
 

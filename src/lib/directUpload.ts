@@ -1,12 +1,18 @@
 import { ApiError, apiClient } from "@/lib/api-client";
-import type { UploadIngestionFileResponse } from "@/lib/types";
 
 /**
- * Bloco 4 — upload direto do navegador para o S3 (URL pré-assinada): a
- * API nunca segura o arquivo, e lote grande não estoura timeout. O worker
- * processa e a tela acompanha o status. Quando o recurso está desligado no
- * servidor (409) ou o envio ao armazenamento falha, devolve `null` e a tela
- * usa o upload pela API de sempre.
+ * Upload direto do navegador para o armazenamento (URL pré-assinada): a API
+ * nunca segura o arquivo e o worker processa em segundo plano.
+ *
+ * `startDirectUpload` envia o arquivo (com a porcentagem do envio), confirma
+ * e devolve na hora — a pessoa não fica presa na tela esperando o
+ * processamento. O andamento (linhas processadas / total) é acompanhado por
+ * `useDirectUploads` (lib/useDirectUploads.ts), no painel "Em processamento"
+ * e no indicador que aparece em qualquer tela.
+ *
+ * Devolve `null` quando o servidor não oferece upload direto (409 desligado;
+ * 404/405 API antiga) ou o armazenamento recusa o envio (CORS, rede): a tela
+ * usa o envio pela API, que só aceita arquivos pequenos.
  */
 interface DirectUploadCreated {
   upload_id: string;
@@ -15,15 +21,23 @@ interface DirectUploadCreated {
   headers: Record<string, string>;
 }
 
-interface DirectUploadStatus {
+export type DirectUploadState = "aguardando_envio" | "na_fila" | "processando" | "processado" | "falhou";
+
+export interface DirectUploadStatus {
   upload_id: string;
-  status: "aguardando_envio" | "na_fila" | "processando" | "processado" | "falhou";
+  status: DirectUploadState;
   error: string | null;
   ingestion_file_id: string | null;
   row_count: number | null;
   error_row_count: number | null;
   already_processed?: boolean;
   message?: string | null;
+  original_filename?: string | null;
+  data_type?: string | null;
+  processed_rows?: number;
+  total_rows?: number | null;
+  created_at?: string | null;
+  completed_at?: string | null;
 }
 
 /** Limite do envio pela API (espelha INGESTION_SYNC_MAX_MB do backend):
@@ -34,14 +48,34 @@ export const LARGE_FILE_UNAVAILABLE_MESSAGE =
   "Arquivos acima de 3 MB são processados em segundo plano, e esse envio não está disponível agora. " +
   "Divida o arquivo em partes menores e envie uma de cada vez, ou tente de novo em alguns minutos.";
 
-const POLL_MS = 2000;
-const MAX_WAIT_MS = 10 * 60 * 1000;
+export const ACTIVE_STATES: DirectUploadState[] = ["aguardando_envio", "na_fila", "processando"];
 
-export async function uploadViaS3(
+/** PUT com porcentagem do envio (fetch não informa progresso de upload). */
+export type PutWithProgress = (
+  url: string,
+  init: { method: string; headers: Record<string, string>; body: Blob },
+  onProgress: (fraction: number) => void
+) => Promise<boolean>;
+
+export const xhrPut: PutWithProgress = (url, { method, headers, body }, onProgress) =>
+  new Promise((resolve) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open(method, url);
+    Object.entries(headers).forEach(([name, value]) => xhr.setRequestHeader(name, value));
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable && event.total > 0) onProgress(event.loaded / event.total);
+    };
+    xhr.onload = () => resolve(xhr.status >= 200 && xhr.status < 300);
+    xhr.onerror = () => resolve(false); // CORS do bucket ou rede: a tela decide o que fazer
+    xhr.onabort = () => resolve(false);
+    xhr.send(body);
+  });
+
+export async function startDirectUpload(
   file: File,
   dataType: string,
-  { sleep = (ms: number) => new Promise((r) => setTimeout(r, ms)), put = fetch }: { sleep?: (ms: number) => Promise<unknown>; put?: typeof fetch } = {}
-): Promise<UploadIngestionFileResponse | null> {
+  { onProgress = () => undefined, put = xhrPut }: { onProgress?: (fraction: number) => void; put?: PutWithProgress } = {}
+): Promise<DirectUploadStatus | null> {
   let created: DirectUploadCreated;
   try {
     created = await apiClient.post<DirectUploadCreated>("/api/v1/ingestion/direct-uploads", {
@@ -51,41 +85,19 @@ export async function uploadViaS3(
       content_type: file.type || null,
     });
   } catch (err) {
-    // 409: desligado no servidor; 404/405: API ainda sem o recurso (front e
-    // back publicados em momentos diferentes) — nos dois casos, upload pela API.
     if (err instanceof ApiError && [404, 405, 409].includes(err.status)) return null;
     throw err;
   }
 
-  // Armazenamento recusou ou ficou inalcançável (CORS do bucket, rede): a
-  // tela cai no upload pela API de sempre em vez de travar o usuário.
-  let sent: Response | null = null;
-  try {
-    sent = await put(created.upload_url, { method: created.method, headers: created.headers, body: file });
-  } catch {
-    sent = null;
-  }
-  if (!sent?.ok) return null;
+  const sent = await put(created.upload_url, { method: created.method, headers: created.headers, body: file }, onProgress);
+  if (!sent) return null;
+  onProgress(1);
+  return apiClient.post<DirectUploadStatus>(`/api/v1/ingestion/direct-uploads/${created.upload_id}/complete`);
+}
 
-  let status = await apiClient.post<DirectUploadStatus>(`/api/v1/ingestion/direct-uploads/${created.upload_id}/complete`);
-  const started = Date.now();
-  while (status.status !== "processado" && status.status !== "falhou") {
-    if (Date.now() - started > MAX_WAIT_MS) {
-      throw new Error("O arquivo foi recebido e continua em processamento. Ele aparece no histórico assim que terminar.");
-    }
-    await sleep(POLL_MS);
-    status = await apiClient.get<DirectUploadStatus>(`/api/v1/ingestion/direct-uploads/${created.upload_id}`);
-  }
-  if (status.status === "falhou") throw new Error(status.error ?? "Falha ao processar o arquivo.");
-  return {
-    id: status.ingestion_file_id ?? created.upload_id,
-    file_format: "csv",
-    data_type: dataType,
-    status: "processed",
-    row_count: status.row_count ?? 0,
-    error_row_count: status.error_row_count ?? 0,
-    received_at: new Date().toISOString(),
-    already_processed: status.already_processed ?? false,
-    message: status.message ?? null,
-  } as UploadIngestionFileResponse;
+/** Porcentagem do processamento (0–100) ou null enquanto o total ainda não é conhecido. */
+export function processingPercent(upload: DirectUploadStatus): number | null {
+  if (upload.status === "processado") return 100;
+  if (!upload.total_rows) return null;
+  return Math.min(100, Math.round(((upload.processed_rows ?? 0) / upload.total_rows) * 100));
 }
