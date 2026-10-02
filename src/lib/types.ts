@@ -118,6 +118,17 @@ export interface IngestionFileEntry {
   error_message: string | null;
   received_at: string;
   processed_at: string | null;
+  /** Importação desfeita (POST /ingestion/files/{id}/undo). */
+  undone_at?: string | null;
+}
+
+/** Prévia (GET .../undo-preview) ou resultado (POST .../undo). */
+export interface IngestionUndoResponse {
+  ingestion_file_id: string;
+  deleted: Record<string, number>;
+  restored: number;
+  appeals_removed: number;
+  message: string;
 }
 
 export interface UploadIngestionFileResponse {
@@ -200,6 +211,8 @@ export interface PlatformUser {
   onboarding_completed_at: string | null;
   /** Verificação em duas etapas ligada (null = desligada). */
   mfa_enabled_at?: string | null;
+  /** E-mail confirmado pelo link do cadastro (null = ainda não). */
+  email_verified_at?: string | null;
 }
 
 export interface UserCreateRequest {

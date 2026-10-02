@@ -8,7 +8,9 @@ import { AuthTextField } from "@/components/ui/AuthTextField";
 import { GoogleSignInButton, isGoogleAuthConfigured } from "@/components/ui/GoogleSignInButton";
 import { PasswordStrengthMeter } from "@/components/ui/PasswordStrengthMeter";
 import { Stepper } from "@/components/ui/Stepper";
-import { formatCNPJ, isCompleteCNPJ } from "@/lib/masks";
+import { formatCNPJ, isCompleteCNPJ, isValidCNPJ } from "@/lib/masks";
+import { passwordProblem } from "@/lib/password";
+import { ApiError } from "@/lib/api-client";
 import type { PlanTier } from "@/lib/types";
 
 /** Estado de navegação vindo do LoginPage quando "Continuar com Google"
@@ -91,10 +93,12 @@ export function SignUpPage() {
     const errors: FieldErrors = {};
     if (!tradeName.trim()) errors.trade_name = "Informe o nome da clínica.";
     if (!isCompleteCNPJ(cnpj)) errors.cnpj = "Informe os 14 dígitos do CNPJ.";
+    else if (!isValidCNPJ(cnpj)) errors.cnpj = "CNPJ inválido: os dígitos verificadores não conferem. Confira no cartão CNPJ.";
     if (!googleCredential) {
       if (!ownerName.trim()) errors.owner_name = "Informe seu nome completo.";
       if (!email.trim()) errors.email = "Informe seu e-mail.";
-      if (password.length < 8) errors.password = "A senha precisa ter pelo menos 8 caracteres.";
+      const problem = passwordProblem(password);
+      if (problem) errors.password = problem;
       if (password !== passwordConfirm) errors.passwordConfirm = "As senhas não coincidem.";
     }
     setFieldErrors(errors);
@@ -150,8 +154,18 @@ export function SignUpPage() {
             }
       );
       navigate("/", { replace: true });
-    } catch {
-      // registerError já foi setado pelo contexto — nada a fazer aqui.
+    } catch (err) {
+      // registerError já foi setado pelo contexto. Se o servidor apontou
+      // campos (CNPJ, e-mail, senha), destaca cada um e volta ao passo 1.
+      if (err instanceof ApiError && err.campos?.length) {
+        const mapped: FieldErrors = {};
+        for (const c of err.campos) mapped[c.campo.split(".").pop() as keyof FieldErrors] = c.problema;
+        setFieldErrors(mapped);
+        setStep(1);
+      } else if (err instanceof ApiError && err.status === 409) {
+        setFieldErrors({ cnpj: err.message });
+        setStep(1);
+      }
     }
   }
 

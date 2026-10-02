@@ -13,15 +13,25 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { ImportDataNav } from "@/components/layout/ImportDataNav";
 import { Tabs, TabPanel } from "@/components/ui/Tabs";
 import { apiClient } from "@/lib/api-client";
-import { uploadViaS3 } from "@/lib/directUpload";
+import {
+  ACTIVE_STATES,
+  LARGE_FILE_UNAVAILABLE_MESSAGE,
+  SYNC_UPLOAD_MAX_BYTES,
+  processingPercent,
+  startDirectUpload,
+  type DirectUploadStatus,
+} from "@/lib/directUpload";
+import { DIRECT_UPLOADS_QUERY_KEY, useDirectUploads } from "@/lib/useDirectUploads";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useToast } from "@/context/ToastContext";
+import { useAuth } from "@/context/AuthContext";
 import type {
   IngestionTemplate,
   IngestionValidationReport,
   ColumnMappingPreview,
   Contract,
   IngestionFileEntry,
+  IngestionUndoResponse,
   InsurancePlan,
   PaginatedResponse,
   UploadIngestionFileResponse,
@@ -376,6 +386,9 @@ function BatchUploadTab() {
   const [offset, setOffset] = useState(0);
   const [isMappingModalOpen, setIsMappingModalOpen] = useState(false);
   const [reportFileId, setReportFileId] = useState<string | null>(null);
+  const [undoFile, setUndoFile] = useState<IngestionFileEntry | null>(null);
+  const { user } = useAuth();
+  const canUndo = !!user && ["owner", "admin"].includes(user.role);
   const { data: templates } = useQuery({
     queryKey: ["ingestion-templates"],
     queryFn: () => apiClient.get<IngestionTemplate[]>("/api/v1/ingestion/templates"),
@@ -383,19 +396,34 @@ function BatchUploadTab() {
   });
   const template = Array.isArray(templates) ? templates.find((t) => t.data_type === dataType) : undefined;
 
+  const [sendPercent, setSendPercent] = useState<number | null>(null);
   const mutation = useMutation({
-    mutationFn: async (f: File) => {
-      // Bloco 4: direto ao S3 quando o servidor permite; senão, pela API.
-      const direct = await uploadViaS3(f, dataType);
-      if (direct) return direct;
+    mutationFn: async (f: File): Promise<{ queued: DirectUploadStatus } | { result: UploadIngestionFileResponse }> => {
+      setSendPercent(0);
+      // Direto ao armazenamento quando o servidor permite: o arquivo é
+      // processado em segundo plano e a tela fica livre (painel "Em
+      // processamento"). Senão, pela API — só para arquivos pequenos.
+      const queued = await startDirectUpload(f, dataType, { onProgress: (fraction) => setSendPercent(Math.round(fraction * 100)) });
+      if (queued) return { queued };
+      // Sem upload direto, a API só aceita arquivos pequenos: avisa antes de
+      // mandar 20 MB pela rede para receber um 413.
+      if (f.size > SYNC_UPLOAD_MAX_BYTES) throw new Error(LARGE_FILE_UNAVAILABLE_MESSAGE);
+      setSendPercent(null);
       const formData = new FormData();
       formData.append("file", f);
       formData.append("data_type", dataType);
-      return apiClient.upload<UploadIngestionFileResponse>("/api/v1/ingestion/upload", formData);
+      return { result: await apiClient.upload<UploadIngestionFileResponse>("/api/v1/ingestion/upload", formData) };
     },
-    onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ["ingestion-files"] });
+    onSettled: () => setSendPercent(null),
+    onSuccess: (outcome) => {
       setFile(null);
+      if ("queued" in outcome) {
+        queryClient.invalidateQueries({ queryKey: DIRECT_UPLOADS_QUERY_KEY });
+        showSuccess("Arquivo recebido. O processamento continua em segundo plano: você pode seguir usando o Insighta e acompanhar abaixo.");
+        return;
+      }
+      const result = outcome.result;
+      queryClient.invalidateQueries({ queryKey: ["ingestion-files"] });
       if (result.already_processed) {
         showSuccess(result.message ?? "Este arquivo já havia sido processado antes — nada foi duplicado.");
       } else if (result.error_row_count > 0) {
@@ -475,7 +503,7 @@ function BatchUploadTab() {
               </Button>
             )}
             <Button disabled={!file || mutation.isPending} onClick={() => file && mutation.mutate(file)}>
-              {mutation.isPending ? "Enviando..." : "Enviar arquivo"}
+              {mutation.isPending ? (sendPercent !== null && sendPercent > 0 ? `Enviando ${sendPercent}%` : "Enviando...") : "Enviar arquivo"}
             </Button>
           </div>
           <p className="mt-2 text-2xs text-ink-faint">
@@ -493,10 +521,12 @@ function BatchUploadTab() {
         onClose={() => setIsMappingModalOpen(false)}
       />
       <UploadReportModal fileId={reportFileId} onClose={() => setReportFileId(null)} />
+      <UndoImportModal file={undoFile} onClose={() => setUndoFile(null)} />
+      <BackgroundImportsPanel onOpenReport={setReportFileId} />
 
       <Panel
         title="Histórico de importações"
-        subtitle="Últimos arquivos enviados por este tenant, mais recente primeiro"
+        subtitle="Últimos arquivos enviados por esta clínica, mais recente primeiro"
         glow={(history?.items ?? []).some((f) => f.error_row_count > 0) ? "pending" : "none"}
       >
         {isLoading && <LoadingState variant="table" rows={4} />}
@@ -516,7 +546,7 @@ function BatchUploadTab() {
                   <th className="px-4 py-2.5 font-medium">Linhas rejeitadas</th>
                   <th className="px-4 py-2.5 font-medium">Recebido em</th>
                   <th className="px-4 py-2.5 font-medium">
-                    <span className="sr-only">Relatório</span>
+                    <span className="sr-only">Ações</span>
                   </th>
                 </tr>
               </thead>
@@ -527,7 +557,11 @@ function BatchUploadTab() {
                     <td className="px-4 py-2.5 text-ink-muted">{DATA_TYPE_LABELS[f.data_type] ?? f.data_type}</td>
                     <td className="px-4 py-2.5 text-ink-muted uppercase">{f.file_format}</td>
                     <td className="px-4 py-2.5">
-                      <Badge tone={STATUS_TONE[f.status] ?? "neutral"}>{STATUS_LABELS[f.status] ?? f.status}</Badge>
+                      {f.undone_at ? (
+                        <Badge tone="neutral">Desfeita</Badge>
+                      ) : (
+                        <Badge tone={STATUS_TONE[f.status] ?? "neutral"}>{STATUS_LABELS[f.status] ?? f.status}</Badge>
+                      )}
                     </td>
                     <td className="tabular px-4 py-2.5 text-ink-muted">{f.row_count}</td>
                     <td className={`tabular px-4 py-2.5 ${f.error_row_count > 0 ? "text-denied" : "text-ink-muted"}`}>
@@ -535,11 +569,23 @@ function BatchUploadTab() {
                     </td>
                     <td className="px-4 py-2.5 text-ink-muted">{formatDateTime(f.received_at)}</td>
                     <td className="px-4 py-2.5">
-                      {f.status === "processed" && (
-                        <button type="button" className="text-xs font-medium text-accent-muted hover:underline" onClick={() => setReportFileId(f.id)}>
-                          Relatório
-                        </button>
-                      )}
+                      <div className="flex items-center gap-3">
+                        {f.status === "processed" && (
+                          <button type="button" className="text-xs font-medium text-accent-muted hover:underline" onClick={() => setReportFileId(f.id)}>
+                            Relatório
+                          </button>
+                        )}
+                        {canUndo && f.status === "processed" && !f.undone_at && (
+                          <button
+                            type="button"
+                            className="text-xs font-medium text-denied hover:underline"
+                            onClick={() => setUndoFile(f)}
+                            aria-label={`Desfazer importação de ${f.original_filename ?? "arquivo"}`}
+                          >
+                            Desfazer
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -551,6 +597,173 @@ function BatchUploadTab() {
         )}
       </Panel>
     </div>
+  );
+}
+
+/**
+ * "Desfazer importação": mostra antes o que vai ser apagado/restaurado e
+ * só então confirma. Depois o mesmo arquivo (ou a versão corrigida) pode
+ * ser enviado de novo.
+ */
+export function UndoImportModal({ file, onClose }: { file: IngestionFileEntry | null; onClose: () => void }) {
+  const queryClient = useQueryClient();
+  const { showSuccess, showError } = useToast();
+  const previewQuery = useQuery({
+    queryKey: ["ingestion-undo-preview", file?.id],
+    queryFn: () => apiClient.get<IngestionUndoResponse>(`/api/v1/ingestion/files/${file?.id}/undo-preview`),
+    enabled: !!file,
+    staleTime: 0,
+    gcTime: 0,
+  });
+  const undoMutation = useMutation({
+    // Arquivo com centenas de milhares de linhas leva até ~1 min no servidor.
+    mutationFn: () => apiClient.post<IngestionUndoResponse>(`/api/v1/ingestion/files/${file?.id}/undo`, undefined, { timeoutMs: 5 * 60_000 }),
+    onSuccess: (result) => {
+      // Os números de todas as telas mudam: recarrega tudo que estiver em cache.
+      queryClient.invalidateQueries();
+      showSuccess(result.message);
+      onClose();
+    },
+    onError: (err) => showError(getApiErrorMessage(err)),
+  });
+  const preview = previewQuery.data;
+  const items = Object.entries(preview?.deleted ?? {}).filter(([, n]) => n > 0);
+
+  return (
+    <Modal title="Desfazer importação" isOpen={!!file} onClose={onClose}>
+      <div className="space-y-3 text-sm">
+        <p className="text-ink-muted">
+          Arquivo <span className="font-medium text-ink">{file?.original_filename ?? "sem nome"}</span>. Tudo o que ele criou é
+          apagado e o que ele alterou volta a ser como era antes. Depois você pode enviar o arquivo corrigido.
+        </p>
+        {previewQuery.isLoading && <LoadingState variant="table" rows={2} />}
+        {previewQuery.error && <p className="text-xs text-denied">{getApiErrorMessage(previewQuery.error)}</p>}
+        {preview && (
+          <>
+            {items.length > 0 ? (
+              <ul className="list-disc space-y-0.5 pl-5 text-ink" aria-label="O que será apagado">
+                {items.map(([label, n]) => (
+                  <li key={label}>
+                    <span className="tabular">{n}</span> {label}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-ink-muted">Nenhum registro deste arquivo continua no sistema.</p>
+            )}
+            {preview.restored > 0 && (
+              <p className="text-ink-muted">
+                <span className="tabular">{preview.restored}</span> registro(s) alterado(s) por este arquivo voltam ao valor anterior.
+              </p>
+            )}
+            {preview.appeals_removed > 0 && (
+              <p role="alert" className="rounded-md border border-denied/30 bg-denied-bg px-3 py-2 text-xs text-denied">
+                Atenção: {preview.appeals_removed} recurso(s) de glosa aberto(s) sobre essas cobranças também serão apagados.
+              </p>
+            )}
+          </>
+        )}
+        <div className="flex justify-end gap-2 pt-2">
+          <Button type="button" variant="secondary" onClick={onClose} disabled={undoMutation.isPending}>
+            Cancelar
+          </Button>
+          <Button type="button" onClick={() => undoMutation.mutate()} disabled={!preview || undoMutation.isPending}>
+            {undoMutation.isPending ? "Desfazendo..." : "Desfazer importação"}
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+const UPLOAD_STATE_LABELS: Record<string, string> = {
+  aguardando_envio: "Enviando",
+  na_fila: "Na fila",
+  processando: "Processando",
+  processado: "Concluído",
+  falhou: "Falhou",
+};
+
+/**
+ * Importações em segundo plano (upload direto): progresso de cada arquivo,
+ * atualizado a cada 2 s enquanto houver algum em andamento. A pessoa pode
+ * sair da tela e voltar — o andamento vem do servidor.
+ */
+export function BackgroundImportsPanel({ onOpenReport }: { onOpenReport: (fileId: string) => void }) {
+  const { data } = useDirectUploads();
+  const uploads = data ?? [];
+  if (uploads.length === 0) return null;
+  const activeCount = uploads.filter((u) => ACTIVE_STATES.includes(u.status)).length;
+
+  return (
+    <Panel
+      title="Em processamento"
+      subtitle={
+        activeCount > 0
+          ? "Arquivos grandes são processados em segundo plano. Você pode sair desta tela; avisamos quando terminar."
+          : "Importações em segundo plano concluídas nos últimos 30 minutos."
+      }
+    >
+      <ul className="divide-y divide-border-hairline">
+        {uploads.map((upload) => {
+          const percent = processingPercent(upload);
+          const isActive = ACTIVE_STATES.includes(upload.status);
+          const name = upload.original_filename ?? "Arquivo";
+          return (
+            <li key={upload.upload_id} className="space-y-1.5 px-4 py-3 text-sm">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="min-w-0 truncate font-medium text-ink">{name}</span>
+                <span className="flex items-center gap-2">
+                  <span className="text-2xs text-ink-faint">{DATA_TYPE_LABELS[upload.data_type ?? ""] ?? upload.data_type}</span>
+                  <Badge tone={upload.status === "falhou" ? "denied" : upload.status === "processado" ? "revenue" : "pending"}>
+                    {UPLOAD_STATE_LABELS[upload.status] ?? upload.status}
+                  </Badge>
+                </span>
+              </div>
+              {isActive && (
+                <>
+                  <div
+                    className="h-1.5 w-full overflow-hidden rounded-full bg-border-subtle"
+                    role="progressbar"
+                    aria-label={`Progresso de ${name}`}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={percent ?? undefined}
+                  >
+                    <div
+                      className={percent === null ? "h-full w-1/3 animate-pulse rounded-full bg-accent" : "h-full rounded-full bg-accent transition-all"}
+                      style={percent === null ? undefined : { width: `${percent}%` }}
+                    />
+                  </div>
+                  <p className="text-2xs text-ink-faint">
+                    {upload.status === "na_fila"
+                      ? "Aguardando a vez — começa em instantes."
+                      : percent === null
+                        ? "Lendo a planilha…"
+                        : `${(upload.processed_rows ?? 0).toLocaleString("pt-BR")} de ${(upload.total_rows ?? 0).toLocaleString("pt-BR")} linhas (${percent}%)`}
+                  </p>
+                </>
+              )}
+              {upload.status === "processado" && (
+                <p className="flex flex-wrap items-center gap-3 text-2xs text-ink-muted">
+                  <span>
+                    {upload.already_processed
+                      ? "Conteúdo já importado antes — nada foi duplicado."
+                      : `${(upload.row_count ?? 0).toLocaleString("pt-BR")} linha(s) lida(s), ${(upload.error_row_count ?? 0).toLocaleString("pt-BR")} rejeitada(s).`}
+                  </span>
+                  {upload.ingestion_file_id && !upload.already_processed && (
+                    <button type="button" className="font-medium text-accent-muted hover:underline" onClick={() => onOpenReport(upload.ingestion_file_id!)}>
+                      Relatório
+                    </button>
+                  )}
+                </p>
+              )}
+              {upload.status === "falhou" && <p className="text-2xs text-denied">{upload.error ?? "Não foi possível processar o arquivo."}</p>}
+            </li>
+          );
+        })}
+      </ul>
+    </Panel>
   );
 }
 

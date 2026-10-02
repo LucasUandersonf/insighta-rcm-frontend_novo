@@ -191,8 +191,8 @@ function SessionsPanel() {
     <Panel title="Sessões">
       <div className="space-y-3 p-4">
         <p className="max-w-xl text-xs leading-relaxed text-ink-faint">
-          Perdeu o celular ou entrou num computador que não é seu? Encerre todas as sessões: qualquer aparelho conectado
-          precisa entrar de novo em até 30 minutos.
+          Perdeu o celular ou entrou num computador que não é seu? Encerre todas as sessões: qualquer outro aparelho
+          conectado precisa entrar de novo imediatamente. Este aparelho continua conectado.
         </p>
         <Button type="button" variant="secondary" onClick={() => mutation.mutate()} disabled={mutation.isPending}>
           <LogOut className="h-4 w-4" aria-hidden />

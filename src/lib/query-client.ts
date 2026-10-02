@@ -24,5 +24,9 @@ export const queryClient = new QueryClient({
 });
 
 export function getApiErrorMessage(err: unknown): string {
-  return err instanceof ApiError ? err.message : "Algo deu errado. Tente novamente.";
+  if (err instanceof ApiError) return err.message;
+  // `new Error("...")` lançado pelo próprio app já vem em português para a
+  // pessoa; TypeError/RangeError etc. são falhas internas e não aparecem.
+  if (err instanceof Error && err.name === "Error" && err.message) return err.message;
+  return "Algo deu errado. Tente novamente.";
 }

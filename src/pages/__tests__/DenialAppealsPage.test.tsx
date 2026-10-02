@@ -11,6 +11,8 @@ import type {
   PaginatedResponse,
 } from "@/lib/types";
 
+vi.mock("@/context/AuthContext", () => ({ useAuth: () => ({ user: { sub: "u1", tenant_id: "t1", role: "financeiro" } }) }));
+
 vi.mock("@/lib/api-client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api-client")>();
   return {

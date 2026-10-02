@@ -1,6 +1,8 @@
 import { Suspense, useEffect } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
+import { EmailVerificationBanner } from "./EmailVerificationBanner";
+import { ImportProgressIndicator } from "./ImportProgressIndicator";
 import { TopBar } from "./TopBar";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { RouteLoadingFallback } from "@/components/RouteLoadingFallback";
@@ -44,6 +46,8 @@ export function AppShell() {
       <OnboardingTourProvider>
         <div className={cn("transition-[filter] duration-200", isModalOpen && "blur-[1.5px] saturate-[0.85]")}>
           <TopBar />
+          <EmailVerificationBanner />
+          <ImportProgressIndicator />
           <main id="main-content" className="mx-auto w-full max-w-[1680px] px-4 pb-14 pt-8 sm:px-8">
             <ErrorBoundary scope="route" key={location.pathname}>
               <AnimatePresence mode="wait">

@@ -5,6 +5,7 @@ import { ArrowLeft, CheckCircle2, Lock, ShieldAlert, ShieldCheck } from "lucide-
 import { confirmPasswordReset, ApiError } from "@/lib/api-client";
 import { AuthLayout, AuthFormHeader } from "@/components/layout/AuthLayout";
 import { PasswordStrengthMeter } from "@/components/ui/PasswordStrengthMeter";
+import { passwordProblem } from "@/lib/password";
 
 // Mesmo padrão de HIGHLIGHTS das outras 3 telas públicas (ver
 // LoginPage/SignUpPage/ForgotPasswordPage) — sem isso, o painel de
@@ -26,7 +27,8 @@ export function ResetPasswordPage() {
   const [done, setDone] = useState(false);
 
   const passwordsMatch = password.length > 0 && password === passwordConfirm;
-  const canSubmit = !!token && password.length >= 8 && passwordsMatch;
+  const strengthProblem = password.length > 0 ? passwordProblem(password) : null;
+  const canSubmit = !!token && password.length > 0 && !strengthProblem && passwordsMatch;
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -127,6 +129,7 @@ export function ResetPasswordPage() {
                   placeholder="••••••••"
                 />
                 {passwordConfirm.length > 0 && !passwordsMatch && <p className="mt-1 text-2xs text-denied">As senhas não coincidem.</p>}
+                {strengthProblem && password.length >= 8 && <p className="mt-1 text-2xs text-denied">{strengthProblem}</p>}
               </div>
 
               {error && (

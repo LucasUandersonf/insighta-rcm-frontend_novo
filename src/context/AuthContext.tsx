@@ -31,9 +31,9 @@ interface AuthContextValue {
   user: CurrentUser | null;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
-  /** Cadastro público (self-signup) — autentica direto ao concluir
-   * (ver DECISÃO em POST /auth/register no backend: sem etapa de
-   * verificação de e-mail nesta primeira versão). */
+  /** Cadastro público (self-signup) — autentica direto ao concluir; o
+   * e-mail é confirmado depois por link (EmailVerificationBanner), e só a
+   * assinatura espera essa confirmação. */
   register: (data: RegisterRequest) => Promise<void>;
   /** Erro amigável da última tentativa de cadastro (null quando não há erro). */
   registerError: string | null;
@@ -284,8 +284,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // erro visível (o usuário já está saindo, o refresh token vai
     // expirar sozinho de qualquer forma se esta chamada falhar).
     const refreshToken = getStoredRefreshToken();
-    if (refreshToken || REFRESH_COOKIE_MODE) {
-      logoutRequest(refreshToken).catch(() => {});
+    const accessToken = getStoredToken();
+    if (refreshToken || accessToken || REFRESH_COOKIE_MODE) {
+      logoutRequest(refreshToken, accessToken).catch(() => {});
     }
     clearStoredToken();
     clearStoredRefreshToken();
