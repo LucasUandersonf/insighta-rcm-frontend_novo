@@ -11,9 +11,12 @@ function finishedMessage(upload: DirectUploadStatus): string {
   if (upload.already_processed) return upload.message ?? `${name}: este conteúdo já tinha sido importado. Nada foi duplicado.`;
   const rejected = upload.error_row_count ?? 0;
   const rows = upload.row_count ?? 0;
-  return rejected > 0
-    ? `${name} importado: ${rows} linha(s) lida(s), ${rejected} rejeitada(s). Veja o motivo no histórico de importações.`
-    : `${name} importado: ${rows} linha(s).`;
+  const base =
+    rejected > 0
+      ? `${name} importado: ${rows} linha(s) lida(s), ${rejected} rejeitada(s). Veja o motivo no histórico de importações.`
+      : `${name} importado: ${rows} linha(s).`;
+  const ignored = upload.ignored_columns ?? [];
+  return ignored.length > 0 ? `${base} Colunas ignoradas (fora do modelo): ${ignored.join(", ")}.` : base;
 }
 
 /**

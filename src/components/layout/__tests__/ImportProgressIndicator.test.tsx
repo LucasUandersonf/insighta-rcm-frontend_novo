@@ -41,6 +41,18 @@ describe("ImportProgressIndicator", () => {
     expect(screen.queryByRole("status", { name: /Importando/ })).not.toBeInTheDocument();
   });
 
+  it("avisa as colunas do arquivo que ficaram de fora", async () => {
+    vi.mocked(apiClient.get)
+      .mockResolvedValueOnce([upload({ status: "processando", processed_rows: 10, total_rows: 100 })] as never)
+      .mockResolvedValue([
+        upload({ status: "processado", row_count: 100, error_row_count: 0, ingestion_file_id: "f1", ignored_columns: ["cpf_titular"] }),
+      ] as never);
+
+    renderWithProviders(<ImportProgressIndicator />, { route: "/inicio" });
+
+    await waitFor(() => expect(screen.getByText(/Colunas ignoradas \(fora do modelo\): cpf_titular/)).toBeInTheDocument(), { timeout: 4000 });
+  });
+
   it("sem importação em andamento não mostra nada", async () => {
     vi.mocked(apiClient.get).mockResolvedValue([] as never);
     const { container } = renderWithProviders(<ImportProgressIndicator />, { route: "/inicio" });

@@ -38,6 +38,8 @@ export interface DirectUploadStatus {
   total_rows?: number | null;
   created_at?: string | null;
   completed_at?: string | null;
+  /** Colunas do arquivo fora do modelo, que não foram importadas. */
+  ignored_columns?: string[];
 }
 
 /** Limite do envio pela API (espelha INGESTION_SYNC_MAX_MB do backend):

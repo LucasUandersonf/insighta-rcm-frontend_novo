@@ -432,6 +432,8 @@ function BatchUploadTab() {
       } else {
         showSuccess(`Arquivo processado com sucesso: ${result.row_count} linha(s) importada(s).`);
       }
+      // Colunas fora do modelo não entram — avisar em vez de calar.
+      if (!result.already_processed && result.ignored_columns?.length && result.message) showError(result.message);
     },
     onError: (err) => showError(getApiErrorMessage(err)),
   });
@@ -751,6 +753,9 @@ export function BackgroundImportsPanel({ onOpenReport }: { onOpenReport: (fileId
                       ? "Conteúdo já importado antes — nada foi duplicado."
                       : `${(upload.row_count ?? 0).toLocaleString("pt-BR")} linha(s) lida(s), ${(upload.error_row_count ?? 0).toLocaleString("pt-BR")} rejeitada(s).`}
                   </span>
+                  {!upload.already_processed && upload.ignored_columns && upload.ignored_columns.length > 0 && (
+                    <span className="text-pending">Colunas ignoradas: {upload.ignored_columns.join(", ")}</span>
+                  )}
                   {upload.ingestion_file_id && !upload.already_processed && (
                     <button type="button" className="font-medium text-accent-muted hover:underline" onClick={() => onOpenReport(upload.ingestion_file_id!)}>
                       Relatório
