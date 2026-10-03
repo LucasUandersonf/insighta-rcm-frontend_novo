@@ -94,6 +94,10 @@ export interface ReportRecipient {
   active: boolean;
   created_at: string;
   updated_at: string;
+  /** Último envio (WhatsApp e/ou e-mail): "ok" ou "falhou" com o motivo. */
+  last_delivery_at?: string | null;
+  last_delivery_status?: "ok" | "falhou" | null;
+  last_delivery_error?: string | null;
 }
 
 // --- Central de Upload / Ingestão de Dados (app/schemas/ingestion.py) ---
@@ -158,7 +162,10 @@ export interface UploadIngestionFileResponse {
 // arquivo de origem) — não tem mapeamento possível, só corrigir o
 // arquivo e reenviar; `payload` vem vazio ({}) nesse caso porque a linha
 // nunca chegou a virar um RawBillingRow válido.
-export type RejectedRowReason = "unknown_insurance_plan" | "validation_error" | string;
+export type RejectedRowReason =
+  | "unknown_insurance_plan"
+  | "validation_error"
+  | string;
 
 export interface RejectedRow {
   id: number;
@@ -194,7 +201,12 @@ export interface AuditLogEntry {
   created_at: string;
 }
 
-export type UserRole = "owner" | "admin" | "financeiro" | "atendimento" | "auditor";
+export type UserRole =
+  | "owner"
+  | "admin"
+  | "financeiro"
+  | "atendimento"
+  | "auditor";
 
 export interface CurrentUser {
   tenant_id: string;
@@ -701,7 +713,9 @@ export interface MorningEdition {
   headline: string;
   lead: string;
   /** Só os cards aprovados pela checagem de números: faturado, recebimento, agenda, saude. */
-  cards: Partial<Record<"faturado" | "recebimento" | "agenda" | "saude", string>>;
+  cards: Partial<
+    Record<"faturado" | "recebimento" | "agenda" | "saude", string>
+  >;
 }
 
 // Taxa de confirmação real do motor de risco de glosa (GET
@@ -829,7 +843,11 @@ export interface DataQuality {
 // backend. Visualmente distinto de crítico/atenção/positivo (tom violeta,
 // não semântico de "bom"/"ruim") porque não é um veredito sobre a
 // clínica, é uma comparação.
-export type InsightSeverity = "critical" | "warning" | "positive" | "comparativo";
+export type InsightSeverity =
+  | "critical"
+  | "warning"
+  | "positive"
+  | "comparativo";
 
 // "faturamento" | "agenda" — área do card, usada por SmartInsightsFeed.tsx
 // pra agrupar o feed em seções em vez de uma lista única misturando
@@ -838,7 +856,12 @@ export type InsightSeverity = "critical" | "warning" | "positive" | "comparativo
 // aparece em itens sintéticos da fila (PriorityQueueItem, ver abaixo) —
 // nunca emitido por generate_insights(), então SmartInsightsFeed.tsx
 // nunca precisa saber desse terceiro valor.
-export type InsightCategory = "faturamento" | "agenda" | "estoque" | "prontuario" | "estrategia";
+export type InsightCategory =
+  | "faturamento"
+  | "agenda"
+  | "estoque"
+  | "prontuario"
+  | "estrategia";
 
 export interface SmartInsight {
   severity: InsightSeverity;
@@ -914,7 +937,11 @@ export interface PriorityQueue {
 // Épicos F1.2 (ciclo fechado de insight) + F1.3 (atribuição/workflow)
 // do Plano Diretor — ver DECISÃO completa em
 // app/sql/038_insight_outcomes.sql no backend.
-export type InsightOutcomeStatus = "pendente" | "em_andamento" | "resolvido" | "ignorado";
+export type InsightOutcomeStatus =
+  | "pendente"
+  | "em_andamento"
+  | "resolvido"
+  | "ignorado";
 
 export interface InsightOutcome {
   id: string;
@@ -1101,8 +1128,17 @@ export interface InactivePatientItem {
 
 // Registro de contato de reativação (POST/GET
 // /patients/{id}/outreach-log) — Onda 4 do Plano de Ação, item 12.
-export type PatientOutreachChannel = "telefone" | "whatsapp" | "sms" | "email" | "presencial";
-export type PatientOutreachOutcome = "contatado" | "sem_resposta" | "agendou" | "recusou";
+export type PatientOutreachChannel =
+  | "telefone"
+  | "whatsapp"
+  | "sms"
+  | "email"
+  | "presencial";
+export type PatientOutreachOutcome =
+  | "contatado"
+  | "sem_resposta"
+  | "agendou"
+  | "recusou";
 
 export interface PatientOutreachLogCreateRequest {
   channel: PatientOutreachChannel;
@@ -1215,7 +1251,14 @@ export interface PepConformidade {
 // item 4. Recência e Frequência já existiam espalhadas (InactivePatients,
 // score VIP); Valor era a dimensão que faltava pra virar RFM de verdade.
 // Ver DECISÃO completa em app/services/rfm_engine.py (backend).
-export type RfmSegment = "campeoes" | "fieis" | "nao_pode_perder" | "em_risco" | "novos" | "hibernando" | "precisa_atencao";
+export type RfmSegment =
+  | "campeoes"
+  | "fieis"
+  | "nao_pode_perder"
+  | "em_risco"
+  | "novos"
+  | "hibernando"
+  | "precisa_atencao";
 
 export interface RfmSegmentCount {
   segment: RfmSegment;
@@ -1315,7 +1358,12 @@ export interface Profitability {
 
 // Épico F3.1 do Plano Diretor — ver DECISÃO completa em
 // app/sql/039_cost_entries.sql no backend.
-export type CostEntryCategory = "folha_fixa" | "comissao_repasse" | "aluguel" | "insumo" | "outros";
+export type CostEntryCategory =
+  | "folha_fixa"
+  | "comissao_repasse"
+  | "aluguel"
+  | "insumo"
+  | "outros";
 
 export interface CostEntry {
   id: string;
@@ -1467,7 +1515,9 @@ export interface FinancialHoleBillings {
 // candidatos a recontato correspondentes). Ver DECISÃO em
 // InsightActionButton (SmartInsightsFeed.tsx) sobre os formatos
 // "#weekday:<n>"/"#professional:<id>" que originam este estado.
-export type AgendaFocus = { type: "weekday"; weekday: number } | { type: "professional"; professionalId: string };
+export type AgendaFocus =
+  | { type: "weekday"; weekday: number }
+  | { type: "professional"; professionalId: string };
 
 // Comparativo entre clínicas (GET /analytics/network-benchmark) — Sala de Comando 2.0
 export interface NetworkBenchmarkMetric {
@@ -1573,7 +1623,13 @@ export interface BillingResponse {
   id: string;
   appointment_id: string;
   charged_value: number;
-  status: "pending" | "held_for_review" | "submitted" | "paid" | "denied" | "reversed";
+  status:
+    | "pending"
+    | "held_for_review"
+    | "submitted"
+    | "paid"
+    | "denied"
+    | "reversed";
   denial_risk_level: "low" | "medium" | "high";
   denial_reasons: string[];
   value_saved_by_correction: number;
@@ -1604,7 +1660,12 @@ export interface BillingResponse {
   installments: number | null;
 }
 
-export type PaymentMethod = "dinheiro" | "pix" | "cartao_debito" | "cartao_credito" | "boleto";
+export type PaymentMethod =
+  | "dinheiro"
+  | "pix"
+  | "cartao_debito"
+  | "cartao_credito"
+  | "boleto";
 
 export interface BillingSettleRequest {
   received_value: number;
@@ -1958,6 +2019,10 @@ export interface AppointmentUpdateRequest {
   addon_offered_procedure?: string | null;
   addon_declined?: boolean | null;
   is_squeeze_in?: boolean | null;
+  /** Remarcar (horário de Brasília, sem fuso) — só atendimento agendado e sem cobrança. */
+  scheduled_at?: string | null;
+  professional_id?: string | null;
+  insurance_plan_id?: string | null;
 }
 
 // POST /appointments/{id}/satisfaction-link (app/schemas/appointment_satisfaction.py)
@@ -2181,7 +2246,12 @@ export interface AiGenerationJob<TResult = unknown> {
 
 // --- Recurso de Glosa / conformidade ANS (app/schemas/denial_appeal.py) ---
 export type AppealType = "tecnica" | "administrativa" | "medica";
-export type AppealStatus = "aberto" | "protocolado" | "deferido" | "indeferido" | "nip_aberta";
+export type AppealStatus =
+  | "aberto"
+  | "protocolado"
+  | "deferido"
+  | "indeferido"
+  | "nip_aberta";
 
 export interface DenialAppealAttachment {
   id: string;
@@ -2264,12 +2334,23 @@ export interface SupportRequest {
 // --- Painel interno de Customer Success (/plataforma) — nunca acessível
 // por um usuário de clínica, só pela equipe que opera a Insighta (ver
 // DECISÃO em app/sql/026_platform_customer_success.sql no backend). ---
-export type TenantEngagementStatus = "engajado" | "atencao" | "risco" | "novo" | "inativo";
+export type TenantEngagementStatus =
+  | "engajado"
+  | "atencao"
+  | "risco"
+  | "novo"
+  | "inativo";
 
 // Mesmas 6 chaves de app/sql/030_platform_feature_usage.sql, sempre
 // presentes (mesmo zeradas) — mede MUTAÇÃO (ação real de escrita), não
 // navegação/leitura de tela (ver DECISÃO no arquivo SQL).
-export type FeatureUsageKey = "pacientes" | "agenda" | "faturamento" | "recurso_de_glosa" | "contratos" | "usuarios";
+export type FeatureUsageKey =
+  | "pacientes"
+  | "agenda"
+  | "faturamento"
+  | "recurso_de_glosa"
+  | "contratos"
+  | "usuarios";
 
 export interface TenantUsageSummary {
   tenant_id: string;
@@ -2315,7 +2396,12 @@ export interface PlanCatalogEntry {
   self_service: boolean;
 }
 
-export type BillingStatus = "pending_payment" | "active" | "past_due" | "canceled";
+export type BillingStatus =
+  | "pending_payment"
+  | "active"
+  | "past_due"
+  | "canceling"
+  | "canceled";
 
 export interface SubscriptionStatus {
   plan_tier: PlanTier;
@@ -2330,6 +2416,16 @@ export interface SubscriptionStatus {
   price_locked_until: string | null;
   current_price_cents: number | null;
   provider: "asaas" | "stripe" | "mock";
+  /** Cancelamento pelo cliente: pedido em / acesso até (fim do período pago). */
+  cancel_requested_at?: string | null;
+  access_until?: string | null;
+}
+
+export interface SubscriptionCancelResponse {
+  status: BillingStatus;
+  access_until: string | null;
+  provider_confirmed: boolean | null;
+  message: string;
 }
 
 /** Oferta vigente para quem vai assinar agora (GET /api/v1/subscription/offer). */

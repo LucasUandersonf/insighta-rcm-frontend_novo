@@ -1,7 +1,19 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { CalendarCheck, Copy, Crown, Pencil, Star, UserRound } from "lucide-react";
-import { Panel, EmptyState, LoadingState, ErrorState } from "@/components/ui/Panel";
+import {
+  CalendarCheck,
+  Copy,
+  Crown,
+  Pencil,
+  Star,
+  UserRound,
+} from "lucide-react";
+import {
+  Panel,
+  EmptyState,
+  LoadingState,
+  ErrorState,
+} from "@/components/ui/Panel";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { TextField, SelectField } from "@/components/ui/FormField";
@@ -20,17 +32,33 @@ import type {
   SatisfactionLinkResponse,
 } from "@/lib/types";
 
+/** Instante ISO -> "AAAA-MM-DDTHH:mm" no horário de Brasília (campo datetime-local). */
+function toClinicInput(iso: string): string {
+  const parts = new Intl.DateTimeFormat("sv-SE", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(new Date(iso));
+  return parts.replace(" ", "T");
+}
+
 const PREFERRED_TIME_WINDOW_LABELS: Record<PreferredTimeWindow, string> = {
   manha: "Manhã",
   tarde: "Tarde",
   noite: "Noite",
 };
 
-
 function formatDateTime(iso: string): string {
-  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).format(
-    new Date(iso)
-  );
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(iso));
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -75,13 +103,20 @@ function EditPatientContactModal({
   useEffect(() => {
     if (!patient) return;
     setReferredBy(patient.referred_by_patient_id ?? "");
-    setConsent(patient.communication_consent === null ? "" : patient.communication_consent ? "true" : "false");
+    setConsent(
+      patient.communication_consent === null
+        ? ""
+        : patient.communication_consent
+          ? "true"
+          : "false",
+    );
     setPreferredWindow(patient.preferred_time_window ?? "");
     setZipCode(patient.zip_code ?? "");
   }, [patient]);
 
   const mutation = useMutation({
-    mutationFn: (payload: PatientUpdateRequest) => apiClient.patch<Patient>(`/api/v1/patients/${patient!.id}`, payload),
+    mutationFn: (payload: PatientUpdateRequest) =>
+      apiClient.patch<Patient>(`/api/v1/patients/${patient!.id}`, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["patients"] });
       showSuccess("Dados do paciente atualizados.");
@@ -96,7 +131,8 @@ function EditPatientContactModal({
     mutation.mutate({
       referred_by_patient_id: referredBy || null,
       communication_consent: consent === "" ? null : consent === "true",
-      preferred_time_window: (preferredWindow || null) as PreferredTimeWindow | null,
+      preferred_time_window: (preferredWindow ||
+        null) as PreferredTimeWindow | null,
       zip_code: zipCode || null,
     });
   }
@@ -104,10 +140,18 @@ function EditPatientContactModal({
   if (!patient) return null;
 
   return (
-    <Modal title={`Dados de contato — ${patient.full_name}`} isOpen={isOpen} onClose={onClose}>
+    <Modal
+      title={`Dados de contato — ${patient.full_name}`}
+      isOpen={isOpen}
+      onClose={onClose}
+    >
       <form onSubmit={handleSubmit}>
         {patients.length > 0 && (
-          <SelectField label="Quem indicou (opcional)" value={referredBy} onChange={(e) => setReferredBy(e.target.value)}>
+          <SelectField
+            label="Quem indicou (opcional)"
+            value={referredBy}
+            onChange={(e) => setReferredBy(e.target.value)}
+          >
             <option value="">Ninguém indicou / não sei</option>
             {patients
               .filter((p) => p.id !== patient.id)
@@ -125,13 +169,20 @@ function EditPatientContactModal({
             onChange={(e) => setPreferredWindow(e.target.value)}
           >
             <option value="">Não informado</option>
-            {Object.entries(PREFERRED_TIME_WINDOW_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
+            {Object.entries(PREFERRED_TIME_WINDOW_LABELS).map(
+              ([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ),
+            )}
           </SelectField>
-          <TextField label="CEP (opcional)" value={zipCode} onChange={(e) => setZipCode(e.target.value)} placeholder="00000-000" />
+          <TextField
+            label="CEP (opcional)"
+            value={zipCode}
+            onChange={(e) => setZipCode(e.target.value)}
+            placeholder="00000-000"
+          />
         </div>
         <SelectField
           label="Autoriza contato (LGPD)"
@@ -181,23 +232,57 @@ function RegisterVisitModal({
   const [procedureCode, setProcedureCode] = useState("");
   const [cidCode, setCidCode] = useState("");
   const [addonOfferedProcedure, setAddonOfferedProcedure] = useState("");
-  const [addonResult, setAddonResult] = useState<"" | "aceito" | "recusado">("");
+  const [addonResult, setAddonResult] = useState<"" | "aceito" | "recusado">(
+    "",
+  );
+  const [when, setWhen] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const originalWhen = appointment
+    ? toClinicInput(appointment.scheduled_at)
+    : "";
 
   useEffect(() => {
     if (!appointment) return;
+    setWhen(toClinicInput(appointment.scheduled_at));
+    setConfirmDelete(false);
     setStatus(appointment.status);
     setProcedureCode(appointment.procedure_code ?? "");
     setCidCode(appointment.cid_code ?? "");
     setAddonOfferedProcedure(appointment.addon_offered_procedure ?? "");
-    setAddonResult(appointment.addon_declined === null ? "" : appointment.addon_declined ? "recusado" : "aceito");
+    setAddonResult(
+      appointment.addon_declined === null
+        ? ""
+        : appointment.addon_declined
+          ? "recusado"
+          : "aceito",
+    );
   }, [appointment]);
 
   const mutation = useMutation({
     mutationFn: (payload: AppointmentUpdateRequest) =>
-      apiClient.patch<Appointment>(`/api/v1/appointments/${appointment!.id}`, payload),
+      apiClient.patch<Appointment>(
+        `/api/v1/appointments/${appointment!.id}`,
+        payload,
+      ),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["appointments", appointment!.patient_id] });
+      queryClient.invalidateQueries({
+        queryKey: ["appointments", appointment!.patient_id],
+      });
       showSuccess("Atendimento atualizado.");
+      onClose();
+    },
+    onError: (err) => showError(getApiErrorMessage(err)),
+  });
+
+  // Excluir lançamento manual por engano (sem cobrança) — rodada 4, A6.
+  const removal = useMutation({
+    mutationFn: () =>
+      apiClient.delete<void>(`/api/v1/appointments/${appointment!.id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["appointments", appointment!.patient_id],
+      });
+      showSuccess("Atendimento excluído.");
       onClose();
     },
     onError: (err) => showError(getApiErrorMessage(err)),
@@ -207,6 +292,8 @@ function RegisterVisitModal({
     e.preventDefault();
     if (!appointment) return;
     mutation.mutate({
+      // Remarcação só quando o horário mudou (o backend confere as regras).
+      ...(when && when !== originalWhen ? { scheduled_at: `${when}:00` } : {}),
       status: status || null,
       procedure_code: procedureCode || null,
       cid_code: cidCode || null,
@@ -220,16 +307,35 @@ function RegisterVisitModal({
   return (
     <Modal title="Registrar atendimento" isOpen={isOpen} onClose={onClose}>
       <form onSubmit={handleSubmit}>
-        <SelectField label="Status" value={status} onChange={(e) => setStatus(e.target.value)}>
+        <SelectField
+          label="Status"
+          value={status}
+          onChange={(e) => setStatus(e.target.value)}
+        >
           {Object.entries(STATUS_LABELS).map(([value, label]) => (
             <option key={value} value={value}>
               {label}
             </option>
           ))}
         </SelectField>
+        <TextField
+          label="Data e hora (remarcar)"
+          type="datetime-local"
+          value={when}
+          onChange={(e) => setWhen(e.target.value)}
+          disabled={appointment.status !== "scheduled"}
+        />
         <div className="grid grid-cols-2 gap-3">
-          <TextField label="Código do procedimento" value={procedureCode} onChange={(e) => setProcedureCode(e.target.value)} />
-          <TextField label="CID" value={cidCode} onChange={(e) => setCidCode(e.target.value)} />
+          <TextField
+            label="Código do procedimento"
+            value={procedureCode}
+            onChange={(e) => setProcedureCode(e.target.value)}
+          />
+          <TextField
+            label="CID"
+            value={cidCode}
+            onChange={(e) => setCidCode(e.target.value)}
+          />
         </div>
         <TextField
           label="Procedimento/serviço oferecido no checkout (opcional)"
@@ -240,10 +346,16 @@ function RegisterVisitModal({
         <SelectField
           label="Resultado da oferta"
           value={addonResult}
-          onChange={(e) => setAddonResult(e.target.value as "" | "aceito" | "recusado")}
+          onChange={(e) =>
+            setAddonResult(e.target.value as "" | "aceito" | "recusado")
+          }
           disabled={!addonOfferedProcedure}
         >
-          <option value="">{addonOfferedProcedure ? "Ainda não sei" : "Nada oferecido / não perguntado"}</option>
+          <option value="">
+            {addonOfferedProcedure
+              ? "Ainda não sei"
+              : "Nada oferecido / não perguntado"}
+          </option>
           {Object.entries(ADDON_RESULT_LABELS).map(([value, label]) => (
             <option key={value} value={value}>
               {label}
@@ -251,7 +363,18 @@ function RegisterVisitModal({
           ))}
         </SelectField>
 
-        <div className="mt-1 flex justify-end gap-2">
+        <div className="mt-1 flex items-center justify-end gap-2">
+          <Button
+            type="button"
+            variant="ghost"
+            className="mr-auto text-denied"
+            disabled={removal.isPending}
+            onClick={() =>
+              confirmDelete ? removal.mutate() : setConfirmDelete(true)
+            }
+          >
+            {confirmDelete ? "Confirmar exclusão" : "Excluir"}
+          </Button>
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancelar
           </Button>
@@ -287,7 +410,9 @@ function SatisfactionLinkModal({
       await navigator.clipboard.writeText(link.url);
       showSuccess("Link copiado.");
     } catch {
-      showError("Não foi possível copiar o link automaticamente — selecione e copie manualmente.");
+      showError(
+        "Não foi possível copiar o link automaticamente — selecione e copie manualmente.",
+      );
     }
   }
 
@@ -296,7 +421,8 @@ function SatisfactionLinkModal({
       {link && (
         <div>
           <p className="mb-3 text-xs leading-relaxed text-ink-muted">
-            Envie este link para o paciente pelo canal que preferir (WhatsApp, SMS). Ele é de uso único e expira em{" "}
+            Envie este link para o paciente pelo canal que preferir (WhatsApp,
+            SMS). Ele é de uso único e expira em{" "}
             {formatDateTime(link.expires_at)}.
           </p>
           <div className="mb-4 flex items-center gap-2">
@@ -306,7 +432,13 @@ function SatisfactionLinkModal({
               onFocus={(e) => e.target.select()}
               className="w-full rounded-md border border-border-default bg-canvas-raised px-3 py-2 text-xs text-ink"
             />
-            <Button type="button" variant="secondary" size="xs" onClick={handleCopy} className="flex shrink-0 items-center gap-1">
+            <Button
+              type="button"
+              variant="secondary"
+              size="xs"
+              onClick={handleCopy}
+              className="flex shrink-0 items-center gap-1"
+            >
               <Copy size={12} />
               Copiar
             </Button>
@@ -325,13 +457,17 @@ function SatisfactionLinkModal({
 export function AppointmentsPage() {
   const [selectedPatientId, setSelectedPatientId] = useState("");
   const [isEditPatientModalOpen, setIsEditPatientModalOpen] = useState(false);
-  const [registeringAppointment, setRegisteringAppointment] = useState<Appointment | null>(null);
-  const [satisfactionLink, setSatisfactionLink] = useState<SatisfactionLinkResponse | null>(null);
+  const [registeringAppointment, setRegisteringAppointment] =
+    useState<Appointment | null>(null);
+  const [satisfactionLink, setSatisfactionLink] =
+    useState<SatisfactionLinkResponse | null>(null);
   const { showError: showSatisfactionLinkError } = useToast();
 
   const satisfactionLinkMutation = useMutation({
     mutationFn: (appointmentId: string) =>
-      apiClient.post<SatisfactionLinkResponse>(`/api/v1/appointments/${appointmentId}/satisfaction-link`),
+      apiClient.post<SatisfactionLinkResponse>(
+        `/api/v1/appointments/${appointmentId}/satisfaction-link`,
+      ),
     onSuccess: (data) => setSatisfactionLink(data),
     onError: (err) => showSatisfactionLinkError(getApiErrorMessage(err)),
   });
@@ -345,7 +481,10 @@ export function AppointmentsPage() {
   // virar um combobox com busca no servidor antes do GA (ver auditoria).
   const { data: patientsPage, isLoading: patientsLoading } = useQuery({
     queryKey: ["patients", "for-appointment-selector"],
-    queryFn: () => apiClient.get<PaginatedResponse<Patient>>("/api/v1/patients?limit=200&offset=0"),
+    queryFn: () =>
+      apiClient.get<PaginatedResponse<Patient>>(
+        "/api/v1/patients?limit=200&offset=0",
+      ),
   });
   const patients = patientsPage?.items;
 
@@ -355,7 +494,10 @@ export function AppointmentsPage() {
     error: appointmentsError,
   } = useQuery({
     queryKey: ["appointments", selectedPatientId],
-    queryFn: () => apiClient.get<Appointment[]>(`/api/v1/appointments/by-patient/${selectedPatientId}`),
+    queryFn: () =>
+      apiClient.get<Appointment[]>(
+        `/api/v1/appointments/by-patient/${selectedPatientId}`,
+      ),
     enabled: !!selectedPatientId, // só busca depois que um paciente foi escolhido
   });
 
@@ -402,11 +544,14 @@ export function AppointmentsPage() {
           o paciente é de alto valor — antes o aviso só existia dentro do
           antigo "Nova consulta", que saiu (a agenda chega pela importação). */}
       {(() => {
-        const selected = (patients ?? []).find((p) => p.id === selectedPatientId);
+        const selected = (patients ?? []).find(
+          (p) => p.id === selectedPatientId,
+        );
         return selected?.is_vip ? (
           <p className="-mt-2 flex items-center gap-1.5 rounded-md border border-tier1/25 bg-tier1-bg px-3 py-2 text-xs text-ink">
             <Crown aria-hidden size={13} className="text-tier1" />
-            Paciente de alto valor ({selected.vip_reasons.join(", ")}) — capricha no atendimento.
+            Paciente de alto valor ({selected.vip_reasons.join(", ")}) —
+            capricha no atendimento.
           </p>
         ) : null;
       })()}
@@ -420,86 +565,123 @@ export function AppointmentsPage() {
               : "none"
         }
       >
-        {!selectedPatientId && <EmptyState icon={<UserRound size={17} strokeWidth={1.5} />} message="Selecione um paciente acima para ver as consultas dele." />}
-        {selectedPatientId && appointmentsLoading && <LoadingState />}
-        {selectedPatientId && appointmentsError && <ErrorState message={getApiErrorMessage(appointmentsError)} />}
-        {selectedPatientId && !appointmentsLoading && (appointments ?? []).length === 0 && (
-          <EmptyState icon={<CalendarCheck size={17} strokeWidth={1.5} />} message="Este paciente ainda não tem consultas registradas." />
+        {!selectedPatientId && (
+          <EmptyState
+            icon={<UserRound size={17} strokeWidth={1.5} />}
+            message="Selecione um paciente acima para ver as consultas dele."
+          />
         )}
-        {selectedPatientId && !appointmentsLoading && (appointments ?? []).length > 0 && (
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-border-hairline text-2xs uppercase tracking-wide text-ink-faint">
-                <th className="px-4 py-2.5 font-medium">Data</th>
-                <th className="px-4 py-2.5 font-medium">Status</th>
-                <th className="px-4 py-2.5 font-medium">Procedimento</th>
-                <th className="px-4 py-2.5 font-medium">CID</th>
-                <th className="px-4 py-2.5 font-medium">Risco de falta</th>
-                <th className="px-4 py-2.5 font-medium">Satisfação</th>
-                <th className="px-4 py-2.5 font-medium">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(appointments ?? [])
-                .slice()
-                .sort((a, b) => new Date(b.scheduled_at).getTime() - new Date(a.scheduled_at).getTime())
-                .map((a) => (
-                  <tr key={a.id} className="border-b border-border-hairline last:border-0 transition-colors hover:bg-canvas-raised/60">
-                    <td className="tabular px-4 py-2.5 font-mono text-ink">{formatDateTime(a.scheduled_at)}</td>
-                    <td className="px-4 py-2.5 text-ink-muted">{STATUS_LABELS[a.status] ?? a.status}</td>
-                    <td className="px-4 py-2.5 text-ink-muted">{a.procedure_code ?? "—"}</td>
-                    <td className="px-4 py-2.5 text-ink-muted">{a.cid_code ?? "—"}</td>
-                    <td className="px-4 py-2.5">
-                      <NoShowBadge level={a.no_show_risk_level} />
-                    </td>
-                    <td className="px-4 py-2.5 text-ink-muted">
-                      {a.visit_satisfaction_score !== null ? (
-                        <span className="inline-flex items-center gap-1">
-                          <Star size={12} className="fill-pending text-pending" />
-                          {a.visit_satisfaction_score}/5
-                        </span>
-                      ) : (
-                        "—"
-                      )}
-                    </td>
-                    <td className="px-4 py-2.5">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="xs"
-                          className="flex items-center gap-1.5"
-                          onClick={() => setRegisteringAppointment(a)}
-                        >
-                          <Pencil size={12} />
-                          Registrar atendimento
-                        </Button>
-                        {a.status === "completed" && a.visit_satisfaction_score === null && (
+        {selectedPatientId && appointmentsLoading && <LoadingState />}
+        {selectedPatientId && appointmentsError && (
+          <ErrorState message={getApiErrorMessage(appointmentsError)} />
+        )}
+        {selectedPatientId &&
+          !appointmentsLoading &&
+          (appointments ?? []).length === 0 && (
+            <EmptyState
+              icon={<CalendarCheck size={17} strokeWidth={1.5} />}
+              message="Este paciente ainda não tem consultas registradas."
+            />
+          )}
+        {selectedPatientId &&
+          !appointmentsLoading &&
+          (appointments ?? []).length > 0 && (
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-border-hairline text-2xs uppercase tracking-wide text-ink-faint">
+                  <th className="px-4 py-2.5 font-medium">Data</th>
+                  <th className="px-4 py-2.5 font-medium">Status</th>
+                  <th className="px-4 py-2.5 font-medium">Procedimento</th>
+                  <th className="px-4 py-2.5 font-medium">CID</th>
+                  <th className="px-4 py-2.5 font-medium">Risco de falta</th>
+                  <th className="px-4 py-2.5 font-medium">Satisfação</th>
+                  <th className="px-4 py-2.5 font-medium">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(appointments ?? [])
+                  .slice()
+                  .sort(
+                    (a, b) =>
+                      new Date(b.scheduled_at).getTime() -
+                      new Date(a.scheduled_at).getTime(),
+                  )
+                  .map((a) => (
+                    <tr
+                      key={a.id}
+                      className="border-b border-border-hairline last:border-0 transition-colors hover:bg-canvas-raised/60"
+                    >
+                      <td className="tabular px-4 py-2.5 font-mono text-ink">
+                        {formatDateTime(a.scheduled_at)}
+                      </td>
+                      <td className="px-4 py-2.5 text-ink-muted">
+                        {STATUS_LABELS[a.status] ?? a.status}
+                      </td>
+                      <td className="px-4 py-2.5 text-ink-muted">
+                        {a.procedure_code ?? "—"}
+                      </td>
+                      <td className="px-4 py-2.5 text-ink-muted">
+                        {a.cid_code ?? "—"}
+                      </td>
+                      <td className="px-4 py-2.5">
+                        <NoShowBadge level={a.no_show_risk_level} />
+                      </td>
+                      <td className="px-4 py-2.5 text-ink-muted">
+                        {a.visit_satisfaction_score !== null ? (
+                          <span className="inline-flex items-center gap-1">
+                            <Star
+                              size={12}
+                              className="fill-pending text-pending"
+                            />
+                            {a.visit_satisfaction_score}/5
+                          </span>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                      <td className="px-4 py-2.5">
+                        <div className="flex flex-wrap items-center gap-2">
                           <Button
                             type="button"
                             variant="ghost"
                             size="xs"
                             className="flex items-center gap-1.5"
-                            disabled={satisfactionLinkMutation.isPending}
-                            onClick={() => satisfactionLinkMutation.mutate(a.id)}
+                            onClick={() => setRegisteringAppointment(a)}
                           >
-                            <Star size={12} />
-                            Link de avaliação
+                            <Pencil size={12} />
+                            Registrar atendimento
                           </Button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-            </tbody>
-          </table>
-        )}
+                          {a.status === "completed" &&
+                            a.visit_satisfaction_score === null && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="xs"
+                                className="flex items-center gap-1.5"
+                                disabled={satisfactionLinkMutation.isPending}
+                                onClick={() =>
+                                  satisfactionLinkMutation.mutate(a.id)
+                                }
+                              >
+                                <Star size={12} />
+                                Link de avaliação
+                              </Button>
+                            )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          )}
       </Panel>
 
       <EditPatientContactModal
         isOpen={isEditPatientModalOpen}
         onClose={() => setIsEditPatientModalOpen(false)}
-        patient={(patients ?? []).find((p) => p.id === selectedPatientId) ?? null}
+        patient={
+          (patients ?? []).find((p) => p.id === selectedPatientId) ?? null
+        }
         patients={patients ?? []}
       />
 
@@ -509,7 +691,10 @@ export function AppointmentsPage() {
         appointment={registeringAppointment}
       />
 
-      <SatisfactionLinkModal link={satisfactionLink} onClose={() => setSatisfactionLink(null)} />
+      <SatisfactionLinkModal
+        link={satisfactionLink}
+        onClose={() => setSatisfactionLink(null)}
+      />
     </div>
   );
 }

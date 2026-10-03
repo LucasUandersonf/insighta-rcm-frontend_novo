@@ -27,8 +27,13 @@ export function clearStoredPlatformToken(): void {
   localStorage.removeItem(PLATFORM_TOKEN_STORAGE_KEY);
 }
 
-async function platformRequest<T>(path: string, options: { method?: "GET" | "POST"; body?: unknown; auth?: boolean } = {}): Promise<T> {
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
+async function platformRequest<T>(
+  path: string,
+  options: { method?: "GET" | "POST"; body?: unknown; auth?: boolean } = {},
+): Promise<T> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
   if (options.auth) {
     const token = getStoredPlatformToken();
     if (token) headers["Authorization"] = `Bearer ${token}`;
@@ -45,7 +50,11 @@ async function platformRequest<T>(path: string, options: { method?: "GET" | "POS
     try {
       errorBody = await response.json();
     } catch {
-      errorBody = { error_code: "erro_desconhecido", message: "Não foi possível se conectar ao servidor.", request_id: "-" };
+      errorBody = {
+        error_code: "erro_desconhecido",
+        message: "Não foi possível se conectar ao servidor.",
+        request_id: "-",
+      };
     }
     throw new ApiError(response.status, errorBody);
   }
@@ -54,16 +63,56 @@ async function platformRequest<T>(path: string, options: { method?: "GET" | "POS
   return response.json() as Promise<T>;
 }
 
+export interface PlatformLoginResponse {
+  access_token: string | null;
+  token_type: string;
+  mfa_required: boolean;
+  mfa_setup_required: boolean;
+  mfa_token: string | null;
+  otpauth_uri: string | null;
+  mfa_secret: string | null;
+}
+
 export const platformApiClient = {
   login: (email: string, password: string) =>
-    platformRequest<{ access_token: string; token_type: string }>("/api/v1/platform/login", { method: "POST", body: { email, password } }),
-  getTenantsUsage: () => platformRequest<import("./types").TenantUsageSummary[]>("/api/v1/platform/tenants-usage", { auth: true }),
-  getPilotMetrics: () => platformRequest<import("./types").PilotMetrics[]>("/api/v1/platform/pilot-metrics", { auth: true }),
+    platformRequest<PlatformLoginResponse>("/api/v1/platform/login", {
+      method: "POST",
+      body: { email, password },
+    }),
+  // Segundo passo (MFA obrigatório em produção — auditoria V1, rodada 4, A1).
+  loginMfa: (mfaToken: string, code: string) =>
+    platformRequest<PlatformLoginResponse>("/api/v1/platform/login/mfa", {
+      method: "POST",
+      body: { mfa_token: mfaToken, code },
+    }),
+  logout: () =>
+    platformRequest<void>("/api/v1/platform/logout", {
+      method: "POST",
+      auth: true,
+    }),
+  getTenantsUsage: () =>
+    platformRequest<import("./types").TenantUsageSummary[]>(
+      "/api/v1/platform/tenants-usage",
+      { auth: true },
+    ),
+  getPilotMetrics: () =>
+    platformRequest<import("./types").PilotMetrics[]>(
+      "/api/v1/platform/pilot-metrics",
+      { auth: true },
+    ),
   // Disparo manual dos alertas proativos (ver POST /platform/alerts/run
   // no backend) — útil para checar agora em vez de esperar o agendador
   // externo (mesmo espírito do botão "Enviar agora" do relatório
   // semanal em ReportRecipientsPage.tsx).
-  runAlerts: () => platformRequest<import("./types").PlatformAlertRunResult>("/api/v1/platform/alerts/run", { method: "POST", auth: true }),
+  runAlerts: () =>
+    platformRequest<import("./types").PlatformAlertRunResult>(
+      "/api/v1/platform/alerts/run",
+      { method: "POST", auth: true },
+    ),
   // "Histórico de quem fez o quê" (ver GET /platform/audit-log no backend).
-  getAuditLog: () => platformRequest<import("./types").PlatformAuditLogEntry[]>("/api/v1/platform/audit-log", { auth: true }),
+  getAuditLog: () =>
+    platformRequest<import("./types").PlatformAuditLogEntry[]>(
+      "/api/v1/platform/audit-log",
+      { auth: true },
+    ),
 };
