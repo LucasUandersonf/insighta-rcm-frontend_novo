@@ -19,6 +19,7 @@ import { Modal } from "@/components/ui/Modal";
 import { TextField, SelectField } from "@/components/ui/FormField";
 import { NoShowBadge } from "@/components/ui/NoShowBadge";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { ConfirmationDeclined, withConfirmation } from "@/lib/confirmable";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useToast } from "@/context/ToastContext";
@@ -99,9 +100,16 @@ function EditPatientContactModal({
   const [consent, setConsent] = useState<"" | "true" | "false">("");
   const [preferredWindow, setPreferredWindow] = useState("");
   const [zipCode, setZipCode] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [cpf, setCpf] = useState("");
+  const [birthDate, setBirthDate] = useState("");
+  const anonymized = Boolean(patient?.anonymized_at);
 
   useEffect(() => {
     if (!patient) return;
+    setFullName(patient.full_name);
+    setCpf(patient.cpf ?? "");
+    setBirthDate(patient.birth_date ?? "");
     setReferredBy(patient.referred_by_patient_id ?? "");
     setConsent(
       patient.communication_consent === null
@@ -115,37 +123,81 @@ function EditPatientContactModal({
   }, [patient]);
 
   const mutation = useMutation({
+    // Rodada 5: CPF de quem pediu eliminação pede confirmação (409).
     mutationFn: (payload: PatientUpdateRequest) =>
-      apiClient.patch<Patient>(`/api/v1/patients/${patient!.id}`, payload),
+      withConfirmation((confirmation) =>
+        apiClient.patch<Patient>(`/api/v1/patients/${patient!.id}`, {
+          ...payload,
+          ...confirmation,
+        }),
+      ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["patients"] });
       showSuccess("Dados do paciente atualizados.");
       onClose();
     },
-    onError: (err) => showError(getApiErrorMessage(err)),
+    onError: (err) => {
+      if (!(err instanceof ConfirmationDeclined)) showError(getApiErrorMessage(err));
+    },
   });
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!patient) return;
-    mutation.mutate({
+    const payload: PatientUpdateRequest = {
       referred_by_patient_id: referredBy || null,
       communication_consent: consent === "" ? null : consent === "true",
       preferred_time_window: (preferredWindow ||
         null) as PreferredTimeWindow | null,
       zip_code: zipCode || null,
-    });
+    };
+    // Rodada 5 (A3): nome, CPF e nascimento só vão quando mudaram.
+    if (fullName.trim() && fullName.trim() !== patient.full_name) payload.full_name = fullName.trim();
+    if (cpf.replace(/\D/g, "") !== (patient.cpf ?? "")) payload.cpf = cpf.trim() || null;
+    if (birthDate && birthDate !== (patient.birth_date ?? "")) payload.birth_date = birthDate;
+    mutation.mutate(payload);
   }
 
   if (!patient) return null;
 
   return (
     <Modal
-      title={`Dados de contato — ${patient.full_name}`}
+      title={`Cadastro — ${patient.full_name}`}
       isOpen={isOpen}
       onClose={onClose}
     >
       <form onSubmit={handleSubmit}>
+        {anonymized ? (
+          <p className="mb-3 text-sm text-ink-muted">
+            Paciente anonimizado a pedido do titular: o cadastro não pode mais ser editado.
+          </p>
+        ) : (
+          <>
+            <TextField
+              label="Nome completo"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              required
+              minLength={2}
+              maxLength={200}
+            />
+            <div className="grid grid-cols-2 gap-3">
+              <TextField
+                label="CPF (opcional)"
+                value={cpf}
+                onChange={(e) => setCpf(e.target.value)}
+                placeholder="000.000.000-00"
+                inputMode="numeric"
+              />
+              <TextField
+                label="Data de nascimento (opcional)"
+                type="date"
+                value={birthDate}
+                onChange={(e) => setBirthDate(e.target.value)}
+              />
+            </div>
+          </>
+        )}
         {patients.length > 0 && (
           <SelectField
             label="Quem indicou (opcional)"
@@ -197,7 +249,7 @@ function EditPatientContactModal({
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancelar
           </Button>
-          <Button type="submit" disabled={mutation.isPending}>
+          <Button type="submit" disabled={mutation.isPending || anonymized}>
             {mutation.isPending ? "Salvando..." : "Salvar"}
           </Button>
         </div>
@@ -259,10 +311,13 @@ function RegisterVisitModal({
   }, [appointment]);
 
   const mutation = useMutation({
+    // Rodada 5 (M3): horário já ocupado pede confirmação de encaixe (409).
     mutationFn: (payload: AppointmentUpdateRequest) =>
-      apiClient.patch<Appointment>(
-        `/api/v1/appointments/${appointment!.id}`,
-        payload,
+      withConfirmation((confirmation) =>
+        apiClient.patch<Appointment>(
+          `/api/v1/appointments/${appointment!.id}`,
+          { ...payload, ...confirmation },
+        ),
       ),
     onSuccess: () => {
       queryClient.invalidateQueries({
@@ -271,7 +326,9 @@ function RegisterVisitModal({
       showSuccess("Atendimento atualizado.");
       onClose();
     },
-    onError: (err) => showError(getApiErrorMessage(err)),
+    onError: (err) => {
+      if (!(err instanceof ConfirmationDeclined)) showError(getApiErrorMessage(err));
+    },
   });
 
   // Excluir lançamento manual por engano (sem cobrança) — rodada 4, A6.

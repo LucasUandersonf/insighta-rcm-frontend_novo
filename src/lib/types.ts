@@ -1769,6 +1769,8 @@ export interface ApiErrorBody {
   request_id: string;
   detail?: unknown;
   campos?: { campo: string; problema: string }[];
+  /** 409 que se resolve confirmando (rodada 5): reenviar com este campo = true. */
+  confirm_field?: string;
 }
 
 // --- Pacientes (app/schemas/patient.py) ---
@@ -1779,6 +1781,7 @@ export interface Patient {
   full_name: string;
   cpf: string | null;
   birth_date: string | null;
+  anonymized_at?: string | null;
   acquisition_source: string | null;
   created_at: string;
   // "Mapa de Dados Insighta" — Domínio Paciente (Onda 1): o paciente
@@ -1821,6 +1824,11 @@ export interface PatientCreateRequest {
 // PATCH /patients/{id} — completa depois os campos relacionais que
 // raramente são conhecidos no primeiro cadastro.
 export interface PatientUpdateRequest {
+  // Rodada 5 (A3): correção de cadastro (LGPD art. 18, III).
+  full_name?: string;
+  cpf?: string | null;
+  birth_date?: string | null;
+  confirm_returning_patient?: boolean;
   referred_by_patient_id?: string | null;
   communication_consent?: boolean | null;
   preferred_time_window?: PreferredTimeWindow | null;
@@ -2012,6 +2020,7 @@ export interface AppointmentCreateRequest {
 // — fecha o ciclo Agendamento -> Atendimento: status/procedimento/CID e o
 // funil de upsell só são conhecidos DEPOIS da consulta.
 export interface AppointmentUpdateRequest {
+  allow_overlap?: boolean;
   status?: string | null;
   procedure_code?: string | null;
   cid_code?: string | null;
