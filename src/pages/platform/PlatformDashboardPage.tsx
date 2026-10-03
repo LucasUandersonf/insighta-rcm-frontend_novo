@@ -2,14 +2,29 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { ShieldCheck, LogOut, BellRing } from "lucide-react";
-import { Panel, EmptyState, LoadingState, ErrorState } from "@/components/ui/Panel";
+import {
+  Panel,
+  EmptyState,
+  LoadingState,
+  ErrorState,
+} from "@/components/ui/Panel";
 import { Button } from "@/components/ui/Button";
 import { Badge, type BadgeTone } from "@/components/ui/Badge";
 import { ApiError } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
-import { clearStoredPlatformToken, platformApiClient } from "@/lib/platform-api-client";
+import {
+  clearStoredPlatformToken,
+  platformApiClient,
+} from "@/lib/platform-api-client";
 import { useToast } from "@/context/ToastContext";
-import type { FeatureUsageKey, PilotMetrics, PlatformAlertRunResult, PlatformAuditLogEntry, TenantEngagementStatus, TenantUsageSummary } from "@/lib/types";
+import type {
+  FeatureUsageKey,
+  PilotMetrics,
+  PlatformAlertRunResult,
+  PlatformAuditLogEntry,
+  TenantEngagementStatus,
+  TenantUsageSummary,
+} from "@/lib/types";
 
 const ACTION_LABEL: Record<string, string> = {
   login: "Entrou no painel",
@@ -17,17 +32,33 @@ const ACTION_LABEL: Record<string, string> = {
 };
 
 function formatDateTime(iso: string): string {
-  return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(iso));
+  return new Intl.DateTimeFormat("pt-BR", {
+    dateStyle: "short",
+    timeStyle: "short",
+  }).format(new Date(iso));
 }
 
 function describeAlertRun(result: PlatformAlertRunResult): string {
-  if (result.new_alerts.length === 0 && result.reminders_sent.length === 0 && result.recovered.length === 0) {
+  if (
+    result.new_alerts.length === 0 &&
+    result.reminders_sent.length === 0 &&
+    result.recovered.length === 0
+  ) {
     return "Nenhuma mudança de status desde a última checagem.";
   }
   const parts: string[] = [];
-  if (result.new_alerts.length > 0) parts.push(`${result.new_alerts.length} nova(s) em risco: ${result.new_alerts.join(", ")}`);
-  if (result.reminders_sent.length > 0) parts.push(`${result.reminders_sent.length} lembrete(s) reenviado(s): ${result.reminders_sent.join(", ")}`);
-  if (result.recovered.length > 0) parts.push(`${result.recovered.length} recuperada(s): ${result.recovered.join(", ")}`);
+  if (result.new_alerts.length > 0)
+    parts.push(
+      `${result.new_alerts.length} nova(s) em risco: ${result.new_alerts.join(", ")}`,
+    );
+  if (result.reminders_sent.length > 0)
+    parts.push(
+      `${result.reminders_sent.length} lembrete(s) reenviado(s): ${result.reminders_sent.join(", ")}`,
+    );
+  if (result.recovered.length > 0)
+    parts.push(
+      `${result.recovered.length} recuperada(s): ${result.recovered.join(", ")}`,
+    );
   return parts.join(" · ");
 }
 
@@ -49,7 +80,9 @@ const STATUS_TONE: Record<TenantEngagementStatus, BadgeTone> = {
 
 function formatDate(iso: string | null): string {
   if (!iso) return "nunca";
-  return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short" }).format(new Date(iso));
+  return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short" }).format(
+    new Date(iso),
+  );
 }
 
 function formatDaysAgo(days: number | null): string {
@@ -74,29 +107,50 @@ const FEATURE_KEYS = Object.keys(FEATURE_LABEL) as FeatureUsageKey[];
 /** "Mais usa" de uma clínica: os 1-2 recursos com mais mutação nos
  * últimos 30 dias, ou "—" quando não há nenhuma (clínica nova/inativa). */
 function topFeatureSummary(usage: Record<FeatureUsageKey, number>): string {
-  const entries = FEATURE_KEYS.map((key) => [key, usage[key] ?? 0] as const).filter(([, count]) => count > 0);
+  const entries = FEATURE_KEYS.map(
+    (key) => [key, usage[key] ?? 0] as const,
+  ).filter(([, count]) => count > 0);
   entries.sort((a, b) => b[1] - a[1]);
   if (entries.length === 0) return "—";
-  return entries.slice(0, 2).map(([key, count]) => `${FEATURE_LABEL[key]} (${count})`).join(", ");
+  return entries
+    .slice(0, 2)
+    .map(([key, count]) => `${FEATURE_LABEL[key]} (${count})`)
+    .join(", ");
 }
 
 /** Soma feature_usage_last_30d de TODAS as clínicas — o ranking "o que a
  * base inteira mais usa", o sinal mais direto para priorização de
  * backlog (ver Laudo de Vistoria Técnica, parecer PM/PO). */
-function aggregateFeatureUsage(rows: TenantUsageSummary[]): (readonly [FeatureUsageKey, number])[] {
-  const totals = Object.fromEntries(FEATURE_KEYS.map((key) => [key, 0])) as Record<FeatureUsageKey, number>;
+function aggregateFeatureUsage(
+  rows: TenantUsageSummary[],
+): (readonly [FeatureUsageKey, number])[] {
+  const totals = Object.fromEntries(
+    FEATURE_KEYS.map((key) => [key, 0]),
+  ) as Record<FeatureUsageKey, number>;
   for (const row of rows) {
-    for (const key of FEATURE_KEYS) totals[key] += row.feature_usage_last_30d[key] ?? 0;
+    for (const key of FEATURE_KEYS)
+      totals[key] += row.feature_usage_last_30d[key] ?? 0;
   }
-  return FEATURE_KEYS.map((key) => [key, totals[key]] as const).sort((a, b) => b[1] - a[1]);
+  return FEATURE_KEYS.map((key) => [key, totals[key]] as const).sort(
+    (a, b) => b[1] - a[1],
+  );
 }
 
-const BRL = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+const BRL = new Intl.NumberFormat("pt-BR", {
+  style: "currency",
+  currency: "BRL",
+  maximumFractionDigits: 0,
+});
 
 /** Um critério do piloto: ok, não atingido, ou ainda sem base (null). */
 function Criterion({ ok, label }: { ok: boolean | null; label: string }) {
   if (ok === null) return <span className="text-ink-faint">—</span>;
-  return <Badge tone={ok ? "revenue" : "neutral"}>{ok ? "sim" : "não"}<span className="sr-only"> — {label}</span></Badge>;
+  return (
+    <Badge tone={ok ? "revenue" : "neutral"}>
+      {ok ? "sim" : "não"}
+      <span className="sr-only"> — {label}</span>
+    </Badge>
+  );
 }
 
 /**
@@ -131,19 +185,50 @@ function PilotMetricsPanel({ rows }: { rows: PilotMetrics[] }) {
           </thead>
           <tbody>
             {rows.map((r) => (
-              <tr key={r.tenant_id} className="border-b border-border-hairline last:border-0">
+              <tr
+                key={r.tenant_id}
+                className="border-b border-border-hairline last:border-0"
+              >
                 <td className="px-4 py-2.5 text-ink">{r.trade_name}</td>
-                <td className="tabular px-4 py-2.5 text-ink-muted">{r.days_to_first_upload ?? "sem upload"}</td>
-                <td className="tabular px-4 py-2.5 text-ink-muted">{r.upload_days_total}</td>
-                <td className="tabular px-4 py-2.5 text-ink-muted">{r.active_weeks_last_4}</td>
-                <td className="tabular px-4 py-2.5 text-ink-muted">{BRL.format(r.value_found)}</td>
-                <td className="tabular px-4 py-2.5 text-ink-muted">{BRL.format(r.value_recovered)}</td>
-                <td className="px-4 py-2.5"><Criterion ok={r.criterio_dados_em_7_dias} label="dados em 7 dias" /></td>
-                <td className="px-4 py-2.5"><Criterion ok={r.criterio_autonomia} label="autonomia" /></td>
-                <td className="px-4 py-2.5"><Criterion ok={r.criterio_uso_semanal} label="uso semanal" /></td>
-                <td className="px-4 py-2.5"><Criterion ok={r.criterio_valor_3x_mensalidade} label="valor 3x" /></td>
-                <td className="px-4 py-2.5"><Criterion ok={r.criterio_acao_tomada} label="ação tomada" /></td>
-                <td className="tabular px-4 py-2.5 font-medium text-ink">{r.criterios_atingidos} de 5</td>
+                <td className="tabular px-4 py-2.5 text-ink-muted">
+                  {r.days_to_first_upload ?? "sem upload"}
+                </td>
+                <td className="tabular px-4 py-2.5 text-ink-muted">
+                  {r.upload_days_total}
+                </td>
+                <td className="tabular px-4 py-2.5 text-ink-muted">
+                  {r.active_weeks_last_4}
+                </td>
+                <td className="tabular px-4 py-2.5 text-ink-muted">
+                  {BRL.format(r.value_found)}
+                </td>
+                <td className="tabular px-4 py-2.5 text-ink-muted">
+                  {BRL.format(r.value_recovered)}
+                </td>
+                <td className="px-4 py-2.5">
+                  <Criterion
+                    ok={r.criterio_dados_em_7_dias}
+                    label="dados em 7 dias"
+                  />
+                </td>
+                <td className="px-4 py-2.5">
+                  <Criterion ok={r.criterio_autonomia} label="autonomia" />
+                </td>
+                <td className="px-4 py-2.5">
+                  <Criterion ok={r.criterio_uso_semanal} label="uso semanal" />
+                </td>
+                <td className="px-4 py-2.5">
+                  <Criterion
+                    ok={r.criterio_valor_3x_mensalidade}
+                    label="valor 3x"
+                  />
+                </td>
+                <td className="px-4 py-2.5">
+                  <Criterion ok={r.criterio_acao_tomada} label="ação tomada" />
+                </td>
+                <td className="tabular px-4 py-2.5 font-medium text-ink">
+                  {r.criterios_atingidos} de 5
+                </td>
               </tr>
             ))}
           </tbody>
@@ -200,15 +285,22 @@ export function PlatformDashboardPage() {
   }, [error, navigate]);
 
   function handleLogout() {
+    // Encerra a sessão no servidor (o token deixa de valer na hora), não só no navegador.
+    void platformApiClient.logout().catch(() => undefined);
     clearStoredPlatformToken();
     navigate("/plataforma/login", { replace: true });
   }
 
   const rows: TenantUsageSummary[] = data ?? [];
-  const atRiskCount = rows.filter((r) => r.engagement_status === "risco").length;
+  const atRiskCount = rows.filter(
+    (r) => r.engagement_status === "risco",
+  ).length;
   const auditRows: PlatformAuditLogEntry[] = auditLog ?? [];
   const featureRanking = aggregateFeatureUsage(rows);
-  const maxFeatureCount = Math.max(1, ...featureRanking.map(([, count]) => count));
+  const maxFeatureCount = Math.max(
+    1,
+    ...featureRanking.map(([, count]) => count),
+  );
 
   return (
     <div className="min-h-screen bg-canvas px-6 py-8">
@@ -216,9 +308,16 @@ export function PlatformDashboardPage() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <ShieldCheck aria-hidden size={18} className="text-accent" />
-            <h1 className="text-base font-semibold text-ink">Customer Success — uso por clínica</h1>
+            <h1 className="text-base font-semibold text-ink">
+              Customer Success — uso por clínica
+            </h1>
           </div>
-          <Button variant="ghost" size="sm" onClick={handleLogout} className="flex items-center gap-1.5">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleLogout}
+            className="flex items-center gap-1.5"
+          >
             <LogOut size={13} />
             Sair
           </Button>
@@ -226,7 +325,9 @@ export function PlatformDashboardPage() {
 
         {atRiskCount > 0 && (
           <div className="rounded-md border border-denied/25 bg-denied-bg px-4 py-2.5 text-sm text-denied">
-            {atRiskCount} {atRiskCount === 1 ? "clínica está" : "clínicas estão"} sem nenhuma atividade nos últimos 30 dias.
+            {atRiskCount}{" "}
+            {atRiskCount === 1 ? "clínica está" : "clínicas estão"} sem nenhuma
+            atividade nos últimos 30 dias.
           </div>
         )}
 
@@ -238,14 +339,20 @@ export function PlatformDashboardPage() {
             <ul className="space-y-2.5">
               {featureRanking.map(([key, count]) => (
                 <li key={key} className="flex items-center gap-3">
-                  <span className="w-32 shrink-0 text-xs text-ink-muted">{FEATURE_LABEL[key]}</span>
+                  <span className="w-32 shrink-0 text-xs text-ink-muted">
+                    {FEATURE_LABEL[key]}
+                  </span>
                   <span className="h-2 flex-1 overflow-hidden rounded-full bg-canvas-inset">
                     <span
                       className="block h-full rounded-full bg-accent"
-                      style={{ width: `${Math.max(2, (count / maxFeatureCount) * 100)}%` }}
+                      style={{
+                        width: `${Math.max(2, (count / maxFeatureCount) * 100)}%`,
+                      }}
                     />
                   </span>
-                  <span className="tabular w-10 shrink-0 text-right text-xs font-medium text-ink">{count}</span>
+                  <span className="tabular w-10 shrink-0 text-right text-xs font-medium text-ink">
+                    {count}
+                  </span>
                 </li>
               ))}
             </ul>
@@ -264,13 +371,19 @@ export function PlatformDashboardPage() {
               className="flex items-center gap-1.5"
             >
               <BellRing size={13} />
-              {runAlertsMutation.isPending ? "Verificando..." : "Verificar alertas agora"}
+              {runAlertsMutation.isPending
+                ? "Verificando..."
+                : "Verificar alertas agora"}
             </Button>
           }
         >
           {isLoading && <LoadingState />}
-          {error && !(error instanceof ApiError && error.status === 401) && <ErrorState message={getApiErrorMessage(error)} />}
-          {!isLoading && !error && rows.length === 0 && <EmptyState message="Nenhuma clínica cadastrada ainda." />}
+          {error && !(error instanceof ApiError && error.status === 401) && (
+            <ErrorState message={getApiErrorMessage(error)} />
+          )}
+          {!isLoading && !error && rows.length === 0 && (
+            <EmptyState message="Nenhuma clínica cadastrada ainda." />
+          )}
           {!isLoading && rows.length > 0 && (
             <div className="overflow-x-auto" tabIndex={0}>
               <table className="w-full text-left text-sm">
@@ -280,7 +393,9 @@ export function PlatformDashboardPage() {
                     <th className="px-4 py-2.5 font-medium">Plano</th>
                     <th className="px-4 py-2.5 font-medium">Cliente desde</th>
                     <th className="px-4 py-2.5 font-medium">Usuários ativos</th>
-                    <th className="px-4 py-2.5 font-medium">Última atividade</th>
+                    <th className="px-4 py-2.5 font-medium">
+                      Última atividade
+                    </th>
                     <th className="px-4 py-2.5 font-medium">Eventos (30d)</th>
                     <th className="px-4 py-2.5 font-medium">Mais usa (30d)</th>
                     <th className="px-4 py-2.5 font-medium">Pacientes</th>
@@ -289,17 +404,36 @@ export function PlatformDashboardPage() {
                 </thead>
                 <tbody>
                   {rows.map((r) => (
-                    <tr key={r.tenant_id} className="border-b border-border-hairline last:border-0 transition-colors hover:bg-canvas-raised/60">
+                    <tr
+                      key={r.tenant_id}
+                      className="border-b border-border-hairline last:border-0 transition-colors hover:bg-canvas-raised/60"
+                    >
                       <td className="px-4 py-2.5 text-ink">{r.trade_name}</td>
-                      <td className="px-4 py-2.5 text-ink-muted capitalize">{r.plan_tier}</td>
-                      <td className="tabular px-4 py-2.5 font-mono text-ink-muted">{formatDate(r.tenant_created_at)}</td>
-                      <td className="tabular px-4 py-2.5 text-ink-muted">{r.active_users}</td>
-                      <td className="px-4 py-2.5 text-ink-muted">{formatDaysAgo(r.days_since_last_activity)}</td>
-                      <td className="tabular px-4 py-2.5 text-ink-muted">{r.events_last_30d}</td>
-                      <td className="px-4 py-2.5 text-ink-muted">{topFeatureSummary(r.feature_usage_last_30d)}</td>
-                      <td className="tabular px-4 py-2.5 text-ink-muted">{r.patients_total}</td>
+                      <td className="px-4 py-2.5 text-ink-muted capitalize">
+                        {r.plan_tier}
+                      </td>
+                      <td className="tabular px-4 py-2.5 font-mono text-ink-muted">
+                        {formatDate(r.tenant_created_at)}
+                      </td>
+                      <td className="tabular px-4 py-2.5 text-ink-muted">
+                        {r.active_users}
+                      </td>
+                      <td className="px-4 py-2.5 text-ink-muted">
+                        {formatDaysAgo(r.days_since_last_activity)}
+                      </td>
+                      <td className="tabular px-4 py-2.5 text-ink-muted">
+                        {r.events_last_30d}
+                      </td>
+                      <td className="px-4 py-2.5 text-ink-muted">
+                        {topFeatureSummary(r.feature_usage_last_30d)}
+                      </td>
+                      <td className="tabular px-4 py-2.5 text-ink-muted">
+                        {r.patients_total}
+                      </td>
                       <td className="px-4 py-2.5">
-                        <Badge tone={STATUS_TONE[r.engagement_status]}>{STATUS_LABEL[r.engagement_status]}</Badge>
+                        <Badge tone={STATUS_TONE[r.engagement_status]}>
+                          {STATUS_LABEL[r.engagement_status]}
+                        </Badge>
                       </td>
                     </tr>
                   ))}
@@ -312,7 +446,10 @@ export function PlatformDashboardPage() {
         <PilotMetricsPanel rows={pilotMetrics ?? []} />
 
         {auditRows.length > 0 && (
-          <Panel title="Histórico" subtitle="Quem fez o quê neste painel — login individual, ver core.platform_audit_log.">
+          <Panel
+            title="Histórico"
+            subtitle="Quem fez o quê neste painel — login individual, ver core.platform_audit_log."
+          >
             <div className="overflow-x-auto" tabIndex={0}>
               <table className="w-full text-left text-sm">
                 <thead>
@@ -324,10 +461,19 @@ export function PlatformDashboardPage() {
                 </thead>
                 <tbody>
                   {auditRows.map((entry) => (
-                    <tr key={entry.id} className="border-b border-border-hairline last:border-0">
-                      <td className="px-4 py-2.5 text-ink">{entry.actor_email}</td>
-                      <td className="px-4 py-2.5 text-ink-muted">{ACTION_LABEL[entry.action] ?? entry.action}</td>
-                      <td className="tabular px-4 py-2.5 font-mono text-ink-muted">{formatDateTime(entry.created_at)}</td>
+                    <tr
+                      key={entry.id}
+                      className="border-b border-border-hairline last:border-0"
+                    >
+                      <td className="px-4 py-2.5 text-ink">
+                        {entry.actor_email}
+                      </td>
+                      <td className="px-4 py-2.5 text-ink-muted">
+                        {ACTION_LABEL[entry.action] ?? entry.action}
+                      </td>
+                      <td className="tabular px-4 py-2.5 font-mono text-ink-muted">
+                        {formatDateTime(entry.created_at)}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

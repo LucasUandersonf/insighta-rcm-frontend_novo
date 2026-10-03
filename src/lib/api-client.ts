@@ -10,7 +10,9 @@ import { reportError } from "./monitoring";
 
 // Exportado para src/lib/platform-api-client.ts reaproveitar a mesma
 // URL base sem duplicar a leitura de import.meta.env.
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL as string | undefined;
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL as
+  | string
+  | undefined;
 const TOKEN_STORAGE_KEY = "insighta_access_token";
 // Achado MÉDIO da Auditoria de Prontidão v1 — ver DECISÃO em
 // app/sql/059_refresh_tokens.sql (backend).
@@ -30,7 +32,8 @@ export const isApiConfigured = Boolean(API_BASE_URL);
 /** Refresh token em cookie httpOnly (backend REFRESH_TOKEN_COOKIE_ENABLED).
  * Ligar só com domínio próprio: app e API no mesmo site. Nesse modo o
  * refresh token nunca passa pelo JavaScript nem pelo localStorage. */
-export const REFRESH_COOKIE_MODE = import.meta.env.VITE_REFRESH_TOKEN_COOKIE === "true";
+export const REFRESH_COOKIE_MODE =
+  import.meta.env.VITE_REFRESH_TOKEN_COOKIE === "true";
 
 /**
  * Erro tipado que carrega o envelope de erro do backend
@@ -59,7 +62,11 @@ const DEFAULT_TIMEOUT_MS = 30_000;
 const BLOB_TIMEOUT_MS = 60_000;
 const UPLOAD_TIMEOUT_MS = 5 * 60_000;
 
-async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: number): Promise<Response> {
+async function fetchWithTimeout(
+  url: string,
+  init: RequestInit,
+  timeoutMs: number,
+): Promise<Response> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -68,13 +75,15 @@ async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: numbe
     if (err instanceof DOMException && err.name === "AbortError") {
       throw new ApiError(0, {
         error_code: "tempo_esgotado",
-        message: "O servidor demorou demais para responder. Confira sua conexão e tente de novo.",
+        message:
+          "O servidor demorou demais para responder. Confira sua conexão e tente de novo.",
         request_id: "-",
       });
     }
     throw new ApiError(0, {
       error_code: "sem_conexao",
-      message: "Sem conexão com o servidor. Confira sua internet e tente de novo.",
+      message:
+        "Sem conexão com o servidor. Confira sua internet e tente de novo.",
       request_id: "-",
     });
   } finally {
@@ -100,6 +109,17 @@ export function getStoredRefreshToken(): string | null {
 
 export function storeRefreshToken(token: string): void {
   localStorage.setItem(REFRESH_TOKEN_STORAGE_KEY, token);
+}
+
+/** Tokens novos emitidos pela API fora do login (ex.: trocar a senha
+ * encerra as outras sessões e devolve um par novo para esta). */
+export function applySessionTokens(tokens: {
+  access_token: string;
+  refresh_token?: string | null;
+}): void {
+  storeToken(tokens.access_token);
+  if (tokens.refresh_token && !REFRESH_COOKIE_MODE)
+    storeRefreshToken(tokens.refresh_token);
 }
 
 export function clearStoredRefreshToken(): void {
@@ -135,7 +155,9 @@ async function attemptSilentRefresh(): Promise<boolean> {
       const response = await fetch(`${API_BASE_URL}/api/v1/auth/refresh`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(REFRESH_COOKIE_MODE ? {} : { refresh_token: refreshToken }),
+        body: JSON.stringify(
+          REFRESH_COOKIE_MODE ? {} : { refresh_token: refreshToken },
+        ),
         credentials: REFRESH_COOKIE_MODE ? "include" : "same-origin",
       });
       if (!response.ok) return false;
@@ -168,7 +190,10 @@ interface RequestOptions {
   _isRetryAfterRefresh?: boolean;
 }
 
-async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+async function request<T>(
+  path: string,
+  options: RequestOptions = {},
+): Promise<T> {
   if (!API_BASE_URL) {
     // Não deveria ser alcançável na prática (App.tsx bloqueia a
     // renderização das rotas quando isApiConfigured é false), mas é uma
@@ -181,7 +206,9 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     });
   }
 
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
 
   if (!options.skipAuth) {
     const token = getStoredToken();
@@ -195,9 +222,11 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
       headers,
       body: options.body ? JSON.stringify(options.body) : undefined,
       // Modo cookie: login/cadastro/Google/MFA recebem o cookie do refresh token.
-      ...(REFRESH_COOKIE_MODE && path.startsWith("/api/v1/auth") ? { credentials: "include" as const } : {}),
+      ...(REFRESH_COOKIE_MODE && path.startsWith("/api/v1/auth")
+        ? { credentials: "include" as const }
+        : {}),
     },
-    options.timeoutMs ?? DEFAULT_TIMEOUT_MS
+    options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
   );
 
   if (!response.ok) {
@@ -205,7 +234,11 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     // derrubar a sessão, tenta renovar silenciosamente com o refresh
     // token guardado (ver DECISÃO em attemptSilentRefresh). Só UMA
     // retentativa (via _isRetryAfterRefresh) — nunca um loop.
-    if (response.status === 401 && !options.skipAuth && !options._isRetryAfterRefresh) {
+    if (
+      response.status === 401 &&
+      !options.skipAuth &&
+      !options._isRetryAfterRefresh
+    ) {
       const refreshed = await attemptSilentRefresh();
       if (refreshed) {
         return request<T>(path, { ...options, _isRetryAfterRefresh: true });
@@ -218,7 +251,8 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     } catch {
       errorBody = {
         error_code: "erro_desconhecido",
-        message: "Não foi possível se conectar ao servidor. Tente novamente em instantes.",
+        message:
+          "Não foi possível se conectar ao servidor. Tente novamente em instantes.",
         request_id: "-",
       };
     }
@@ -241,7 +275,10 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     // validação normal do usuário (dado inválido, permissão, etc.) e
     // inundaria o monitoramento com eventos não-acionáveis.
     if (response.status >= 500) {
-      reportError(new ApiError(response.status, errorBody), { path, method: options.method ?? "GET" });
+      reportError(new ApiError(response.status, errorBody), {
+        path,
+        method: options.method ?? "GET",
+      });
     }
 
     throw new ApiError(response.status, errorBody);
@@ -252,11 +289,23 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 }
 
 export const apiClient = {
-  get: <T>(path: string, options?: { skipAuth?: boolean }) => request<T>(path, { method: "GET", skipAuth: options?.skipAuth }),
-  post: <T>(path: string, body?: unknown, options?: { skipAuth?: boolean; timeoutMs?: number }) =>
-    request<T>(path, { method: "POST", body, skipAuth: options?.skipAuth, timeoutMs: options?.timeoutMs }),
-  patch: <T>(path: string, body?: unknown) => request<T>(path, { method: "PATCH", body }),
-  put: <T>(path: string, body?: unknown) => request<T>(path, { method: "PUT", body }),
+  get: <T>(path: string, options?: { skipAuth?: boolean }) =>
+    request<T>(path, { method: "GET", skipAuth: options?.skipAuth }),
+  post: <T>(
+    path: string,
+    body?: unknown,
+    options?: { skipAuth?: boolean; timeoutMs?: number },
+  ) =>
+    request<T>(path, {
+      method: "POST",
+      body,
+      skipAuth: options?.skipAuth,
+      timeoutMs: options?.timeoutMs,
+    }),
+  patch: <T>(path: string, body?: unknown) =>
+    request<T>(path, { method: "PATCH", body }),
+  put: <T>(path: string, body?: unknown) =>
+    request<T>(path, { method: "PUT", body }),
   delete: <T>(path: string) => request<T>(path, { method: "DELETE" }),
   /**
    * GET que devolve um arquivo binário (hoje só o PDF do recurso de
@@ -264,7 +313,12 @@ export const apiClient = {
    * `request()` de propósito: `response.json()` quebraria num corpo que
    * não é JSON. Devolve o Blob pronto para `URL.createObjectURL`.
    */
-  async getBlob(path: string, _isRetryAfterRefresh = false): Promise<Blob> {
+  /** `body`: envia como POST JSON (dado sensível nunca na URL — rodada 4, B3). */
+  async getBlob(
+    path: string,
+    _isRetryAfterRefresh = false,
+    body?: unknown,
+  ): Promise<Blob> {
     if (!API_BASE_URL) {
       throw new ApiError(0, {
         error_code: "configuracao_ausente",
@@ -275,12 +329,28 @@ export const apiClient = {
     const headers: Record<string, string> = {};
     const token = getStoredToken();
     if (token) headers["Authorization"] = `Bearer ${token}`;
+    const init: RequestInit =
+      body === undefined
+        ? { method: "GET", headers }
+        : {
+            method: "POST",
+            headers: { ...headers, "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          };
 
-    const response = await fetchWithTimeout(`${API_BASE_URL}${path}`, { method: "GET", headers }, BLOB_TIMEOUT_MS);
+    const response = await fetchWithTimeout(
+      `${API_BASE_URL}${path}`,
+      init,
+      BLOB_TIMEOUT_MS,
+    );
 
     if (!response.ok) {
-      if (response.status === 401 && !_isRetryAfterRefresh && (await attemptSilentRefresh())) {
-        return apiClient.getBlob(path, true);
+      if (
+        response.status === 401 &&
+        !_isRetryAfterRefresh &&
+        (await attemptSilentRefresh())
+      ) {
+        return apiClient.getBlob(path, true, body);
       }
       let errorBody: ApiErrorBody;
       try {
@@ -288,7 +358,8 @@ export const apiClient = {
       } catch {
         errorBody = {
           error_code: "erro_desconhecido",
-          message: "Não foi possível se conectar ao servidor. Tente novamente em instantes.",
+          message:
+            "Não foi possível se conectar ao servidor. Tente novamente em instantes.",
           request_id: "-",
         };
       }
@@ -296,7 +367,10 @@ export const apiClient = {
         window.dispatchEvent(new CustomEvent("auth:unauthorized"));
       }
       if (response.status >= 500) {
-        reportError(new ApiError(response.status, errorBody), { path, method: "GET (blob)" });
+        reportError(new ApiError(response.status, errorBody), {
+          path,
+          method: "GET (blob)",
+        });
       }
       throw new ApiError(response.status, errorBody);
     }
@@ -309,7 +383,11 @@ export const apiClient = {
    * boundary do multipart sozinho a partir do FormData; um Content-Type
    * fixo aqui quebraria o parse no backend).
    */
-  async upload<T>(path: string, formData: FormData, _isRetryAfterRefresh = false): Promise<T> {
+  async upload<T>(
+    path: string,
+    formData: FormData,
+    _isRetryAfterRefresh = false,
+  ): Promise<T> {
     if (!API_BASE_URL) {
       throw new ApiError(0, {
         error_code: "configuracao_ausente",
@@ -321,10 +399,18 @@ export const apiClient = {
     const token = getStoredToken();
     if (token) headers["Authorization"] = `Bearer ${token}`;
 
-    const response = await fetchWithTimeout(`${API_BASE_URL}${path}`, { method: "POST", headers, body: formData }, UPLOAD_TIMEOUT_MS);
+    const response = await fetchWithTimeout(
+      `${API_BASE_URL}${path}`,
+      { method: "POST", headers, body: formData },
+      UPLOAD_TIMEOUT_MS,
+    );
 
     if (!response.ok) {
-      if (response.status === 401 && !_isRetryAfterRefresh && (await attemptSilentRefresh())) {
+      if (
+        response.status === 401 &&
+        !_isRetryAfterRefresh &&
+        (await attemptSilentRefresh())
+      ) {
         return apiClient.upload<T>(path, formData, true);
       }
       let errorBody: ApiErrorBody;
@@ -333,7 +419,8 @@ export const apiClient = {
       } catch {
         errorBody = {
           error_code: "erro_desconhecido",
-          message: "Não foi possível se conectar ao servidor. Tente novamente em instantes.",
+          message:
+            "Não foi possível se conectar ao servidor. Tente novamente em instantes.",
           request_id: "-",
         };
       }
@@ -341,7 +428,10 @@ export const apiClient = {
         window.dispatchEvent(new CustomEvent("auth:unauthorized"));
       }
       if (response.status >= 500) {
-        reportError(new ApiError(response.status, errorBody), { path, method: "POST (upload)" });
+        reportError(new ApiError(response.status, errorBody), {
+          path,
+          method: "POST (upload)",
+        });
       }
       throw new ApiError(response.status, errorBody);
     }
@@ -352,28 +442,39 @@ export const apiClient = {
 // tenantId opcional (achado F-04): só é enviado na segunda chamada,
 // depois que o usuário escolhe a clínica numa lista que o próprio
 // backend retornou (ver AuthContext.tsx / LoginPage.tsx).
-export async function login(email: string, password: string, tenantId?: string): Promise<TokenResponse> {
+export async function login(
+  email: string,
+  password: string,
+  tenantId?: string,
+): Promise<TokenResponse> {
   return apiClient.post<TokenResponse>(
     "/api/v1/auth/login",
     { email, password, tenant_id: tenantId ?? null },
-    { skipAuth: true }
+    { skipAuth: true },
   );
 }
 
 /** Cadastro público (self-signup) — ver POST /auth/register no backend. */
-export async function register(data: RegisterRequest): Promise<RegisterResponse> {
-  return apiClient.post<RegisterResponse>("/api/v1/auth/register", data, { skipAuth: true });
+export async function register(
+  data: RegisterRequest,
+): Promise<RegisterResponse> {
+  return apiClient.post<RegisterResponse>("/api/v1/auth/register", data, {
+    skipAuth: true,
+  });
 }
 
 /** "Continuar com Google" — `credential` é o ID token entregue pelo
  * Google Identity Services no callback do botão (ver GoogleSignInButton.tsx).
  * `tenantId` só é reenviado depois que o usuário escolhe a clínica numa
  * lista que o próprio backend retornou (mesmo padrão de login/tenant_id). */
-export async function googleAuth(credential: string, tenantId?: string): Promise<GoogleAuthResponse> {
+export async function googleAuth(
+  credential: string,
+  tenantId?: string,
+): Promise<GoogleAuthResponse> {
   return apiClient.post<GoogleAuthResponse>(
     "/api/v1/auth/google",
     { credential, tenant_id: tenantId ?? null },
-    { skipAuth: true }
+    { skipAuth: true },
   );
 }
 
@@ -381,14 +482,21 @@ export async function googleAuth(credential: string, tenantId?: string): Promise
  * backend devolve 202 sem corpo, exista ou não o e-mail (anti-
  * enumeração, ver DECISÃO em AuthService.request_password_reset). */
 export async function requestPasswordReset(email: string): Promise<void> {
-  return apiClient.post<void>("/api/v1/auth/password-reset/request", { email }, { skipAuth: true });
+  return apiClient.post<void>(
+    "/api/v1/auth/password-reset/request",
+    { email },
+    { skipAuth: true },
+  );
 }
 
-export async function confirmPasswordReset(token: string, newPassword: string): Promise<void> {
+export async function confirmPasswordReset(
+  token: string,
+  newPassword: string,
+): Promise<void> {
   return apiClient.post<void>(
     "/api/v1/auth/password-reset/confirm",
     { token, new_password: newPassword },
-    { skipAuth: true }
+    { skipAuth: true },
   );
 }
 
@@ -399,15 +507,28 @@ export async function confirmPasswordReset(token: string, newPassword: string): 
  * frequentemente o caso quando o usuário finalmente clica "Sair"), e o
  * backend não exige Authorization para este endpoint (ver DECISÃO em
  * POST /auth/logout, que espelha /auth/refresh no mesmo critério). */
-export async function logoutRequest(refreshToken: string | null, accessToken: string | null = null): Promise<void> {
+export async function logoutRequest(
+  refreshToken: string | null,
+  accessToken: string | null = null,
+): Promise<void> {
   // access_token: o servidor invalida na hora o token deste aparelho.
-  const body = { ...(refreshToken ? { refresh_token: refreshToken } : {}), ...(accessToken ? { access_token: accessToken } : {}) };
+  const body = {
+    ...(refreshToken ? { refresh_token: refreshToken } : {}),
+    ...(accessToken ? { access_token: accessToken } : {}),
+  };
   return apiClient.post<void>("/api/v1/auth/logout", body, { skipAuth: true });
 }
 
 /** Segunda etapa do login com MFA: token curto do login + código do app. */
-export async function verifyMfaRequest(mfaToken: string, code: string): Promise<TokenResponse> {
-  return apiClient.post<TokenResponse>("/api/v1/auth/mfa/verify", { mfa_token: mfaToken, code }, { skipAuth: true });
+export async function verifyMfaRequest(
+  mfaToken: string,
+  code: string,
+): Promise<TokenResponse> {
+  return apiClient.post<TokenResponse>(
+    "/api/v1/auth/mfa/verify",
+    { mfa_token: mfaToken, code },
+    { skipAuth: true },
+  );
 }
 
 /** "Encerrar todas as sessões" — de um dispositivo em que o usuário
@@ -415,10 +536,14 @@ export async function verifyMfaRequest(mfaToken: string, code: string): Promise<
  * de um dispositivo perdido/roubado que ele não tem mais em mãos). Ao
  * contrário de logoutRequest acima, exige o access_token válido — por
  * isso sem skipAuth. */
-export async function logoutAllSessionsRequest(): Promise<{ revoked_count: number }> {
-  const result = await apiClient.post<{ revoked_count: number; access_token?: string | null; refresh_token?: string | null }>(
-    "/api/v1/auth/logout-all-sessions"
-  );
+export async function logoutAllSessionsRequest(): Promise<{
+  revoked_count: number;
+}> {
+  const result = await apiClient.post<{
+    revoked_count: number;
+    access_token?: string | null;
+    refresh_token?: string | null;
+  }>("/api/v1/auth/logout-all-sessions");
   // O servidor encerra TODAS as sessões na hora, inclusive esta, e devolve
   // tokens novos para este aparelho continuar conectado.
   if (result.access_token) storeToken(result.access_token);
@@ -429,12 +554,24 @@ export async function logoutAllSessionsRequest(): Promise<{ revoked_count: numbe
 /** Lado público (sem autenticação) do link de avaliação de satisfação
  * pós-atendimento — ver DECISÃO em 052_appointment_satisfaction.sql
  * (backend). O paciente abre `/satisfacao/:token` sem estar logado. */
-export async function getSatisfactionStatus(token: string): Promise<PublicSatisfactionStatusResponse> {
-  return apiClient.get<PublicSatisfactionStatusResponse>(`/api/v1/public/satisfaction/${encodeURIComponent(token)}`, {
-    skipAuth: true,
-  });
+export async function getSatisfactionStatus(
+  token: string,
+): Promise<PublicSatisfactionStatusResponse> {
+  return apiClient.get<PublicSatisfactionStatusResponse>(
+    `/api/v1/public/satisfaction/${encodeURIComponent(token)}`,
+    {
+      skipAuth: true,
+    },
+  );
 }
 
-export async function submitSatisfactionScore(token: string, score: number): Promise<void> {
-  return apiClient.post<void>(`/api/v1/public/satisfaction/${encodeURIComponent(token)}`, { score }, { skipAuth: true });
+export async function submitSatisfactionScore(
+  token: string,
+  score: number,
+): Promise<void> {
+  return apiClient.post<void>(
+    `/api/v1/public/satisfaction/${encodeURIComponent(token)}`,
+    { score },
+    { skipAuth: true },
+  );
 }
