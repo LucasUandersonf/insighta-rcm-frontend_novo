@@ -46,6 +46,7 @@ export class ApiError extends Error {
   requestId: string;
   status: number;
   campos?: { campo: string; problema: string }[];
+  confirmField?: string;
 
   constructor(status: number, body: ApiErrorBody) {
     super(body.message);
@@ -53,6 +54,7 @@ export class ApiError extends Error {
     this.errorCode = body.error_code;
     this.requestId = body.request_id;
     this.campos = body.campos;
+    this.confirmField = body.confirm_field;
   }
 }
 

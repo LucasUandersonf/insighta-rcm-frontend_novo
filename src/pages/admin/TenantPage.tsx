@@ -19,6 +19,7 @@ import type {
   HealthScoreCeilingSuggestion,
   NoShowThresholdSuggestion,
   OrganizationInviteResponse,
+  OrganizationSummary,
   OrganizationJoinResponse,
   PlanCatalogEntry,
   Tenant,
@@ -789,11 +790,31 @@ function OrganizationLinkingPanel({ isOwner }: { isOwner: boolean }) {
     onError: (err) => showError(getApiErrorMessage(err)),
   });
 
+  const queryClient = useQueryClient();
+  const [confirmLeave, setConfirmLeave] = useState(false);
+  const membership = useQuery({
+    queryKey: ["organization-summary"],
+    queryFn: () => apiClient.get<OrganizationSummary>("/api/v1/analytics/organization-summary"),
+    enabled: isOwner,
+  });
+
   const joinMutation = useMutation({
     mutationFn: (code: string) => apiClient.post<OrganizationJoinResponse>("/api/v1/tenant/organization/join", { code }),
     onSuccess: (data) => {
       showSuccess(`Vinculado à organização "${data.organization_name}" com sucesso.`);
       setJoinCode("");
+      queryClient.invalidateQueries({ queryKey: ["organization-summary"] });
+    },
+    onError: (err) => showError(getApiErrorMessage(err)),
+  });
+
+  // Rodada 5 (B6): a unidade pode sair da organização (venda, separação de sócios).
+  const leaveMutation = useMutation({
+    mutationFn: () => apiClient.post<void>("/api/v1/tenant/organization/leave"),
+    onSuccess: () => {
+      showSuccess("Esta clínica saiu da organização. As outras unidades não veem mais os dados dela.");
+      setConfirmLeave(false);
+      queryClient.invalidateQueries({ queryKey: ["organization-summary"] });
     },
     onError: (err) => showError(getApiErrorMessage(err)),
   });
@@ -870,6 +891,39 @@ function OrganizationLinkingPanel({ isOwner }: { isOwner: boolean }) {
             </div>
           )}
         </div>
+
+        {membership.data?.belongs_to_organization && (
+          <div className="rounded-md border border-border-hairline bg-canvas-raised/40 p-3">
+            <p className="text-xs text-ink">
+              Esta clínica faz parte da organização <strong>{membership.data.organization_name}</strong>.
+            </p>
+            {confirmLeave ? (
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <span className="text-2xs text-ink-muted">As outras unidades deixam de ver os dados desta clínica. Confirma?</span>
+                <Button
+                  type="button"
+                  size="xs"
+                  className="bg-denied hover:brightness-110"
+                  onClick={() => leaveMutation.mutate()}
+                  disabled={leaveMutation.isPending}
+                >
+                  {leaveMutation.isPending ? "Saindo..." : "Sair da organização"}
+                </Button>
+                <Button type="button" size="xs" variant="secondary" onClick={() => setConfirmLeave(false)}>
+                  Voltar
+                </Button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setConfirmLeave(true)}
+                className="mt-2 text-2xs text-ink-faint underline-offset-2 hover:text-denied hover:underline"
+              >
+                Sair da organização
+              </button>
+            )}
+          </div>
+        )}
 
         <form onSubmit={handleJoinSubmit} className="border-t border-border-hairline pt-4">
           <span className="mb-2 block text-xs font-medium text-ink">Entrar com um código recebido</span>
