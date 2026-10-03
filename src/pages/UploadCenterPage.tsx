@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Download, FileSpreadsheet, UploadCloud, Wand2 } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
@@ -630,6 +630,13 @@ export function UndoImportModal({ file, onClose }: { file: IngestionFileEntry | 
   });
   const preview = previewQuery.data;
   const items = Object.entries(preview?.deleted ?? {}).filter(([, n]) => n > 0);
+  // Registros criados pelo arquivo e editados depois: o desfazer apaga as
+  // edições junto — exige confirmação explícita (auditoria V1, rodada 3).
+  const [acceptLoss, setAcceptLoss] = useState(false);
+  useEffect(() => setAcceptLoss(false), [file?.id]);
+  const conflicts = preview?.conflicts ?? 0;
+  const edited = preview?.edited_after_import ?? 0;
+  const blocked = conflicts > 0;
 
   return (
     <Modal title="Desfazer importação" isOpen={!!file} onClose={onClose}>
@@ -663,13 +670,33 @@ export function UndoImportModal({ file, onClose }: { file: IngestionFileEntry | 
                 Atenção: {preview.appeals_removed} recurso(s) de glosa aberto(s) sobre essas cobranças também serão apagados.
               </p>
             )}
+            {blocked && (
+              <p role="alert" className="rounded-md border border-denied/30 bg-denied-bg px-3 py-2 text-xs text-denied">
+                Não é possível desfazer agora: <span className="tabular">{conflicts}</span> registro(s) desta importação mudaram depois dela
+                (por um arquivo enviado depois ou por uma alteração na tela, como uma baixa de pagamento). Desfaça primeiro as importações
+                mais recentes e reverta as alterações manuais.
+              </p>
+            )}
+            {!blocked && edited > 0 && (
+              <label className="flex items-start gap-2 rounded-md border border-pending/30 bg-pending-bg px-3 py-2 text-xs text-ink">
+                <input type="checkbox" className="mt-0.5" checked={acceptLoss} onChange={(e) => setAcceptLoss(e.target.checked)} />
+                <span>
+                  <span className="tabular">{edited}</span> registro(s) criados por esta importação foram editados depois (por exemplo, faltas marcadas
+                  na tela). Entendo que essas edições serão perdidas.
+                </span>
+              </label>
+            )}
           </>
         )}
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="secondary" onClick={onClose} disabled={undoMutation.isPending}>
             Cancelar
           </Button>
-          <Button type="button" onClick={() => undoMutation.mutate()} disabled={!preview || undoMutation.isPending}>
+          <Button
+            type="button"
+            onClick={() => undoMutation.mutate()}
+            disabled={!preview || undoMutation.isPending || blocked || (edited > 0 && !acceptLoss)}
+          >
             {undoMutation.isPending ? "Desfazendo..." : "Desfazer importação"}
           </Button>
         </div>
