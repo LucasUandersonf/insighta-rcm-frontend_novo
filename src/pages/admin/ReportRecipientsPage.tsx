@@ -1,7 +1,12 @@
 import { useState, type FormEvent } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Plus, Send, Zap } from "lucide-react";
-import { Panel, EmptyState, LoadingState, ErrorState } from "@/components/ui/Panel";
+import {
+  Panel,
+  EmptyState,
+  LoadingState,
+  ErrorState,
+} from "@/components/ui/Panel";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -12,11 +17,23 @@ import { cn } from "@/lib/cn";
 import { apiClient, ApiError } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useToast } from "@/context/ToastContext";
-import type { ReportRecipient, RiskAlertSendResponse, WeeklyReportResponse } from "@/lib/types";
+import type {
+  ReportRecipient,
+  RiskAlertSendResponse,
+  WeeklyReportResponse,
+} from "@/lib/types";
 
 // Espelha app/schemas/report_recipient.py — "" (todos os tipos) é o
 // valor mais comum; os demais existem para restringir um contato a um
 // disparo específico (ex: só o resumo semanal, não alertas pontuais).
+function formatDateTime(iso: string): string {
+  return new Intl.DateTimeFormat("pt-BR", {
+    dateStyle: "short",
+    timeStyle: "short",
+    timeZone: "America/Sao_Paulo",
+  }).format(new Date(iso));
+}
+
 const REPORT_TYPE_LABELS: Record<string, string> = {
   weekly_summary: "Resumo semanal (WhatsApp)",
   daily_risk_alert: "Alerta de risco de falta (próximas 24h)",
@@ -34,7 +51,12 @@ interface RecipientFormValues {
   report_types: string[];
 }
 
-const EMPTY_FORM: RecipientFormValues = { name: "", phone_whatsapp: "", email: "", report_types: [] };
+const EMPTY_FORM: RecipientFormValues = {
+  name: "",
+  phone_whatsapp: "",
+  email: "",
+  report_types: [],
+};
 
 function RecipientModal({
   isOpen,
@@ -55,18 +77,23 @@ function RecipientModal({
           email: editing.email ?? "",
           report_types: editing.report_types,
         }
-      : EMPTY_FORM
+      : EMPTY_FORM,
   );
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const mutation = useMutation({
     mutationFn: (payload: Record<string, unknown>) =>
       editing
-        ? apiClient.patch<ReportRecipient>(`/api/v1/report-recipients/${editing.id}`, payload)
+        ? apiClient.patch<ReportRecipient>(
+            `/api/v1/report-recipients/${editing.id}`,
+            payload,
+          )
         : apiClient.post<ReportRecipient>("/api/v1/report-recipients", payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["report-recipients"] });
-      showSuccess(editing ? "Destinatário atualizado." : "Destinatário cadastrado.");
+      showSuccess(
+        editing ? "Destinatário atualizado." : "Destinatário cadastrado.",
+      );
       resetAndClose();
     },
     onError: (err) => {
@@ -98,7 +125,11 @@ function RecipientModal({
   }
 
   return (
-    <Modal title={editing ? "Editar destinatário" : "Novo destinatário"} isOpen={isOpen} onClose={resetAndClose}>
+    <Modal
+      title={editing ? "Editar destinatário" : "Novo destinatário"}
+      isOpen={isOpen}
+      onClose={resetAndClose}
+    >
       <form onSubmit={handleSubmit}>
         <TextField
           label="Nome"
@@ -111,7 +142,9 @@ function RecipientModal({
           label="WhatsApp (com DDI/DDD)"
           placeholder="+55 11 91234-5678"
           value={values.phone_whatsapp}
-          onChange={(e) => setValues((v) => ({ ...v, phone_whatsapp: e.target.value }))}
+          onChange={(e) =>
+            setValues((v) => ({ ...v, phone_whatsapp: e.target.value }))
+          }
           error={fieldErrors["phone_whatsapp"]}
         />
         <TextField
@@ -121,9 +154,13 @@ function RecipientModal({
           onChange={(e) => setValues((v) => ({ ...v, email: e.target.value }))}
           error={fieldErrors["email"]}
         />
-        <p className="-mt-2 mb-4 text-2xs text-ink-faint">Informe pelo menos um canal de contato (WhatsApp ou e-mail).</p>
+        <p className="-mt-2 mb-4 text-2xs text-ink-faint">
+          Informe pelo menos um canal de contato (WhatsApp ou e-mail).
+        </p>
 
-        <label className="mb-1 block text-xs font-medium text-ink-muted">Relatórios que este contato recebe</label>
+        <label className="mb-1 block text-xs font-medium text-ink-muted">
+          Relatórios que este contato recebe
+        </label>
         <div className="mb-4 flex flex-wrap gap-2">
           {Object.entries(REPORT_TYPE_LABELS).map(([value, label]) => {
             const checked = values.report_types.includes(value);
@@ -135,12 +172,16 @@ function RecipientModal({
                 onClick={() =>
                   setValues((v) => ({
                     ...v,
-                    report_types: checked ? v.report_types.filter((t) => t !== value) : [...v.report_types, value],
+                    report_types: checked
+                      ? v.report_types.filter((t) => t !== value)
+                      : [...v.report_types, value],
                   }))
                 }
                 className={cn(
                   "rounded-full border px-3 py-1 text-2xs font-medium transition-colors",
-                  checked ? "border-accent bg-accent-bg text-accent" : "border-border-default text-ink-faint hover:text-ink"
+                  checked
+                    ? "border-accent bg-accent-bg text-accent"
+                    : "border-border-default text-ink-faint hover:text-ink",
                 )}
               >
                 {label}
@@ -149,17 +190,24 @@ function RecipientModal({
           })}
         </div>
         <p className="-mt-2 mb-4 text-2xs text-ink-faint">
-          Nenhum selecionado = recebe todos os tipos de relatório disparados para o tenant.
+          Nenhum selecionado = recebe todos os tipos de relatório disparados
+          para o tenant.
         </p>
 
-        {fieldErrors["__root__"] && <p className="mb-3 text-xs text-denied">{fieldErrors["__root__"]}</p>}
+        {fieldErrors["__root__"] && (
+          <p className="mb-3 text-xs text-denied">{fieldErrors["__root__"]}</p>
+        )}
 
         <div className="mt-5 flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={resetAndClose}>
             Cancelar
           </Button>
           <Button type="submit" disabled={mutation.isPending}>
-            {mutation.isPending ? "Salvando..." : editing ? "Salvar alterações" : "Cadastrar destinatário"}
+            {mutation.isPending
+              ? "Salvando..."
+              : editing
+                ? "Salvar alterações"
+                : "Cadastrar destinatário"}
           </Button>
         </div>
       </form>
@@ -172,18 +220,27 @@ export function ReportRecipientsPage() {
   const { showSuccess, showError } = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [recipientToDelete, setRecipientToDelete] = useState<ReportRecipient | null>(null);
+  const [recipientToDelete, setRecipientToDelete] =
+    useState<ReportRecipient | null>(null);
 
-  const { data: recipients, isLoading, error, refetch } = useQuery({
+  const {
+    data: recipients,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
     queryKey: ["report-recipients"],
-    queryFn: () => apiClient.get<ReportRecipient[]>("/api/v1/report-recipients"),
+    queryFn: () =>
+      apiClient.get<ReportRecipient[]>("/api/v1/report-recipients"),
   });
 
   const editing = (recipients ?? []).find((r) => r.id === editingId) ?? null;
 
   const toggleActiveMutation = useMutation({
     mutationFn: ({ id, active }: { id: string; active: boolean }) =>
-      apiClient.patch<ReportRecipient>(`/api/v1/report-recipients/${id}`, { active }),
+      apiClient.patch<ReportRecipient>(`/api/v1/report-recipients/${id}`, {
+        active,
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["report-recipients"] });
       showSuccess("Destinatário atualizado.");
@@ -192,7 +249,8 @@ export function ReportRecipientsPage() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => apiClient.delete(`/api/v1/report-recipients/${id}`),
+    mutationFn: (id: string) =>
+      apiClient.delete(`/api/v1/report-recipients/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["report-recipients"] });
       showSuccess("Destinatário removido.");
@@ -208,7 +266,8 @@ export function ReportRecipientsPage() {
   // o backend usa "desde segunda até hoje" por padrão (ver DECISÃO em
   // app/api/v1/endpoints/reports.py).
   const sendNowMutation = useMutation({
-    mutationFn: () => apiClient.post<WeeklyReportResponse>("/api/v1/reports/weekly/send", {}),
+    mutationFn: () =>
+      apiClient.post<WeeklyReportResponse>("/api/v1/reports/weekly/send", {}),
     onSuccess: (data) => {
       if (data.sent_via_whatsapp) showSuccess(data.detail);
       else showError(data.detail);
@@ -221,7 +280,11 @@ export function ReportRecipientsPage() {
   // (ver DECISÃO em app/worker/daily_alert_job.py no backend). Útil
   // para conferir agora mesmo sem esperar o próximo ciclo do cron.
   const sendRiskAlertNowMutation = useMutation({
-    mutationFn: () => apiClient.post<RiskAlertSendResponse>("/api/v1/reports/risk-alert/send", {}),
+    mutationFn: () =>
+      apiClient.post<RiskAlertSendResponse>(
+        "/api/v1/reports/risk-alert/send",
+        {},
+      ),
     onSuccess: (data) => {
       if (data.sent_via_whatsapp) showSuccess(data.detail);
       else showError(data.detail);
@@ -244,7 +307,9 @@ export function ReportRecipientsPage() {
               className="flex items-center gap-1.5"
             >
               <Zap size={14} />
-              {sendNowMutation.isPending ? "Enviando..." : "Enviar relatório agora"}
+              {sendNowMutation.isPending
+                ? "Enviando..."
+                : "Enviar relatório agora"}
             </Button>
             <Button
               variant="secondary"
@@ -253,9 +318,14 @@ export function ReportRecipientsPage() {
               className="flex items-center gap-1.5"
             >
               <AlertTriangle size={14} />
-              {sendRiskAlertNowMutation.isPending ? "Verificando..." : "Verificar risco agora"}
+              {sendRiskAlertNowMutation.isPending
+                ? "Verificando..."
+                : "Verificar risco agora"}
             </Button>
-            <Button onClick={() => setIsModalOpen(true)} className="flex items-center gap-1.5">
+            <Button
+              onClick={() => setIsModalOpen(true)}
+              className="flex items-center gap-1.5"
+            >
               <Plus size={14} />
               Novo destinatário
             </Button>
@@ -265,12 +335,21 @@ export function ReportRecipientsPage() {
 
       <Panel>
         {isLoading && <LoadingState variant="table" rows={3} />}
-        {error && <ErrorState message={getApiErrorMessage(error)} onRetry={() => refetch()} />}
+        {error && (
+          <ErrorState
+            message={getApiErrorMessage(error)}
+            onRetry={() => refetch()}
+          />
+        )}
         {!isLoading && !error && (recipients ?? []).length === 0 && (
           <EmptyState
             icon={<Send size={17} strokeWidth={1.5} />}
             message="Nenhum destinatário cadastrado ainda — os relatórios automatizados não têm para quem ir."
-            action={<Button onClick={() => setIsModalOpen(true)}>Cadastrar o primeiro destinatário</Button>}
+            action={
+              <Button onClick={() => setIsModalOpen(true)}>
+                Cadastrar o primeiro destinatário
+              </Button>
+            }
           />
         )}
         {!isLoading && (recipients ?? []).length > 0 && (
@@ -282,29 +361,69 @@ export function ReportRecipientsPage() {
                 <th className="px-4 py-2.5 font-medium">E-mail</th>
                 <th className="px-4 py-2.5 font-medium">Recebe</th>
                 <th className="px-4 py-2.5 font-medium">Status</th>
+                <th className="px-4 py-2.5 font-medium">Último envio</th>
                 <th className="px-4 py-2.5 font-medium">Ações</th>
               </tr>
             </thead>
             <tbody>
               {(recipients ?? []).map((r) => (
-                <tr key={r.id} className="border-b border-border-hairline last:border-0 transition-colors hover:bg-canvas-raised/60">
+                <tr
+                  key={r.id}
+                  className="border-b border-border-hairline last:border-0 transition-colors hover:bg-canvas-raised/60"
+                >
                   <td className="px-4 py-2.5 text-ink">{r.name}</td>
-                  <td className="tabular px-4 py-2.5 font-mono text-ink-muted">{r.phone_whatsapp ?? "—"}</td>
-                  <td className="px-4 py-2.5 text-ink-muted">{r.email ?? "—"}</td>
-                  <td className="px-4 py-2.5 text-ink-muted">{reportTypesLabel(r.report_types)}</td>
+                  <td className="tabular px-4 py-2.5 font-mono text-ink-muted">
+                    {r.phone_whatsapp ?? "—"}
+                  </td>
+                  <td className="px-4 py-2.5 text-ink-muted">
+                    {r.email ?? "—"}
+                  </td>
+                  <td className="px-4 py-2.5 text-ink-muted">
+                    {reportTypesLabel(r.report_types)}
+                  </td>
                   <td className="px-4 py-2.5">
-                    <Badge tone={r.active ? "revenue" : "neutral"}>{r.active ? "Ativo" : "Inativo"}</Badge>
+                    <Badge tone={r.active ? "revenue" : "neutral"}>
+                      {r.active ? "Ativo" : "Inativo"}
+                    </Badge>
+                  </td>
+                  <td className="px-4 py-2.5 text-xs">
+                    {!r.last_delivery_at ? (
+                      <span className="text-ink-faint">Ainda não enviado</span>
+                    ) : r.last_delivery_status === "ok" ? (
+                      <span className="text-revenue">
+                        Entregue em {formatDateTime(r.last_delivery_at)}
+                      </span>
+                    ) : (
+                      <span
+                        className="text-denied"
+                        title={r.last_delivery_error ?? undefined}
+                      >
+                        Falhou em {formatDateTime(r.last_delivery_at)}
+                        {r.last_delivery_error
+                          ? `: ${r.last_delivery_error}`
+                          : ""}
+                      </span>
+                    )}
                   </td>
                   <td className="px-4 py-2.5">
                     <div className="flex gap-2">
-                      <Button variant="secondary" size="xs" onClick={() => setEditingId(r.id)}>
+                      <Button
+                        variant="secondary"
+                        size="xs"
+                        onClick={() => setEditingId(r.id)}
+                      >
                         Editar
                       </Button>
                       <Button
                         variant="ghost"
                         size="xs"
                         disabled={toggleActiveMutation.isPending}
-                        onClick={() => toggleActiveMutation.mutate({ id: r.id, active: !r.active })}
+                        onClick={() =>
+                          toggleActiveMutation.mutate({
+                            id: r.id,
+                            active: !r.active,
+                          })
+                        }
                       >
                         {r.active ? "Desativar" : "Reativar"}
                       </Button>
@@ -343,8 +462,14 @@ export function ReportRecipientsPage() {
       <ConfirmDialog
         isOpen={!!recipientToDelete}
         title="Remover destinatário"
-        message={recipientToDelete ? `${recipientToDelete.name} deixará de receber o relatório semanal e o alerta de risco de falta. Não pode ser desfeito.` : ""}
-        onConfirm={() => recipientToDelete && deleteMutation.mutate(recipientToDelete.id)}
+        message={
+          recipientToDelete
+            ? `${recipientToDelete.name} deixará de receber o relatório semanal e o alerta de risco de falta. Não pode ser desfeito.`
+            : ""
+        }
+        onConfirm={() =>
+          recipientToDelete && deleteMutation.mutate(recipientToDelete.id)
+        }
         onCancel={() => setRecipientToDelete(null)}
         isConfirming={deleteMutation.isPending}
       />

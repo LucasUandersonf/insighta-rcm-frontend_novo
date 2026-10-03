@@ -2,7 +2,7 @@ import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { Lock } from "lucide-react";
-import { apiClient } from "@/lib/api-client";
+import { apiClient, applySessionTokens } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useAuth } from "@/context/AuthContext";
 import { AuthLayout, AuthFormHeader } from "@/components/layout/AuthLayout";
@@ -29,7 +29,8 @@ export function ChangeTemporaryPasswordPage() {
 
   const problem = password.length > 0 ? passwordProblem(password) : null;
   const matches = password === confirm;
-  const canSubmit = current.length > 0 && password.length > 0 && !problem && matches && !saving;
+  const canSubmit =
+    current.length > 0 && password.length > 0 && !problem && matches && !saving;
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -37,7 +38,15 @@ export function ChangeTemporaryPasswordPage() {
     setSaving(true);
     setError(null);
     try {
-      await apiClient.post("/api/v1/users/me/change-password", { current_password: current, new_password: password });
+      // A troca encerra as outras sessões e devolve tokens novos para esta.
+      const tokens = await apiClient.post<{
+        access_token: string;
+        refresh_token?: string | null;
+      }>("/api/v1/users/me/change-password", {
+        current_password: current,
+        new_password: password,
+      });
+      if (tokens?.access_token) applySessionTokens(tokens);
       await queryClient.invalidateQueries({ queryKey: ["users", "me"] });
       navigate("/", { replace: true });
     } catch (err) {
@@ -48,18 +57,52 @@ export function ChangeTemporaryPasswordPage() {
   }
 
   return (
-    <AuthLayout headline="Crie a sua senha" subheadline="A senha que você recebeu é temporária. Escolha uma senha só sua para continuar.">
+    <AuthLayout
+      headline="Crie a sua senha"
+      subheadline="A senha que você recebeu é temporária. Escolha uma senha só sua para continuar."
+    >
       <div className="w-full max-w-sm">
-        <AuthFormHeader title="Trocar senha temporária" subtitle="Só depois disso o sistema fica liberado" />
-        <form onSubmit={handleSubmit} className="space-y-3 rounded-xl border border-border-hairline bg-glass p-6 shadow-elevated backdrop-blur-xl">
-          <Field id="current" label="Senha temporária" value={current} onChange={setCurrent} autoComplete="current-password" />
-          <Field id="new" label="Nova senha" value={password} onChange={setPassword} autoComplete="new-password" />
+        <AuthFormHeader
+          title="Trocar senha temporária"
+          subtitle="Só depois disso o sistema fica liberado"
+        />
+        <form
+          onSubmit={handleSubmit}
+          className="space-y-3 rounded-xl border border-border-hairline bg-glass p-6 shadow-elevated backdrop-blur-xl"
+        >
+          <Field
+            id="current"
+            label="Senha temporária"
+            value={current}
+            onChange={setCurrent}
+            autoComplete="current-password"
+          />
+          <Field
+            id="new"
+            label="Nova senha"
+            value={password}
+            onChange={setPassword}
+            autoComplete="new-password"
+          />
           <PasswordStrengthMeter password={password} />
-          <Field id="confirm" label="Confirmar nova senha" value={confirm} onChange={setConfirm} autoComplete="new-password" />
-          {confirm.length > 0 && !matches && <p className="text-2xs text-denied">As senhas não coincidem.</p>}
-          {problem && password.length >= 8 && <p className="text-2xs text-denied">{problem}</p>}
+          <Field
+            id="confirm"
+            label="Confirmar nova senha"
+            value={confirm}
+            onChange={setConfirm}
+            autoComplete="new-password"
+          />
+          {confirm.length > 0 && !matches && (
+            <p className="text-2xs text-denied">As senhas não coincidem.</p>
+          )}
+          {problem && password.length >= 8 && (
+            <p className="text-2xs text-denied">{problem}</p>
+          )}
           {error && (
-            <div role="alert" className="rounded-md border border-denied/25 bg-denied-bg px-3 py-2 text-xs text-denied">
+            <div
+              role="alert"
+              className="rounded-md border border-denied/25 bg-denied-bg px-3 py-2 text-xs text-denied"
+            >
               {error}
             </div>
           )}
@@ -70,7 +113,11 @@ export function ChangeTemporaryPasswordPage() {
           >
             {saving ? "Salvando..." : "Salvar e continuar"}
           </button>
-          <button type="button" onClick={logout} className="w-full text-xs text-ink-muted hover:underline">
+          <button
+            type="button"
+            onClick={logout}
+            className="w-full text-xs text-ink-muted hover:underline"
+          >
             Sair
           </button>
         </form>
@@ -79,14 +126,27 @@ export function ChangeTemporaryPasswordPage() {
   );
 }
 
-function Field(props: { id: string; label: string; value: string; onChange: (v: string) => void; autoComplete: string }) {
+function Field(props: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  autoComplete: string;
+}) {
   return (
     <div>
-      <label htmlFor={props.id} className="mb-1.5 block text-xs font-medium text-ink-muted">
+      <label
+        htmlFor={props.id}
+        className="mb-1.5 block text-xs font-medium text-ink-muted"
+      >
         {props.label}
       </label>
       <div className="relative">
-        <Lock aria-hidden size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-faint" />
+        <Lock
+          aria-hidden
+          size={14}
+          className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-faint"
+        />
         <input
           id={props.id}
           type="password"

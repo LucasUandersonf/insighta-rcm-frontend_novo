@@ -1,11 +1,20 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FileText, Paperclip, Plus, ShieldAlert, Sparkles } from "lucide-react";
-import { Panel, EmptyState, LoadingState, ErrorState } from "@/components/ui/Panel";
+import {
+  Panel,
+  EmptyState,
+  LoadingState,
+  ErrorState,
+} from "@/components/ui/Panel";
 import { Button } from "@/components/ui/Button";
 import { Badge, type BadgeTone } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
-import { TextField, TextareaField, SelectField } from "@/components/ui/FormField";
+import {
+  TextField,
+  TextareaField,
+  SelectField,
+} from "@/components/ui/FormField";
 import { Pagination } from "@/components/ui/Pagination";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { BillingSearchPicker } from "@/components/billing/BillingSearchPicker";
@@ -30,7 +39,11 @@ import type {
 const APPEALS_PAGE_SIZE = 20;
 
 function formatDate(iso: string): string {
-  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(iso));
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(new Date(iso));
 }
 
 const APPEAL_TYPE_LABELS: Record<AppealType, string> = {
@@ -59,7 +72,9 @@ const DUE_SOON_HORIZON_DAYS = 5;
 
 function deadlineClass(deadlineAt: string, status: AppealStatus): string {
   if (status !== "aberto" && status !== "protocolado") return "text-ink-muted";
-  const daysLeft = Math.floor((new Date(deadlineAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+  const daysLeft = Math.floor(
+    (new Date(deadlineAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24),
+  );
   if (daysLeft < 0) return "font-medium text-denied";
   if (daysLeft <= DUE_SOON_HORIZON_DAYS) return "font-medium text-pending";
   return "text-ink-muted";
@@ -69,10 +84,17 @@ function deadlineClass(deadlineAt: string, status: AppealStatus): string {
 // Novo recurso
 // ---------------------------------------------------------------------
 
-function CreateAppealModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+function CreateAppealModal({
+  isOpen,
+  onClose,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+}) {
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
-  const [selectedBilling, setSelectedBilling] = useState<BillingSearchItem | null>(null);
+  const [selectedBilling, setSelectedBilling] =
+    useState<BillingSearchItem | null>(null);
   const [appealType, setAppealType] = useState<AppealType>("administrativa");
   const [operatorDenialReason, setOperatorDenialReason] = useState("");
   const [deniedAt, setDeniedAt] = useState("");
@@ -80,7 +102,8 @@ function CreateAppealModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const mutation = useMutation({
-    mutationFn: (payload: DenialAppealCreateRequest) => apiClient.post<DenialAppeal>("/api/v1/denial-appeals", payload),
+    mutationFn: (payload: DenialAppealCreateRequest) =>
+      apiClient.post<DenialAppeal>("/api/v1/denial-appeals", payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["denial-appeals"] });
       showSuccess("Recurso de glosa aberto com sucesso.");
@@ -111,7 +134,9 @@ function CreateAppealModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =
     e.preventDefault();
     setFieldErrors({});
     if (!selectedBilling) {
-      setFieldErrors({ billing_id: "Busque e selecione o faturamento glosado." });
+      setFieldErrors({
+        billing_id: "Busque e selecione o faturamento glosado.",
+      });
       return;
     }
     mutation.mutate({
@@ -124,13 +149,22 @@ function CreateAppealModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =
   }
 
   return (
-    <Modal title="Abrir recurso de glosa" isOpen={isOpen} onClose={resetAndClose}>
+    <Modal
+      title="Abrir recurso de glosa"
+      isOpen={isOpen}
+      onClose={resetAndClose}
+    >
       <form onSubmit={handleSubmit}>
         <p className="mb-4 text-xs text-ink-faint">
-          Para uma negativa FORMAL recebida da operadora (glosa administrativa ou médica) — diferente do alerta de
-          risco pré-envio do Painel Anti-Glosa. O ID do faturamento aparece na tela de Faturamento.
+          Para uma negativa FORMAL recebida da operadora (glosa administrativa
+          ou médica) — diferente do alerta de risco pré-envio do Painel
+          Anti-Glosa. O ID do faturamento aparece na tela de Faturamento.
         </p>
-        <BillingSearchPicker selected={selectedBilling} onSelect={setSelectedBilling} error={fieldErrors["billing_id"]} />
+        <BillingSearchPicker
+          selected={selectedBilling}
+          onSelect={setSelectedBilling}
+          error={fieldErrors["billing_id"]}
+        />
         <SelectField
           label="Tipo de glosa"
           required
@@ -139,7 +173,9 @@ function CreateAppealModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =
         >
           <option value="administrativa">Administrativa (documental)</option>
           <option value="medica">Médica (negativa de cobertura)</option>
-          <option value="tecnica">Técnica (erro de preenchimento pós-envio)</option>
+          <option value="tecnica">
+            Técnica (erro de preenchimento pós-envio)
+          </option>
         </SelectField>
         <TextField
           label="Justificativa da operadora"
@@ -164,8 +200,9 @@ function CreateAppealModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =
           />
         </div>
         <p className="mb-4 -mt-2 text-2xs text-ink-faint">
-          Deixe em branco para calcular automaticamente a partir do prazo cadastrado na operadora do plano (ou do
-          padrão geral, se a operadora ainda não tem prazo configurado).
+          Deixe em branco para calcular automaticamente a partir do prazo
+          cadastrado na operadora do plano (ou do padrão geral, se a operadora
+          ainda não tem prazo configurado).
         </p>
         <div className="mt-5 flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={resetAndClose}>
@@ -184,15 +221,32 @@ function CreateAppealModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =
 // Registrar decisão (deferido / indeferido / NIP)
 // ---------------------------------------------------------------------
 
-function ResolveAppealModal({ appeal, onClose }: { appeal: DenialAppeal | null; onClose: () => void }) {
+function ResolveAppealModal({
+  appeal,
+  onClose,
+}: {
+  appeal: DenialAppeal | null;
+  onClose: () => void;
+}) {
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
-  const [resolutionStatus, setResolutionStatus] = useState<"deferido" | "indeferido" | "nip_aberta">("deferido");
+  const [resolutionStatus, setResolutionStatus] = useState<
+    "deferido" | "indeferido" | "nip_aberta"
+  >("deferido");
   const [notes, setNotes] = useState("");
 
   const mutation = useMutation({
-    mutationFn: ({ appealId, payload }: { appealId: string; payload: DenialAppealResolveRequest }) =>
-      apiClient.post<DenialAppeal>(`/api/v1/denial-appeals/${appealId}/resolve`, payload),
+    mutationFn: ({
+      appealId,
+      payload,
+    }: {
+      appealId: string;
+      payload: DenialAppealResolveRequest;
+    }) =>
+      apiClient.post<DenialAppeal>(
+        `/api/v1/denial-appeals/${appealId}/resolve`,
+        payload,
+      ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["denial-appeals"] });
       showSuccess("Decisão registrada.");
@@ -210,24 +264,42 @@ function ResolveAppealModal({ appeal, onClose }: { appeal: DenialAppeal | null; 
   if (!appeal) return null;
 
   return (
-    <Modal title="Registrar decisão do recurso" isOpen={Boolean(appeal)} onClose={handleClose}>
+    <Modal
+      title="Registrar decisão do recurso"
+      isOpen={Boolean(appeal)}
+      onClose={handleClose}
+    >
       <SelectField
         label="Resultado"
         value={resolutionStatus}
-        onChange={(e) => setResolutionStatus(e.target.value as typeof resolutionStatus)}
+        onChange={(e) =>
+          setResolutionStatus(e.target.value as typeof resolutionStatus)
+        }
       >
         <option value="deferido">Deferido (operadora aceitou o recurso)</option>
-        <option value="indeferido">Indeferido (operadora manteve a negativa)</option>
+        <option value="indeferido">
+          Indeferido (operadora manteve a negativa)
+        </option>
         <option value="nip_aberta">Escalar para NIP na ANS</option>
       </SelectField>
-      <TextField label="Observações" value={notes} onChange={(e) => setNotes(e.target.value)} />
+      <TextField
+        label="Observações"
+        value={notes}
+        onChange={(e) => setNotes(e.target.value)}
+      />
       <div className="mt-5 flex justify-end gap-2">
         <Button type="button" variant="secondary" onClick={handleClose}>
           Cancelar
         </Button>
         <Button
           onClick={() =>
-            mutation.mutate({ appealId: appeal.id, payload: { status: resolutionStatus, resolution_notes: notes || null } })
+            mutation.mutate({
+              appealId: appeal.id,
+              payload: {
+                status: resolutionStatus,
+                resolution_notes: notes || null,
+              },
+            })
           }
           disabled={mutation.isPending}
         >
@@ -242,18 +314,52 @@ function ResolveAppealModal({ appeal, onClose }: { appeal: DenialAppeal | null; 
 // Anexos
 // ---------------------------------------------------------------------
 
-function AttachmentsModal({ appeal, onClose }: { appeal: DenialAppeal | null; onClose: () => void }) {
+function AttachmentsModal({
+  appeal,
+  onClose,
+}: {
+  appeal: DenialAppeal | null;
+  onClose: () => void;
+}) {
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
   const [file, setFile] = useState<File | null>(null);
 
   const mutation = useMutation({
-    mutationFn: ({ appealId, formData }: { appealId: string; formData: FormData }) =>
-      apiClient.upload(`/api/v1/denial-appeals/${appealId}/attachments`, formData),
+    mutationFn: ({
+      appealId,
+      formData,
+    }: {
+      appealId: string;
+      formData: FormData;
+    }) =>
+      apiClient.upload(
+        `/api/v1/denial-appeals/${appealId}/attachments`,
+        formData,
+      ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["denial-appeals"] });
       showSuccess("Anexo enviado.");
       setFile(null);
+    },
+    onError: (err) => showError(getApiErrorMessage(err)),
+  });
+
+  // Anexo enviado por engano (ex.: exame de outro paciente) — só antes de protocolar.
+  const removeAttachment = useMutation({
+    mutationFn: ({
+      appealId,
+      attachmentId,
+    }: {
+      appealId: string;
+      attachmentId: string;
+    }) =>
+      apiClient.delete<void>(
+        `/api/v1/denial-appeals/${appealId}/attachments/${attachmentId}`,
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["denial-appeals"] });
+      showSuccess("Anexo removido.");
     },
     onError: (err) => showError(getApiErrorMessage(err)),
   });
@@ -270,12 +376,45 @@ function AttachmentsModal({ appeal, onClose }: { appeal: DenialAppeal | null; on
   return (
     <Modal title="Anexos do recurso" isOpen={Boolean(appeal)} onClose={onClose}>
       {appeal.attachments.length === 0 ? (
-        <EmptyState icon={<Paperclip size={17} strokeWidth={1.5} />} message="Nenhum anexo enviado ainda." />
+        <EmptyState
+          icon={<Paperclip size={17} strokeWidth={1.5} />}
+          message="Nenhum anexo enviado ainda."
+        />
       ) : (
         <ul className="mb-4 divide-y divide-border-subtle">
           {appeal.attachments.map((a) => (
-            <li key={a.id} className="py-2 text-sm text-ink">
-              {a.filename} <span className="text-2xs text-ink-faint">— {formatDate(a.created_at)}</span>
+            <li
+              key={a.id}
+              className="flex items-center justify-between gap-2 py-2 text-sm text-ink"
+            >
+              <span>
+                {a.filename}{" "}
+                <span className="text-2xs text-ink-faint">
+                  — {formatDate(a.created_at)}
+                </span>
+              </span>
+              {appeal.status === "aberto" && (
+                <button
+                  type="button"
+                  aria-label={`Remover anexo ${a.filename}`}
+                  disabled={removeAttachment.isPending}
+                  onClick={() => {
+                    if (
+                      window.confirm(
+                        `Remover o anexo ${a.filename}? O arquivo é apagado.`,
+                      )
+                    ) {
+                      removeAttachment.mutate({
+                        appealId: appeal.id,
+                        attachmentId: a.id,
+                      });
+                    }
+                  }}
+                  className="text-2xs text-denied hover:underline"
+                >
+                  Remover
+                </button>
+              )}
             </li>
           ))}
         </ul>
@@ -306,9 +445,18 @@ function AttachmentsModal({ appeal, onClose }: { appeal: DenialAppeal | null; on
  * forçar download direto — o usuário normalmente quer LER/editar antes
  * de protocolar, não só guardar o arquivo.
  */
-async function downloadAppealDocument(appealId: string, justification?: string): Promise<void> {
-  const params = justification?.trim() ? `?${new URLSearchParams({ justification: justification.trim() })}` : "";
-  const blob = await apiClient.getBlob(`/api/v1/denial-appeals/${appealId}/document${params}`);
+async function downloadAppealDocument(
+  appealId: string,
+  justification?: string,
+): Promise<void> {
+  // POST com a justificativa no corpo: na URL ela iria para os logs (pode citar diagnóstico).
+  const blob = await apiClient.getBlob(
+    `/api/v1/denial-appeals/${appealId}/document`,
+    false,
+    {
+      justification: justification?.trim() || null,
+    },
+  );
   const url = URL.createObjectURL(blob);
   window.open(url, "_blank", "noopener,noreferrer");
   // Revoga depois de um tempo generoso para dar chance da aba nova
@@ -326,7 +474,13 @@ async function downloadAppealDocument(appealId: string, justification?: string):
  * em app/services/denial_appeal_draft_service.py no backend, que NUNCA
  * inventa mérito clínico). O usuário revisa/edita antes de baixar.
  */
-function JustificationModal({ appeal, onClose }: { appeal: DenialAppeal | null; onClose: () => void }) {
+function JustificationModal({
+  appeal,
+  onClose,
+}: {
+  appeal: DenialAppeal | null;
+  onClose: () => void;
+}) {
   const { showError } = useToast();
   const [justification, setJustification] = useState("");
   const [isDownloading, setIsDownloading] = useState(false);
@@ -337,20 +491,27 @@ function JustificationModal({ appeal, onClose }: { appeal: DenialAppeal | null; 
   const [draftJobId, setDraftJobId] = useState<string | null>(null);
   // Rascunho por IA: só quem pode editar recursos (auditor só lê).
   const { user } = useAuth();
-  const canDraft = !!user && ["owner", "admin", "financeiro"].includes(user.role);
+  const canDraft =
+    !!user && ["owner", "admin", "financeiro"].includes(user.role);
 
   const enqueueDraftMutation = useMutation({
     mutationFn: (appealId: string) =>
-      apiClient.post<AiGenerationJobEnqueuedResponse>(`/api/v1/denial-appeals/${appealId}/draft-justification`),
+      apiClient.post<AiGenerationJobEnqueuedResponse>(
+        `/api/v1/denial-appeals/${appealId}/draft-justification`,
+      ),
     onSuccess: (data) => setDraftJobId(data.job_id),
     onError: (err) => showError(getApiErrorMessage(err)),
   });
 
   const draftJobQuery = useQuery({
     queryKey: ["ai-jobs", draftJobId],
-    queryFn: () => apiClient.get<AiGenerationJob<DenialAppealDraftJustificationResponse>>(`/api/v1/ai-jobs/${draftJobId}`),
+    queryFn: () =>
+      apiClient.get<AiGenerationJob<DenialAppealDraftJustificationResponse>>(
+        `/api/v1/ai-jobs/${draftJobId}`,
+      ),
     enabled: draftJobId !== null,
-    refetchInterval: (query) => (query.state.data?.status === "pending" ? 1000 : false),
+    refetchInterval: (query) =>
+      query.state.data?.status === "pending" ? 1000 : false,
   });
 
   useEffect(() => {
@@ -365,7 +526,9 @@ function JustificationModal({ appeal, onClose }: { appeal: DenialAppeal | null; 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draftJobQuery.data]);
 
-  const isDrafting = enqueueDraftMutation.isPending || (draftJobId !== null && draftJobQuery.data?.status !== "failed");
+  const isDrafting =
+    enqueueDraftMutation.isPending ||
+    (draftJobId !== null && draftJobQuery.data?.status !== "failed");
 
   function handleClose() {
     setJustification("");
@@ -388,11 +551,16 @@ function JustificationModal({ appeal, onClose }: { appeal: DenialAppeal | null; 
   }
 
   return (
-    <Modal title="Justificativa do recurso" isOpen={Boolean(appeal)} onClose={handleClose}>
+    <Modal
+      title="Justificativa do recurso"
+      isOpen={Boolean(appeal)}
+      onClose={handleClose}
+    >
       <p className="mb-4 text-xs text-ink-faint">
-        O Insighta rascunha um ponto de partida usando SÓ os dados deste caso (motivo da negativa, guia,
-        procedimento, convênio) — nunca inventa mérito clínico ou jurídico. Complete os trechos entre colchetes e
-        revise antes de protocolar.
+        O Insighta rascunha um ponto de partida usando SÓ os dados deste caso
+        (motivo da negativa, guia, procedimento, convênio) — nunca inventa
+        mérito clínico ou jurídico. Complete os trechos entre colchetes e revise
+        antes de protocolar.
       </p>
       {canDraft && (
         <Button
@@ -418,7 +586,11 @@ function JustificationModal({ appeal, onClose }: { appeal: DenialAppeal | null; 
         <Button type="button" variant="secondary" onClick={handleClose}>
           Cancelar
         </Button>
-        <Button onClick={handleDownload} disabled={isDownloading} className="flex items-center gap-1.5">
+        <Button
+          onClick={handleDownload}
+          disabled={isDownloading}
+          className="flex items-center gap-1.5"
+        >
           <FileText size={14} />
           {isDownloading ? "Gerando PDF..." : "Baixar documento (PDF)"}
         </Button>
@@ -433,9 +605,15 @@ function JustificationModal({ appeal, onClose }: { appeal: DenialAppeal | null; 
 
 export function DenialAppealsPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [resolvingAppealId, setResolvingAppealId] = useState<string | null>(null);
-  const [attachmentsAppealId, setAttachmentsAppealId] = useState<string | null>(null);
-  const [justificationAppealId, setJustificationAppealId] = useState<string | null>(null);
+  const [resolvingAppealId, setResolvingAppealId] = useState<string | null>(
+    null,
+  );
+  const [attachmentsAppealId, setAttachmentsAppealId] = useState<string | null>(
+    null,
+  );
+  const [justificationAppealId, setJustificationAppealId] = useState<
+    string | null
+  >(null);
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [appealsOffset, setAppealsOffset] = useState(0);
   const queryClient = useQueryClient();
@@ -449,31 +627,53 @@ export function DenialAppealsPage() {
   } = useQuery({
     queryKey: ["denial-appeals", statusFilter, appealsOffset],
     queryFn: () => {
-      const params = new URLSearchParams({ limit: String(APPEALS_PAGE_SIZE), offset: String(appealsOffset) });
+      const params = new URLSearchParams({
+        limit: String(APPEALS_PAGE_SIZE),
+        offset: String(appealsOffset),
+      });
       if (statusFilter) params.set("status", statusFilter);
-      return apiClient.get<PaginatedResponse<DenialAppeal>>(`/api/v1/denial-appeals?${params.toString()}`);
+      return apiClient.get<PaginatedResponse<DenialAppeal>>(
+        `/api/v1/denial-appeals?${params.toString()}`,
+      );
     },
   });
   const appeals = appealsPage?.items;
 
-  const resolvingAppeal = (appeals ?? []).find((a) => a.id === resolvingAppealId) ?? null;
-  const attachmentsAppeal = (appeals ?? []).find((a) => a.id === attachmentsAppealId) ?? null;
-  const justificationAppeal = (appeals ?? []).find((a) => a.id === justificationAppealId) ?? null;
+  const resolvingAppeal =
+    (appeals ?? []).find((a) => a.id === resolvingAppealId) ?? null;
+  const attachmentsAppeal =
+    (appeals ?? []).find((a) => a.id === attachmentsAppealId) ?? null;
+  const justificationAppeal =
+    (appeals ?? []).find((a) => a.id === justificationAppealId) ?? null;
 
   // Mesmo critério de deadlineClass() acima, resumido a nível de painel
   // (glow, não só a cor da célula) — vencido é crítico de verdade, "vence
   // em breve" é atenção; nenhum dos dois é decoração, os dois já existiam
   // como cor de texto por linha, isto só torna o card inteiro reagir.
-  const openOrFiled = (appeals ?? []).filter((a) => a.status === "aberto" || a.status === "protocolado");
-  const hasOverdueAppeal = openOrFiled.some((a) => new Date(a.deadline_at).getTime() < Date.now());
+  const openOrFiled = (appeals ?? []).filter(
+    (a) => a.status === "aberto" || a.status === "protocolado",
+  );
+  const hasOverdueAppeal = openOrFiled.some(
+    (a) => new Date(a.deadline_at).getTime() < Date.now(),
+  );
   const hasAppealDueSoon = openOrFiled.some((a) => {
-    const daysLeft = Math.floor((new Date(a.deadline_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+    const daysLeft = Math.floor(
+      (new Date(a.deadline_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24),
+    );
     return daysLeft >= 0 && daysLeft <= DUE_SOON_HORIZON_DAYS;
   });
-  const appealsGlow = hasOverdueAppeal ? "denied" : hasAppealDueSoon ? "pending" : "none";
+  const appealsGlow = hasOverdueAppeal
+    ? "denied"
+    : hasAppealDueSoon
+      ? "pending"
+      : "none";
 
   const fileMutation = useMutation({
-    mutationFn: (appealId: string) => apiClient.post<DenialAppeal>(`/api/v1/denial-appeals/${appealId}/file`, {}),
+    mutationFn: (appealId: string) =>
+      apiClient.post<DenialAppeal>(
+        `/api/v1/denial-appeals/${appealId}/file`,
+        {},
+      ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["denial-appeals"] });
       showSuccess("Recurso marcado como protocolado.");
@@ -488,7 +688,10 @@ export function DenialAppealsPage() {
         title="Recurso de glosa"
         subtitle="Negativas formais da operadora (administrativa ou médica) — diferente do Painel Anti-Glosa, que previne erro de preenchimento antes do envio. Aqui é o processo de contestação, com prazo."
         action={
-          <Button onClick={() => setIsCreateModalOpen(true)} className="flex items-center gap-1.5">
+          <Button
+            onClick={() => setIsCreateModalOpen(true)}
+            className="flex items-center gap-1.5"
+          >
             <Plus size={14} />
             Abrir recurso
           </Button>
@@ -496,7 +699,16 @@ export function DenialAppealsPage() {
       />
 
       <div className="flex flex-wrap gap-2">
-        {(["", "aberto", "protocolado", "deferido", "indeferido", "nip_aberta"] as const).map((s) => (
+        {(
+          [
+            "",
+            "aberto",
+            "protocolado",
+            "deferido",
+            "indeferido",
+            "nip_aberta",
+          ] as const
+        ).map((s) => (
           <button
             key={s}
             type="button"
@@ -509,7 +721,7 @@ export function DenialAppealsPage() {
               "rounded-full border px-3 py-1 text-2xs font-medium transition-colors",
               statusFilter === s
                 ? "border-accent/30 bg-accent-bg text-accent"
-                : "border-border-subtle text-ink-faint hover:border-border hover:text-ink"
+                : "border-border-subtle text-ink-faint hover:border-border hover:text-ink",
             )}
           >
             {s === "" ? "Todos" : STATUS_LABELS[s]}
@@ -519,9 +731,17 @@ export function DenialAppealsPage() {
 
       <Panel glow={appealsGlow}>
         {isLoading && <LoadingState variant="table" rows={4} />}
-        {error && <ErrorState message={getApiErrorMessage(error)} onRetry={() => refetchAppeals()} />}
+        {error && (
+          <ErrorState
+            message={getApiErrorMessage(error)}
+            onRetry={() => refetchAppeals()}
+          />
+        )}
         {!isLoading && !error && (appeals ?? []).length === 0 && (
-          <EmptyState icon={<ShieldAlert size={17} strokeWidth={1.5} />} message="Nenhum recurso de glosa nesta visão." />
+          <EmptyState
+            icon={<ShieldAlert size={17} strokeWidth={1.5} />}
+            message="Nenhum recurso de glosa nesta visão."
+          />
         )}
         {!isLoading && (appeals ?? []).length > 0 && (
           <table className="w-full text-left text-sm">
@@ -531,19 +751,32 @@ export function DenialAppealsPage() {
                 <th className="px-4 py-2.5 font-medium">Negativa em</th>
                 <th className="px-4 py-2.5 font-medium">Prazo</th>
                 <th className="px-4 py-2.5 font-medium">Status</th>
-                <th className="px-4 py-2.5 font-medium"><span className="sr-only">Ações</span></th>
+                <th className="px-4 py-2.5 font-medium">
+                  <span className="sr-only">Ações</span>
+                </th>
               </tr>
             </thead>
             <tbody>
               {(appeals ?? []).map((a) => (
-                <tr key={a.id} className="border-b border-border-hairline last:border-0 transition-colors hover:bg-canvas-raised/60">
-                  <td className="px-4 py-2.5 text-ink">{APPEAL_TYPE_LABELS[a.appeal_type]}</td>
-                  <td className="px-4 py-2.5 text-ink-muted">{formatDate(a.denied_at)}</td>
-                  <td className={`tabular px-4 py-2.5 ${deadlineClass(a.deadline_at, a.status)}`}>
+                <tr
+                  key={a.id}
+                  className="border-b border-border-hairline last:border-0 transition-colors hover:bg-canvas-raised/60"
+                >
+                  <td className="px-4 py-2.5 text-ink">
+                    {APPEAL_TYPE_LABELS[a.appeal_type]}
+                  </td>
+                  <td className="px-4 py-2.5 text-ink-muted">
+                    {formatDate(a.denied_at)}
+                  </td>
+                  <td
+                    className={`tabular px-4 py-2.5 ${deadlineClass(a.deadline_at, a.status)}`}
+                  >
                     {formatDate(a.deadline_at)}
                   </td>
                   <td className="px-4 py-2.5">
-                    <Badge tone={STATUS_TONE[a.status]}>{STATUS_LABELS[a.status]}</Badge>
+                    <Badge tone={STATUS_TONE[a.status]}>
+                      {STATUS_LABELS[a.status]}
+                    </Badge>
                   </td>
                   <td className="space-x-2 px-4 py-2.5 text-right">
                     {a.status === "aberto" && (
@@ -556,12 +789,21 @@ export function DenialAppealsPage() {
                         Protocolar
                       </Button>
                     )}
-                    {(a.status === "protocolado" || a.status === "nip_aberta") && (
-                      <Button variant="secondary" size="xs" onClick={() => setResolvingAppealId(a.id)}>
+                    {(a.status === "protocolado" ||
+                      a.status === "nip_aberta") && (
+                      <Button
+                        variant="secondary"
+                        size="xs"
+                        onClick={() => setResolvingAppealId(a.id)}
+                      >
                         Registrar decisão
                       </Button>
                     )}
-                    <Button variant="ghost" size="xs" onClick={() => setAttachmentsAppealId(a.id)}>
+                    <Button
+                      variant="ghost"
+                      size="xs"
+                      onClick={() => setAttachmentsAppealId(a.id)}
+                    >
                       Anexos ({a.attachments.length})
                     </Button>
                     <Button
@@ -590,10 +832,22 @@ export function DenialAppealsPage() {
         )}
       </Panel>
 
-      <CreateAppealModal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} />
-      <ResolveAppealModal appeal={resolvingAppeal} onClose={() => setResolvingAppealId(null)} />
-      <AttachmentsModal appeal={attachmentsAppeal} onClose={() => setAttachmentsAppealId(null)} />
-      <JustificationModal appeal={justificationAppeal} onClose={() => setJustificationAppealId(null)} />
+      <CreateAppealModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+      />
+      <ResolveAppealModal
+        appeal={resolvingAppeal}
+        onClose={() => setResolvingAppealId(null)}
+      />
+      <AttachmentsModal
+        appeal={attachmentsAppeal}
+        onClose={() => setAttachmentsAppealId(null)}
+      />
+      <JustificationModal
+        appeal={justificationAppeal}
+        onClose={() => setJustificationAppealId(null)}
+      />
     </div>
   );
 }
