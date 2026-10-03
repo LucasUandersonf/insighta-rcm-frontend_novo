@@ -24,6 +24,9 @@ import { HomeRouter, LegacyRedirect, ManagerProfileRoute } from "@/routes/TeamRo
 const LoginPage = lazy(() => import("@/pages/LoginPage").then((m) => ({ default: m.LoginPage })));
 const SignUpPage = lazy(() => import("@/pages/SignUpPage").then((m) => ({ default: m.SignUpPage })));
 const TermsOfServicePage = lazy(() => import("@/pages/TermsOfServicePage").then((m) => ({ default: m.TermsOfServicePage })));
+const ChangeTemporaryPasswordPage = lazy(() =>
+  import("@/pages/ChangeTemporaryPasswordPage").then((m) => ({ default: m.ChangeTemporaryPasswordPage })),
+);
 const AccountSecurityPage = lazy(() => import("@/pages/AccountSecurityPage").then((m) => ({ default: m.AccountSecurityPage })));
 const StatusPage = lazy(() => import("@/pages/StatusPage").then((m) => ({ default: m.StatusPage })));
 const DataProcessingAgreementPage = lazy(() =>
@@ -141,6 +144,8 @@ export default function App() {
               {/* Assinatura (autoatendimento): fora do AppShell e da porta de
                   cobrança, para a clínica bloqueada conseguir pagar. */}
               <Route path="/assinatura" element={<SubscriptionPage />} />
+              {/* Senha temporária: troca obrigatória antes de qualquer tela. */}
+              <Route path="/trocar-senha" element={<ChangeTemporaryPasswordPage />} />
               <Route element={<BillingGate />}>
               <Route element={<AppShell />}>
                 {/* Home: briefing do gestor ou "Minhas demandas" do
