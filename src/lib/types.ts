@@ -129,6 +129,10 @@ export interface IngestionUndoResponse {
   restored: number;
   appeals_removed: number;
   message: string;
+  /** Registros que mudaram depois da importação: bloqueiam o desfazer. */
+  conflicts?: number;
+  /** Registros criados pela importação e editados depois: o desfazer apaga. */
+  edited_after_import?: number;
 }
 
 export interface UploadIngestionFileResponse {

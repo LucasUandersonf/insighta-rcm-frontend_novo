@@ -302,6 +302,41 @@ describe("UploadCenterPage — aba Lotes Operacionais", () => {
     expect(await screen.findByText("Importação desfeita: 120 cobranças.")).toBeInTheDocument();
   });
 
+  it("bloqueia o desfazer quando registros desta importação mudaram depois dela", async () => {
+    const history: PaginatedResponse<IngestionFileEntry> = { items: [makeFileEntry()], total: 1, limit: 15, offset: 0 };
+    vi.mocked(apiClient.get).mockImplementation(((url: string) =>
+      Promise.resolve(
+        url.includes("undo-preview")
+          ? { ingestion_file_id: "file-1", deleted: { "cobranças": 10 }, restored: 4, appeals_removed: 0, conflicts: 2, edited_after_import: 0, message: "" }
+          : history
+      )) as never);
+
+    renderWithProviders(<UploadCenterPage />);
+    fireEvent.click(await screen.findByRole("button", { name: "Desfazer importação de faturamento-setembro.csv" }));
+
+    expect(await screen.findByText(/Não é possível desfazer agora/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Desfazer importação" })).toBeDisabled();
+  });
+
+  it("exige confirmar a perda de edições feitas depois da importação", async () => {
+    const history: PaginatedResponse<IngestionFileEntry> = { items: [makeFileEntry()], total: 1, limit: 15, offset: 0 };
+    vi.mocked(apiClient.get).mockImplementation(((url: string) =>
+      Promise.resolve(
+        url.includes("undo-preview")
+          ? { ingestion_file_id: "file-1", deleted: { "cobranças": 10 }, restored: 0, appeals_removed: 0, conflicts: 0, edited_after_import: 3, message: "" }
+          : history
+      )) as never);
+
+    renderWithProviders(<UploadCenterPage />);
+    fireEvent.click(await screen.findByRole("button", { name: "Desfazer importação de faturamento-setembro.csv" }));
+
+    const confirm = await screen.findByRole("checkbox");
+    const undo = screen.getByRole("button", { name: "Desfazer importação" });
+    expect(undo).toBeDisabled();
+    fireEvent.click(confirm);
+    expect(undo).toBeEnabled();
+  });
+
   it("importação desfeita aparece como 'Desfeita' e sem botão de desfazer", async () => {
     const history: PaginatedResponse<IngestionFileEntry> = {
       items: [makeFileEntry({ undone_at: "2026-09-02T10:00:00Z" })],
