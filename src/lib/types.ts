@@ -2728,3 +2728,21 @@ export interface MfaStatus {
   enabled_at: string | null;
   recovery_codes_left: number;
 }
+
+/** Auditoria V1, rodada 6 (M1): exportação completa em segundo plano. */
+export interface TenantExport {
+  id: string;
+  status: "pending" | "running" | "done" | "failed" | "expired";
+  status_label: string;
+  size_bytes: number | null;
+  error: string | null;
+  created_at: string;
+  finished_at: string | null;
+  expires_at: string | null;
+}
+
+export interface TenantExportDownload {
+  url: string;
+  filename: string;
+  expires_in_seconds: number;
+}
