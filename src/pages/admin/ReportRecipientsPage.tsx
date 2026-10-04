@@ -89,10 +89,14 @@ function RecipientModal({
             payload,
           )
         : apiClient.post<ReportRecipient>("/api/v1/report-recipients", payload),
-    onSuccess: () => {
+    onSuccess: (saved) => {
       queryClient.invalidateQueries({ queryKey: ["report-recipients"] });
+      const base = editing ? "Destinatário atualizado." : "Destinatário cadastrado.";
+      // Rodada 8 (A2): e-mail de fora da equipe confirma pelo link antes de receber.
       showSuccess(
-        editing ? "Destinatário atualizado." : "Destinatário cadastrado.",
+        saved?.email && !saved.email_confirmed_at
+          ? `${base} Enviamos um link para ${saved.email}: os relatórios por e-mail começam depois que a pessoa confirmar.`
+          : base,
       );
       resetAndClose();
     },
@@ -248,6 +252,16 @@ export function ReportRecipientsPage() {
     onError: (err) => showError(getApiErrorMessage(err)),
   });
 
+  const resendMutation = useMutation({
+    mutationFn: (id: string) =>
+      apiClient.post<ReportRecipient>(`/api/v1/report-recipients/${id}/resend-confirmation`, {}),
+    onSuccess: (r) => {
+      queryClient.invalidateQueries({ queryKey: ["report-recipients"] });
+      showSuccess(`Link de confirmação reenviado para ${r.email}.`);
+    },
+    onError: (err) => showError(getApiErrorMessage(err)),
+  });
+
   const deleteMutation = useMutation({
     mutationFn: (id: string) =>
       apiClient.delete(`/api/v1/report-recipients/${id}`),
@@ -297,7 +311,7 @@ export function ReportRecipientsPage() {
       <PageHeader
         icon={Send}
         title="Destinatários de relatórios"
-        subtitle="Quem recebe o resumo semanal e o alerta de risco de falta por WhatsApp e e-mail."
+        subtitle="Quem recebe o resumo semanal e o alerta de risco de falta por WhatsApp e e-mail. Até 20 destinatários; e-mails de fora da equipe confirmam pelo link antes de receber."
         action={
           <div className="flex items-center gap-2">
             <Button
@@ -377,6 +391,19 @@ export function ReportRecipientsPage() {
                   </td>
                   <td className="px-4 py-2.5 text-ink-muted">
                     {r.email ?? "—"}
+                    {r.email && !r.email_confirmed_at ? (
+                      <span className="mt-1 flex flex-wrap items-center gap-2">
+                        <Badge tone="pending">Aguardando confirmação</Badge>
+                        <button
+                          type="button"
+                          className="text-2xs font-medium text-accent-muted hover:underline disabled:opacity-50"
+                          disabled={resendMutation.isPending}
+                          onClick={() => resendMutation.mutate(r.id)}
+                        >
+                          Reenviar link
+                        </button>
+                      </span>
+                    ) : null}
                   </td>
                   <td className="px-4 py-2.5 text-ink-muted">
                     {reportTypesLabel(r.report_types)}

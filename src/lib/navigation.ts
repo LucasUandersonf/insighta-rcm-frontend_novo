@@ -96,7 +96,7 @@ export const NAV_ITEMS: NavItem[] = [
 
   // Dados
   // Upload + Setup eram dois módulos para uma tarefa só.
-  { to: "/upload", label: "Importar dados", description: "Enviar arquivos, mapear e corrigir linhas rejeitadas", roles: FINANCE_WRITE, placement: "modules", group: "dados", matches: ["/setup"] },
+  { to: "/upload", label: "Importar dados", description: "Enviar arquivos, mapear e corrigir linhas rejeitadas", roles: LEADERSHIP, placement: "modules", group: "dados", matches: ["/setup"] },
 ];
 
 export const MODULE_GROUPS: { id: ModuleGroupId; label: string }[] = [
@@ -136,12 +136,12 @@ const SECTOR_NAV: Record<TeamSector, NavItem[]> = {
     { to: "/waitlist", label: "Lista de espera", icon: ListOrdered, placement: "primary" },
   ],
   faturamento: [
-    { to: "/faturamento", label: "Faturamento", icon: Receipt, roles: FINANCE_WRITE, placement: "primary" },
+    { to: "/faturamento", label: "Faturamento", icon: Receipt, roles: LEADERSHIP, placement: "primary" },
     { to: "/fila-correcao", label: "Fila de correção", icon: ShieldAlert, roles: FINANCE_WRITE, placement: "primary" },
     { to: "/lotes", label: "Lotes", icon: Layers, roles: LEADERSHIP, placement: "primary" },
     { to: "/denial-appeals", label: "Recursos de glosa", icon: FileWarning, roles: LEADERSHIP, placement: "primary" },
     { to: "/contracts", label: "Convênios", icon: Handshake, roles: LEADERSHIP, placement: "primary" },
-    { to: "/upload", label: "Importar dados", icon: UploadCloud, roles: FINANCE_WRITE, placement: "primary", matches: ["/setup"] },
+    { to: "/upload", label: "Importar dados", icon: UploadCloud, roles: LEADERSHIP, placement: "primary", matches: ["/setup"] },
   ],
   estoque: [{ to: "/upload", label: "Importar dados", icon: UploadCloud, roles: FINANCE_WRITE, placement: "primary", matches: ["/setup"] }],
   assistencial: [{ to: "/pacientes", label: "Pacientes", icon: UserRound, placement: "primary" }],

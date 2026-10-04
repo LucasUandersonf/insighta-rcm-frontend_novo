@@ -376,6 +376,44 @@ describe("UploadCenterPage — aba Lotes Operacionais", () => {
     expect(screen.queryByRole("button", { name: /Desfazer importação de/ })).not.toBeInTheDocument();
   });
 
+  it("rodada 8 (M1): worker parado troca o 'começa em instantes' pelo aviso de atraso", async () => {
+    vi.mocked(apiClient.get).mockImplementation(((url: string) =>
+      Promise.resolve(
+        url.includes("direct-uploads")
+          ? [
+              {
+                upload_id: "u4",
+                status: "na_fila",
+                error: null,
+                ingestion_file_id: null,
+                row_count: null,
+                error_row_count: null,
+                original_filename: "grande.csv",
+                data_type: "faturamento",
+                queue_delayed: true,
+                queue_message: "O processamento está atrasado. Já fomos avisados e o arquivo continua guardado.",
+              },
+            ]
+          : emptyHistory(),
+      )) as never);
+    renderWithProviders(<UploadCenterPage />);
+    expect(await screen.findByText(/O processamento está atrasado/)).toBeInTheDocument();
+    expect(screen.queryByText(/começa em instantes/)).not.toBeInTheDocument();
+  });
+
+  it("rodada 8 (B2): auditor vê o histórico e o relatório, sem enviar nem desfazer", async () => {
+    asRole("auditor");
+    const history: PaginatedResponse<IngestionFileEntry> = { items: [makeFileEntry()], total: 1, limit: 15, offset: 0 };
+    vi.mocked(apiClient.get).mockResolvedValue(history as never);
+    renderWithProviders(<UploadCenterPage />);
+    await screen.findByText("faturamento-setembro.csv");
+    expect(screen.getByRole("heading", { name: "Importações" })).toBeInTheDocument();
+    expect(screen.queryByText("Upload de lotes operacionais")).not.toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "Contratos de Convênio" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Relatório" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Desfazer importação de/ })).not.toBeInTheDocument();
+  });
+
   it("quem não é dono nem administrador não vê o botão de desfazer", async () => {
     asRole("viewer");
     const history: PaginatedResponse<IngestionFileEntry> = { items: [makeFileEntry()], total: 1, limit: 15, offset: 0 };

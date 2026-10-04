@@ -14,7 +14,9 @@ import { Tabs, TabPanel } from "@/components/ui/Tabs";
 import { BillingSearchPicker } from "@/components/billing/BillingSearchPicker";
 import { apiClient, ApiError } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
+import { ConfirmationDeclined, withConfirmation } from "@/lib/confirmable";
 import { useToast } from "@/context/ToastContext";
+import { useAuth } from "@/context/AuthContext";
 import type {
   BillingSearchItem,
   BillingStatusHistoryEntry,
@@ -108,7 +110,7 @@ function BillingStatusHistoryTimeline({ billingId }: { billingId: string }) {
 // Registrar pagamento recebido
 // ---------------------------------------------------------------------
 
-function SettlementTab() {
+function SettlementTab({ readOnly = false }: { readOnly?: boolean }) {
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
   const [selected, setSelected] = useState<BillingSearchItem | null>(null);
@@ -122,8 +124,17 @@ function SettlementTab() {
   const [showUnsettleConfirm, setShowUnsettleConfirm] = useState(false);
 
   const settleMutation = useMutation({
-    mutationFn: (vars: { billingId: string; value: number }) =>
-      apiClient.post(`/api/v1/billing/${vars.billingId}/settle`, { received_value: vars.value }),
+    // Auditoria V1, rodada 8 (A1): recebido acima do cobrado (ou somado às
+    // glosas já lançadas) pede confirmação. Quando o aviso já apareceu no
+    // diálogo, a confirmação vai junto; o caso das glosas a API explica.
+    mutationFn: (vars: { billingId: string; value: number; overpaymentSeen: boolean }) =>
+      withConfirmation((confirmation) =>
+        apiClient.post(`/api/v1/billing/${vars.billingId}/settle`, {
+          received_value: vars.value,
+          ...(vars.overpaymentSeen ? { confirm_overpayment: true } : {}),
+          ...confirmation,
+        }),
+      ),
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ["billing"] });
       showSuccess(`Pagamento de ${formatCurrency(vars.value)} registrado para ${selected!.patient_name}.`);
@@ -134,6 +145,7 @@ function SettlementTab() {
     },
     onError: (err) => {
       setPendingSettle(null);
+      if (err instanceof ConfirmationDeclined) return;
       if (err instanceof ApiError && err.campos) {
         const mapped: Record<string, string> = {};
         for (const c of err.campos) mapped[c.campo] = c.problema;
@@ -179,6 +191,29 @@ function SettlementTab() {
 
   const alreadySettled = selected?.status === "paid";
 
+  if (readOnly) {
+    // Auditoria V1, rodada 8 (B2): o auditor confere de onde veio cada
+    // cobrança e o histórico de status, sem os botões de escrita (a API já
+    // recusa a escrita para esse papel).
+    return (
+      <Panel
+        title="Consultar faturamento"
+        subtitle="Busque um faturamento para ver valores e o histórico de status. Seu papel é de leitura."
+      >
+        <div className="p-4">
+          <BillingSearchPicker selected={selected} onSelect={setSelected} error={undefined} />
+          {selected && (
+            <p className="mb-3 text-sm text-ink-muted">
+              Cobrado: {formatCurrency(selected.charged_value)}
+              {selected.received_value != null ? ` · Recebido: ${formatCurrency(selected.received_value)}` : " · Ainda sem recebimento"}
+            </p>
+          )}
+          {selected && <BillingStatusHistoryTimeline billingId={selected.id} />}
+        </div>
+      </Panel>
+    );
+  }
+
   return (
     <Panel
       title="Registrar pagamento recebido"
@@ -190,8 +225,9 @@ function SettlementTab() {
         {selected && alreadySettled && (
           <div className="mb-4 rounded-lg border border-denied/30 bg-denied-bg p-4">
             <p className="text-sm text-ink">
-              Este faturamento já foi liquidado (recebido: {formatCurrency(selected.charged_value)}). Para registrar
-              um novo valor, reverta a liquidação atual primeiro.
+              Este faturamento já foi liquidado
+              {selected.received_value != null ? ` (recebido: ${formatCurrency(selected.received_value)})` : ""}. Para
+              registrar um novo valor, reverta a liquidação atual primeiro.
             </p>
             <div className="mt-3 flex justify-end">
               <Button
@@ -240,11 +276,16 @@ function SettlementTab() {
         title="Registrar pagamento recebido"
         message={
           pendingSettle
-            ? `Confirma o registro de ${formatCurrency(pendingSettle.value)} recebido de ${pendingSettle.billing.patient_name}? Esta ação fica visível na trilha de auditoria e pode ser revertida depois, se necessário.`
+            ? overpayment(pendingSettle)
+              ? `Atenção: ${formatCurrency(pendingSettle.value)} é mais do que o valor cobrado (${formatCurrency(pendingSettle.billing.charged_value)}). Confira se não há um zero ou uma vírgula a mais. Se a operadora pagou mesmo esse valor, confirme para registrar o recebimento de ${pendingSettle.billing.patient_name}.`
+              : `Confirma o registro de ${formatCurrency(pendingSettle.value)} recebido de ${pendingSettle.billing.patient_name}? Esta ação fica visível na trilha de auditoria e pode ser revertida depois, se necessário.`
             : ""
         }
         confirmLabel="Registrar"
-        onConfirm={() => pendingSettle && settleMutation.mutate({ billingId: pendingSettle.billing.id, value: pendingSettle.value })}
+        onConfirm={() =>
+          pendingSettle &&
+          settleMutation.mutate({ billingId: pendingSettle.billing.id, value: pendingSettle.value, overpaymentSeen: overpayment(pendingSettle) })
+        }
         onCancel={() => setPendingSettle(null)}
         isConfirming={settleMutation.isPending}
       />
@@ -670,12 +711,28 @@ const TABS_GROUP = "faturamento-operacoes";
 
 const TAB_IDS: Tab[] = ["pagamento", "coparticipacao", "auditoria-opme", "guias"];
 
+
+/** Rodada 8 (A1): recebido acima do cobrado quase sempre é erro de digitação. */
+function overpayment(p: { billing: BillingSearchItem; value: number }): boolean {
+  return p.value > Number(p.billing.charged_value) + 0.005;
+}
+
 export function BillingOperationsPage() {
   // Os alertas de coparticipação e de OPME abrem direto na aba certa
   // (?tab=coparticipacao / ?tab=auditoria-opme).
   const [searchParams] = useSearchParams();
   const requested = searchParams.get("tab") as Tab | null;
   const [tab, setTab] = useState<Tab>(requested && TAB_IDS.includes(requested) ? requested : "pagamento");
+  const { user } = useAuth();
+
+  if (user?.role === "auditor") {
+    return (
+      <div className="space-y-6">
+        <PageHeader icon={Wallet} title="Faturamento" subtitle="Consulta de faturamentos e do histórico de cada um, em modo leitura." />
+        <SettlementTab readOnly />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

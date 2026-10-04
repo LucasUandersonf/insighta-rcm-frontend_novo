@@ -406,6 +406,24 @@ describe("TenantPage — exportação dos dados (LGPD, portabilidade)", () => {
     expect(screen.getByText(/ficaram de fora: glosas/)).toBeInTheDocument();
   });
 
+  it("rodada 8 (M1): pedido parado na fila com o worker fora mostra o aviso de atraso", async () => {
+    vi.mocked(useAuth).mockReturnValue({ user: { tenant_id: "t1", sub: "u1", role: "owner" } } as unknown as ReturnType<
+      typeof useAuth
+    >);
+    mockGetByPath({
+      "/api/v1/tenant/exports": [
+        {
+          id: "e3", status: "pending", status_label: "Na fila", size_bytes: null, error: null, missing_tables: [],
+          queue_delayed: true, queue_message: "A montagem do arquivo está atrasada. Já fomos avisados.",
+          created_at: "2026-10-04T12:00:00Z", finished_at: null, expires_at: null,
+        },
+      ],
+      ...routes,
+    });
+    renderWithProviders(<TenantPage />);
+    expect(await screen.findByText(/A montagem do arquivo está atrasada/)).toBeInTheDocument();
+  });
+
   it("sem armazenamento (503), cai no download direto do .zip", async () => {
     vi.mocked(useAuth).mockReturnValue({ user: { tenant_id: "t1", sub: "u1", role: "owner" } } as unknown as ReturnType<
       typeof useAuth
