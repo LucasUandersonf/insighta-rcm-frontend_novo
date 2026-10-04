@@ -2736,6 +2736,8 @@ export interface TenantExport {
   status_label: string;
   size_bytes: number | null;
   error: string | null;
+  /** Rodada 7 (M2): tabelas que não puderam ser lidas (a cópia saiu sem elas). */
+  missing_tables?: string[];
   created_at: string;
   finished_at: string | null;
   expires_at: string | null;

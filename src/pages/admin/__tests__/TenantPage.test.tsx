@@ -387,6 +387,25 @@ describe("TenantPage — exportação dos dados (LGPD, portabilidade)", () => {
     click.mockRestore();
   });
 
+  it("exportação com tabela faltando mostra o aviso", async () => {
+    vi.mocked(useAuth).mockReturnValue({ user: { tenant_id: "t1", sub: "u1", role: "owner" } } as unknown as ReturnType<
+      typeof useAuth
+    >);
+    mockGetByPath({
+      "/api/v1/tenant/exports": [
+        {
+          id: "e2", status: "done", status_label: "Pronto, com avisos", size_bytes: 1000, error: null,
+          missing_tables: ["glosas"], created_at: "2026-10-03T12:00:00Z", finished_at: "2026-10-03T12:01:00Z",
+          expires_at: "2026-10-10T12:01:00Z",
+        },
+      ],
+      ...routes,
+    });
+    renderWithProviders(<TenantPage />);
+    expect(await screen.findByText("Pronto, com avisos")).toBeInTheDocument();
+    expect(screen.getByText(/ficaram de fora: glosas/)).toBeInTheDocument();
+  });
+
   it("sem armazenamento (503), cai no download direto do .zip", async () => {
     vi.mocked(useAuth).mockReturnValue({ user: { tenant_id: "t1", sub: "u1", role: "owner" } } as unknown as ReturnType<
       typeof useAuth
