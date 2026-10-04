@@ -1054,6 +1054,11 @@ export function DataExportPanel({ isOwner }: { isOwner: boolean }) {
                   </Button>
                 ) : null}
                 {latest.status === "failed" && latest.error ? <span className="text-denied">{latest.error}</span> : null}
+                {latest.queue_delayed ? (
+                  <span className="basis-full text-pending" role="status">
+                    {latest.queue_message ?? "A montagem do arquivo está atrasada. O pedido continua na fila."}
+                  </span>
+                ) : null}
                 {latest.status === "done" && latest.missing_tables?.length ? (
                   <span className="basis-full text-pending">
                     Algumas tabelas não puderam ser lidas e ficaram de fora: {latest.missing_tables.join(", ")}. Peça a

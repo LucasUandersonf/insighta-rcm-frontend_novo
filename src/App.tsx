@@ -36,6 +36,7 @@ const PrivacyPolicyPage = lazy(() => import("@/pages/PrivacyPolicyPage").then((m
 const ForgotPasswordPage = lazy(() => import("@/pages/ForgotPasswordPage").then((m) => ({ default: m.ForgotPasswordPage })));
 const ResetPasswordPage = lazy(() => import("@/pages/ResetPasswordPage").then((m) => ({ default: m.ResetPasswordPage })));
 const ConfirmEmailPage = lazy(() => import("@/pages/ConfirmEmailPage").then((m) => ({ default: m.ConfirmEmailPage })));
+const ConfirmRecipientPage = lazy(() => import("@/pages/ConfirmRecipientPage").then((m) => ({ default: m.ConfirmRecipientPage })));
 const TeamPage = lazy(() => import("@/pages/TeamPage").then((m) => ({ default: m.TeamPage })));
 const SatisfactionRatingPage = lazy(() =>
   import("@/pages/SatisfactionRatingPage").then((m) => ({ default: m.SatisfactionRatingPage }))
@@ -127,6 +128,7 @@ export default function App() {
               <Route path="/forgot-password" element={<ForgotPasswordPage />} />
               <Route path="/reset-password" element={<ResetPasswordPage />} />
               <Route path="/confirmar-email" element={<ConfirmEmailPage />} />
+              <Route path="/confirmar-destinatario" element={<ConfirmRecipientPage />} />
               {/* "Mapa de Dados Insighta" — Domínio Pós-atendimento (Onda 2):
                   link público de avaliação de satisfação, sem autenticação
                   (o paciente abre no próprio celular) — ver DECISÃO em
@@ -218,13 +220,18 @@ export default function App() {
                 {/* Upload é ação de escrita — mesmo RBAC do backend em
                     ingestion.py/_CAN_MANAGE e contracts.py/_CAN_WRITE
                     (owner/admin/financeiro); sem auditor, que é só leitura. */}
-                <Route element={<RoleProtectedRoute allowedRoles={["owner", "admin", "financeiro"]} />}>
+                {/* Rodada 8 (B2): o auditor consulta importações e faturamento em
+                    modo leitura (as próprias páginas escondem a escrita, que a API
+                    já recusa para esse papel). */}
+                <Route element={<RoleProtectedRoute allowedRoles={["owner", "admin", "financeiro", "auditor"]} />}>
                   <Route path="/upload" element={<UploadCenterPage />} />
+                  <Route path="/faturamento" element={<BillingOperationsPage />} />
+                </Route>
+                <Route element={<RoleProtectedRoute allowedRoles={["owner", "admin", "financeiro"]} />}>
                   {/* Registrar pagamento recebido (POST /billing/{id}/settle) e
                       cadastro avulso de Guia TISS (POST /guias) — mesmo RBAC de
                       /upload: ação de escrita financeira, fora do alcance de
                       "atendimento" e de "auditor" (leitura só). */}
-                  <Route path="/faturamento" element={<BillingOperationsPage />} />
                   <Route path="/fila-correcao" element={<BillingRiskQueuePage />} />
                   {/* Destino que o próprio toast de sucesso da Central de Upload já
                       promete ("veja a tela de Setup") — mesmo RBAC de /upload
