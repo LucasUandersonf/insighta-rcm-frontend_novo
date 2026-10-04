@@ -1918,6 +1918,8 @@ export interface PlannedAbsence {
   end_date: string;
   reason: string | null;
   created_at: string;
+  /** Rodada 9 (M3): só na resposta do cadastro. */
+  appointments_in_period?: number | null;
 }
 
 export interface PlannedAbsenceCreateRequest {
@@ -2754,4 +2756,10 @@ export interface TenantExportDownload {
   url: string;
   filename: string;
   expires_in_seconds: number;
+}
+
+/** Rodada 9 (M4): catálogo de GET /integrations/webhooks/event-types. */
+export interface WebhookEventType {
+  event_type: string;
+  description: string;
 }

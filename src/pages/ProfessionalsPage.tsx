@@ -168,7 +168,15 @@ function PlannedAbsencesEditor({
       setStartDate("");
       setEndDate("");
       setReason("");
-      showSuccess("Ausência registrada.");
+      // Rodada 9 (M3): consultas já marcadas no período precisam ser remarcadas.
+      const affected = created.appointments_in_period ?? 0;
+      if (affected > 0) {
+        showError(
+          `Ausência registrada. ${affected} consulta(s) já marcada(s) com este profissional nesse período: remarque ou avise os pacientes na Agenda.`,
+        );
+      } else {
+        showSuccess("Ausência registrada.");
+      }
     },
     onError: (err) => showError(getApiErrorMessage(err)),
   });
