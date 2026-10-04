@@ -113,6 +113,26 @@ describe("ProfessionalsPage — ausências planejadas", () => {
     expect(screen.queryByText(/01\/07\/2026–10\/07\/2026/)).not.toBeInTheDocument();
   });
 
+  it("rodada 9 (M3): ausência com consultas já marcadas no período avisa para remarcar", async () => {
+    vi.mocked(apiClient.get).mockResolvedValue([makeProfessional({ id: "p1", full_name: "Dr. X", planned_absences: [] })] as never);
+    vi.mocked(apiClient.post).mockResolvedValue({
+      id: "abs-9",
+      start_date: "2026-12-20",
+      end_date: "2026-12-22",
+      reason: null,
+      created_at: "2026-01-01T00:00:00Z",
+      appointments_in_period: 2,
+    } as never);
+    const user = userEvent.setup();
+    renderWithProviders(<ProfessionalsPage />);
+    await waitFor(() => expect(screen.getByText("Dr. X")).toBeInTheDocument());
+    await user.click(screen.getByRole("button", { name: /Editar/ }));
+    await user.type(screen.getByLabelText("Início"), "2026-12-20");
+    await user.type(screen.getByLabelText("Fim"), "2026-12-22");
+    await user.click(screen.getByRole("button", { name: "+ Adicionar" }));
+    expect(await screen.findByText(/2 consulta\(s\) já marcada\(s\)/)).toBeInTheDocument();
+  });
+
   it("não mostra o editor de ausências ao cadastrar um profissional novo", async () => {
     vi.mocked(apiClient.get).mockResolvedValue([makeProfessional()] as never);
     const user = userEvent.setup();

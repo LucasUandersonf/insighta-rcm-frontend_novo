@@ -17,6 +17,7 @@ import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useToast } from "@/context/ToastContext";
 import type {
+  WebhookEventType,
   ApiKey,
   ApiKeyCreated,
   WebhookDeliveryEntry,
@@ -180,7 +181,15 @@ function CreateWebhookModal({
   const { showError } = useToast();
   const [name, setName] = useState("");
   const [url, setUrl] = useState("");
-  const [eventTypes, setEventTypes] = useState("");
+  // Auditoria V1, rodada 9 (M4): escolha na lista dos eventos que existem.
+  // Texto livre deixava um erro de digitação criar um webhook que nunca dispara.
+  const [eventTypes, setEventTypes] = useState<string[]>([]);
+  const { data: catalog } = useQuery({
+    queryKey: ["webhook-event-types"],
+    queryFn: () => apiClient.get<WebhookEventType[]>("/api/v1/integrations/webhooks/event-types"),
+    enabled: isOpen,
+    staleTime: 60 * 60 * 1000,
+  });
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -192,10 +201,7 @@ function CreateWebhookModal({
           // Campo vazio = recebe todos os eventos (ver DECISÃO em
           // app/schemas/webhook_subscription.py) — mesma convenção de "sem
           // restrição" já usada em Gestão de Contatos para Relatórios.
-          event_types: eventTypes
-            .split(",")
-            .map((e) => e.trim())
-            .filter(Boolean),
+          event_types: eventTypes,
           active: true,
         },
       ),
@@ -203,7 +209,7 @@ function CreateWebhookModal({
       queryClient.invalidateQueries({ queryKey: ["webhook-subscriptions"] });
       setName("");
       setUrl("");
-      setEventTypes("");
+      setEventTypes([]);
       onClose();
       onCreated(created);
     },
@@ -233,21 +239,29 @@ function CreateWebhookModal({
           value={url}
           onChange={(e) => setUrl(e.target.value)}
         />
-        <TextField
-          label="Eventos (opcional)"
-          placeholder="billing.held_for_review, denial_appeal.resolved — vazio recebe todos"
-          value={eventTypes}
-          onChange={(e) => setEventTypes(e.target.value)}
-        />
-        <p className="mb-4 text-2xs text-ink-faint">
-          Separe vários por vírgula. Disponíveis hoje:{" "}
-          <code className="font-mono">billing.held_for_review</code>{" "}
-          (faturamento retido por risco de glosa),{" "}
-          <code className="font-mono">denial_appeal.resolved</code> (recurso de
-          glosa deferido/indeferido/escalado para NIP) e{" "}
-          <code className="font-mono">no_show_risk.high</code> (agendamento com
-          alto risco de falta).
-        </p>
+        <fieldset className="mb-4">
+          <legend className="mb-1.5 text-xs font-medium text-ink-muted">Eventos (nenhum marcado = recebe todos)</legend>
+          <div className="space-y-1.5">
+            {(catalog ?? []).map((ev) => (
+              <label key={ev.event_type} className="flex items-start gap-2 text-sm text-ink">
+                <input
+                  type="checkbox"
+                  className="mt-0.5"
+                  checked={eventTypes.includes(ev.event_type)}
+                  onChange={(e) =>
+                    setEventTypes((prev) =>
+                      e.target.checked ? [...prev, ev.event_type] : prev.filter((t) => t !== ev.event_type),
+                    )
+                  }
+                />
+                <span>
+                  <code className="font-mono text-2xs">{ev.event_type}</code>
+                  <span className="block text-2xs text-ink-faint">{ev.description}</span>
+                </span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
         <div className="mt-5 flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancelar
