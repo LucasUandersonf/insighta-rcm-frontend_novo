@@ -98,6 +98,9 @@ export interface ReportRecipient {
   last_delivery_at?: string | null;
   last_delivery_status?: "ok" | "falhou" | null;
   last_delivery_error?: string | null;
+  /** Rodada 8 (A2): e-mail de fora da equipe só recebe depois de confirmar. */
+  email_confirmed_at?: string | null;
+  email_confirmation_sent_at?: string | null;
 }
 
 // --- Central de Upload / Ingestão de Dados (app/schemas/ingestion.py) ---
@@ -1680,6 +1683,7 @@ export interface BillingSearchItem {
   procedure_code: string | null;
   insurance_plan_name: string;
   charged_value: number;
+  received_value?: number | null;
   status: BillingResponse["status"];
   denial_risk_level: BillingResponse["denial_risk_level"];
   created_at: string;
@@ -2738,6 +2742,9 @@ export interface TenantExport {
   error: string | null;
   /** Rodada 7 (M2): tabelas que não puderam ser lidas (a cópia saiu sem elas). */
   missing_tables?: string[];
+  /** Rodada 8 (M1): na fila ou montando com o worker parado. */
+  queue_delayed?: boolean;
+  queue_message?: string | null;
   created_at: string;
   finished_at: string | null;
   expires_at: string | null;

@@ -4,8 +4,17 @@ import userEvent from "@testing-library/user-event";
 import { BillingOperationsPage } from "@/pages/BillingOperationsPage";
 import { apiClient } from "@/lib/api-client";
 import { renderWithProviders } from "@/test/utils";
+import { useAuth } from "@/context/AuthContext";
 import { expectNoA11yViolations } from "@/test/a11y";
 import type { BillingSearchItem, Guia, InsurancePlan, PaginatedResponse } from "@/lib/types";
+
+vi.mock("@/context/AuthContext", () => ({ useAuth: vi.fn() }));
+
+function asRole(role: string) {
+  vi.mocked(useAuth).mockReturnValue({ user: { sub: "u1", tenant_id: "t1", role } } as never);
+}
+
+beforeEach(() => asRole("financeiro"));
 
 vi.mock("@/lib/api-client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api-client")>();
@@ -443,3 +452,67 @@ describe("BillingOperationsPage — destino dos alertas", () => {
     expect(await screen.findByRole("tab", { name: "Registrar pagamento" })).toHaveAttribute("aria-selected", "true");
   });
 });
+
+describe("BillingOperationsPage — rodada 8", () => {
+  beforeEach(() => {
+    vi.mocked(apiClient.post).mockReset();
+    vi.mocked(apiClient.get).mockClear();
+  });
+
+  async function selectAndType(value: string) {
+    const user = userEvent.setup();
+    renderWithProviders(<BillingOperationsPage />);
+    await user.type(screen.getByLabelText(/Buscar faturamento/), "Maria da Silva");
+    await waitFor(() => expect(screen.getByText("Maria da Silva Santos")).toBeInTheDocument(), { timeout: 2000 });
+    await user.click(screen.getByText("Maria da Silva Santos"));
+    await user.type(screen.getByLabelText(/Valor recebido/), value);
+    await user.click(screen.getByRole("button", { name: "Registrar pagamento" }));
+    return user;
+  }
+
+  it("A1: valor acima do cobrado avisa no diálogo e envia a confirmação junto", async () => {
+    mockGetByPath({ "/api/v1/billing/search": [makeResult({ status: "pending" })], "/api/v1/insurance-companies/plans": [] });
+    vi.mocked(apiClient.post).mockResolvedValue({});
+    const user = await selectAndType("1500");
+    expect(screen.getByText(/é mais do que o valor cobrado/)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Registrar" }));
+    await waitFor(() =>
+      expect(apiClient.post).toHaveBeenCalledWith("/api/v1/billing/b1/settle", { received_value: 1500, confirm_overpayment: true }),
+    );
+  });
+
+  it("A1: quando a API pede confirmação (glosas já lançadas), pergunta e reenvia", async () => {
+    const { ApiError } = await import("@/lib/api-client");
+    mockGetByPath({ "/api/v1/billing/search": [makeResult({ status: "pending" })], "/api/v1/insurance-companies/plans": [] });
+    const conflict = new ApiError(409, {
+      error_code: "recebimento_acima_do_cobrado",
+      message: "O recebido mais as glosas passa do cobrado.",
+      confirm_field: "confirm_overpayment",
+    } as never);
+    vi.mocked(apiClient.post).mockRejectedValueOnce(conflict).mockResolvedValueOnce({});
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+    const user = await selectAndType("140");
+    await user.click(screen.getByRole("button", { name: "Registrar" }));
+    await waitFor(() =>
+      expect(apiClient.post).toHaveBeenLastCalledWith("/api/v1/billing/b1/settle", { received_value: 140, confirm_overpayment: true }),
+    );
+    expect(confirmSpy).toHaveBeenCalledWith(expect.stringContaining("glosas"));
+    confirmSpy.mockRestore();
+  });
+
+  it("B2: auditor consulta faturamento sem formulário de escrita", async () => {
+    asRole("auditor");
+    mockGetByPath({ "/api/v1/billing/search": [makeResult({ status: "paid", received_value: 120 })] });
+    const user = userEvent.setup();
+    renderWithProviders(<BillingOperationsPage />);
+    expect(screen.getByText("Consultar faturamento")).toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "Coparticipação" })).not.toBeInTheDocument();
+    await user.type(screen.getByLabelText(/Buscar faturamento/), "Maria da Silva");
+    await waitFor(() => expect(screen.getByText("Maria da Silva Santos")).toBeInTheDocument(), { timeout: 2000 });
+    await user.click(screen.getByText("Maria da Silva Santos"));
+    expect(screen.getByText(/Recebido: R\$\s?120,00/)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/Valor recebido/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Reverter/ })).not.toBeInTheDocument();
+  });
+});
+

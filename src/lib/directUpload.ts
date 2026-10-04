@@ -36,6 +36,9 @@ export interface DirectUploadStatus {
   data_type?: string | null;
   processed_rows?: number;
   total_rows?: number | null;
+  /** Rodada 8 (M1): na fila ou processando com o worker parado. */
+  queue_delayed?: boolean;
+  queue_message?: string | null;
   created_at?: string | null;
   completed_at?: string | null;
   /** Colunas do arquivo fora do modelo, que não foram importadas. */

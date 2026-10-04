@@ -451,8 +451,13 @@ function BatchUploadTab() {
       ),
   });
 
+  // Auditoria V1, rodada 8 (B2): o auditor vê o histórico e os relatórios
+  // das importações (a API já liberava a leitura), sem enviar nada.
+  const readOnly = user?.role === "auditor";
+
   return (
     <div className="space-y-4">
+      {!readOnly && (
       <Panel
         title="Upload de lotes operacionais"
         subtitle="Faturamento, Atendimento, Estoque, PEP ou Agenda (CSV ou JSON — Agenda também aceita XML) do seu ERP. Processado na hora: você vê o resultado nesta mesma tela."
@@ -520,6 +525,8 @@ function BatchUploadTab() {
         </div>
       </Panel>
 
+      )}
+
       <ColumnMappingModal
         file={file}
         dataType={dataType}
@@ -529,7 +536,7 @@ function BatchUploadTab() {
       />
       <UploadReportModal fileId={reportFileId} onClose={() => setReportFileId(null)} />
       <UndoImportModal file={undoFile} onClose={() => setUndoFile(null)} />
-      <BackgroundImportsPanel onOpenReport={setReportFileId} />
+      {!readOnly && <BackgroundImportsPanel onOpenReport={setReportFileId} />}
 
       <Panel
         title="Histórico de importações"
@@ -769,8 +776,10 @@ export function BackgroundImportsPanel({ onOpenReport }: { onOpenReport: (fileId
                       style={percent === null ? undefined : { width: `${percent}%` }}
                     />
                   </div>
-                  <p className="text-2xs text-ink-faint">
-                    {upload.status === "na_fila"
+                  <p className={upload.queue_delayed ? "text-2xs text-pending" : "text-2xs text-ink-faint"} role={upload.queue_delayed ? "status" : undefined}>
+                    {upload.queue_delayed
+                      ? (upload.queue_message ?? "O processamento está atrasado. O arquivo continua guardado.")
+                      : upload.status === "na_fila"
                       ? "Aguardando a vez — começa em instantes."
                       : percent === null
                         ? "Lendo a planilha…"
@@ -900,6 +909,20 @@ const TABS_GROUP = "central-upload";
 
 export function UploadCenterPage() {
   const [tab, setTab] = useState<Tab>("lotes");
+  const { user } = useAuth();
+
+  if (user?.role === "auditor") {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          icon={UploadCloud}
+          title="Importações"
+          subtitle="Histórico dos arquivos importados pela clínica e o relatório de cada um, em modo leitura."
+        />
+        <BatchUploadTab />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
