@@ -412,7 +412,12 @@ function BatchUploadTab() {
       const formData = new FormData();
       formData.append("file", f);
       formData.append("data_type", dataType);
-      return { result: await apiClient.upload<UploadIngestionFileResponse>("/api/v1/ingestion/upload", formData) };
+      const response = await apiClient.upload<UploadIngestionFileResponse | DirectUploadStatus>("/api/v1/ingestion/upload", formData);
+      // Auditoria V1, rodada 7 (A1): arquivo grande enviado pela API entra na
+      // fila do worker (202 com o status do envio) em vez de segurar a tela
+      // por minutos; o acompanhamento é o mesmo do envio direto.
+      if ("upload_id" in response) return { queued: response };
+      return { result: response };
     },
     onSettled: () => setSendPercent(null),
     onSuccess: (outcome) => {
