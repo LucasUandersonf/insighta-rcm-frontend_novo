@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { TenantPage } from "@/pages/admin/TenantPage";
-import { apiClient } from "@/lib/api-client";
+import { apiClient, ApiError } from "@/lib/api-client";
 import { useAuth } from "@/context/AuthContext";
 import { renderWithProviders } from "@/test/utils";
 import { expectNoA11yViolations } from "@/test/a11y";
@@ -351,18 +351,57 @@ describe("TenantPage — exportação dos dados (LGPD, portabilidade)", () => {
     "/api/v1/tenant": makeTenant(),
   };
 
-  it("owner baixa o .zip com todos os dados", async () => {
+  it("owner pede o arquivo em segundo plano e baixa quando fica pronto", async () => {
     vi.mocked(useAuth).mockReturnValue({ user: { tenant_id: "t1", sub: "u1", role: "owner" } } as unknown as ReturnType<
       typeof useAuth
     >);
-    mockGetByPath(routes);
+    const ready = {
+      id: "e1",
+      status: "done",
+      status_label: "Pronto para baixar",
+      size_bytes: 2_500_000,
+      error: null,
+      created_at: "2026-10-03T12:00:00Z",
+      finished_at: "2026-10-03T12:02:00Z",
+      expires_at: "2026-10-10T12:02:00Z",
+    };
+    mockGetByPath({
+      "/api/v1/tenant/exports/e1/download": { url: "https://bucket/e1.zip", filename: "dados.zip", expires_in_seconds: 900 },
+      "/api/v1/tenant/exports": [ready],
+      ...routes,
+    });
+    vi.mocked(apiClient.post).mockResolvedValue({ ...ready, status: "pending", status_label: "Na fila" } as never);
+    const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+
+    renderWithProviders(<TenantPage />);
+    const generate = await screen.findByRole("button", { name: /Gerar arquivo com todos os dados/ });
+    await userEvent.click(generate);
+    await waitFor(() => expect(apiClient.post).toHaveBeenCalledWith("/api/v1/tenant/exports", {}));
+
+    expect(await screen.findByText("Pronto para baixar")).toBeInTheDocument();
+    expect(screen.getByText(/2,4 MB/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Baixar arquivo" }));
+    await waitFor(() => expect(apiClient.get).toHaveBeenCalledWith("/api/v1/tenant/exports/e1/download"));
+    expect(click).toHaveBeenCalled();
+    expect(apiClient.getBlob).not.toHaveBeenCalled();
+    click.mockRestore();
+  });
+
+  it("sem armazenamento (503), cai no download direto do .zip", async () => {
+    vi.mocked(useAuth).mockReturnValue({ user: { tenant_id: "t1", sub: "u1", role: "owner" } } as unknown as ReturnType<
+      typeof useAuth
+    >);
+    mockGetByPath({ "/api/v1/tenant/exports": [], ...routes });
+    vi.mocked(apiClient.post).mockRejectedValue(
+      new ApiError(503, { error_code: "servico_indisponivel", message: "Use o download direto.", request_id: "r" }),
+    );
     vi.mocked(apiClient.getBlob).mockResolvedValue(new Blob(["zip"], { type: "application/zip" }));
     const createObjectURL = vi.fn(() => "blob:x");
     Object.assign(URL, { createObjectURL, revokeObjectURL: vi.fn() });
     const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
 
     renderWithProviders(<TenantPage />);
-    const button = await screen.findByRole("button", { name: /Baixar todos os dados/ });
+    const button = await screen.findByRole("button", { name: /Gerar arquivo com todos os dados/ });
     await userEvent.click(button);
 
     await waitFor(() => expect(apiClient.getBlob).toHaveBeenCalledWith("/api/v1/tenant/export"));

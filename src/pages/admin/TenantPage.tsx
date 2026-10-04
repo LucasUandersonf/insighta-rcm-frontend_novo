@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { TextField } from "@/components/ui/FormField";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Badge } from "@/components/ui/Badge";
-import { apiClient } from "@/lib/api-client";
+import { apiClient, ApiError } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useToast } from "@/context/ToastContext";
 import { useAuth } from "@/context/AuthContext";
@@ -23,6 +23,8 @@ import type {
   OrganizationJoinResponse,
   PlanCatalogEntry,
   Tenant,
+  TenantExport,
+  TenantExportDownload,
 } from "@/lib/types";
 
 function formatDateTime(value: string): string {
@@ -948,27 +950,80 @@ function OrganizationLinkingPanel({ isOwner }: { isOwner: boolean }) {
 /**
  * LGPD, portabilidade (art. 18, V): o dono baixa todos os dados da clínica
  * num .zip (um CSV por tabela), sem pedir ao suporte. Senhas e tokens nunca
- * saem; cada exportação fica na auditoria (GET /tenant/export).
+ * saem; cada exportação fica na auditoria.
+ *
+ * Auditoria V1, rodada 6 (M1): o arquivo é montado em segundo plano
+ * (POST /tenant/exports) — numa clínica grande, montar dentro da requisição
+ * passava do tempo limite. A tela acompanha o andamento e oferece o link
+ * quando fica pronto (7 dias). Sem armazenamento configurado (ambiente
+ * local), a API responde 503 e a tela cai no download direto de antes.
  */
+function formatBytes(value: number | null): string {
+  if (!value) return "";
+  if (value < 1024 * 1024) return `${Math.max(1, Math.round(value / 1024))} KB`;
+  return `${(value / 1024 / 1024).toFixed(1).replace(".", ",")} MB`;
+}
+
 export function DataExportPanel({ isOwner }: { isOwner: boolean }) {
   const { showSuccess, showError } = useToast();
+  const queryClient = useQueryClient();
   const [busy, setBusy] = useState(false);
+
+  const exportsQuery = useQuery({
+    queryKey: ["tenant-exports"],
+    queryFn: () => apiClient.get<TenantExport[]>("/api/v1/tenant/exports"),
+    enabled: isOwner,
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      const latest = Array.isArray(data) ? data[0] : undefined;
+      return latest && (latest.status === "pending" || latest.status === "running") ? 5000 : false;
+    },
+  });
+  const latest = Array.isArray(exportsQuery.data) ? exportsQuery.data[0] : undefined;
+  const inProgress = latest?.status === "pending" || latest?.status === "running";
+
+  async function directDownload() {
+    const blob = await apiClient.getBlob("/api/v1/tenant/export");
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `insighta-dados-${new Date().toISOString().slice(0, 10)}.zip`;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 10_000);
+    showSuccess("Exportação pronta. O arquivo foi baixado.");
+  }
 
   async function handleExport() {
     setBusy(true);
     try {
-      const blob = await apiClient.getBlob("/api/v1/tenant/export");
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `insighta-dados-${new Date().toISOString().slice(0, 10)}.zip`;
-      link.click();
-      setTimeout(() => URL.revokeObjectURL(url), 10_000);
-      showSuccess("Exportação pronta. O arquivo foi baixado.");
+      await apiClient.post<TenantExport>("/api/v1/tenant/exports", {});
+      await queryClient.invalidateQueries({ queryKey: ["tenant-exports"] });
+      showSuccess("Pedido recebido. Estamos montando o arquivo; esta tela avisa quando ficar pronto.");
     } catch (err) {
-      showError(getApiErrorMessage(err));
+      if (err instanceof ApiError && err.status === 503) {
+        try {
+          await directDownload();
+        } catch (directErr) {
+          showError(getApiErrorMessage(directErr));
+        }
+      } else {
+        showError(getApiErrorMessage(err));
+      }
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function handleDownload(exportId: string) {
+    try {
+      const link = await apiClient.get<TenantExportDownload>(`/api/v1/tenant/exports/${exportId}/download`);
+      const anchor = document.createElement("a");
+      anchor.href = link.url;
+      anchor.download = link.filename;
+      anchor.click();
+    } catch (err) {
+      showError(getApiErrorMessage(err));
+      await queryClient.invalidateQueries({ queryKey: ["tenant-exports"] });
     }
   }
 
@@ -981,10 +1036,27 @@ export function DataExportPanel({ isOwner }: { isOwner: boolean }) {
           e chaves de acesso não são incluídas.
         </p>
         {isOwner ? (
-          <Button type="button" variant="secondary" onClick={handleExport} disabled={busy}>
-            <Download className="h-4 w-4" aria-hidden />
-            {busy ? "Preparando o arquivo..." : "Baixar todos os dados (.zip)"}
-          </Button>
+          <div className="space-y-3">
+            <Button type="button" variant="secondary" onClick={handleExport} disabled={busy || inProgress}>
+              <Download className="h-4 w-4" aria-hidden />
+              {busy ? "Enviando o pedido..." : inProgress ? "Montando o arquivo..." : "Gerar arquivo com todos os dados (.zip)"}
+            </Button>
+            {latest ? (
+              <div className="flex flex-wrap items-center gap-2 text-xs text-ink-muted" role="status">
+                <span>
+                  Último pedido em {formatDateTime(latest.created_at)}: <strong>{latest.status_label}</strong>
+                  {latest.status === "done" && latest.size_bytes ? ` (${formatBytes(latest.size_bytes)})` : ""}
+                  {latest.status === "done" && latest.expires_at ? `. Disponível até ${formatDateTime(latest.expires_at)}.` : ""}
+                </span>
+                {latest.status === "done" ? (
+                  <Button type="button" size="sm" onClick={() => handleDownload(latest.id)}>
+                    Baixar arquivo
+                  </Button>
+                ) : null}
+                {latest.status === "failed" && latest.error ? <span className="text-denied">{latest.error}</span> : null}
+              </div>
+            ) : null}
+          </div>
         ) : (
           <p className="text-2xs text-ink-faint">Só o papel "owner" pode exportar os dados da clínica.</p>
         )}
