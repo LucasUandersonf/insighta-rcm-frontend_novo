@@ -147,6 +147,32 @@ describe("UploadCenterPage — aba Lotes Operacionais", () => {
     ).toBeInTheDocument();
   });
 
+  it("arquivo grande pela API entra na fila (202) e a tela libera na hora", async () => {
+    vi.mocked(apiClient.get).mockResolvedValue(emptyHistory() as never);
+    vi.mocked(apiClient.upload).mockResolvedValue({
+      upload_id: "up-1",
+      status: "na_fila",
+      error: null,
+      ingestion_file_id: null,
+      row_count: null,
+      error_row_count: null,
+      already_processed: false,
+      message: null,
+      processed_rows: 0,
+      total_rows: null,
+      ignored_columns: [],
+    } as never);
+
+    renderWithProviders(<UploadCenterPage />);
+    await screen.findByText(/Nenhum arquivo enviado ainda/);
+    const user = userEvent.setup();
+    await user.upload(fileInput(), csvFile());
+    fireEvent.click(screen.getByRole("button", { name: "Enviar arquivo" }));
+
+    expect(await screen.findByText(/O processamento continua em segundo plano/)).toBeInTheDocument();
+    expect(screen.queryByText(/Arquivo processado/)).not.toBeInTheDocument();
+  });
+
   it("mostra erro da API sem travar a tela quando o upload falha", async () => {
     vi.mocked(apiClient.get).mockResolvedValue(emptyHistory() as never);
     vi.mocked(apiClient.upload).mockRejectedValue(apiError("Arquivo maior que o limite de 20MB."));
