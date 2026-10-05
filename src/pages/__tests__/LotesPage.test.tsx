@@ -164,3 +164,23 @@ describe("LotesPage", () => {
     await expectNoA11yViolations(container);
   });
 });
+
+describe("LotesPage — rodada 10 (A1)", () => {
+  it("lote fechado pode ser reaberto e leva para Faturas", async () => {
+    const lote = makeLote({ status: "fechado", closed_at: "2026-09-30T00:00:00Z" });
+    const lotesPage: PaginatedResponse<Lote> = { items: [lote], total: 1, limit: 20, offset: 0 };
+    mockGetByPath({
+      "/api/v1/insurance-companies/plans?include_inactive=true": [makePlan()],
+      "/api/v1/insurance-companies/plans": [makePlan()],
+      [`/api/v1/lotes/${lote.id}/guias`]: [makeGuia({ lote_id: lote.id })],
+      "/api/v1/lotes": lotesPage,
+    });
+    vi.mocked(apiClient.post).mockResolvedValue(makeLote({ status: "aberto" }) as never);
+
+    renderWithProviders(<LotesPage />);
+    fireEvent.click(await screen.findByRole("button", { name: "Ver guias" }));
+    expect(await screen.findByRole("link", { name: "Gerar fatura" })).toHaveAttribute("href", "/faturas");
+    fireEvent.click(screen.getByRole("button", { name: "Reabrir lote" }));
+    await waitFor(() => expect(apiClient.post).toHaveBeenCalledWith(`/api/v1/lotes/${lote.id}/reabrir`));
+  });
+});
