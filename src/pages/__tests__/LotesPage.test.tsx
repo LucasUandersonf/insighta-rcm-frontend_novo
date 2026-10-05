@@ -6,6 +6,11 @@ import { renderWithProviders } from "@/test/utils";
 import { expectNoA11yViolations } from "@/test/a11y";
 import type { Guia, InsurancePlan, Lote, PaginatedResponse } from "@/lib/types";
 
+let mockRole = "financeiro";
+vi.mock("@/context/AuthContext", () => ({
+  useAuth: () => ({ user: { sub: "u1", tenant_id: "t1", role: mockRole } }),
+}));
+
 vi.mock("@/lib/api-client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api-client")>();
   return {
@@ -182,5 +187,25 @@ describe("LotesPage — rodada 10 (A1)", () => {
     expect(await screen.findByRole("link", { name: "Gerar fatura" })).toHaveAttribute("href", "/faturas");
     fireEvent.click(screen.getByRole("button", { name: "Reabrir lote" }));
     await waitFor(() => expect(apiClient.post).toHaveBeenCalledWith(`/api/v1/lotes/${lote.id}/reabrir`));
+  });
+});
+
+describe("LotesPage — rodada 11 (B4)", () => {
+  it("auditor não vê criar, fechar nem reabrir", async () => {
+    mockRole = "auditor";
+    const lote = makeLote({ status: "fechado", closed_at: "2026-09-30T00:00:00Z" });
+    mockGetByPath({
+      "/api/v1/insurance-companies/plans?include_inactive=true": [makePlan()],
+      "/api/v1/insurance-companies/plans": [makePlan()],
+      [`/api/v1/lotes/${lote.id}/guias`]: [makeGuia({ lote_id: lote.id })],
+      "/api/v1/lotes": { items: [lote], total: 1, limit: 20, offset: 0 },
+    });
+    renderWithProviders(<LotesPage />);
+    expect(screen.queryByRole("button", { name: /novo lote/i })).not.toBeInTheDocument();
+    fireEvent.click(await screen.findByRole("button", { name: "Ver guias" }));
+    await screen.findByText(/Guias no lote/);
+    expect(screen.queryByRole("button", { name: "Reabrir lote" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Gerar fatura" })).not.toBeInTheDocument();
+    mockRole = "financeiro";
   });
 });
