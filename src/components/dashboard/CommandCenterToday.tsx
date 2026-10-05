@@ -400,6 +400,9 @@ export function CommandCenterToday({
             {payers.concentration_text && <p className="text-[13px] text-ink-muted">{payers.concentration_text}</p>}
           </div>
           <div
+            role="region"
+            aria-label="Participação de cada convênio no faturamento"
+            tabIndex={0}
             className="grid gap-1.5 overflow-x-auto"
             style={{
               gridTemplateColumns: [...shareRows.map((r) => `minmax(120px, ${Math.max(r.share_pct, 6)}fr)`), ...(others.length ? [`minmax(120px, ${Math.max(othersShare, 6)}fr)`] : [])].join(" "),

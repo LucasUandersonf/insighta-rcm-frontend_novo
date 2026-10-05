@@ -174,7 +174,7 @@ export function OnboardingTour({ isOpen, steps, onFinish }: { isOpen: boolean; s
               onClick={onFinish}
               aria-label="Pular tour"
               title="Pular tour"
-              className="rounded-sm p-0.5 text-ink-faint transition-colors hover:text-ink"
+              className="rounded-sm p-1.5 text-ink-faint transition-colors hover:text-ink"
             >
               <X aria-hidden size={14} />
             </button>

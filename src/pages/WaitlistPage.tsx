@@ -268,7 +268,7 @@ export function WaitlistPage() {
               onClick={() => setStatusFilter(s)}
               className={
                 statusFilter === s
-                  ? "rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white"
+                  ? "rounded-md bg-brand px-3 py-1.5 text-xs font-medium text-white"
                   : "rounded-md border border-border-hairline px-3 py-1.5 text-xs text-ink-muted hover:bg-canvas-raised"
               }
             >

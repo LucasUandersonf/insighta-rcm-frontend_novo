@@ -123,7 +123,7 @@ function MfaChallenge() {
         <button
           type="submit"
           disabled={isLoggingIn || code.trim().length < 6}
-          className="mt-5 w-full rounded-md bg-accent px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+          className="mt-5 w-full rounded-md bg-brand px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isLoggingIn ? "Conferindo..." : "Entrar"}
         </button>
