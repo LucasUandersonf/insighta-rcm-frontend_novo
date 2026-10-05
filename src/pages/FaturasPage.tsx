@@ -13,11 +13,13 @@ import { apiClient } from "@/lib/api-client";
 import { ConfirmationDeclined, withConfirmation } from "@/lib/confirmable";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useToast } from "@/context/ToastContext";
+import { useAuth } from "@/context/AuthContext";
 import type {
   Fatura,
   FaturaCreateRequest,
   FaturaSettleRequest,
   FaturaStatus,
+  FaturaSummary,
   InsurancePlan,
   Lote,
   PaginatedResponse,
@@ -285,15 +287,30 @@ export function FaturasPage() {
   });
   const faturas = data?.items ?? [];
 
+  // Rodada 11 (B4): auditor só lê — as ações ficam escondidas (a API também recusa).
+  const { user } = useAuth();
+  const canWrite = !!user && ["owner", "admin", "financeiro"].includes(user.role);
+
+  // Rodada 11 (M1): o recebido em baixas parciais aparece aqui.
+  const summaryQuery = useQuery({
+    queryKey: ["faturas", "resumo"],
+    queryFn: () => apiClient.get<FaturaSummary>("/api/v1/faturas/resumo"),
+  });
+
   const cancelMutation = useMutation({
-    mutationFn: (id: string) => apiClient.post<Fatura>(`/api/v1/faturas/${id}/cancelar`),
+    // Rodada 11 (M1): com baixa parcial, a API pede confirmação antes de cancelar.
+    mutationFn: (id: string) =>
+      withConfirmation((confirmation) => apiClient.post<Fatura>(`/api/v1/faturas/${id}/cancelar`, confirmation)),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["faturas"] });
       queryClient.invalidateQueries({ queryKey: ["lotes"] });
       showSuccess("Fatura cancelada. Os lotes voltaram para “fechado” e podem ser faturados de novo ou reabertos.");
       setCancelling(null);
     },
-    onError: (err) => showError(getApiErrorMessage(err)),
+    onError: (err) => {
+      setCancelling(null);
+      if (!(err instanceof ConfirmationDeclined)) showError(getApiErrorMessage(err));
+    },
   });
 
   return (
@@ -303,12 +320,40 @@ export function FaturasPage() {
         title="Faturas"
         subtitle="Gere a fatura a partir dos lotes fechados e dê baixa quando a operadora pagar. A baixa total marca as cobranças como recebidas."
         action={
-          <Button onClick={() => setIsCreateOpen(true)} className="flex items-center gap-1.5">
-            <Plus size={14} />
-            Nova fatura
-          </Button>
+          canWrite ? (
+            <Button onClick={() => setIsCreateOpen(true)} className="flex items-center gap-1.5">
+              <Plus size={14} />
+              Nova fatura
+            </Button>
+          ) : undefined
         }
       />
+
+      {summaryQuery.data && (summaryQuery.data.emitidas > 0 || summaryQuery.data.parciais > 0) && (
+        <Panel>
+          <dl className="grid grid-cols-1 gap-4 px-4 py-3 text-sm sm:grid-cols-3">
+            <div>
+              <dt className="text-2xs uppercase tracking-wide text-ink-faint">Emitidas, aguardando pagamento</dt>
+              <dd className="tabular text-ink">
+                {summaryQuery.data.emitidas} · {money(summaryQuery.data.emitidas_valor)}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-2xs uppercase tracking-wide text-ink-faint">Recebido em baixas parciais</dt>
+              <dd className="tabular text-ink">
+                {money(summaryQuery.data.parciais_recebido)} em {summaryQuery.data.parciais} fatura(s)
+              </dd>
+            </div>
+            <div>
+              <dt className="text-2xs uppercase tracking-wide text-ink-faint">Falta receber nessas faturas</dt>
+              <dd className="tabular text-ink">{money(summaryQuery.data.parciais_a_receber)}</dd>
+            </div>
+          </dl>
+          <p className="px-4 pb-3 text-2xs text-ink-faint">
+            O recebido parcial entra nas cobranças na baixa final da fatura, para não aparecer como “pagou a menos” antes da hora.
+          </p>
+        </Panel>
+      )}
 
       <Panel>
         {isLoading && <LoadingState variant="table" rows={4} />}
@@ -323,7 +368,7 @@ export function FaturasPage() {
                 <tr className="border-b border-border-hairline text-2xs uppercase tracking-wide text-ink-faint">
                   <th className="px-4 py-2.5 font-medium">Fatura</th>
                   <th className="px-4 py-2.5 font-medium">Convênio</th>
-                  <th className="px-4 py-2.5 font-medium">Total cobrado</th>
+                  <th className="px-4 py-2.5 font-medium">A receber</th>
                   <th className="px-4 py-2.5 font-medium">Recebido</th>
                   <th className="px-4 py-2.5 font-medium">Cobranças em aberto</th>
                   <th className="px-4 py-2.5 font-medium">Status</th>
@@ -337,7 +382,12 @@ export function FaturasPage() {
                       {faturaLabel(f)} <span className="text-2xs text-ink-faint">— {formatDate(f.data_emissao)}</span>
                     </td>
                     <td className="px-4 py-2.5 text-ink-muted">{planNameById.get(f.insurance_plan_id) ?? "—"}</td>
-                    <td className="tabular px-4 py-2.5 text-ink-muted">{money(f.valor_total)}</td>
+                    <td className="tabular px-4 py-2.5 text-ink-muted">
+                      {money(f.valor_total)}
+                      {f.valor_negado > 0 && (
+                        <span className="block text-2xs text-ink-faint">+ {money(f.valor_negado)} negado</span>
+                      )}
+                    </td>
                     <td className="tabular px-4 py-2.5 text-ink-muted">{money(f.valor_recebido)}</td>
                     <td className="tabular px-4 py-2.5 text-ink-muted">
                       {f.status === "cancelada" ? "—" : `${f.cobrancas_pendentes} de ${f.cobrancas}`}
@@ -346,12 +396,12 @@ export function FaturasPage() {
                       <Badge tone={STATUS_TONE[f.status]}>{STATUS_LABELS[f.status]}</Badge>
                     </td>
                     <td className="space-x-1 whitespace-nowrap px-4 py-2.5 text-right">
-                      {f.status !== "cancelada" && (
+                      {canWrite && f.status !== "cancelada" && (
                         <Button variant="ghost" size="xs" onClick={() => setSettling(f)}>
                           {f.status === "paga" ? "Corrigir baixa" : "Dar baixa"}
                         </Button>
                       )}
-                      {(f.status === "emitida" || f.status === "parcialmente_paga") && (
+                      {canWrite && (f.status === "emitida" || f.status === "parcialmente_paga") && (
                         <Button variant="ghost" size="xs" onClick={() => setCancelling(f)}>
                           Cancelar
                         </Button>

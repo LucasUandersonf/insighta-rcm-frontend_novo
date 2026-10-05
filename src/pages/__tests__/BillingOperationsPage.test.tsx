@@ -175,7 +175,7 @@ describe("BillingOperationsPage — aba Registrar pagamento", () => {
     await user.click(screen.getByRole("button", { name: "Reverter liquidação" }));
     await user.click(screen.getByRole("button", { name: "Reverter" }));
 
-    await waitFor(() => expect(apiClient.post).toHaveBeenCalledWith("/api/v1/billing/b1/unsettle"));
+    await waitFor(() => expect(apiClient.post).toHaveBeenCalledWith("/api/v1/billing/b1/unsettle", {}));
   });
 });
 
