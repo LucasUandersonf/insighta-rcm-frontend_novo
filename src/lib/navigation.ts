@@ -17,6 +17,7 @@ import {
   Receipt,
   Layers,
   FileWarning,
+  FileText,
   Handshake,
   UploadCloud,
   type LucideIcon,
@@ -82,6 +83,7 @@ export const NAV_ITEMS: NavItem[] = [
   // coordenador de Faturamento, como exceção à importação.
   { to: "/fila-correcao", label: "Fila de correção", description: "Guias com risco de glosa, antes do envio", roles: FINANCE_WRITE, placement: "modules", group: "faturamento" },
   { to: "/lotes", label: "Lotes de faturamento", description: "Agrupar guias antes de virar fatura", roles: LEADERSHIP, placement: "modules", group: "faturamento" },
+  { to: "/faturas", label: "Faturas", description: "Gerar a fatura dos lotes e dar baixa no pagamento", roles: LEADERSHIP, placement: "modules", group: "faturamento" },
   { to: "/denial-appeals", label: "Recurso de glosa", description: "Contestar recusas dentro do prazo", roles: LEADERSHIP, placement: "modules", group: "faturamento" },
   { to: "/contracts", label: "Convênios e contratos", description: "Tabelas de repasse e vigências", roles: LEADERSHIP, placement: "modules", group: "faturamento" },
 
@@ -139,6 +141,7 @@ const SECTOR_NAV: Record<TeamSector, NavItem[]> = {
     { to: "/faturamento", label: "Faturamento", icon: Receipt, roles: LEADERSHIP, placement: "primary" },
     { to: "/fila-correcao", label: "Fila de correção", icon: ShieldAlert, roles: FINANCE_WRITE, placement: "primary" },
     { to: "/lotes", label: "Lotes", icon: Layers, roles: LEADERSHIP, placement: "primary" },
+    { to: "/faturas", label: "Faturas", icon: FileText, roles: LEADERSHIP, placement: "primary" },
     { to: "/denial-appeals", label: "Recursos de glosa", icon: FileWarning, roles: LEADERSHIP, placement: "primary" },
     { to: "/contracts", label: "Convênios", icon: Handshake, roles: LEADERSHIP, placement: "primary" },
     { to: "/upload", label: "Importar dados", icon: UploadCloud, roles: LEADERSHIP, placement: "primary", matches: ["/setup"] },
