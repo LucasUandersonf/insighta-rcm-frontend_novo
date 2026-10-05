@@ -161,16 +161,20 @@ function SettlementTab({ readOnly = false }: { readOnly?: boolean }) {
   // conserto possível na tela — o único caminho era pedir pra alguém
   // com acesso ao banco corrigir na mão.
   const unsettleMutation = useMutation({
-    mutationFn: (billingId: string) => apiClient.post(`/api/v1/billing/${billingId}/unsettle`),
+    // Rodada 11 (B3): cobrança paga pela baixa de uma fatura pede uma segunda
+    // confirmação (a fatura volta para “paga em parte”).
+    mutationFn: (billingId: string) =>
+      withConfirmation((confirmation) => apiClient.post(`/api/v1/billing/${billingId}/unsettle`, confirmation)),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["billing"] });
+      queryClient.invalidateQueries({ queryKey: ["faturas"] });
       showSuccess(`Liquidação de ${selected!.patient_name} revertida — faturamento voltou a 'pendente'.`);
       setSelected(null);
       setShowUnsettleConfirm(false);
     },
     onError: (err) => {
       setShowUnsettleConfirm(false);
-      showError(getApiErrorMessage(err));
+      if (!(err instanceof ConfirmationDeclined)) showError(getApiErrorMessage(err));
     },
   });
 

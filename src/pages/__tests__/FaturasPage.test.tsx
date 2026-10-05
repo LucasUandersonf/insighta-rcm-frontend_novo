@@ -6,6 +6,11 @@ import { renderWithProviders } from "@/test/utils";
 import { expectNoA11yViolations } from "@/test/a11y";
 import type { Fatura, InsurancePlan, Lote, PaginatedResponse } from "@/lib/types";
 
+let mockRole = "financeiro";
+vi.mock("@/context/AuthContext", () => ({
+  useAuth: () => ({ user: { sub: "u1", tenant_id: "t1", role: mockRole } }),
+}));
+
 vi.mock("@/lib/api-client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api-client")>();
   return {
@@ -39,6 +44,7 @@ function makeFatura(overrides: Partial<Fatura> = {}): Fatura {
     valor_total: 300,
     cobrancas: 2,
     cobrancas_pendentes: 2,
+    valor_negado: 0,
     ...overrides,
   };
 }
@@ -72,7 +78,10 @@ function mockGet(faturas: Fatura[], lotes: Lote[] = []) {
   });
 }
 
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => {
+  vi.restoreAllMocks();
+  mockRole = "financeiro";
+});
 
 describe("parseMoney", () => {
   it("aceita formato brasileiro e com ponto", () => {
@@ -161,6 +170,52 @@ describe("FaturasPage", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: "Cancelar" }));
     fireEvent.click(await screen.findByRole("button", { name: "Cancelar fatura" }));
-    await waitFor(() => expect(apiClient.post).toHaveBeenCalledWith("/api/v1/faturas/fat-1/cancelar"));
+    await waitFor(() => expect(apiClient.post).toHaveBeenCalledWith("/api/v1/faturas/fat-1/cancelar", {}));
+  });
+});
+
+describe("FaturasPage — rodada 11", () => {
+  it("auditor vê as faturas, mas não as ações", async () => {
+    mockRole = "auditor";
+    mockGet([makeFatura()]);
+    renderWithProviders(<FaturasPage />);
+    await screen.findByText(/NF-777/);
+    expect(screen.queryByRole("button", { name: /nova fatura/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Dar baixa" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Cancelar" })).not.toBeInTheDocument();
+  });
+
+  it("mostra o recebido em baixas parciais e o valor negado", async () => {
+    vi.mocked(apiClient.get).mockImplementation((path: string) => {
+      if (path.startsWith("/api/v1/insurance-companies/plans")) return Promise.resolve([plan] as never);
+      if (path === "/api/v1/faturas/resumo")
+        return Promise.resolve({ emitidas: 1, emitidas_valor: 300, parciais: 1, parciais_recebido: 120, parciais_a_receber: 180 } as never);
+      if (path.startsWith("/api/v1/faturas"))
+        return Promise.resolve({ items: [makeFatura({ valor_negado: 50 })], total: 1, limit: 20, offset: 0 } as never);
+      return Promise.reject(new Error(`Sem mock para ${path}`));
+    });
+    renderWithProviders(<FaturasPage />);
+    expect(await screen.findByText(/em 1 fatura\(s\)/)).toBeInTheDocument();
+    expect(screen.getByText(/negado/)).toBeInTheDocument();
+  });
+
+  it("cancelar com baixa parcial pede confirmação e reenvia com o campo", async () => {
+    mockGet([makeFatura({ status: "parcialmente_paga", valor_recebido: 120 })]);
+    vi.mocked(apiClient.post)
+      .mockRejectedValueOnce(
+        new ApiError(409, {
+          error_code: "fatura_com_baixa_parcial",
+          message: "Esta fatura já tem R$ 120,00 recebidos em baixa parcial.",
+          request_id: "r2",
+          confirm_field: "confirm_discard_partial",
+        })
+      )
+      .mockResolvedValueOnce(makeFatura({ status: "cancelada" }) as never);
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    renderWithProviders(<FaturasPage />);
+    fireEvent.click(await screen.findByRole("button", { name: "Cancelar" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Cancelar fatura" }));
+    await waitFor(() => expect(apiClient.post).toHaveBeenCalledTimes(2));
+    expect(vi.mocked(apiClient.post).mock.calls[1]).toEqual(["/api/v1/faturas/fat-1/cancelar", { confirm_discard_partial: true }]);
   });
 });

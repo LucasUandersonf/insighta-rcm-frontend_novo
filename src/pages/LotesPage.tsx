@@ -14,6 +14,7 @@ import { cn } from "@/lib/cn";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useToast } from "@/context/ToastContext";
+import { useAuth } from "@/context/AuthContext";
 import type { Guia, GuiaTipo, InsurancePlan, Lote, LoteCreateRequest, LoteStatus, PaginatedResponse } from "@/lib/types";
 
 const LOTES_PAGE_SIZE = 20;
@@ -119,7 +120,10 @@ function CreateLoteModal({ isOpen, onClose, plans }: { isOpen: boolean; onClose:
 function LoteDetailModal({ lote, planName, onClose }: { lote: Lote | null; planName: string; onClose: () => void }) {
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
-  const isAberto = lote?.status === "aberto";
+  // Rodada 11 (B4): auditor só lê — sem incluir/remover guia, fechar ou reabrir.
+  const { user } = useAuth();
+  const canWrite = !!user && ["owner", "admin", "financeiro"].includes(user.role);
+  const isAberto = canWrite && lote?.status === "aberto";
   const [guiaToRemove, setGuiaToRemove] = useState<Guia | null>(null);
 
   const guiasQuery = useQuery({
@@ -252,7 +256,7 @@ function LoteDetailModal({ lote, planName, onClose }: { lote: Lote | null; planN
         <Button type="button" variant="secondary" onClick={onClose}>
           Fechar janela
         </Button>
-        {lote.status === "fechado" && (
+        {canWrite && lote.status === "fechado" && (
           <>
             <Button variant="secondary" onClick={() => reabrirMutation.mutate()} disabled={reabrirMutation.isPending}>
               {reabrirMutation.isPending ? "Reabrindo..." : "Reabrir lote"}
@@ -305,6 +309,8 @@ function LoteDetailModal({ lote, planName, onClose }: { lote: Lote | null; planN
  * só era consumido internamente por FaturaService.create_from_lotes.
  */
 export function LotesPage() {
+  const { user } = useAuth();
+  const canWrite = !!user && ["owner", "admin", "financeiro"].includes(user.role);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [detailLoteId, setDetailLoteId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<LoteStatus | "">("");
@@ -349,10 +355,12 @@ export function LotesPage() {
         title="Lotes de faturamento"
         subtitle="Agrupe guias do mesmo convênio e tipo, feche o lote e gere a fatura em Faturas — o mesmo fluxo de 'lote' que um ERP de faturamento médico já usa."
         action={
-          <Button onClick={() => setIsCreateModalOpen(true)} className="flex items-center gap-1.5">
-            <Plus size={14} />
-            Novo lote
-          </Button>
+          canWrite ? (
+            <Button onClick={() => setIsCreateModalOpen(true)} className="flex items-center gap-1.5">
+              <Plus size={14} />
+              Novo lote
+            </Button>
+          ) : undefined
         }
       />
 

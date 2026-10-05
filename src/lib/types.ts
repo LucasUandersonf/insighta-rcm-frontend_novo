@@ -1782,6 +1782,17 @@ export interface Fatura {
   valor_total: number | null;
   cobrancas: number;
   cobrancas_pendentes: number;
+  // Rodada 11 (B2): cobranças negadas ficam fora de valor_total.
+  valor_negado: number;
+}
+
+// Rodada 11 (M1): faturas em aberto e recebido em baixas parciais.
+export interface FaturaSummary {
+  emitidas: number;
+  emitidas_valor: number;
+  parciais: number;
+  parciais_recebido: number;
+  parciais_a_receber: number;
 }
 
 export interface FaturaCreateRequest {
