@@ -1764,6 +1764,40 @@ export interface LoteCreateRequest {
   tipo: GuiaTipo;
 }
 
+// Fatura — ver app/schemas/fatura.py no backend. Auditoria V1, rodada 10
+// (A1): o ciclo lote → fatura → recebimento ganhou tela. A baixa total paga
+// as cobranças das guias; cancelar devolve os lotes para "fechado".
+export type FaturaStatus = "emitida" | "paga" | "parcialmente_paga" | "cancelada";
+
+export interface Fatura {
+  id: string;
+  insurance_plan_id: string;
+  serie: string | null;
+  numero: string | null;
+  status: FaturaStatus;
+  data_emissao: string;
+  valor_recebido: number | null;
+  data_recebimento: string | null;
+  created_at: string;
+  valor_total: number | null;
+  cobrancas: number;
+  cobrancas_pendentes: number;
+}
+
+export interface FaturaCreateRequest {
+  lote_ids: string[];
+  serie?: string | null;
+  numero?: string | null;
+}
+
+export interface FaturaSettleRequest {
+  valor_recebido: number;
+  is_partial?: boolean;
+  correction?: boolean;
+  confirm_overpayment?: boolean;
+  confirm_underpayment?: boolean;
+}
+
 // Formato de erro único que app/main.py devolve para TODO erro da API
 // (ver DECISÃO em app/main.py — o mesmo mecanismo serve o frontend e o
 // usuário final).

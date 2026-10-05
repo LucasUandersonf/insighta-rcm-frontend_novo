@@ -49,6 +49,7 @@ const OrganizationSummaryPage = lazy(() => import("@/pages/OrganizationSummaryPa
 const ContractsPage = lazy(() => import("@/pages/ContractsPage").then((m) => ({ default: m.ContractsPage })));
 const DenialAppealsPage = lazy(() => import("@/pages/DenialAppealsPage").then((m) => ({ default: m.DenialAppealsPage })));
 const LotesPage = lazy(() => import("@/pages/LotesPage").then((m) => ({ default: m.LotesPage })));
+const FaturasPage = lazy(() => import("@/pages/FaturasPage").then((m) => ({ default: m.FaturasPage })));
 const CostEntriesPage = lazy(() => import("@/pages/CostEntriesPage").then((m) => ({ default: m.CostEntriesPage })));
 const MarketingSpendPage = lazy(() => import("@/pages/MarketingSpendPage").then((m) => ({ default: m.MarketingSpendPage })));
 const MyInsightsPage = lazy(() => import("@/pages/MyInsightsPage").then((m) => ({ default: m.MyInsightsPage })));
@@ -206,6 +207,8 @@ export default function App() {
                       backend barra sozinho, mesmo critério já usado em
                       /denial-appeals acima. */}
                   <Route path="/lotes" element={<LotesPage />} />
+                  {/* Rodada 10 (A1): mesmo RBAC de faturas.py (_CAN_READ). */}
+                  <Route path="/faturas" element={<FaturasPage />} />
                   {/* Épico F3.1 do Plano Diretor — mesmo RBAC de /lotes
                       acima (lotes.py/_CAN_READ: owner/admin/financeiro/
                       auditor; escrita via cost_entries.py/_CAN_WRITE,

@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Boxes, Layers, Plus } from "lucide-react";
 import { Panel, EmptyState, LoadingState, ErrorState } from "@/components/ui/Panel";
@@ -162,8 +163,18 @@ function LoteDetailModal({ lote, planName, onClose }: { lote: Lote | null; planN
     mutationFn: () => apiClient.post<Lote>(`/api/v1/lotes/${lote!.id}/fechar`),
     onSuccess: () => {
       invalidateLote();
-      showSuccess("Lote fechado — pronto para virar fatura.");
+      showSuccess("Lote fechado. Gere a fatura em Faturas quando for enviar à operadora.");
       onClose();
+    },
+    onError: (err) => showError(getApiErrorMessage(err)),
+  });
+
+  // Rodada 10 (A1): lote fechado por engano tinha volta só pelo suporte.
+  const reabrirMutation = useMutation({
+    mutationFn: () => apiClient.post<Lote>(`/api/v1/lotes/${lote!.id}/reabrir`),
+    onSuccess: () => {
+      invalidateLote();
+      showSuccess("Lote reaberto. Você já pode incluir ou remover guias.");
     },
     onError: (err) => showError(getApiErrorMessage(err)),
   });
@@ -227,10 +238,33 @@ function LoteDetailModal({ lote, planName, onClose }: { lote: Lote | null; planN
         </>
       )}
 
-      <div className="mt-5 flex justify-end gap-2">
+      {lote.status === "faturado" && (
+        <p className="mb-2 text-xs text-ink-faint">
+          Este lote já virou fatura. Para mexer nele, cancele a fatura em{" "}
+          <Link to="/faturas" className="text-accent underline">
+            Faturas
+          </Link>
+          .
+        </p>
+      )}
+
+      <div className="mt-5 flex flex-wrap justify-end gap-2">
         <Button type="button" variant="secondary" onClick={onClose}>
           Fechar janela
         </Button>
+        {lote.status === "fechado" && (
+          <>
+            <Button variant="secondary" onClick={() => reabrirMutation.mutate()} disabled={reabrirMutation.isPending}>
+              {reabrirMutation.isPending ? "Reabrindo..." : "Reabrir lote"}
+            </Button>
+            <Link
+              to="/faturas"
+              className="inline-flex items-center rounded-[11px] bg-brand px-4 py-2.5 text-[13px] text-white hover:brightness-110"
+            >
+              Gerar fatura
+            </Link>
+          </>
+        )}
         {isAberto && (
           <Button
             onClick={() => fecharMutation.mutate()}
@@ -313,7 +347,7 @@ export function LotesPage() {
       <PageHeader
         icon={Layers}
         title="Lotes de faturamento"
-        subtitle="Agrupe guias do mesmo convênio e tipo antes de fechar e gerar a fatura — o mesmo fluxo de 'lote' que um ERP de faturamento médico já usa."
+        subtitle="Agrupe guias do mesmo convênio e tipo, feche o lote e gere a fatura em Faturas — o mesmo fluxo de 'lote' que um ERP de faturamento médico já usa."
         action={
           <Button onClick={() => setIsCreateModalOpen(true)} className="flex items-center gap-1.5">
             <Plus size={14} />
