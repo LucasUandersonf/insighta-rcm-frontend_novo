@@ -28,6 +28,7 @@ import { useAuth } from "@/context/AuthContext";
 import type {
   IngestionTemplate,
   IngestionValidationReport,
+  ColumnAlias,
   ColumnMappingPreview,
   Contract,
   IngestionFileEntry,
@@ -148,6 +149,7 @@ function ColumnMappingModal({
   isOpen: boolean;
   onClose: () => void;
 }) {
+  const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
   const [assignments, setAssignments] = useState<Record<string, string>>({});
 
@@ -172,6 +174,7 @@ function ColumnMappingModal({
     mutationFn: (mapping: Record<string, string>) =>
       apiClient.post("/api/v1/ingestion/column-aliases", { data_type: dataType, mapping }),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["ingestion-column-aliases", dataType] });
       showSuccess("Mapeamento salvo — todo upload futuro deste template já aplica sozinho. Pode enviar o arquivo agora.");
       onClose();
     },
@@ -246,6 +249,53 @@ function ColumnMappingModal({
         </div>
       )}
     </Modal>
+  );
+}
+
+/**
+ * Auditoria V1, rodada 14 (B2): o mapeamento salvo valia em todo upload
+ * futuro sem que a clínica pudesse ver ou esquecer — um cabeçalho associado
+ * ao campo errado seguia levando valor para a coluna errada.
+ */
+function SavedMappings({ dataType, template }: { dataType: string; template: IngestionTemplate | undefined }) {
+  const queryClient = useQueryClient();
+  const { showSuccess, showError } = useToast();
+  const queryKey = ["ingestion-column-aliases", dataType];
+  const aliases = useQuery({
+    queryKey,
+    queryFn: () => apiClient.get<ColumnAlias[]>(`/api/v1/ingestion/column-aliases?data_type=${encodeURIComponent(dataType)}`),
+  });
+  const forget = useMutation({
+    mutationFn: (alias: ColumnAlias) => apiClient.delete(`/api/v1/ingestion/column-aliases/${alias.id}`),
+    onSuccess: (_, alias) => {
+      queryClient.invalidateQueries({ queryKey });
+      showSuccess(`O cabeçalho “${alias.source_header}” deixou de ser mapeado. Os próximos uploads usam só o padrão.`);
+    },
+    onError: (err) => showError(getApiErrorMessage(err)),
+  });
+
+  const items = Array.isArray(aliases.data) ? aliases.data : [];
+  if (items.length === 0) return null;
+  const label = (field: string) => CANONICAL_FIELD_LABELS[field] ?? template?.columns.find((c) => c.header === field)?.label ?? field;
+
+  return (
+    <details className="mt-3 rounded-md border border-border-hairline bg-canvas-raised/40 px-3 py-2">
+      <summary className="cursor-pointer text-xs text-ink-muted">Mapeamentos salvos deste modelo ({items.length})</summary>
+      <ul className="mt-2 divide-y divide-border-hairline">
+        {items.map((alias) => (
+          <li key={alias.id} className="flex items-center justify-between gap-3 py-1.5 text-xs">
+            <span className="min-w-0 truncate text-ink">
+              <span className="font-mono">{alias.source_header}</span>
+              <span className="text-ink-faint"> → </span>
+              {label(alias.canonical_field)}
+            </span>
+            <Button type="button" variant="ghost" size="xs" disabled={forget.isPending} onClick={() => forget.mutate(alias)}>
+              Esquecer
+            </Button>
+          </li>
+        ))}
+      </ul>
+    </details>
   );
 }
 
@@ -522,6 +572,7 @@ function BatchUploadTab() {
             Cabeçalho do arquivo diferente do nosso padrão? Use "Mapear colunas" antes de enviar — evita que o arquivo
             inteiro seja rejeitado por um nome de coluna diferente.
           </p>
+          <SavedMappings dataType={dataType} template={template} />
         </div>
       </Panel>
 

@@ -1677,6 +1677,19 @@ export interface BillingSettleRequest {
 // Resultado de GET /billing/search — busca por nome/CPF do paciente,
 // usada pelo autocomplete de "registrar pagamento recebido" e do
 // Recurso de Glosa (ver DECISÃO em BillingRepository.search, backend).
+/** Glosa registrada numa cobrança (GET /glosas?billing_id=). Rodada 14 (M3). */
+export interface Glosa {
+  id: string;
+  billing_id: string;
+  codigo_motivo: string | null;
+  descricao_motivo: string | null;
+  valor_glosado: number;
+  data_recebimento: string;
+  created_at: string;
+  /** Veio de arquivo importado: corrige-se desfazendo a importação. */
+  imported: boolean;
+}
+
 export interface BillingSearchItem {
   id: string;
   patient_name: string;

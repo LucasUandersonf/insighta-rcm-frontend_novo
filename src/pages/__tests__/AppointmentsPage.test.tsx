@@ -12,6 +12,11 @@ vi.mock("@/lib/api-client", async (importOriginal) => {
   return { ...actual, apiClient: { ...actual.apiClient, get: vi.fn(), post: vi.fn(), patch: vi.fn() } };
 });
 
+let mockRole = "owner";
+vi.mock("@/context/AuthContext", () => ({
+  useAuth: () => ({ user: { sub: "u1", tenant_id: "t1", role: mockRole } }),
+}));
+
 function makePatient(overrides: Partial<Patient> = {}): Patient {
   return {
     id: "p1",
@@ -289,5 +294,56 @@ describe("AppointmentsPage — link de avaliação de satisfação", () => {
     await screen.findByText("Registrar atendimento");
 
     await expectNoA11yViolations(container);
+  });
+});
+
+
+// Auditoria V1, rodada 14 (A2): o contrato promete à clínica o meio de
+// atender o pedido de eliminação do titular.
+describe("AppointmentsPage — anonimizar a pedido do titular", () => {
+  async function openPatient() {
+    const user = userEvent.setup();
+    renderWithProviders(<AppointmentsPage />);
+    await waitFor(() => expect(screen.getByLabelText("Ver consultas do paciente")).not.toBeDisabled());
+    await user.selectOptions(screen.getByLabelText("Ver consultas do paciente"), "p1");
+    await user.click(await screen.findByRole("button", { name: /Dados de contato/ }));
+    return user;
+  }
+
+  it("só anonimiza depois de digitar o nome do paciente", async () => {
+    mockRole = "owner";
+    mockGet([makePatient()]);
+    vi.mocked(apiClient.post).mockClear();
+    vi.mocked(apiClient.post).mockResolvedValue(makePatient({ full_name: "[Paciente anonimizado]" }));
+    const user = await openPatient();
+    const name = makePatient().full_name;
+
+    await user.click(screen.getByRole("button", { name: /Anonimizar a pedido do titular/ }));
+    const confirmButton = screen.getByRole("button", { name: "Anonimizar" });
+    expect(confirmButton).toBeDisabled();
+    await user.type(screen.getByLabelText(/Digite o nome do paciente/), "outro nome");
+    expect(confirmButton).toBeDisabled();
+    await user.clear(screen.getByLabelText(/Digite o nome do paciente/));
+    await user.type(screen.getByLabelText(/Digite o nome do paciente/), name);
+    expect(confirmButton).not.toBeDisabled();
+    await user.click(confirmButton);
+
+    await waitFor(() => expect(apiClient.post).toHaveBeenCalledWith("/api/v1/patients/p1/anonymize"));
+  });
+
+  it("não aparece para quem não é dono nem admin", async () => {
+    mockRole = "atendimento";
+    mockGet([makePatient()]);
+    await openPatient();
+    expect(screen.queryByRole("button", { name: /Anonimizar a pedido do titular/ })).not.toBeInTheDocument();
+    mockRole = "owner";
+  });
+
+  it("não aparece para paciente já anonimizado", async () => {
+    mockRole = "owner";
+    mockGet([makePatient({ anonymized_at: "2026-09-01T00:00:00Z" })]);
+    await openPatient();
+    expect(screen.getByText(/anonimizado a pedido do titular/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Anonimizar a pedido do titular/ })).not.toBeInTheDocument();
   });
 });

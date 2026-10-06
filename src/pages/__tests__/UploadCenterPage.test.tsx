@@ -35,7 +35,7 @@ vi.mock("@/lib/api-client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api-client")>();
   return {
     ...actual,
-    apiClient: { ...actual.apiClient, get: vi.fn(), post: vi.fn(), upload: vi.fn() },
+    apiClient: { ...actual.apiClient, get: vi.fn(), post: vi.fn(), upload: vi.fn(), delete: vi.fn() },
   };
 });
 
@@ -519,5 +519,29 @@ describe("UploadCenterPage — aba Contratos de Convênio", () => {
     expect(
       await screen.findByText("PDF enviado. Vá até Convênios & Contratos para extrair a tabela de preços com IA e homologar.")
     ).toBeInTheDocument();
+  });
+});
+
+
+// Auditoria V1, rodada 14 (B2): mapeamento salvo visível e removível.
+describe("UploadCenterPage — mapeamentos salvos", () => {
+  it("lista o mapeamento salvo do modelo e esquece com um clique", async () => {
+    vi.mocked(apiClient.get).mockImplementation((path: string) => {
+      if (path.startsWith("/api/v1/ingestion/column-aliases"))
+        return Promise.resolve([
+          { id: "al-1", data_type: "faturamento", source_header: "Vlr Pago", canonical_field: "valor_cobrado", created_at: "2026-09-01T00:00:00Z" },
+        ] as never);
+      return Promise.resolve(emptyHistory() as never);
+    });
+    vi.mocked(apiClient.delete).mockResolvedValue(undefined as never);
+    const user = userEvent.setup();
+
+    renderWithProviders(<UploadCenterPage />);
+
+    await user.click(await screen.findByText(/Mapeamentos salvos deste modelo \(1\)/));
+    expect(screen.getByText("Vlr Pago")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Esquecer" }));
+
+    await waitFor(() => expect(apiClient.delete).toHaveBeenCalledWith("/api/v1/ingestion/column-aliases/al-1"));
   });
 });
