@@ -23,6 +23,7 @@ import type {
   Guia,
   GuiaCreateRequest,
   GuiaTipo,
+  Glosa,
   InsurancePlan,
   PaginatedResponse,
   PaymentMethod,
@@ -36,7 +37,7 @@ import type {
 // guia_tipo/guia_numero/guia_senha). Achado do Raio-X da Sala de
 // Comando: a lacuna era só de UI, não de lógica de negócio.
 
-type Tab = "pagamento" | "coparticipacao" | "auditoria-opme" | "guias";
+type Tab = "pagamento" | "glosas" | "coparticipacao" | "auditoria-opme" | "guias";
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
@@ -327,6 +328,222 @@ const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   cartao_credito: "Cartão de crédito",
   boleto: "Boleto",
 };
+
+// ---------------------------------------------------------------------
+// Glosas da cobrança — auditoria V1, rodada 14 (M3). A API já lançava,
+// corrigia e excluía glosa (com as confirmações das rodadas 8, 9 e 13), mas
+// a glosa que chega fora da planilha de faturamento (e-mail ou portal da
+// operadora) não tinha onde ser registrada pela tela.
+// ---------------------------------------------------------------------
+
+function parseMoney(value: string): number | null {
+  const n = Number(value.replace(/\./g, "").replace(",", "."));
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+function GlosaRow({ glosa, billingId }: { glosa: Glosa; billingId: string }) {
+  const queryClient = useQueryClient();
+  const { showSuccess, showError } = useToast();
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(String(glosa.valor_glosado).replace(".", ","));
+
+  const refresh = () => {
+    queryClient.invalidateQueries({ queryKey: ["glosas", billingId] });
+    queryClient.invalidateQueries({ queryKey: ["billing"] });
+  };
+  const update = useMutation({
+    mutationFn: (amount: number) =>
+      withConfirmation((confirmation) => apiClient.patch(`/api/v1/glosas/${glosa.id}`, { valor_glosado: amount, ...confirmation })),
+    onSuccess: () => (refresh(), setEditing(false), showSuccess("Glosa corrigida.")),
+    onError: (err) => {
+      if (!(err instanceof ConfirmationDeclined)) showError(getApiErrorMessage(err));
+    },
+  });
+  const remove = useMutation({
+    mutationFn: () =>
+      withConfirmation((confirmation) =>
+        apiClient.delete(`/api/v1/glosas/${glosa.id}${confirmation.confirm_unexplained_difference ? "?confirm_unexplained_difference=true" : ""}`),
+      ),
+    onSuccess: () => (refresh(), showSuccess("Glosa excluída.")),
+    onError: (err) => {
+      if (!(err instanceof ConfirmationDeclined)) showError(getApiErrorMessage(err));
+    },
+  });
+
+  return (
+    <li className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+      <div className="min-w-0">
+        <p className="text-sm text-ink">
+          <span className="font-mono font-medium">{formatCurrency(glosa.valor_glosado)}</span>
+          {glosa.codigo_motivo && <span className="text-ink-muted"> · código {glosa.codigo_motivo}</span>}
+          {glosa.imported && <> <Badge tone="neutral">importada</Badge></>}
+        </p>
+        <p className="mt-0.5 text-2xs text-ink-faint">
+          {glosa.descricao_motivo ?? "Sem descrição do motivo"} · demonstrativo de {formatDate(glosa.data_recebimento)}
+        </p>
+      </div>
+      {glosa.imported ? (
+        <p className="text-2xs text-ink-faint">Para corrigir, desfaça a importação e envie o arquivo corrigido.</p>
+      ) : editing ? (
+        <form
+          className="flex items-end gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const amount = parseMoney(value);
+            if (amount === null) return showError("Informe um valor maior que zero.");
+            update.mutate(amount);
+          }}
+        >
+          <TextField label="Valor glosado (R$)" value={value} onChange={(e) => setValue(e.target.value)} inputMode="decimal" />
+          <Button type="submit" disabled={update.isPending}>
+            {update.isPending ? "Salvando..." : "Salvar"}
+          </Button>
+          <Button type="button" variant="secondary" onClick={() => setEditing(false)}>
+            Cancelar
+          </Button>
+        </form>
+      ) : (
+        <div className="flex gap-2">
+          <Button type="button" variant="secondary" size="sm" onClick={() => setEditing(true)}>
+            Corrigir valor
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            disabled={remove.isPending}
+            onClick={() => window.confirm(`Excluir a glosa de ${formatCurrency(glosa.valor_glosado)}?`) && remove.mutate()}
+          >
+            Excluir
+          </Button>
+        </div>
+      )}
+    </li>
+  );
+}
+
+function GlosasTab() {
+  const queryClient = useQueryClient();
+  const { showSuccess, showError } = useToast();
+  const [selected, setSelected] = useState<BillingSearchItem | null>(null);
+  const [value, setValue] = useState("");
+  const [code, setCode] = useState("");
+  const [description, setDescription] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  const glosas = useQuery({
+    queryKey: ["glosas", selected?.id],
+    queryFn: () => apiClient.get<PaginatedResponse<Glosa>>(`/api/v1/glosas?billing_id=${selected!.id}&limit=200`),
+    enabled: !!selected,
+  });
+
+  const create = useMutation({
+    mutationFn: (amount: number) =>
+      withConfirmation((confirmation) =>
+        apiClient.post<Glosa>("/api/v1/glosas", {
+          billing_id: selected!.id,
+          valor_glosado: amount,
+          codigo_motivo: code.trim() || null,
+          descricao_motivo: description.trim() || null,
+          ...confirmation,
+        }),
+      ),
+    onSuccess: (_, amount) => {
+      queryClient.invalidateQueries({ queryKey: ["glosas", selected?.id] });
+      queryClient.invalidateQueries({ queryKey: ["billing"] });
+      showSuccess(`Glosa de ${formatCurrency(amount)} lançada para ${selected!.patient_name}.`);
+      setValue("");
+      setCode("");
+      setDescription("");
+      setFieldErrors({});
+    },
+    onError: (err) => {
+      if (err instanceof ConfirmationDeclined) return;
+      if (err instanceof ApiError && err.campos) {
+        const mapped: Record<string, string> = {};
+        for (const c of err.campos) mapped[c.campo] = c.problema;
+        setFieldErrors(mapped);
+      } else {
+        showError(getApiErrorMessage(err));
+      }
+    },
+  });
+
+  function submit(e: FormEvent) {
+    e.preventDefault();
+    const amount = parseMoney(value);
+    if (amount === null) {
+      setFieldErrors({ valor_glosado: "Informe um valor maior que zero." });
+      return;
+    }
+    create.mutate(amount);
+  }
+
+  const items = glosas.data?.items ?? [];
+  const total = items.reduce((sum, g) => sum + g.valor_glosado, 0);
+
+  return (
+    <Panel
+      title="Glosas da cobrança"
+      subtitle="Lance a glosa que chegou fora da planilha (e-mail ou portal da operadora) e corrija uma lançada errado."
+    >
+      <div className="space-y-4 p-4">
+        <BillingSearchPicker selected={selected} onSelect={setSelected} />
+        {selected && (
+          <>
+            <p className="text-2xs text-ink-faint">
+              Cobrado {formatCurrency(selected.charged_value)}
+              {selected.received_value != null && <> · recebido {formatCurrency(selected.received_value)}</>}
+              {items.length > 0 && <> · glosado {formatCurrency(total)}</>}
+            </p>
+            {glosas.isLoading && <LoadingState variant="table" rows={2} />}
+            {glosas.error && <ErrorState message={getApiErrorMessage(glosas.error)} />}
+            {glosas.data && items.length === 0 && <EmptyState message="Nenhuma glosa nesta cobrança." />}
+            {items.length > 0 && (
+              <ul className="divide-y divide-border-hairline rounded-md border border-border-hairline">
+                {items.map((g) => (
+                  <GlosaRow key={g.id} glosa={g} billingId={selected.id} />
+                ))}
+              </ul>
+            )}
+            <form onSubmit={submit} className="rounded-md border border-border-hairline bg-canvas-raised/40 p-3">
+              <p className="mb-2 text-sm font-medium text-ink">Lançar glosa</p>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <TextField
+                  label="Valor glosado (R$)"
+                  value={value}
+                  onChange={(e) => setValue(e.target.value)}
+                  inputMode="decimal"
+                  required
+                  error={fieldErrors["valor_glosado"]}
+                />
+                <TextField
+                  label="Código do motivo (opcional)"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  maxLength={10}
+                  error={fieldErrors["codigo_motivo"]}
+                />
+                <TextField
+                  label="Motivo (opcional)"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  maxLength={2000}
+                  error={fieldErrors["descricao_motivo"]}
+                />
+              </div>
+              <div className="mt-3 flex justify-end">
+                <Button type="submit" disabled={create.isPending}>
+                  {create.isPending ? "Lançando..." : "Lançar glosa"}
+                </Button>
+              </div>
+            </form>
+          </>
+        )}
+      </div>
+    </Panel>
+  );
+}
 
 function CoparticipationTab() {
   const queryClient = useQueryClient();
@@ -713,7 +930,7 @@ function GuiasTab() {
 
 const TABS_GROUP = "faturamento-operacoes";
 
-const TAB_IDS: Tab[] = ["pagamento", "coparticipacao", "auditoria-opme", "guias"];
+const TAB_IDS: Tab[] = ["pagamento", "glosas", "coparticipacao", "auditoria-opme", "guias"];
 
 
 /** Rodada 8 (A1): recebido acima do cobrado quase sempre é erro de digitação. */
@@ -752,6 +969,7 @@ export function BillingOperationsPage() {
         onChange={(id) => setTab(id as Tab)}
         items={[
           { id: "pagamento", label: "Registrar pagamento" },
+          { id: "glosas", label: "Glosas" },
           { id: "coparticipacao", label: "Coparticipação" },
           { id: "auditoria-opme", label: "Auditoria documental (OPME)" },
           { id: "guias", label: "Guias" },
@@ -761,6 +979,11 @@ export function BillingOperationsPage() {
       {tab === "pagamento" && (
         <TabPanel id="pagamento" groupId={TABS_GROUP}>
           <SettlementTab />
+        </TabPanel>
+      )}
+      {tab === "glosas" && (
+        <TabPanel id="glosas" groupId={TABS_GROUP}>
+          <GlosasTab />
         </TabPanel>
       )}
       {tab === "coparticipacao" && (
