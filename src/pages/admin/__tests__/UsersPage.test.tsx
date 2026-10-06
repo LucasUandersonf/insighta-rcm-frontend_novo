@@ -66,4 +66,21 @@ describe("UsersPage", () => {
     await screen.findByText("Ana Financeiro");
     expect(screen.queryByRole("button", { name: "Desligar MFA" })).not.toBeInTheDocument();
   });
+
+  it("criar usuário mostra a senha temporária da própria resposta, sem segunda chamada", async () => {
+    vi.mocked(useAuth).mockReturnValue({ user: { sub: "owner-1", role: "owner" } } as unknown as ReturnType<typeof useAuth>);
+    vi.mocked(apiClient.get).mockResolvedValue(USERS as never);
+    vi.mocked(apiClient.post).mockReset();
+    vi.mocked(apiClient.post).mockResolvedValue({ ...USERS[0], id: "u2", temporary_password: "Temp-Senha-123" } as never);
+    renderWithProviders(<UsersPage />);
+
+    await userEvent.click(await screen.findByRole("button", { name: /Novo usuário/ }));
+    await userEvent.type(screen.getByLabelText(/Nome completo/), "Bruno Recepção");
+    await userEvent.type(screen.getByLabelText(/E-mail/), "bruno@clinica.com");
+    await userEvent.click(screen.getByRole("button", { name: "Criar usuário" }));
+
+    expect(await screen.findByText("Temp-Senha-123")).toBeInTheDocument();
+    expect(apiClient.post).toHaveBeenCalledTimes(1);
+    expect(apiClient.post).toHaveBeenCalledWith("/api/v1/users", expect.objectContaining({ email: "bruno@clinica.com" }));
+  });
 });

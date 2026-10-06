@@ -62,15 +62,15 @@ function CreateUserModal({ isOpen, onClose, onCreated }: { isOpen: boolean; onCl
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const mutation = useMutation({
-    mutationFn: (payload: UserCreateRequest) => apiClient.post<PlatformUser>("/api/v1/users", payload),
-    onSuccess: async (user) => {
+    mutationFn: (payload: UserCreateRequest) =>
+      apiClient.post<PlatformUser & { temporary_password: string }>("/api/v1/users", payload),
+    onSuccess: (user) => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
-      // A criação não devolve a senha temporária no corpo (contrato de
-      // UserResponse) — busca via o mesmo endpoint de reset administrado,
-      // que é o único que a expõe (ver app/api/v1/endpoints/users.py).
-      const reset = await apiClient.post<PasswordResetResponse>(`/api/v1/users/${user.id}/reset-password`);
+      // Auditoria V1, rodada 16 (M4): a senha temporária vem na própria
+      // resposta da criação. Antes uma segunda chamada (reset) a buscava; se
+      // ela falhasse, a pessoa ficava criada sem senha visível e sem aviso.
       resetAndClose();
-      onCreated(reset.temporary_password);
+      onCreated(user.temporary_password);
     },
     onError: (err) => {
       if (err instanceof ApiError && err.campos) {
