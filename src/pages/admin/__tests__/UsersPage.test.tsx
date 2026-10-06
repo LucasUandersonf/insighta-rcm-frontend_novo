@@ -83,4 +83,21 @@ describe("UsersPage", () => {
     expect(apiClient.post).toHaveBeenCalledTimes(1);
     expect(apiClient.post).toHaveBeenCalledWith("/api/v1/users", expect.objectContaining({ email: "bruno@clinica.com" }));
   });
+
+  it("API antiga sem senha na resposta e reset falhando: avisa como resolver", async () => {
+    vi.mocked(useAuth).mockReturnValue({ user: { sub: "owner-1", role: "owner" } } as unknown as ReturnType<typeof useAuth>);
+    vi.mocked(apiClient.get).mockResolvedValue(USERS as never);
+    vi.mocked(apiClient.post).mockReset();
+    vi.mocked(apiClient.post)
+      .mockResolvedValueOnce({ ...USERS[0], id: "u3", full_name: "Carla Nova" } as never)
+      .mockRejectedValueOnce(new Error("rede caiu"));
+    renderWithProviders(<UsersPage />);
+
+    await userEvent.click(await screen.findByRole("button", { name: /Novo usuário/ }));
+    await userEvent.type(screen.getByLabelText(/Nome completo/), "Carla Nova");
+    await userEvent.type(screen.getByLabelText(/E-mail/), "carla@clinica.com");
+    await userEvent.click(screen.getByRole("button", { name: "Criar usuário" }));
+
+    expect(await screen.findByText(/Carla Nova foi criado\(a\), mas a senha temporária não pôde ser mostrada/)).toBeInTheDocument();
+  });
 });

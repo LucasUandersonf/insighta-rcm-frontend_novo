@@ -64,13 +64,24 @@ function CreateUserModal({ isOpen, onClose, onCreated }: { isOpen: boolean; onCl
   const mutation = useMutation({
     mutationFn: (payload: UserCreateRequest) =>
       apiClient.post<PlatformUser & { temporary_password: string }>("/api/v1/users", payload),
-    onSuccess: (user) => {
+    onSuccess: async (user) => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
       // Auditoria V1, rodada 16 (M4): a senha temporária vem na própria
       // resposta da criação. Antes uma segunda chamada (reset) a buscava; se
       // ela falhasse, a pessoa ficava criada sem senha visível e sem aviso.
       resetAndClose();
-      onCreated(user.temporary_password);
+      if (user.temporary_password) {
+        onCreated(user.temporary_password);
+        return;
+      }
+      // API anterior (durante a troca de versão): busca pelo reset e, se
+      // falhar, diz o que aconteceu e como resolver.
+      try {
+        const reset = await apiClient.post<PasswordResetResponse>(`/api/v1/users/${user.id}/reset-password`);
+        onCreated(reset.temporary_password);
+      } catch {
+        showError(`${user.full_name} foi criado(a), mas a senha temporária não pôde ser mostrada. Use “Redefinir senha” na lista para gerar uma.`);
+      }
     },
     onError: (err) => {
       if (err instanceof ApiError && err.campos) {
