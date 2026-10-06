@@ -23,6 +23,7 @@ import { ConfirmationDeclined, withConfirmation } from "@/lib/confirmable";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useToast } from "@/context/ToastContext";
+import { useAuth } from "@/context/AuthContext";
 import type {
   Appointment,
   AppointmentUpdateRequest,
@@ -75,6 +76,59 @@ const ADDON_RESULT_LABELS: Record<"aceito" | "recusado", string> = {
 };
 
 /**
+ * Auditoria V1, rodada 14 (A2): o contrato de tratamento de dados promete à
+ * clínica o meio de atender o pedido de eliminação do titular (LGPD, art. 18).
+ * A API já anonimizava (POST /patients/{id}/anonymize, só dono e admin); faltava
+ * o caminho na tela. Irreversível: confirmação exige digitar o nome.
+ */
+function AnonymizePatientSection({ patient, onDone }: { patient: Patient; onDone: () => void }) {
+  const queryClient = useQueryClient();
+  const { showSuccess, showError } = useToast();
+  const [open, setOpen] = useState(false);
+  const [typed, setTyped] = useState("");
+  const matches = typed.trim().toLocaleLowerCase("pt-BR") === patient.full_name.trim().toLocaleLowerCase("pt-BR");
+
+  const mutation = useMutation({
+    mutationFn: () => apiClient.post<Patient>(`/api/v1/patients/${patient.id}/anonymize`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["patients"] });
+      showSuccess("Paciente anonimizado. Nome, CPF, nascimento e CEP foram apagados; o histórico financeiro ficou sem identificação.");
+      onDone();
+    },
+    onError: (err) => showError(getApiErrorMessage(err)),
+  });
+
+  if (!open) {
+    return (
+      <div className="mt-4 border-t border-border-hairline pt-3">
+        <button type="button" onClick={() => setOpen(true)} className="text-xs text-ink-muted underline-offset-2 hover:text-ink hover:underline">
+          Anonimizar a pedido do titular (LGPD)
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-4 space-y-2 rounded-md border border-denied/30 bg-denied-bg p-3" role="group" aria-label="Anonimizar paciente">
+      <p className="text-sm font-medium text-ink">Anonimizar {patient.full_name}</p>
+      <p className="text-xs text-ink-muted">
+        Use quando o próprio paciente pedir a eliminação dos dados. Nome, CPF, data de nascimento e CEP são apagados e o cadastro não pode mais ser
+        editado. Agendamentos e faturamento ficam, sem identificar a pessoa, porque a lei exige guardar o histórico financeiro. Não dá para desfazer.
+      </p>
+      <TextField label="Digite o nome do paciente para confirmar" value={typed} onChange={(e) => setTyped(e.target.value)} autoComplete="off" />
+      <div className="flex justify-end gap-2">
+        <Button type="button" variant="secondary" onClick={() => (setOpen(false), setTyped(""))}>
+          Cancelar
+        </Button>
+        <Button type="button" disabled={!matches || mutation.isPending} onClick={() => mutation.mutate()}>
+          {mutation.isPending ? "Anonimizando..." : "Anonimizar"}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+/**
  * "Mapa de Dados Insighta" — Domínio Paciente (Onda 1): os 4 campos
  * relacionais raramente são conhecidos no primeiro cadastro (um
  * paciente que veio de uma reimportação em massa nunca teve chance de
@@ -104,6 +158,8 @@ function EditPatientContactModal({
   const [cpf, setCpf] = useState("");
   const [birthDate, setBirthDate] = useState("");
   const anonymized = Boolean(patient?.anonymized_at);
+  const { user } = useAuth();
+  const canAnonymize = !!user && ["owner", "admin"].includes(user.role);
 
   useEffect(() => {
     if (!patient) return;
@@ -254,6 +310,7 @@ function EditPatientContactModal({
           </Button>
         </div>
       </form>
+      {canAnonymize && !anonymized && <AnonymizePatientSection patient={patient} onDone={onClose} />}
     </Modal>
   );
 }
