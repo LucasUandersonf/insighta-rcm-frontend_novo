@@ -1930,6 +1930,8 @@ export interface PatientFichaClinicalEvolution {
   hipotese_diagnostica_principal: string | null;
   conduta_terapeutica_plano: string | null;
   data_evolucao: string;
+  // Auditoria V1, rodada 17 (A1): o financeiro vê só o CID.
+  cid_principal?: string | null;
 }
 
 export interface PatientFichaAppointment {
@@ -1957,6 +1959,8 @@ export interface PatientFicha {
   patient: Patient;
   summary: PatientFichaSummary;
   appointments: PatientFichaAppointment[];
+  // Auditoria V1, rodada 17 (A1): "completo" (dono/admin), "cid" (financeiro) ou "restrito".
+  clinical_access?: "completo" | "cid" | "restrito";
 }
 
 // --- Profissionais (app/schemas/professional.py) ---

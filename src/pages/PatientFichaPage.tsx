@@ -9,7 +9,7 @@ import { NoShowBadge } from "@/components/ui/NoShowBadge";
 import { RiskBadge } from "@/components/ui/RiskBadge";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
-import type { PatientFicha, PatientSearchItem } from "@/lib/types";
+import type { PatientFicha, PatientFichaClinicalEvolution, PatientSearchItem } from "@/lib/types";
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
@@ -104,6 +104,14 @@ function PatientSearchBox({ onSelect }: { onSelect: (item: PatientSearchItem) =>
  * aqui mesmo, ou por `?patient_id=` (ver DECISÃO em AgendaRiscoPage.tsx —
  * cada linha da Agenda de risco linka pra cá).
  */
+/** Auditoria V1, rodada 17 (A1): o conteúdo do prontuário depende do papel
+ * (o backend já filtra; aqui só explicamos por que não aparece). */
+function clinicalText(evolution: PatientFichaClinicalEvolution, access: string | undefined): string {
+  if (access === "restrito") return "Evolução clínica registrada (conteúdo restrito ao dono e ao administrador)";
+  if (access === "cid") return evolution.cid_principal ? `Evolução clínica · CID ${evolution.cid_principal}` : "Evolução clínica registrada";
+  return evolution.hipotese_diagnostica_principal ?? evolution.conduta_terapeutica_plano ?? "Evolução clínica registrada";
+}
+
 export function PatientFichaPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const patientId = searchParams.get("patient_id");
@@ -227,7 +235,7 @@ export function PatientFichaPage() {
                             <FileText aria-hidden size={11} className="mt-0.5 shrink-0 text-ink-faint" />
                             <span>
                               {evolution.professional_name && <span className="text-ink-muted">{evolution.professional_name} · </span>}
-                              {evolution.hipotese_diagnostica_principal ?? evolution.conduta_terapeutica_plano ?? "Evolução clínica registrada"}
+                              {clinicalText(evolution, data.clinical_access)}
                             </span>
                           </li>
                         ))}

@@ -27,6 +27,7 @@ const ACTION_LABELS: Record<string, string> = {
   filed: "Protocolado",
   resolved: "Resolvido",
   password_reset: "Reset de senha",
+  viewed_clinical_record: "Abriu prontuário",
 };
 
 const ACTION_TONE: Record<string, BadgeTone> = {
@@ -36,6 +37,7 @@ const ACTION_TONE: Record<string, BadgeTone> = {
   filed: "pending",
   resolved: "revenue",
   password_reset: "neutral",
+  viewed_clinical_record: "pending",
 };
 
 // Mesma correção: lista os tipos de entidade REALMENTE auditados hoje.
