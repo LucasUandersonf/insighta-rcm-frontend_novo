@@ -70,7 +70,7 @@ function CreatedKeyModal({
         {created?.api_key}
       </div>
       <div className="mt-5 flex justify-end">
-        <Button onClick={onClose}>Entendi, já copiei</Button>
+        <Button onClick={onClose}>Fechar</Button>
       </div>
     </Modal>
   );
@@ -162,7 +162,7 @@ function CreatedWebhookModal({
         {created?.secret}
       </div>
       <div className="mt-5 flex justify-end">
-        <Button onClick={onClose}>Entendi, já copiei</Button>
+        <Button onClick={onClose}>Fechar</Button>
       </div>
     </Modal>
   );
@@ -341,7 +341,7 @@ function WebhooksSection() {
       {!isLoading && (webhooks ?? []).length > 0 && (
         <table className="w-full text-left text-sm">
           <thead>
-            <tr className="border-b border-border-hairline text-2xs uppercase tracking-wide text-ink-faint">
+            <tr className="border-b border-border-hairline text-xs font-medium text-ink-muted">
               <th className="px-4 py-2.5 font-medium">Nome</th>
               <th className="px-4 py-2.5 font-medium">URL</th>
               <th className="px-4 py-2.5 font-medium">Eventos</th>
@@ -464,7 +464,7 @@ function WebhookDeliveriesSection() {
         <div className="overflow-x-auto" tabIndex={0}>
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-border-hairline text-2xs uppercase tracking-wide text-ink-faint">
+              <tr className="border-b border-border-hairline text-xs font-medium text-ink-muted">
                 <th className="px-4 py-2.5 font-medium">Evento</th>
                 <th className="px-4 py-2.5 font-medium">Tentativas</th>
                 <th className="px-4 py-2.5 font-medium">Status</th>
@@ -567,7 +567,7 @@ export function IntegrationsPage() {
         {!isLoading && (keys ?? []).length > 0 && (
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-border-hairline text-2xs uppercase tracking-wide text-ink-faint">
+              <tr className="border-b border-border-hairline text-xs font-medium text-ink-muted">
                 <th className="px-4 py-2.5 font-medium">Nome</th>
                 <th className="px-4 py-2.5 font-medium">Prefixo</th>
                 <th className="px-4 py-2.5 font-medium">Criada em</th>

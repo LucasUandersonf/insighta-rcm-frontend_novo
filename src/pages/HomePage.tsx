@@ -18,7 +18,9 @@ import { cn } from "@/lib/cn";
 import { useTeamOverview } from "@/lib/team";
 import { TeamUpdatesStrip } from "@/components/team/TeamUpdatesStrip";
 import type {
+  AccountHealth,
   BriefingEmailResult,
+  DataReadiness,
   ExecutiveNarrative,
   ExecutiveSummary,
   HealthScore,
@@ -139,13 +141,13 @@ function FirstRunWizard({ canUpload }: { canUpload: boolean }) {
         <p className="text-[15px] font-medium text-ink">Vamos começar? Sua clínica ainda não tem nenhum dado importado.</p>
         <p className="mt-1 text-sm leading-relaxed text-ink-muted">
           {canUpload
-            ? "Suba sua agenda, faturamento ou tabela de convênio na Central de Upload — é o primeiro passo para a Sala de Comando começar a gerar insights de verdade."
-            : "Peça para o owner, administrador(a) ou financeiro da clínica subir os primeiros dados na Central de Upload — depois disso, esta tela passa a mostrar as prioridades reais do dia."}
+            ? "Vamos importar sua primeira planilha: faturamento ou agenda, do jeito que sai do seu sistema. Com ela, esta tela passa a mostrar as prioridades reais do dia."
+            : "Peça para quem é proprietário(a), administrador(a) ou do financeiro da clínica importar os primeiros dados em Importar dados. Depois disso, esta tela passa a mostrar as prioridades reais do dia."}
         </p>
       </div>
       {canUpload && (
-        <Button type="button" onClick={() => navigate("/upload")} className="inline-flex items-center gap-1.5">
-          Ir para Central de Upload
+        <Button type="button" onClick={() => navigate("/importar")} className="inline-flex items-center gap-1.5">
+          Importar dados
           <ArrowRight aria-hidden size={13} />
         </Button>
       )}
@@ -160,12 +162,12 @@ function FirstRunWizard({ canUpload }: { canUpload: boolean }) {
  * completa em Saúde da conta.
  */
 const ONBOARDING_STEPS = [
-  { n: 1, title: "Importe os dados", text: "Baixe o modelo de cada área na Central de Upload, ou mapeie as colunas do seu sistema.", to: "/upload" },
+  { n: 1, title: "Importe os dados", text: "Envie a planilha do seu sistema em Importar dados — ou baixe o modelo de cada área.", to: "/importar" },
   {
     n: 2,
     title: "Defina os coordenadores",
-    text: "Quem cuida de Agendamento, Faturamento, Estoque e Assistencial recebe os alertas do setor. Convide por e-mail.",
-    to: "/admin/users",
+    text: "Quem cuida de Agendamento, Faturamento, Estoque e Assistencial recebe os alertas do setor. Convide a pessoa em Usuários.",
+    to: "/admin/usuarios",
   },
   { n: 3, title: "Confira a saúde da conta", text: "Contratos, meta, grade dos profissionais e o que mais faltar — com o atalho para resolver.", to: "/admin/saude-da-conta" },
 ];
@@ -183,6 +185,68 @@ function OnboardingSteps() {
         </li>
       ))}
     </ol>
+  );
+}
+
+// UX-17: o roteiro não some na primeira importação — fica no topo da Home
+// até o essencial estar pronto. Proprietário(a)/administrador(a) veem a
+// Saúde da conta; os demais, só o que falta importar.
+const SOURCE_LABELS: Record<string, string> = {
+  faturamento: "Faturamento",
+  agenda: "Agenda",
+  atendimento: "Atendimentos",
+  estoque: "Estoque",
+  pep: "Prontuário",
+};
+
+export function missingSourcesText(missing: string[]): string | null {
+  const names = missing.filter((m) => m in SOURCE_LABELS).map((m) => SOURCE_LABELS[m].toLowerCase());
+  if (names.length === 0) return null;
+  if (names.length === 1) return names[0];
+  return `${names.slice(0, -1).join(", ")} e ${names[names.length - 1]}`;
+}
+
+function SetupChecklist({ health, readiness }: { health?: AccountHealth; readiness?: DataReadiness }) {
+  const items = health
+    ? health.checks.map((c) => ({ key: c.key, label: c.label, done: c.status === "ok", href: c.action_href, action: c.action_label }))
+    : readiness
+      ? ["faturamento", "agenda"].map((src) => ({
+          key: src,
+          label: `Importar ${SOURCE_LABELS[src].toLowerCase()}`,
+          done: readiness.sources.includes(src),
+          href: "/importar",
+          action: "Importar",
+        }))
+      : [];
+  if (items.length === 0) return null;
+  const done = items.filter((i) => i.done).length;
+  if (done === items.length) return null;
+  const pending = items.filter((i) => !i.done);
+  return (
+    <details open className="mt-6 rounded-[14px] border border-border-hairline bg-canvas-surface/60">
+      <summary className="flex cursor-pointer flex-wrap items-center gap-2 px-4 py-3 text-sm font-medium text-ink">
+        Configuração da clínica: {done} de {items.length} prontos
+        <span className="text-xs font-normal text-ink-muted">— o que falta para os números ficarem completos</span>
+      </summary>
+      <ul className="divide-y divide-border-hairline border-t border-border-hairline">
+        {pending.slice(0, 5).map((item) => (
+          <li key={item.key} className="flex flex-wrap items-center gap-3 px-4 py-2.5 text-sm">
+            <span aria-hidden className="h-2 w-2 rounded-full bg-pending" />
+            <span className="text-ink-soft">{item.label}</span>
+            {item.href && (
+              <Link to={resolveHref(item.href)} className="ml-auto text-[13px] font-medium text-accent-muted hover:underline">
+                {item.action ?? "Resolver"} →
+              </Link>
+            )}
+          </li>
+        ))}
+      </ul>
+      {health && (
+        <Link to="/admin/saude-da-conta" className="block border-t border-border-hairline px-4 py-2.5 text-[13px] font-medium text-accent-muted hover:underline">
+          Ver tudo em Saúde da conta →
+        </Link>
+      )}
+    </details>
   );
 }
 
@@ -267,10 +331,28 @@ function impactSentence(insight: SmartInsight): string {
   return `São ${value} em jogo. `;
 }
 
-function CalmHeadline() {
+function CalmHeadline({ missingText }: { missingText?: string | null }) {
+  // UX-04: sem agenda ou faturamento importados, "dia tranquilo" é falta de
+  // dado — a manchete diz isso, em tom neutro, em vez de tranquilizar.
+  if (missingText) {
+    return (
+      <article className="flex flex-col gap-[18px] lg:pr-12">
+        <Kicker className="text-ink-muted">Manchete · Faltam dados</Kicker>
+        <h2 className="font-serif text-[30px] font-semibold leading-[1.12] tracking-[-0.02em] text-ink sm:text-[38px]">
+          Ainda não há dados suficientes para dizer como a clínica está.
+        </h2>
+        <p className="font-serif text-[19px] leading-[1.55] text-ink-soft">
+          Falta importar: {missingText}. Sem isso, os alertas que dependem desses dados ficam desligados.
+        </p>
+        <Link to="/importar" className="self-start text-[15px] font-medium text-accent-muted hover:underline">
+          Importar dados →
+        </Link>
+      </article>
+    );
+  }
   return (
     <article className="flex flex-col gap-[18px] lg:pr-12">
-      <Kicker className="text-revenue">Manchete · Dia tranquilo</Kicker>
+      <Kicker className="text-ink-muted">Manchete · Dia tranquilo</Kicker>
       <h2 className="font-serif text-[34px] font-semibold leading-[1.08] tracking-[-0.02em] text-ink sm:text-[44px] xl:text-[54px]">
         Nada pegando fogo hoje. Bom dia para adiantar o que costuma ficar para depois.
       </h2>
@@ -436,7 +518,7 @@ function AskBox() {
             <>
               {ask.data.understood && <p className="text-2xs text-ink-faint">{ask.data.understood}</p>}
               <p className="text-ink">{ask.data.answer}</p>
-              <p className="text-xs text-ink-faint">{ask.data.sources}</p>
+              <p className="text-xs font-medium text-ink-muted">{ask.data.sources}</p>
               {quotaNote && <p className="text-2xs text-ink-faint">{quotaNote}</p>}
             </>
           )}
@@ -472,6 +554,18 @@ export function HomePage() {
     queryKey: ["ingestion-files", "first-run-check"],
     queryFn: () => apiClient.get<PaginatedResponse<IngestionFileEntry>>("/api/v1/ingestion/files?limit=1&offset=0"),
   });
+  const { data: readiness, isLoading: isLoadingReadiness } = useQuery({
+    queryKey: ["analytics", "data-readiness"],
+    queryFn: () => apiClient.get<DataReadiness>("/api/v1/analytics/data-readiness"),
+    enabled: canViewAnalytics,
+    retry: false,
+  });
+  const { data: accountHealth } = useQuery({
+    queryKey: ["tenant", "account-health"],
+    queryFn: () => apiClient.get<AccountHealth>("/api/v1/tenant/account-health"),
+    enabled: canManageTeam,
+    retry: false,
+  });
   const { data: tenant } = useQuery({ queryKey: ["tenant"], queryFn: () => apiClient.get<Tenant>("/api/v1/tenant"), retry: false });
   const { data: nav } = useQuery({
     queryKey: ["analytics", "navigation-summary"],
@@ -494,6 +588,13 @@ export function HomePage() {
     queryKey: ["analytics", "payer-overview", previous.from, previous.to],
     queryFn: () => apiClient.get<PayerOverview>(`/api/v1/analytics/payer-overview?date_from=${previous.from}&date_to=${previous.to}`),
     enabled: canViewAnalytics,
+    retry: false,
+  });
+  const wideWindow = windowFor(90);
+  const { data: payers90 } = useQuery({
+    queryKey: ["analytics", "payer-overview", wideWindow.from, wideWindow.to],
+    queryFn: () => apiClient.get<PayerOverview>(`/api/v1/analytics/payer-overview?date_from=${wideWindow.from}&date_to=${wideWindow.to}`),
+    enabled: canViewAnalytics && !!payers && payers.total_denied === 0 && compareOption.days < 90,
     retry: false,
   });
   const { data: health } = useQuery({
@@ -527,7 +628,13 @@ export function HomePage() {
   const priorities = data?.top_priorities ?? [];
   const recentlyResolved = data?.recently_resolved ?? [];
   const firstName = profile ? firstNameFrom(profile.full_name) : null;
-  const isFirstRun = !isLoadingIngestion && ingestionHistory?.total === 0;
+  // UX-03: "primeira vez" é não ter dado nenhum — não "nunca ter enviado
+  // arquivo" (um arquivo 100% rejeitado tirava o passo a passo da tela).
+  const hasNoData = readiness
+    ? !readiness.sources.some((s) => ["faturamento", "agenda", "atendimento"].includes(s))
+    : ingestionHistory?.total === 0;
+  const isFirstRun = !isLoadingIngestion && !(canViewAnalytics && isLoadingReadiness) && hasNoData;
+  const missingText = readiness ? missingSourcesText(readiness.missing.filter((m) => m === "faturamento" || m === "agenda")) : null;
   const [headline, ...others] = priorities;
   const secondary = others.slice(0, 2);
 
@@ -552,7 +659,10 @@ export function HomePage() {
       value: compactCurrency.format(0),
       delta: "—",
       favorable: null,
-      read: "Os convênios ainda não devolveram o retorno das cobranças deste período.",
+      read:
+        payers90 && payers90.total_denied > 0
+          ? `Nada glosado nos ${compareOption.panorama}. Nos últimos 90 dias foram ${compactCurrency.format(payers90.total_denied)}.`
+          : `Os convênios ainda não devolveram o retorno das cobranças dos ${compareOption.panorama}.`,
     });
   } else if (payers) {
     const prev = previousPayers?.total_denied ?? null;
@@ -565,7 +675,9 @@ export function HomePage() {
       ...kpiDelta({ value: payers.total_denied, previous_value: prev ?? 0, delta_pct: deltaPct }, false),
       read:
         payers.total_denied === 0
-          ? "Nenhuma recusa de convênio no período."
+          ? payers90 && payers90.total_denied > 0
+            ? `Nada glosado nos ${compareOption.panorama}. Nos últimos 90 dias foram ${compactCurrency.format(payers90.total_denied)}.`
+            : `Nenhuma glosa nos ${compareOption.panorama}.`
           : topShare >= 40
             ? `${Math.round(topShare)}% disso vem de um só convênio: ${topDenied.name}.`
             : describeTrend("o valor glosado", payers.total_denied, deltaPct, { shape: "currency" }),
@@ -651,7 +763,9 @@ export function HomePage() {
     ? "Sua clínica ainda não tem dado importado — vamos resolver isso."
     : error
       ? "Bem-vindo de volta. Os números de hoje já estão prontos na Sala de Comando."
-      : priorities.length === 0
+      : priorities.length === 0 && missingText
+        ? "Resumo parcial: alguns dados da clínica ainda não foram importados."
+        : priorities.length === 0
         ? "Tudo tranquilo por aqui — nada precisou da sua atenção nesta janela."
         : "Aqui está o resumo de hoje — confira as prioridades abaixo.";
 
@@ -671,7 +785,7 @@ export function HomePage() {
             Urgente
           </span>
           <span className="text-sm text-ink">{urgentText}</span>
-          <Link to={nav?.urgent?.action_href ?? "/denial-appeals"} className="ml-auto text-[13px] font-medium text-denied hover:underline">
+          <Link to={nav?.urgent?.action_href ?? "/recursos-de-glosa"} className="ml-auto text-[13px] font-medium text-denied hover:underline">
             {nav?.urgent?.action_label ?? "Abrir recurso"} →
           </Link>
         </div>
@@ -736,6 +850,8 @@ export function HomePage() {
         )}
       </header>
 
+      {!isFirstRun && !isLoading && <SetupChecklist health={accountHealth} readiness={canManageTeam ? undefined : readiness} />}
+
       {isFirstRun ? (
         <div className="py-9">
           <FirstRunWizard canUpload={canUpload} />
@@ -751,7 +867,7 @@ export function HomePage() {
                 onAssign={() => workflow.setAssigningItem(toQueueItem(headline))}
               />
             ) : (
-              <CalmHeadline />
+              <CalmHeadline missingText={missingText} />
             )}
             {rows.length > 0 && <Panorama rows={rows} windowLabel={compareOption.panorama} />}
           </div>

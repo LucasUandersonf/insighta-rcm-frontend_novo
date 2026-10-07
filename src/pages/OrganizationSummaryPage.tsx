@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import type { OrganizationSummary, OrganizationUnitSummary } from "@/lib/types";
+import { plural } from "@/lib/plural";
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
@@ -94,11 +95,11 @@ export function OrganizationSummaryPage() {
             </Panel>
           </section>
 
-          <Panel title={data.organization_name ?? "Unidades"} subtitle={`${data.units.length} unidade(s) — últimos ${data.window_days} dias`}>
+          <Panel title={data.organization_name ?? "Unidades"} subtitle={`${plural(data.units.length, "unidade", "unidades")} — últimos ${data.window_days} dias`}>
             <div className="overflow-x-auto p-4">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-border-hairline text-2xs uppercase tracking-wide text-ink-faint">
+                  <tr className="border-b border-border-hairline text-xs font-medium text-ink-muted">
                     <th className="pb-2 text-left font-medium">Unidade</th>
                     <th className="pb-2 text-right font-medium">Faturado</th>
                     <th className="pb-2 text-right font-medium">Risco de glosa</th>

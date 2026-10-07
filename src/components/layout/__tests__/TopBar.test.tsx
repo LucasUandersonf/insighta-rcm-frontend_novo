@@ -94,7 +94,7 @@ describe("TopBar", () => {
 
     await openAccountMenu();
     expect(screen.getByText("Administração")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Usuários e permissões/ })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /^Usuários$/ })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Integrações e webhooks/ })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Minha clínica/ })).toBeInTheDocument();
   });
@@ -137,7 +137,7 @@ describe("TopBar", () => {
 
   it("dentro de um módulo, o botão Módulos mostra onde o usuário está", async () => {
     mockUser("owner");
-    renderWithProviders(<TopBar />, { route: "/contracts" });
+    renderWithProviders(<TopBar />, { route: "/convenios" });
 
     expect(screen.getByRole("button", { name: /Módulos.*Convênios e contratos/ })).toBeInTheDocument();
   });
@@ -170,7 +170,7 @@ describe("TopBar", () => {
     vi.mocked(apiClient.get).mockImplementation((url: string) => {
       if (url.includes("navigation-summary"))
         return Promise.resolve({
-          module_alerts: [{ route: "/denial-appeals", text: "4 prazos vencem nos próximos 7 dias", tone: "critical" }],
+          module_alerts: [{ route: "/recursos-de-glosa", text: "4 prazos vencem nos próximos 7 dias", tone: "critical" }],
           my_open_insights: 3,
           last_import_at: new Date(Date.now() - 12 * 60000).toISOString(),
           last_import_source: "agenda_setembro.xlsx",

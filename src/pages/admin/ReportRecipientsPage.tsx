@@ -369,7 +369,7 @@ export function ReportRecipientsPage() {
         {!isLoading && (recipients ?? []).length > 0 && (
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-border-hairline text-2xs uppercase tracking-wide text-ink-faint">
+              <tr className="border-b border-border-hairline text-xs font-medium text-ink-muted">
                 <th className="px-4 py-2.5 font-medium">Nome</th>
                 <th className="px-4 py-2.5 font-medium">WhatsApp</th>
                 <th className="px-4 py-2.5 font-medium">E-mail</th>

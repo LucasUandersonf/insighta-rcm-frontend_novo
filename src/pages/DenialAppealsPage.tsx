@@ -686,7 +686,7 @@ export function DenialAppealsPage() {
       <PageHeader
         icon={ShieldAlert}
         title="Recurso de glosa"
-        subtitle="Negativas formais da operadora (administrativa ou médica) — diferente do Painel Anti-Glosa, que previne erro de preenchimento antes do envio. Aqui é o processo de contestação, com prazo."
+        subtitle="Conteste glosas dentro do prazo. Para evitar glosa antes de enviar, use a Fila de correção."
         action={
           <Button
             onClick={() => setIsCreateModalOpen(true)}
@@ -746,7 +746,7 @@ export function DenialAppealsPage() {
         {!isLoading && (appeals ?? []).length > 0 && (
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-border-hairline text-2xs uppercase tracking-wide text-ink-faint">
+              <tr className="border-b border-border-hairline text-xs font-medium text-ink-muted">
                 <th className="px-4 py-2.5 font-medium">Tipo</th>
                 <th className="px-4 py-2.5 font-medium">Negativa em</th>
                 <th className="px-4 py-2.5 font-medium">Prazo</th>

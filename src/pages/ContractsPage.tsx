@@ -90,6 +90,127 @@ const STATUS_TONE: Record<Contract["status"], BadgeTone> = {
 // Convênios (Operadoras)
 // ---------------------------------------------------------------------
 
+// UX-07: para a clínica, "Unimed" é um convênio — um formulário só. A
+// operadora é criada junto (particular não tem); operadora e plano
+// separados ficam em "Operadoras e planos (avançado)".
+function CreateConvenioModal({
+  isOpen,
+  onClose,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+}) {
+  const queryClient = useQueryClient();
+  const { showSuccess, showError } = useToast();
+  const [name, setName] = useState("");
+  const [isParticular, setIsParticular] = useState(false);
+  const [ansRegistry, setAnsRegistry] = useState("");
+  const [appealDeadlineDays, setAppealDeadlineDays] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  const mutation = useMutation({
+    mutationFn: (payload: {
+      name: string;
+      plan_type: InsurancePlanType;
+      ans_registry: string | null;
+      default_appeal_deadline_days: number | null;
+    }) =>
+      apiClient.post<{ plan: InsurancePlan; resolved_rows: number }>(
+        "/api/v1/insurance-companies/convenios",
+        payload,
+      ),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries();
+      const extra =
+        result.resolved_rows > 0
+          ? ` ${result.resolved_rows.toLocaleString("pt-BR")} ${result.resolved_rows === 1 ? "linha importada que esperava por ele entrou" : "linhas importadas que esperavam por ele entraram"} no sistema.`
+          : "";
+      showSuccess(`Convênio “${result.plan.display_name}” cadastrado.${extra}`);
+      resetAndClose();
+    },
+    onError: (err) => {
+      if (err instanceof ApiError && err.campos) {
+        const mapped: Record<string, string> = {};
+        for (const c of err.campos) mapped[c.campo] = c.problema;
+        setFieldErrors(mapped);
+      } else {
+        showError(getApiErrorMessage(err));
+      }
+    },
+  });
+
+  function resetAndClose() {
+    setName("");
+    setIsParticular(false);
+    setAnsRegistry("");
+    setAppealDeadlineDays("");
+    setFieldErrors({});
+    onClose();
+  }
+
+  function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    setFieldErrors({});
+    mutation.mutate({
+      name,
+      plan_type: isParticular ? "particular" : "convenio",
+      ans_registry: isParticular ? null : ansRegistry || null,
+      default_appeal_deadline_days:
+        !isParticular && appealDeadlineDays ? parseInt(appealDeadlineDays, 10) : null,
+    });
+  }
+
+  return (
+    <Modal title="Novo convênio" isOpen={isOpen} onClose={resetAndClose}>
+      <form onSubmit={handleSubmit}>
+        <TextField
+          label="Nome do convênio"
+          placeholder="Ex.: Unimed Nacional"
+          required
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          error={fieldErrors["name"]}
+        />
+        <label className="mb-4 flex items-center gap-2 text-sm text-ink">
+          <input
+            type="checkbox"
+            checked={isParticular}
+            onChange={(e) => setIsParticular(e.target.checked)}
+          />
+          É atendimento particular (paciente paga direto, sem operadora)
+        </label>
+        {!isParticular && (
+          <>
+            <TextField
+              label="Registro ANS (opcional)"
+              value={ansRegistry}
+              onChange={(e) => setAnsRegistry(e.target.value)}
+              error={fieldErrors["ans_registry"]}
+            />
+            <TextField
+              label="Prazo para recorrer de glosa, em dias (opcional)"
+              type="number"
+              min="1"
+              placeholder="Ex.: 30 — está no contrato com o convênio"
+              value={appealDeadlineDays}
+              onChange={(e) => setAppealDeadlineDays(e.target.value)}
+              error={fieldErrors["default_appeal_deadline_days"]}
+            />
+          </>
+        )}
+        <div className="mt-5 flex justify-end gap-2">
+          <Button type="button" variant="secondary" onClick={resetAndClose}>
+            Cancelar
+          </Button>
+          <Button type="submit" disabled={mutation.isPending}>
+            {mutation.isPending ? "Salvando..." : "Cadastrar convênio"}
+          </Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
 function CreateCompanyModal({
   isOpen,
   onClose,
@@ -179,7 +300,7 @@ function CreateCompanyModal({
             Cancelar
           </Button>
           <Button type="submit" disabled={mutation.isPending}>
-            {mutation.isPending ? "Salvando..." : "Salvar operadora"}
+            {mutation.isPending ? "Salvando..." : "Cadastrar operadora"}
           </Button>
         </div>
       </form>
@@ -245,7 +366,7 @@ function CreatePlanModal({
     mutation.mutate({
       insurance_company_id: planType === "convenio" ? companyId : null,
       display_name: displayName,
-      ans_registry: ansRegistry || null,
+      ans_registry: planType === "convenio" ? ansRegistry || null : null,
       plan_type: planType,
     });
   }
@@ -289,18 +410,20 @@ function CreatePlanModal({
           onChange={(e) => setDisplayName(e.target.value)}
           error={fieldErrors["display_name"]}
         />
-        <TextField
-          label="Registro ANS"
-          value={ansRegistry}
-          onChange={(e) => setAnsRegistry(e.target.value)}
-          error={fieldErrors["ans_registry"]}
-        />
+        {planType === "convenio" && (
+          <TextField
+            label="Registro ANS"
+            value={ansRegistry}
+            onChange={(e) => setAnsRegistry(e.target.value)}
+            error={fieldErrors["ans_registry"]}
+          />
+        )}
         <div className="mt-5 flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={resetAndClose}>
             Cancelar
           </Button>
           <Button type="submit" disabled={mutation.isPending}>
-            {mutation.isPending ? "Salvando..." : "Salvar plano"}
+            {mutation.isPending ? "Salvando..." : "Cadastrar plano"}
           </Button>
         </div>
       </form>
@@ -983,6 +1106,7 @@ export function ContractsPage() {
   const { windowDays, setWindowDays, dateFrom, dateTo } = useDateWindow(90);
   const queryClient = useQueryClient();
   const { showError } = useToast();
+  const [isConvenioModalOpen, setIsConvenioModalOpen] = useState(false);
   const [isCompanyModalOpen, setIsCompanyModalOpen] = useState(false);
   const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
   const [isManualModalOpen, setIsManualModalOpen] = useState(false);
@@ -1136,7 +1260,56 @@ export function ContractsPage() {
       {activeTab === "contratos" && (
         <TabPanel id="contratos" groupId={PAYER_TABS_GROUP}>
           <div className="space-y-6">
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+            <Panel
+              title="Convênios"
+              subtitle="Os convênios e o particular que a clínica atende. Convênio novo que aparece numa planilha importada é cadastrado sozinho."
+              action={
+                <Button
+                  size="xs"
+                  className="flex items-center gap-1"
+                  onClick={() => setIsConvenioModalOpen(true)}
+                >
+                  <Plus size={12} />
+                  Novo convênio
+                </Button>
+              }
+            >
+              {(allPlans ?? []).length === 0 ? (
+                <EmptyState
+                  icon={<ClipboardList size={17} strokeWidth={1.5} />}
+                  message="Nenhum convênio cadastrado ainda. Cadastre aqui ou importe uma planilha — os convênios dela entram sozinhos."
+                />
+              ) : (
+                <ul className="divide-y divide-border-hairline">
+                  {(allPlans ?? []).map((p) => (
+                    <li
+                      key={p.id}
+                      className="flex items-center justify-between gap-2 px-5 py-2.5 text-sm text-ink"
+                    >
+                      <span className={p.is_active ? undefined : "text-ink-faint"}>
+                        {p.display_name}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        {p.plan_type === "particular" && (
+                          <Badge tone="accent">Particular</Badge>
+                        )}
+                        {!p.is_active && <Badge tone="neutral">Desativado</Badge>}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Panel>
+
+            <details className="rounded-lg border border-border-hairline">
+              <summary className="cursor-pointer px-5 py-3 text-sm font-medium text-ink">
+                Operadoras e planos (avançado)
+              </summary>
+              <p className="px-5 pb-3 text-xs text-ink-muted">
+                Só é preciso aqui quando uma operadora tem vários planos com regras diferentes,
+                ou para desativar um convênio.
+              </p>
+            <div className="grid grid-cols-1 gap-4 p-4 lg:grid-cols-12">
               <div className="lg:col-span-6">
                 <Panel
                   title="Operadoras"
@@ -1262,6 +1435,7 @@ export function ContractsPage() {
                 </Panel>
               </div>
             </div>
+            </details>
 
             <Panel
               title="Contratos"
@@ -1306,7 +1480,7 @@ export function ContractsPage() {
               {!contractsLoading && (contracts ?? []).length > 0 && (
                 <table className="w-full text-left text-sm">
                   <thead>
-                    <tr className="border-b border-border-hairline text-2xs uppercase tracking-wide text-ink-faint">
+                    <tr className="border-b border-border-hairline text-xs font-medium text-ink-muted">
                       <th className="px-4 py-2.5 font-medium">Plano</th>
                       <th className="px-4 py-2.5 font-medium">Vigência</th>
                       <th className="px-4 py-2.5 font-medium">Status</th>
@@ -1375,6 +1549,10 @@ export function ContractsPage() {
         </TabPanel>
       )}
 
+      <CreateConvenioModal
+        isOpen={isConvenioModalOpen}
+        onClose={() => setIsConvenioModalOpen(false)}
+      />
       <CreateCompanyModal
         isOpen={isCompanyModalOpen}
         onClose={() => setIsCompanyModalOpen(false)}

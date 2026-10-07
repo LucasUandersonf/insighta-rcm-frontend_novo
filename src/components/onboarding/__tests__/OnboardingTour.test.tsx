@@ -6,7 +6,7 @@ import { expectNoA11yViolations } from "@/test/a11y";
 
 const STEPS: TourStep[] = [
   { title: "Bem-vindo", description: "Um tour rápido pelos módulos principais." },
-  { targetSelector: '[data-tour-id="/upload"]', title: "Central de upload", description: "É por aqui que os dados entram." },
+  { targetSelector: '[data-tour-id="/importar"]', title: "Central de upload", description: "É por aqui que os dados entram." },
   { title: "Pronto!", description: "Você pode rever este tour quando quiser." },
 ];
 
@@ -24,7 +24,7 @@ function renderTour(onFinish = vi.fn()) {
     <div>
       {/* Alvo real do segundo passo — sem isto, useTargetRect não acha
           nada via document.querySelector e o card cai no modo centralizado. */}
-      <button data-tour-id="/upload">Central de upload</button>
+      <button data-tour-id="/importar">Central de upload</button>
       <OnboardingTour isOpen steps={STEPS} onFinish={onFinish} />
     </div>
   );

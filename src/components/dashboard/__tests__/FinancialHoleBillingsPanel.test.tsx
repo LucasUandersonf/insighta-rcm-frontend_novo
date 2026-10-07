@@ -164,7 +164,7 @@ describe("FinancialHoleBillingsPanel", () => {
 
     const button = await screen.findByRole("button", { name: "Ir para Contratos" });
     await user.click(button);
-    expect(navigateMock).toHaveBeenCalledWith("/contracts");
+    expect(navigateMock).toHaveBeenCalledWith("/convenios");
   });
 
   it("não tem violações de acessibilidade", async () => {

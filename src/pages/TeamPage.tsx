@@ -224,7 +224,7 @@ function ReassignModal({ demand, mode, onClose }: { demand: Demand | null; mode:
                 <span className="flex flex-col gap-0.5">
                   <span className="text-sm font-medium text-ink">{s.label}</span>
                   <span className={cn("text-xs", s.coordinator ? "text-ink-muted" : "text-pending")}>
-                    {s.coordinator ? `Coordenação: ${s.coordinator.full_name}` : "Sem coordenador — Cadastre em Usuários e permissões"}
+                    {s.coordinator ? `Coordenação: ${s.coordinator.full_name}` : "Sem coordenador — cadastre em Usuários"}
                   </span>
                 </span>
               </button>
@@ -400,7 +400,7 @@ export function TeamPage() {
           <span className="ml-auto text-xs text-ink-faint">{reevaluationNote(o)}</span>
         </div>
         {o.scoreboard.length === 0 ? (
-          <p className="text-sm text-ink-muted">Nenhum setor tem coordenador ainda — cadastre em Usuários e permissões para começar a atribuir.</p>
+          <p className="text-sm text-ink-muted">Nenhum setor tem coordenador ainda — cadastre em Usuários para começar a atribuir.</p>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {o.scoreboard.map((s) => (

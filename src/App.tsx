@@ -158,13 +158,28 @@ export default function App() {
                 {/* O antigo Painel saiu (Redesign 2026) — o que ele tinha de
                     trabalho virou a Fila de correção. Links antigos seguem valendo. */}
                 <Route path="/painel" element={<LegacyRedirect to="/fila-correcao" />} />
-                <Route path="/appointments" element={<AppointmentsPage />} />
+                {/* UX-32: endereços em português; os antigos (em inglês) continuam
+                    valendo — links de e-mail, favoritos e insights já salvos. */}
+                <Route path="/upload" element={<LegacyRedirect to="/importar" />} />
+                <Route path="/setup" element={<LegacyRedirect to="/importar/corrigir" />} />
+                <Route path="/contracts" element={<LegacyRedirect to="/convenios" />} />
+                <Route path="/denial-appeals" element={<LegacyRedirect to="/recursos-de-glosa" />} />
+                <Route path="/waitlist" element={<LegacyRedirect to="/lista-de-espera" />} />
+                <Route path="/professionals" element={<LegacyRedirect to="/profissionais" />} />
+                <Route path="/marketing-spend" element={<LegacyRedirect to="/marketing" />} />
+                <Route path="/appointments" element={<LegacyRedirect to="/consultas" />} />
+                <Route path="/admin/users" element={<LegacyRedirect to="/admin/usuarios" />} />
+                <Route path="/admin/integrations" element={<LegacyRedirect to="/admin/integracoes" />} />
+                <Route path="/admin/tenant" element={<LegacyRedirect to="/admin/clinica" />} />
+                <Route path="/admin/report-recipients" element={<LegacyRedirect to="/admin/destinatarios" />} />
+                <Route path="/admin/audit-log" element={<LegacyRedirect to="/admin/auditoria" />} />
+                <Route path="/consultas" element={<AppointmentsPage />} />
                 {/* Ficha do Paciente (Roadmap "Rumo à Nota 9", Fase 4) — mesmo
                     RBAC de GET /patients/search e /patients/{id}/ficha
                     (atendimento/admin/owner/financeiro/auditor = todo papel),
                     por isso sem RoleProtectedRoute. */}
                 <Route path="/pacientes" element={<PatientFichaPage />} />
-                <Route path="/waitlist" element={<WaitlistPage />} />
+                <Route path="/lista-de-espera" element={<WaitlistPage />} />
                 {/* Épico F1.3 do Plano Diretor: "Meus pendentes" é aberto a
                     QUALQUER papel autenticado (mesmo RBAC de
                     GET /insight-outcomes/mine — quem executa não é sempre
@@ -184,7 +199,7 @@ export default function App() {
                     RBAC: mesmo critério de escrita restrita de /upload e /contracts —
                     editar grade é ação administrativa, fora do alcance de atendimento. */}
                 <Route element={<RoleProtectedRoute allowedRoles={["owner", "admin"]} />}>
-                  <Route path="/professionals" element={<ProfessionalsPage />} />
+                  <Route path="/profissionais" element={<ProfessionalsPage />} />
                 </Route>
                 {/* Equipe (Redesign 2026): o gestor acompanha as demandas
                     atribuídas aos coordenadores (mesmo RBAC de /team/overview). */}
@@ -199,8 +214,8 @@ export default function App() {
                   {/* Roadmap "Rumo à Nota 9" (Fase 2) — mesmo RBAC de /decisao
                       (o endpoint que alimenta esta tela usa o mesmo _CAN_VIEW). */}
                   <Route path="/agenda-risco" element={<AgendaRiscoPage />} />
-                  <Route path="/contracts" element={<ContractsPage />} />
-                  <Route path="/denial-appeals" element={<DenialAppealsPage />} />
+                  <Route path="/convenios" element={<ContractsPage />} />
+                  <Route path="/recursos-de-glosa" element={<DenialAppealsPage />} />
                   {/* Mesmo RBAC do backend em lotes.py/_CAN_READ (owner/admin/
                       financeiro/auditor) — as ações de escrita (criar, fechar,
                       atribuir/remover guia) usam _CAN_WRITE (sem auditor) e o
@@ -218,7 +233,7 @@ export default function App() {
                       Ação: mesmo RBAC de /custos acima (leitura via
                       marketing_spend.py/_CAN_READ, escrita via
                       _CAN_WRITE, sem auditor, barrado pelo backend). */}
-                  <Route path="/marketing-spend" element={<MarketingSpendPage />} />
+                  <Route path="/marketing" element={<MarketingSpendPage />} />
                 </Route>
                 {/* Upload é ação de escrita — mesmo RBAC do backend em
                     ingestion.py/_CAN_MANAGE e contracts.py/_CAN_WRITE
@@ -227,7 +242,7 @@ export default function App() {
                     modo leitura (as próprias páginas escondem a escrita, que a API
                     já recusa para esse papel). */}
                 <Route element={<RoleProtectedRoute allowedRoles={["owner", "admin", "financeiro", "auditor"]} />}>
-                  <Route path="/upload" element={<UploadCenterPage />} />
+                  <Route path="/importar" element={<UploadCenterPage />} />
                   <Route path="/faturamento" element={<BillingOperationsPage />} />
                 </Route>
                 <Route element={<RoleProtectedRoute allowedRoles={["owner", "admin", "financeiro"]} />}>
@@ -239,19 +254,19 @@ export default function App() {
                   {/* Destino que o próprio toast de sucesso da Central de Upload já
                       promete ("veja a tela de Setup") — mesmo RBAC de /upload
                       (ingestion.py/_CAN_MANAGE: owner/admin/financeiro). */}
-                  <Route path="/setup" element={<SetupPage />} />
+                  <Route path="/importar/corrigir" element={<SetupPage />} />
                 </Route>
                 <Route path="/conta/seguranca" element={<AccountSecurityPage />} />
                 <Route element={<RoleProtectedRoute allowedRoles={["owner", "admin"]} />}>
-                  <Route path="/admin/users" element={<UsersPage />} />
-                  <Route path="/admin/integrations" element={<IntegrationsPage />} />
-                  <Route path="/admin/tenant" element={<TenantPage />} />
+                  <Route path="/admin/usuarios" element={<UsersPage />} />
+                  <Route path="/admin/integracoes" element={<IntegrationsPage />} />
+                  <Route path="/admin/clinica" element={<TenantPage />} />
                   <Route path="/admin/saude-da-conta" element={<AccountHealthPage />} />
-                  <Route path="/admin/report-recipients" element={<ReportRecipientsPage />} />
+                  <Route path="/admin/destinatarios" element={<ReportRecipientsPage />} />
                 </Route>
                 {/* auditor também acessa a trilha de auditoria (RBAC igual ao backend em audit_log.py) */}
                 <Route element={<RoleProtectedRoute allowedRoles={["owner", "admin", "auditor"]} />}>
-                  <Route path="/admin/audit-log" element={<AuditLogPage />} />
+                  <Route path="/admin/auditoria" element={<AuditLogPage />} />
                 </Route>
               </Route>
               </Route>

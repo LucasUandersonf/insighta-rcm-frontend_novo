@@ -77,7 +77,7 @@ describe("CommandCenterToday (Sala de Comando → Hoje)", () => {
 
     renderWithProviders(<CommandCenterToday dateFrom="2026-08-25" dateTo="2026-09-23" summary={SUMMARY} onNavigateTab={vi.fn()} onFocusAgenda={vi.fn()} />);
 
-    expect(screen.getByText("Buraco financeiro")).toBeInTheDocument();
+    expect(screen.getByText("Cobrado abaixo do contrato")).toBeInTheDocument();
     expect(screen.getByText("Você faturou do que podia")).toBeInTheDocument();
     expect(await screen.findByText("A Unimed está recusando mais pagamentos que o normal")).toBeInTheDocument();
     expect(screen.getByText("Por que agora")).toBeInTheDocument();

@@ -1,3 +1,4 @@
+import { ROLE_DESCRIPTIONS, ROLE_LABELS } from "@/lib/roles";
 import { useState, type FormEvent } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Users } from "lucide-react";
@@ -15,13 +16,6 @@ import { useAuth } from "@/context/AuthContext";
 import { SectorCoordinatorsPanel } from "@/components/team/SectorCoordinatorsPanel";
 import type { PasswordResetResponse, PlatformUser, UserCreateRequest, UserRole } from "@/lib/types";
 
-const ROLE_LABELS: Record<UserRole, string> = {
-  owner: "Diretoria (owner)",
-  admin: "Administrador",
-  financeiro: "Financeiro",
-  atendimento: "Atendimento",
-  auditor: "Auditor (somente leitura)",
-};
 
 // Papéis atribuíveis a um NOVO colaborador — "owner" fica de fora de
 // propósito (não está no select do canvas, ModalNovoUsuario.dc.html):
@@ -39,21 +33,44 @@ function formatDateTime(iso: string | null): string {
 /** Mostrada uma única vez, logo após criar usuário ou resetar senha —
  * mesma lógica de "não pode ser reexibida depois" do backend
  * (PasswordResetResponse nunca é persistida em texto puro). */
-function TemporaryPasswordModal({ password, onClose }: { password: string | null; onClose: () => void }) {
+function TemporaryPasswordModal({ password, email, onClose }: { password: string | null; email?: string | null; onClose: () => void }) {
+  const { showSuccess } = useToast();
+  // UX-26: antes só havia "Entendi, já copiei" — copiar à mão, sem link.
+  const loginUrl = `${window.location.origin}/login`;
+  const message = `Seu acesso ao Insighta: ${loginUrl}${email ? ` — e-mail ${email}` : ""} — senha temporária ${password ?? ""} (você cria a sua no primeiro acesso).`;
+  async function copy(text: string, what: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      showSuccess(`${what} copiado.`);
+    } catch {
+      showSuccess("Selecione o texto e copie com Ctrl+C.");
+    }
+  }
   return (
-    <Modal title="Senha temporária gerada" isOpen={password !== null} onClose={onClose}>
+    <Modal title="Acesso criado" isOpen={password !== null} onClose={onClose}>
       <p className="mb-3 text-sm text-ink-muted">
-        Copie e envie ao colaborador por um canal seguro — esta senha não pode ser recuperada novamente depois de fechar esta janela.
+        Envie ao colaborador por um canal seguro. A senha temporária não aparece de novo depois de fechar esta janela; no primeiro acesso ele cria a dele.
       </p>
-      <div className="rounded-md border border-border-default bg-canvas-raised px-3 py-2.5 font-mono text-sm text-ink">{password}</div>
-      <div className="mt-5 flex justify-end">
-        <Button onClick={onClose}>Entendi, já copiei</Button>
+      <div className="flex items-center gap-2 rounded-md border border-border-default bg-canvas-raised px-3 py-2.5">
+        <span className="flex-1 font-mono text-sm text-ink">{password}</span>
+        <Button type="button" variant="secondary" size="sm" onClick={() => copy(password ?? "", "Senha")}>
+          Copiar senha
+        </Button>
+      </div>
+      <p className="mt-3 text-2xs text-ink-faint">Endereço de acesso: {loginUrl}</p>
+      <div className="mt-5 flex justify-end gap-2">
+        <Button type="button" variant="secondary" onClick={onClose}>
+          Fechar
+        </Button>
+        <Button type="button" onClick={() => copy(message, "Convite")}>
+          Copiar senha e link
+        </Button>
       </div>
     </Modal>
   );
 }
 
-function CreateUserModal({ isOpen, onClose, onCreated }: { isOpen: boolean; onClose: () => void; onCreated: (temp: string) => void }) {
+function CreateUserModal({ isOpen, onClose, onCreated }: { isOpen: boolean; onClose: () => void; onCreated: (temp: string, email: string) => void }) {
   const queryClient = useQueryClient();
   const { showError } = useToast();
   const [email, setEmail] = useState("");
@@ -71,14 +88,14 @@ function CreateUserModal({ isOpen, onClose, onCreated }: { isOpen: boolean; onCl
       // ela falhasse, a pessoa ficava criada sem senha visível e sem aviso.
       resetAndClose();
       if (user.temporary_password) {
-        onCreated(user.temporary_password);
+        onCreated(user.temporary_password, user.email);
         return;
       }
       // API anterior (durante a troca de versão): busca pelo reset e, se
       // falhar, diz o que aconteceu e como resolver.
       try {
         const reset = await apiClient.post<PasswordResetResponse>(`/api/v1/users/${user.id}/reset-password`);
-        onCreated(reset.temporary_password);
+        onCreated(reset.temporary_password, user.email);
       } catch {
         showError(`${user.full_name} foi criado(a), mas a senha temporária não pôde ser mostrada. Use “Redefinir senha” na lista para gerar uma.`);
       }
@@ -135,8 +152,9 @@ function CreateUserModal({ isOpen, onClose, onCreated }: { isOpen: boolean; onCl
             </option>
           ))}
         </SelectField>
-        <p className="-mt-2 mb-4 text-2xs text-ink-faint">
-          Uma senha temporária será gerada e mostrada uma única vez, para você repassar ao colaborador por um canal seguro.
+        <p className="-mt-2 mb-2 text-xs text-ink-muted">{ROLE_DESCRIPTIONS[role]}</p>
+        <p className="mb-4 text-2xs text-ink-faint">
+          Uma senha temporária será gerada e mostrada uma vez, com um botão para copiar o convite (link + senha) e mandar ao colaborador.
         </p>
         <div className="mt-5 flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={resetAndClose}>
@@ -157,6 +175,7 @@ export function UsersPage() {
   const { showSuccess, showError } = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [temporaryPassword, setTemporaryPassword] = useState<string | null>(null);
+  const [temporaryEmail, setTemporaryEmail] = useState<string | null>(null);
 
   const { data: users, isLoading, error } = useQuery({
     queryKey: ["users"],
@@ -186,7 +205,10 @@ export function UsersPage() {
 
   const resetPasswordMutation = useMutation({
     mutationFn: (id: string) => apiClient.post<PasswordResetResponse>(`/api/v1/users/${id}/reset-password`),
-    onSuccess: (reset) => setTemporaryPassword(reset.temporary_password),
+    onSuccess: (reset, id) => {
+      setTemporaryEmail((users ?? []).find((u) => u.id === id)?.email ?? null);
+      setTemporaryPassword(reset.temporary_password);
+    },
     onError: (err) => showError(getApiErrorMessage(err)),
   });
 
@@ -211,7 +233,7 @@ export function UsersPage() {
         {!isLoading && (users ?? []).length > 0 && (
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-border-hairline text-2xs uppercase tracking-wide text-ink-faint">
+              <tr className="border-b border-border-hairline text-xs font-medium text-ink-muted">
                 <th className="px-4 py-2.5 font-medium">Nome</th>
                 <th className="px-4 py-2.5 font-medium">E-mail</th>
                 <th className="px-4 py-2.5 font-medium">Papel</th>
@@ -275,8 +297,15 @@ export function UsersPage() {
 
       {(users ?? []).length > 0 && <SectorCoordinatorsPanel users={users ?? []} />}
 
-      <CreateUserModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onCreated={setTemporaryPassword} />
-      <TemporaryPasswordModal password={temporaryPassword} onClose={() => setTemporaryPassword(null)} />
+      <CreateUserModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onCreated={(temp, email) => {
+          setTemporaryEmail(email);
+          setTemporaryPassword(temp);
+        }}
+      />
+      <TemporaryPasswordModal password={temporaryPassword} email={temporaryEmail} onClose={() => setTemporaryPassword(null)} />
       <ConfirmDialog
         isOpen={mfaTarget !== null}
         title="Desligar a verificação em duas etapas?"

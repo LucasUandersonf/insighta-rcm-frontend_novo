@@ -57,6 +57,8 @@ interface FieldErrors {
   owner_name?: string;
   email?: string;
   password?: string;
+  /** Senha fora da regra: bloqueia o avanço; a mensagem aparece no medidor. */
+  _password?: string;
   passwordConfirm?: string;
 }
 
@@ -96,9 +98,14 @@ export function SignUpPage() {
     else if (!isValidCNPJ(cnpj)) errors.cnpj = "CNPJ inválido: os dígitos verificadores não conferem. Confira no cartão CNPJ.";
     if (!googleCredential) {
       if (!ownerName.trim()) errors.owner_name = "Informe seu nome completo.";
+      // UX-18: e-mail inválido é apontado aqui, não só depois de "Criar conta".
       if (!email.trim()) errors.email = "Informe seu e-mail.";
+      else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim())) errors.email = "Confira o e-mail: falta algo (ex.: voce@clinica.com.br).";
+      // O medidor logo abaixo do campo já mostra o problema da senha em
+      // vermelho — repetir no campo duplicava a mensagem.
       const problem = passwordProblem(password);
-      if (problem) errors.password = problem;
+      if (!password) errors.password = "Crie uma senha.";
+      else if (problem) errors._password = problem;
       if (password !== passwordConfirm) errors.passwordConfirm = "As senhas não coincidem.";
     }
     setFieldErrors(errors);
@@ -229,7 +236,7 @@ export function SignUpPage() {
                     value={ownerName}
                     onChange={(e) => setOwnerName(e.target.value)}
                     error={fieldErrors.owner_name}
-                    placeholder="Seu nome corporativo"
+                    placeholder="Ex.: Ana Souza"
                   />
                   <AuthTextField
                     label="E-mail"

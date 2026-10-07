@@ -43,7 +43,7 @@ export function TermsOfServicePage() {
 
       <h2>3. Conta e usuários</h2>
       <ul>
-        <li>Quem cadastra a Clínica recebe o perfil Diretoria (owner) e pode convidar a equipe com perfis mais restritos.</li>
+        <li>Quem cadastra a Clínica recebe o perfil Proprietário(a) e pode convidar a equipe com perfis mais restritos.</li>
         <li>
           A Clínica guarda o sigilo das senhas e responde pelo que for feito com os acessos que ela mesma criou. Recomendamos
           ligar a verificação em duas etapas em Segurança da conta.

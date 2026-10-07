@@ -53,7 +53,7 @@ export function ImportProgressIndicator() {
   }, [data, showSuccess, showError, queryClient]);
 
   const active = (data ?? []).filter((u) => ACTIVE_STATES.includes(u.status));
-  if (active.length === 0 || location.pathname === "/upload") return null;
+  if (active.length === 0 || location.pathname === "/importar") return null;
   const first = active[0];
   const percent = processingPercent(first);
   const label =
@@ -63,7 +63,7 @@ export function ImportProgressIndicator() {
 
   return (
     <Link
-      to="/upload"
+      to="/importar"
       role="status"
       aria-live="polite"
       className="fixed bottom-5 right-5 z-40 flex max-w-[calc(100vw-2.5rem)] items-center gap-2 rounded-full border border-border-hairline bg-canvas-surface px-4 py-2 text-sm text-ink shadow-elevated hover:bg-canvas-raised"

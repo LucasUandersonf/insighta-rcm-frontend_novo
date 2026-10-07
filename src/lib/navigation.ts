@@ -76,7 +76,7 @@ export const NAV_ITEMS: NavItem[] = [
   // Painel saiu (virou a Fila de correção, em Módulos → Faturamento) e
   // Pacientes saiu da barra do gestor — é ferramenta de quem atende
   // (coordenação de Agendamento/Assistencial, ver SECTOR_NAV).
-  { to: "/appointments", label: "Consultas", icon: CalendarCheck, placement: "primary" },
+  { to: "/consultas", label: "Consultas", icon: CalendarCheck, placement: "primary" },
 
   // Faturamento
   // "Faturamento & guias" (lançamento manual) ficou só na barra do
@@ -84,43 +84,44 @@ export const NAV_ITEMS: NavItem[] = [
   { to: "/fila-correcao", label: "Fila de correção", description: "Guias com risco de glosa, antes do envio", roles: FINANCE_WRITE, placement: "modules", group: "faturamento" },
   { to: "/lotes", label: "Lotes de faturamento", description: "Agrupar guias antes de virar fatura", roles: LEADERSHIP, placement: "modules", group: "faturamento" },
   { to: "/faturas", label: "Faturas", description: "Gerar a fatura dos lotes e dar baixa no pagamento", roles: LEADERSHIP, placement: "modules", group: "faturamento" },
-  { to: "/denial-appeals", label: "Recurso de glosa", description: "Contestar recusas dentro do prazo", roles: LEADERSHIP, placement: "modules", group: "faturamento" },
-  { to: "/contracts", label: "Convênios e contratos", description: "Tabelas de repasse e vigências", roles: LEADERSHIP, placement: "modules", group: "faturamento" },
+  { to: "/recursos-de-glosa", label: "Recurso de glosa", description: "Contestar recusas dentro do prazo", roles: LEADERSHIP, placement: "modules", group: "faturamento" },
+  { to: "/convenios", label: "Convênios e contratos", description: "Tabelas de repasse e vigências", roles: LEADERSHIP, placement: "modules", group: "faturamento" },
 
   // Agenda & operação
-  { to: "/waitlist", label: "Lista de espera", description: "Encaixar pacientes nos horários vagos", placement: "modules", group: "operacao" },
+  { to: "/lista-de-espera", label: "Lista de espera", description: "Encaixar pacientes nos horários vagos", placement: "modules", group: "operacao" },
   // Só aparece para grupo com mais de uma unidade (ver TopBar).
   { to: "/consolidado", label: "Consolidado da rede", description: "Visão multiunidade do grupo", roles: LEADERSHIP, placement: "modules", group: "operacao", requiresNetwork: true },
 
   // Custos & crescimento
   { to: "/custos", label: "Custos", description: "Margem real por procedimento", roles: LEADERSHIP, placement: "modules", group: "custos" },
-  { to: "/marketing-spend", label: "Gasto de marketing", description: "Quanto cada canal traz de volta", roles: LEADERSHIP, placement: "modules", group: "custos" },
+  { to: "/marketing", label: "Gasto de marketing", description: "Quanto cada canal traz de volta", roles: LEADERSHIP, placement: "modules", group: "custos" },
 
   // Dados
   // Upload + Setup eram dois módulos para uma tarefa só.
-  { to: "/upload", label: "Importar dados", description: "Enviar arquivos, mapear e corrigir linhas rejeitadas", roles: LEADERSHIP, placement: "modules", group: "dados", matches: ["/setup"] },
+  // UX-12: a ação que destrava o produto não fica mais escondida em
+  // "Módulos" — vai para a linha principal, com o mesmo nome em todo lugar.
+  { to: "/importar", label: "Importar dados", icon: UploadCloud, roles: LEADERSHIP, placement: "primary", matches: ["/importar/corrigir"] },
 ];
 
 export const MODULE_GROUPS: { id: ModuleGroupId; label: string }[] = [
   { id: "faturamento", label: "Faturamento" },
   { id: "operacao", label: "Agenda & operação" },
   { id: "custos", label: "Custos & crescimento" },
-  { id: "dados", label: "Dados" },
 ];
 
 /** Administração da conta SaaS — só no menu do avatar, nunca na barra. */
 export const ADMIN_NAV_ITEMS: NavItem[] = [
-  { to: "/admin/tenant", label: "Minha clínica", icon: Building2, roles: ADMINS, placement: "modules" },
+  { to: "/admin/clinica", label: "Minha clínica", icon: Building2, roles: ADMINS, placement: "modules" },
   { to: "/admin/saude-da-conta", label: "Saúde da conta", icon: HeartPulse, roles: ADMINS, placement: "modules" },
-  { to: "/admin/users", label: "Usuários e permissões", icon: Users, roles: ADMINS, placement: "modules" },
+  { to: "/admin/usuarios", label: "Usuários", icon: Users, roles: ADMINS, placement: "modules" },
   // Profissionais chegam pela importação; o que falta é só a grade
   // semanal (nenhum arquivo traz), que alimenta ocupação e horários vagos.
-  { to: "/professionals", label: "Horários de atendimento", icon: Clock, roles: ADMINS, placement: "modules" },
-  { to: "/admin/integrations", label: "Integrações e webhooks", icon: Plug, roles: ADMINS, placement: "modules" },
-  { to: "/admin/report-recipients", label: "Destinatários de relatórios", icon: Send, roles: ADMINS, placement: "modules" },
+  { to: "/profissionais", label: "Horários de atendimento", icon: Clock, roles: ADMINS, placement: "modules" },
+  { to: "/admin/integracoes", label: "Integrações e webhooks", icon: Plug, roles: ADMINS, placement: "modules" },
+  { to: "/admin/destinatarios", label: "Destinatários de relatórios", icon: Send, roles: ADMINS, placement: "modules" },
   // Auditor também precisa ver a trilha de auditoria — papel de
   // leitura/compliance (mesmo critério de analytics.py).
-  { to: "/admin/audit-log", label: "Logs de auditoria", icon: ScrollText, roles: ["owner", "admin", "auditor"], placement: "modules" },
+  { to: "/admin/auditoria", label: "Logs de auditoria", icon: ScrollText, roles: ["owner", "admin", "auditor"], placement: "modules" },
 ];
 
 /**
@@ -133,27 +134,30 @@ const MY_DEMANDS: NavItem = { to: "/", label: "Minhas demandas", icon: Inbox, pl
 
 const SECTOR_NAV: Record<TeamSector, NavItem[]> = {
   agendamento: [
-    { to: "/appointments", label: "Consultas", icon: CalendarCheck, placement: "primary" },
+    { to: "/consultas", label: "Consultas", icon: CalendarCheck, placement: "primary" },
     { to: "/pacientes", label: "Pacientes", icon: UserRound, placement: "primary" },
-    { to: "/waitlist", label: "Lista de espera", icon: ListOrdered, placement: "primary" },
+    { to: "/lista-de-espera", label: "Lista de espera", icon: ListOrdered, placement: "primary" },
   ],
   faturamento: [
     { to: "/faturamento", label: "Faturamento", icon: Receipt, roles: LEADERSHIP, placement: "primary" },
     { to: "/fila-correcao", label: "Fila de correção", icon: ShieldAlert, roles: FINANCE_WRITE, placement: "primary" },
     { to: "/lotes", label: "Lotes", icon: Layers, roles: LEADERSHIP, placement: "primary" },
     { to: "/faturas", label: "Faturas", icon: FileText, roles: LEADERSHIP, placement: "primary" },
-    { to: "/denial-appeals", label: "Recursos de glosa", icon: FileWarning, roles: LEADERSHIP, placement: "primary" },
-    { to: "/contracts", label: "Convênios", icon: Handshake, roles: LEADERSHIP, placement: "primary" },
-    { to: "/upload", label: "Importar dados", icon: UploadCloud, roles: LEADERSHIP, placement: "primary", matches: ["/setup"] },
+    { to: "/recursos-de-glosa", label: "Recursos de glosa", icon: FileWarning, roles: LEADERSHIP, placement: "primary" },
+    { to: "/convenios", label: "Convênios", icon: Handshake, roles: LEADERSHIP, placement: "primary" },
+    { to: "/importar", label: "Importar dados", icon: UploadCloud, roles: LEADERSHIP, placement: "primary", matches: ["/importar/corrigir"] },
   ],
-  estoque: [{ to: "/upload", label: "Importar dados", icon: UploadCloud, roles: FINANCE_WRITE, placement: "primary", matches: ["/setup"] }],
+  estoque: [{ to: "/importar", label: "Importar dados", icon: UploadCloud, roles: FINANCE_WRITE, placement: "primary", matches: ["/importar/corrigir"] }],
   assistencial: [{ to: "/pacientes", label: "Pacientes", icon: UserRound, placement: "primary" }],
   gestao: [],
 };
 
 export function coordinatorNavItems(sectors: TeamSector[], role: UserRole | undefined): NavItem[] {
   const seen = new Set<string>();
-  const items = [MY_DEMANDS, ...sectors.flatMap((s) => SECTOR_NAV[s])].filter((item) => {
+  // UX-25: a recepção (papel Atendimento) sem setor só via "Minhas demandas";
+  // agenda, pacientes e lista de espera são o trabalho dela.
+  const roleDefaults = role === "atendimento" ? SECTOR_NAV.agendamento : [];
+  const items = [MY_DEMANDS, ...roleDefaults, ...sectors.flatMap((s) => SECTOR_NAV[s])].filter((item) => {
     if (seen.has(item.to)) return false;
     seen.add(item.to);
     return true;

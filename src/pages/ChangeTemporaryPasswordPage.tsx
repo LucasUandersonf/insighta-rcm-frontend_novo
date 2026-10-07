@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { takeLoginPassword } from "@/lib/loginMemory";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { Lock } from "lucide-react";
@@ -21,7 +22,9 @@ export function ChangeTemporaryPasswordPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { logout } = useAuth();
-  const [current, setCurrent] = useState("");
+  // UX-26: a senha temporária acabou de ser digitada no login — não pede de novo.
+  const [remembered] = useState(() => takeLoginPassword());
+  const [current, setCurrent] = useState(remembered ?? "");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -70,13 +73,15 @@ export function ChangeTemporaryPasswordPage() {
           onSubmit={handleSubmit}
           className="space-y-3 rounded-xl border border-border-hairline bg-glass p-6 shadow-elevated backdrop-blur-xl"
         >
-          <Field
-            id="current"
-            label="Senha temporária"
-            value={current}
-            onChange={setCurrent}
-            autoComplete="current-password"
-          />
+          {!remembered && (
+            <Field
+              id="current"
+              label="Senha temporária"
+              value={current}
+              onChange={setCurrent}
+              autoComplete="current-password"
+            />
+          )}
           <Field
             id="new"
             label="Nova senha"

@@ -142,7 +142,7 @@ export function AssignDemandModal({
                 <span className="flex flex-col gap-0.5">
                   <span className="text-sm font-medium text-ink">{s.label}</span>
                   <span className={cn("text-xs", enabled ? "text-ink-muted" : "text-pending")}>
-                    {s.coordinator ? `Coordenação: ${s.coordinator.full_name}` : "Sem coordenador — Cadastre em Usuários e permissões"}
+                    {s.coordinator ? `Coordenação: ${s.coordinator.full_name}` : "Sem coordenador — cadastre em Usuários"}
                   </span>
                 </span>
                 {s.sector === suggested && (
@@ -154,8 +154,8 @@ export function AssignDemandModal({
           {options.length > 0 && options.every((s) => !s.coordinator) && (
             <p className="text-xs text-pending">
               Nenhum setor tem coordenador ainda.{" "}
-              <Link to="/admin/users" className="underline" onClick={handleClose}>
-                Cadastrar em Usuários e permissões
+              <Link to="/admin/usuarios" className="underline" onClick={handleClose}>
+                Cadastrar em Usuários
               </Link>
             </p>
           )}

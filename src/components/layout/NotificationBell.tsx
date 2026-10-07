@@ -7,6 +7,7 @@ import { getApiErrorMessage } from "@/lib/query-client";
 import { useToast } from "@/context/ToastContext";
 import { cn } from "@/lib/cn";
 import type { Announcement, AnnouncementListResponse } from "@/lib/types";
+import { plural } from "@/lib/plural";
 
 function formatRelativeDate(iso: string): string {
   const date = new Date(iso);
@@ -95,7 +96,7 @@ export function NotificationBell() {
         ref={triggerRef}
         type="button"
         onClick={() => setIsOpen((v) => !v)}
-        aria-label={unreadCount > 0 ? `Notificações — ${unreadCount} não lida(s)` : "Notificações"}
+        aria-label={unreadCount > 0 ? `Notificações — ${plural(unreadCount, "não lida", "não lidas")}` : "Notificações"}
         aria-expanded={isOpen}
         className="relative flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[11px] border border-border-hairline text-ink transition-colors hover:bg-canvas-raised/70"
       >

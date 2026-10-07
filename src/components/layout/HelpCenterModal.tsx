@@ -43,7 +43,7 @@ const FAQ_ITEMS: { question: string; answer: string }[] = [
   {
     question: "Minha planilha foi rejeitada — o que fazer?",
     answer:
-      "Se o cabeçalho das colunas não bate exatamente com o esperado, a Central de Upload sugere automaticamente a correspondência certa e lembra da decisão para os próximos envios — não precisa reformatar a planilha toda vez.",
+      "Se o cabeçalho das colunas não bate exatamente com o esperado, Importar dados sugere automaticamente a correspondência certa e lembra da decisão para os próximos envios — não precisa reformatar a planilha toda vez.",
   },
   {
     question: "Como funciona a leitura automática de contrato por IA?",

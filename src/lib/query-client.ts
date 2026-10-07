@@ -19,6 +19,10 @@ export const queryClient = new QueryClient({
     },
     mutations: {
       retry: false,
+      // UX-23: sem internet, o padrão do React Query PAUSAVA o envio e o
+      // botão ficava em "Salvando…" para sempre, sem aviso. "always" tenta na
+      // hora e mostra o erro de conexão (a faixa "Sem conexão" diz o motivo).
+      networkMode: "always",
     },
   },
 });

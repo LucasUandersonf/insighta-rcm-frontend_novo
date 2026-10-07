@@ -69,7 +69,8 @@ export function AuthLayout({
             )}
           </motion.div>
 
-          <AuraPreviewCards className="hidden xl:block" />
+          {/* UX-18: em 1024–1440 px os cartões cobriam o fim do texto. */}
+          <AuraPreviewCards className="hidden 2xl:block" />
         </div>
 
         <p className="text-2xs text-ink-faint">© {new Date().getFullYear()} Insighta — Inteligência para clínicas</p>

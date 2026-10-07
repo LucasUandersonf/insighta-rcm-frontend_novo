@@ -4,6 +4,10 @@ import { ImportProgressIndicator } from "@/components/layout/ImportProgressIndic
 import { apiClient } from "@/lib/api-client";
 import { renderWithProviders } from "@/test/utils";
 
+vi.mock("@/context/AuthContext", () => ({
+  useAuth: () => ({ user: { tenant_id: "t1", sub: "u1", role: "owner" } }),
+}));
+
 vi.mock("@/lib/api-client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api-client")>();
   return { ...actual, apiClient: { ...actual.apiClient, get: vi.fn() } };
@@ -32,7 +36,7 @@ describe("ImportProgressIndicator", () => {
 
     const pill = await screen.findByRole("status");
     expect(pill).toHaveTextContent("Importando faturamento-2025.xlsx — 25%");
-    expect(pill.closest("a")).toHaveAttribute("href", "/upload");
+    expect(pill.closest("a")).toHaveAttribute("href", "/importar");
 
     // Próxima consulta (a cada 2 s enquanto há algo em andamento): terminou.
     await waitFor(() => expect(screen.getByText(/faturamento-2025.xlsx importado: 120000 linha\(s\) lida\(s\), 3 rejeitada\(s\)/)).toBeInTheDocument(), {

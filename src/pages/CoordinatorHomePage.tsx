@@ -1,3 +1,4 @@
+import { useAuth } from "@/context/AuthContext";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
@@ -272,6 +273,7 @@ function ResolvedDemandCard({ demand }: { demand: Demand }) {
  * setor).
  */
 export function CoordinatorHomePage() {
+  const { user } = useAuth();
   const { data: me } = useCurrentUserProfile();
   const summary = useCoordinatorSummary();
   const demandsQuery = useDemands();
@@ -296,9 +298,12 @@ export function CoordinatorHomePage() {
   const dueToday = s?.due_today_count ?? 0;
   const score = s?.score;
 
+  const isFrontDesk = user?.role === "atendimento";
   const subtitle =
     s?.profile === "sem_setor"
-      ? "Você ainda não coordena nenhum setor. Quando a gestão te cadastrar, suas demandas aparecem aqui."
+      ? isFrontDesk
+        ? "Sua agenda, os pacientes e a lista de espera ficam no menu acima (Consultas, Pacientes, Lista de espera). Quando a gestão te passar uma demanda, ela aparece aqui."
+        : "Você ainda não é coordenador(a) de nenhum setor. Quando a gestão te passar uma demanda, ela aparece aqui."
       : open.length === 0
         ? "Nenhuma demanda aberta agora. Tudo aqui é do seu setor."
         : `Você tem ${plural(open.length, "demanda aberta", "demandas abertas")}${dueToday ? ` — ${dueToday} ${dueToday === 1 ? "vence" : "vencem"} hoje` : ""}. Tudo aqui é do seu setor.`;

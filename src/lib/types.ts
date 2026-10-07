@@ -151,9 +151,13 @@ export interface UploadIngestionFileResponse {
   error_row_count: number;
   received_at: string;
   already_processed: boolean;
+  /** UX-02: reenvio que tentou de novo as linhas rejeitadas. */
+  retried?: boolean;
   message: string | null;
   /** Colunas do arquivo fora do modelo, que não foram importadas. */
   ignored_columns?: string[];
+  /** UX-01: convênios cadastrados a partir do arquivo. */
+  created_plans?: string[];
 }
 
 // --- Tela de Setup: linhas de importação rejeitadas (app/schemas/ingestion.py) ---
@@ -334,6 +338,13 @@ export interface ColumnMappingPreview {
   raw_headers: string[];
   suggested_mapping: Record<string, string>; // cabeçalho do arquivo -> campo canônico
   unresolved_required_fields: string[];
+  /** UX-09: primeiros valores de cada coluna e avisos por coluna. */
+  samples?: Record<string, string[]>;
+  warnings?: Record<string, string>;
+  /** UX-10: mapeamento já salvo que vale para este arquivo (coluna -> campo). */
+  saved_mapping?: Record<string, string>;
+  /** UX-21: modelo que o cabeçalho completa, quando não é o escolhido. */
+  detected_data_type?: string | null;
 }
 
 export interface ColumnAlias {
@@ -2748,7 +2759,42 @@ export interface IngestionValidationReport {
   accepted_rows: number;
   rejected_rows: number;
   pending_rows: number;
-  reasons: { reason: string; count: number; rows: number[] }[];
+  /** `rows` = linhas DA PLANILHA (cabeçalho = linha 1). `action` =
+   * "unknown_insurance_plan" quando a própria tela resolve (UX-06). */
+  reasons: { reason: string; count: number; rows: number[]; action?: string | null; raw_value?: string | null }[];
+  /** UX-01: convênios que o arquivo cadastrou. */
+  created_plans?: string[];
+  last_retry_at?: string | null;
+}
+
+/** GET /analytics/data-readiness — UX-04/UX-17/UX-28. */
+export interface DataReadiness {
+  sources: string[];
+  missing: string[];
+  price_table_coverage_pct: number | null;
+  plans_without_price_table: string[];
+}
+
+/** GET /ingestion/rejected/unknown-plans — UX-05. */
+export interface UnknownPlanGroup {
+  raw_value: string;
+  count: number;
+  first_row_id: number;
+  last_received_at: string | null;
+  data_types: string[];
+  samples: { patient_name: string | null; charged_value: number | string | null }[];
+  suggested_plan_id: string | null;
+  suggested_plan_name: string | null;
+}
+
+export interface ResolveByNameResponse {
+  raw_value: string;
+  plan_id: string;
+  plan_name: string;
+  created_plan: boolean;
+  resolved: number;
+  still_rejected: number;
+  message: string;
 }
 
 /** GET /tenant/account-health — Bloco 2: Saúde da conta. */

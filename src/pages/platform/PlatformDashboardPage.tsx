@@ -25,6 +25,7 @@ import type {
   TenantEngagementStatus,
   TenantUsageSummary,
 } from "@/lib/types";
+import { plural } from "@/lib/plural";
 
 const ACTION_LABEL: Record<string, string> = {
   login: "Entrou no painel",
@@ -49,15 +50,15 @@ function describeAlertRun(result: PlatformAlertRunResult): string {
   const parts: string[] = [];
   if (result.new_alerts.length > 0)
     parts.push(
-      `${result.new_alerts.length} nova(s) em risco: ${result.new_alerts.join(", ")}`,
+      `${plural(result.new_alerts.length, "nova", "novas")} em risco: ${result.new_alerts.join(", ")}`,
     );
   if (result.reminders_sent.length > 0)
     parts.push(
-      `${result.reminders_sent.length} lembrete(s) reenviado(s): ${result.reminders_sent.join(", ")}`,
+      `${plural(result.reminders_sent.length, "lembrete reenviado", "lembretes reenviados")}: ${result.reminders_sent.join(", ")}`,
     );
   if (result.recovered.length > 0)
     parts.push(
-      `${result.recovered.length} recuperada(s): ${result.recovered.join(", ")}`,
+      `${plural(result.recovered.length, "recuperada", "recuperadas")}: ${result.recovered.join(", ")}`,
     );
   return parts.join(" · ");
 }
@@ -168,7 +169,7 @@ function PilotMetricsPanel({ rows }: { rows: PilotMetrics[] }) {
       <div className="overflow-x-auto" tabIndex={0}>
         <table className="w-full text-left text-sm">
           <thead>
-            <tr className="border-b border-border-hairline text-2xs uppercase tracking-wide text-ink-faint">
+            <tr className="border-b border-border-hairline text-xs font-medium text-ink-muted">
               <th className="px-4 py-2.5 font-medium">Clínica</th>
               <th className="px-4 py-2.5 font-medium">Dias até 1º upload</th>
               <th className="px-4 py-2.5 font-medium">Dias com upload</th>
@@ -388,7 +389,7 @@ export function PlatformDashboardPage() {
             <div className="overflow-x-auto" tabIndex={0}>
               <table className="w-full text-left text-sm">
                 <thead>
-                  <tr className="border-b border-border-hairline text-2xs uppercase tracking-wide text-ink-faint">
+                  <tr className="border-b border-border-hairline text-xs font-medium text-ink-muted">
                     <th className="px-4 py-2.5 font-medium">Clínica</th>
                     <th className="px-4 py-2.5 font-medium">Plano</th>
                     <th className="px-4 py-2.5 font-medium">Cliente desde</th>
@@ -453,7 +454,7 @@ export function PlatformDashboardPage() {
             <div className="overflow-x-auto" tabIndex={0}>
               <table className="w-full text-left text-sm">
                 <thead>
-                  <tr className="border-b border-border-hairline text-2xs uppercase tracking-wide text-ink-faint">
+                  <tr className="border-b border-border-hairline text-xs font-medium text-ink-muted">
                     <th className="px-4 py-2.5 font-medium">Quem</th>
                     <th className="px-4 py-2.5 font-medium">Ação</th>
                     <th className="px-4 py-2.5 font-medium">Quando</th>

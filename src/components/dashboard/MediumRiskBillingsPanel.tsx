@@ -53,7 +53,7 @@ export function MediumRiskBillingsPanel() {
   return (
     <section>
       <h2 className="mb-3 text-sm font-medium text-ink">Contas que valem revisão — risco médio de glosa</h2>
-      <Panel subtitle="Sem tabela de preço confirmada pro convênio, ou outro sinal preventivo — dados reais de GET /billing/medium-risk">
+      <Panel subtitle="Contas sem tabela de preço confirmada ou com outro sinal de atenção.">
         {isLoading && <LoadingState variant="table" rows={4} />}
         {error && <ErrorState message={getApiErrorMessage(error)} />}
         {!isLoading && !error && billings.length === 0 && (
@@ -65,7 +65,7 @@ export function MediumRiskBillingsPanel() {
         {!isLoading && billings.length > 0 && (
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-border-hairline text-2xs uppercase tracking-wide text-ink-faint">
+              <tr className="border-b border-border-hairline text-xs font-medium text-ink-muted">
                 <th className="px-4 py-2.5 font-medium">Criado em</th>
                 <th className="px-4 py-2.5 font-medium">Valor cobrado</th>
                 <th className="px-4 py-2.5 font-medium">Item</th>

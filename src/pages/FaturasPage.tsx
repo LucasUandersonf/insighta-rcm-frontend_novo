@@ -24,6 +24,7 @@ import type {
   Lote,
   PaginatedResponse,
 } from "@/lib/types";
+import { plural } from "@/lib/plural";
 
 const FATURAS_PAGE_SIZE = 20;
 
@@ -145,7 +146,7 @@ function CreateFaturaModal({
                         disabled={otherPlan}
                         onChange={() => toggle(l.id)}
                       />
-                      {planNameById.get(l.insurance_plan_id) ?? "Convênio"} · {l.guias_count} guia(s) · fechado em {formatDate(l.closed_at)}
+                      {planNameById.get(l.insurance_plan_id) ?? "Convênio"} · {plural(l.guias_count, "guia", "guias")} · fechado em {formatDate(l.closed_at)}
                     </label>
                   </li>
                 );
@@ -192,7 +193,7 @@ function SettleModal({ fatura, onClose }: { fatura: Fatura | null; onClose: () =
       queryClient.invalidateQueries({ queryKey: ["analytics"] });
       showSuccess(
         updated.status === "paga"
-          ? `Baixa registrada. As ${updated.cobrancas} cobrança(s) da fatura foram marcadas como pagas.`
+          ? updated.cobrancas === 1 ? "Baixa registrada. A cobrança da fatura foi marcada como paga." : `Baixa registrada. As ${updated.cobrancas} cobranças da fatura foram marcadas como pagas.`
           : "Baixa parcial registrada. As cobranças continuam em aberto até a baixa final."
       );
       resetAndClose();
@@ -341,7 +342,7 @@ export function FaturasPage() {
             <div>
               <dt className="text-2xs uppercase tracking-wide text-ink-faint">Recebido em baixas parciais</dt>
               <dd className="tabular text-ink">
-                {money(summaryQuery.data.parciais_recebido)} em {summaryQuery.data.parciais} fatura(s)
+                {money(summaryQuery.data.parciais_recebido)} em {plural(summaryQuery.data.parciais, "fatura", "faturas")}
               </dd>
             </div>
             <div>
@@ -365,7 +366,7 @@ export function FaturasPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="border-b border-border-hairline text-2xs uppercase tracking-wide text-ink-faint">
+                <tr className="border-b border-border-hairline text-xs font-medium text-ink-muted">
                   <th className="px-4 py-2.5 font-medium">Fatura</th>
                   <th className="px-4 py-2.5 font-medium">Convênio</th>
                   <th className="px-4 py-2.5 font-medium">A receber</th>

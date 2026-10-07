@@ -1,277 +1,215 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ListChecks, TriangleAlert } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Panel, EmptyState, LoadingState, ErrorState } from "@/components/ui/Panel";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
-import { Modal } from "@/components/ui/Modal";
-import { SelectField } from "@/components/ui/FormField";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ImportDataNav } from "@/components/layout/ImportDataNav";
+import { UnknownPlanActions } from "@/components/ingestion/UnknownPlanActions";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useToast } from "@/context/ToastContext";
-import type { InsurancePlan, RejectedRow, ResolveInsurancePlanResponse } from "@/lib/types";
+import type { RejectedRow, UnknownPlanGroup } from "@/lib/types";
 
-// Tela de Setup — o destino que o próprio toast de sucesso da Central de
-// Upload já promete ("veja a tela de Setup para resolver") mas que não
-// existia no frontend: o backend suporta 100% este fluxo há tempo
-// (GET /ingestion/rejected, POST .../resolve-insurance-plan — ver
-// app/api/v1/endpoints/ingestion.py), só faltava a tela. Sem ela, uma
-// linha rejeitada por convênio não reconhecido ficava permanentemente
-// fora do faturamento — o usuário não tinha como saber que existia,
-// muito menos como corrigir.
+// Linhas para corrigir — o que a importação não conseguiu trazer sozinha.
 //
-// Duas categorias de rejeição, tratamento bem diferente para cada uma
-// (ver DECISÃO em RejectedRow, lib/types.ts):
-//   - "unknown_insurance_plan": ACIONÁVEL aqui — o humano mapeia o texto
-//     cru do convênio para um plano já cadastrado, e isso promove a
-//     linha (e qualquer outra pendente com o MESMO texto cru, resolvida
-//     em lote pelo próprio backend).
-//   - qualquer outro motivo (hoje só "validation_error"): falha
-//     ESTRUTURAL do arquivo de origem (data/moeda/campo obrigatório
-//     malformado) — não tem mapeamento possível nesta tela, só
-//     corrigir o arquivo e reenviar pela Central de Upload.
+// Auditoria de UX:
+//   - UX-05: os convênios vêm agrupados e CONTADOS no servidor
+//     (GET /ingestion/rejected/unknown-plans); antes a tela agrupava só as
+//     200 primeiras linhas e mostrava "36 lançamentos" onde havia 1.968.
+//   - UX-06/UX-07: cada convênio se resolve aqui mesmo — cadastrar com o
+//     nome do arquivo ou dizer que é outro nome de um convênio que a
+//     clínica já tem (UnknownPlanActions), sem ir a Contratos.
+//   - UX-08: "Resolver automaticamente" traz de uma vez todos os nomes
+//     que já batem com um convênio cadastrado.
+//   - Linhas com dado inválido mostram o número da linha COMO NA PLANILHA
+//     (cabeçalho é a linha 1) e o motivo em texto simples.
 
-const REJECTED_PAGE_LIMIT = 200;
+const STRUCTURAL_LIMIT = 200;
 
-function formatDateTime(iso: string): string {
+function formatDateTime(iso: string | null): string {
+  if (!iso) return "—";
   return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(iso));
 }
 
 function formatMoney(value: unknown): string | null {
+  if (value === null || value === undefined || value === "") return null;
   const n = typeof value === "number" ? value : Number(value);
   if (!Number.isFinite(n)) return null;
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(n);
 }
 
-interface UnknownPlanGroup {
-  rawValue: string;
-  rows: RejectedRow[];
+function linhas(n: number): string {
+  return `${n.toLocaleString("pt-BR")} ${n === 1 ? "linha" : "linhas"}`;
 }
 
-function ResolveInsurancePlanModal({
-  isOpen,
-  onClose,
-  group,
-}: {
-  isOpen: boolean;
-  onClose: () => void;
-  group: UnknownPlanGroup | null;
-}) {
+export function SetupPage() {
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
-  const [planId, setPlanId] = useState("");
 
-  const { data: plans, isLoading: plansLoading } = useQuery({
-    queryKey: ["insurance-plans"],
-    queryFn: () => apiClient.get<InsurancePlan[]>("/api/v1/insurance-companies/plans"),
-    enabled: isOpen,
+  const unknownPlans = useQuery({
+    queryKey: ["rejected-unknown-plans"],
+    queryFn: () => apiClient.get<UnknownPlanGroup[]>("/api/v1/ingestion/rejected/unknown-plans"),
   });
 
-  const resolveMutation = useMutation({
-    mutationFn: (insurancePlanId: string) => {
-      const targetRowId = group!.rows[0].id;
-      return apiClient.post<ResolveInsurancePlanResponse>(
-        `/api/v1/ingestion/rejected/${targetRowId}/resolve-insurance-plan`,
-        { insurance_plan_id: insurancePlanId }
-      );
-    },
+  const rejected = useQuery({
+    queryKey: ["rejected-rows"],
+    queryFn: () => apiClient.get<RejectedRow[]>(`/api/v1/ingestion/rejected?limit=${STRUCTURAL_LIMIT}`),
+  });
+
+  const autoResolve = useMutation({
+    mutationFn: () =>
+      apiClient.post<{ resolved: number; names: string[]; message: string }>(
+        "/api/v1/ingestion/rejected/auto-resolve",
+        {},
+        { timeoutMs: 5 * 60_000 }
+      ),
     onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ["rejected-rows"] });
-      // additionally_resolved_count é SÓ as demais linhas com o mesmo
-      // raw_value (ver DECISÃO em NormalizationService.resolve_unknown_insurance_plan)
-      // — a linha-alvo em si conta à parte (`resolved`).
-      const total = (result.resolved ? 1 : 0) + result.additionally_resolved_count;
-      showSuccess(
-        total > 1
-          ? `${total} lançamentos de "${group!.rawValue}" foram mapeados e entraram no faturamento.`
-          : `Lançamento de "${group!.rawValue}" foi mapeado e entrou no faturamento.`
-      );
-      setPlanId("");
-      onClose();
+      queryClient.invalidateQueries();
+      showSuccess(result.message);
     },
     onError: (err) => showError(getApiErrorMessage(err)),
   });
 
-  if (!group) return null;
-
-  return (
-    <Modal title="Mapear convênio não reconhecido" isOpen={isOpen} onClose={onClose}>
-      <p className="mb-4 text-sm text-ink-muted">
-        O arquivo trouxe o convênio escrito como{" "}
-        <span className="rounded bg-canvas-raised px-1.5 py-0.5 font-mono text-xs text-ink">{group.rawValue}</span> — a
-        importação automática não reconheceu esse texto. Escolha a qual plano ele corresponde: esta e{" "}
-        <strong>toda outra linha pendente com o mesmo texto</strong> serão promovidas de uma vez, e da próxima vez que
-        esse texto aparecer num arquivo ele já será reconhecido sozinho.
-      </p>
-
-      <div className="mb-4 rounded-md border border-border-default bg-canvas-raised/40 px-3 py-2.5">
-        <p className="mb-1 text-2xs font-medium uppercase tracking-wide text-ink-faint">
-          {group.rows.length} lançamento(s) pendente(s) com este texto
-        </p>
-        <ul className="space-y-0.5 text-xs text-ink-muted">
-          {group.rows.slice(0, 5).map((row) => (
-            <li key={row.id}>
-              {String(row.payload.patient_name ?? "Paciente não identificado")}
-              {formatMoney(row.payload.charged_value) ? ` — ${formatMoney(row.payload.charged_value)}` : ""}
-            </li>
-          ))}
-          {group.rows.length > 5 && <li>+ {group.rows.length - 5} outro(s)</li>}
-        </ul>
-      </div>
-
-      <SelectField label="Convênio correto" required value={planId} onChange={(e) => setPlanId(e.target.value)}>
-        <option value="">{plansLoading ? "Carregando..." : "Selecione..."}</option>
-        {(plans ?? []).map((p) => (
-          <option key={p.id} value={p.id}>
-            {p.display_name}
-          </option>
-        ))}
-      </SelectField>
-
-      <div className="mt-5 flex justify-end gap-2 border-t border-border-hairline pt-4">
-        <Button type="button" variant="secondary" onClick={onClose}>
-          Cancelar
-        </Button>
-        <Button
-          type="button"
-          disabled={!planId || resolveMutation.isPending}
-          onClick={() => resolveMutation.mutate(planId)}
-        >
-          {resolveMutation.isPending ? "Mapeando..." : "Mapear e promover"}
-        </Button>
-      </div>
-    </Modal>
-  );
-}
-
-export function SetupPage() {
-  const [resolvingGroup, setResolvingGroup] = useState<UnknownPlanGroup | null>(null);
-
-  const { data: rejected, isLoading, error, refetch } = useQuery({
-    queryKey: ["rejected-rows"],
-    queryFn: () => apiClient.get<RejectedRow[]>(`/api/v1/ingestion/rejected?limit=${REJECTED_PAGE_LIMIT}`),
-  });
-
-  const unknownPlanGroups = useMemo<UnknownPlanGroup[]>(() => {
-    const rows = (rejected ?? []).filter((r) => r.reason === "unknown_insurance_plan");
-    const byRawValue = new Map<string, RejectedRow[]>();
-    for (const row of rows) {
-      const key = row.raw_value ?? "";
-      if (!byRawValue.has(key)) byRawValue.set(key, []);
-      byRawValue.get(key)!.push(row);
-    }
-    return Array.from(byRawValue.entries()).map(([rawValue, groupRows]) => ({ rawValue, rows: groupRows }));
-  }, [rejected]);
-
   const structuralErrorRows = useMemo(
-    () => (rejected ?? []).filter((r) => r.reason !== "unknown_insurance_plan"),
-    [rejected]
+    () => (rejected.data ?? []).filter((r) => r.reason !== "unknown_insurance_plan"),
+    [rejected.data]
   );
+
+  const groups = unknownPlans.data ?? [];
+  const totalUnknown = groups.reduce((sum, g) => sum + g.count, 0);
+  const isLoading = unknownPlans.isLoading || rejected.isLoading;
+  const error = unknownPlans.error ?? rejected.error;
 
   return (
     <div className="space-y-6">
       <PageHeader
         icon={ListChecks}
         title="Importar dados"
-        subtitle="Linhas que a Central de Upload não conseguiu promover sozinha — resolva o que dá para mapear, corrija o que precisa de um novo envio."
+        subtitle="Linhas que a importação não conseguiu trazer sozinha. Resolva os convênios aqui; linhas com dado inválido precisam ser corrigidas na planilha e enviadas de novo."
       />
 
       <ImportDataNav />
 
       {isLoading && <LoadingState variant="table" rows={4} />}
-      {error && <ErrorState message={getApiErrorMessage(error)} onRetry={() => refetch()} />}
+      {error && !isLoading && (
+        <ErrorState
+          message={getApiErrorMessage(error)}
+          onRetry={() => {
+            unknownPlans.refetch();
+            rejected.refetch();
+          }}
+        />
+      )}
 
       {!isLoading && !error && (
         <>
           <Panel
-            title="Convênios não reconhecidos"
-            subtitle="Texto do arquivo não bateu com nenhum convênio cadastrado — mapeie uma vez e todas as linhas com o mesmo texto são promovidas juntas."
-            glow={unknownPlanGroups.length > 0 ? "pending" : "none"}
+            title="Convênios não cadastrados"
+            subtitle={
+              groups.length > 0
+                ? `${linhas(totalUnknown)} esperando: o convênio escrito na planilha não existe na clínica. Cadastre o convênio ou diga qual é — todas as linhas com o mesmo nome entram de uma vez.`
+                : "Quando a planilha traz um convênio que a clínica não tem, as linhas dele aparecem aqui."
+            }
+            glow={groups.length > 0 ? "pending" : "none"}
+            actions={
+              groups.length > 0 ? (
+                <Button
+                  type="button"
+                  size="xs"
+                  variant="secondary"
+                  disabled={autoResolve.isPending}
+                  onClick={() => autoResolve.mutate()}
+                >
+                  {autoResolve.isPending ? "Resolvendo…" : "Resolver automaticamente"}
+                </Button>
+              ) : undefined
+            }
           >
-            {unknownPlanGroups.length === 0 && (
+            {groups.length === 0 && (
               <EmptyState
                 icon={<ListChecks size={17} strokeWidth={1.5} />}
-                message="Nenhum convênio pendente de mapeamento no momento."
+                message="Nenhum convênio esperando cadastro."
               />
             )}
-            {unknownPlanGroups.length > 0 && (
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-border-hairline text-2xs uppercase tracking-wide text-ink-faint">
-                    <th className="px-4 py-2.5 font-medium">Texto do convênio no arquivo</th>
-                    <th className="px-4 py-2.5 font-medium">Lançamentos pendentes</th>
-                    <th className="px-4 py-2.5 font-medium">Recebido em</th>
-                    <th className="px-4 py-2.5 font-medium"><span className="sr-only">Ações</span></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {unknownPlanGroups.map((group) => (
-                    <tr
-                      key={group.rawValue}
-                      className="border-b border-border-hairline last:border-0 transition-colors hover:bg-canvas-raised/60"
-                    >
-                      <td className="px-4 py-2.5 font-mono text-xs text-ink">{group.rawValue || "—"}</td>
-                      <td className="tabular px-4 py-2.5">
-                        <Badge tone="pending">{group.rows.length}</Badge>
-                      </td>
-                      <td className="px-4 py-2.5 text-ink-muted">{formatDateTime(group.rows[0].created_at)}</td>
-                      <td className="px-4 py-2.5">
-                        <div className="flex justify-end">
-                          <Button variant="secondary" size="xs" onClick={() => setResolvingGroup(group)}>
-                            Mapear convênio
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            {groups.length > 0 && (
+              <ul className="divide-y divide-border-hairline">
+                {groups.map((group) => (
+                  <li key={group.raw_value} className="flex flex-col gap-2 px-4 py-3 md:flex-row md:items-start md:justify-between">
+                    <div className="min-w-0">
+                      <p className="flex flex-wrap items-center gap-2 text-sm font-medium text-ink">
+                        {group.raw_value || "Convênio em branco"}
+                        <Badge tone="pending">{linhas(group.count)}</Badge>
+                      </p>
+                      <p className="mt-0.5 text-xs text-ink-muted">
+                        {group.samples
+                          .slice(0, 3)
+                          .map((s) =>
+                            [s.patient_name ?? "Paciente sem nome", formatMoney(s.charged_value)].filter(Boolean).join(" — ")
+                          )
+                          .join(" · ")}
+                        {group.count > 3 ? ` · e mais ${linhas(group.count - 3)}` : ""}
+                      </p>
+                      <p className="mt-0.5 text-xs text-ink-muted">Recebido em {formatDateTime(group.last_received_at)}</p>
+                    </div>
+                    <div className="shrink-0">
+                      <UnknownPlanActions
+                        rawValue={group.raw_value}
+                        suggestedPlanId={group.suggested_plan_id}
+                        suggestedPlanName={group.suggested_plan_name}
+                      />
+                    </div>
+                  </li>
+                ))}
+              </ul>
             )}
           </Panel>
 
           <Panel
-            title="Erros estruturais do arquivo"
-            subtitle="Linha com dado inválido (data, valor, campo obrigatório) — sem mapeamento possível aqui; corrija na origem e reenvie o arquivo."
+            title="Linhas com dado inválido"
+            subtitle="Data, valor ou campo obrigatório que não deu para ler. Corrija essas linhas na planilha e envie o arquivo de novo — só as linhas que faltavam entram."
             glow={structuralErrorRows.length > 0 ? "denied" : "none"}
           >
             {structuralErrorRows.length === 0 && (
               <EmptyState
                 icon={<TriangleAlert size={17} strokeWidth={1.5} />}
-                message="Nenhum erro estrutural pendente no momento."
+                message="Nenhuma linha com dado inválido."
               />
             )}
             {structuralErrorRows.length > 0 && (
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-border-hairline text-2xs uppercase tracking-wide text-ink-faint">
-                    <th className="px-4 py-2.5 font-medium">Linha</th>
-                    <th className="px-4 py-2.5 font-medium">Erro</th>
-                    <th className="px-4 py-2.5 font-medium">Recebido em</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {structuralErrorRows.map((row) => (
-                    <tr key={row.id} className="border-b border-border-hairline last:border-0">
-                      <td className="tabular px-4 py-2.5 text-ink-muted">#{row.row_number}</td>
-                      <td className="px-4 py-2.5 text-denied">{row.raw_value || "Erro não identificado"}</td>
-                      <td className="px-4 py-2.5 text-ink-muted">{formatDateTime(row.created_at)}</td>
+              <>
+                <table className="w-full text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-border-hairline text-xs text-ink-muted">
+                      <th className="px-4 py-2.5 font-medium">Linha da planilha</th>
+                      <th className="px-4 py-2.5 font-medium">O que corrigir</th>
+                      <th className="px-4 py-2.5 font-medium">Recebido em</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {structuralErrorRows.map((row) => (
+                      <tr key={row.id} className="border-b border-border-hairline last:border-0">
+                        <td className="tabular px-4 py-2.5 text-ink-muted">Linha {row.row_number + 1}</td>
+                        <td className="px-4 py-2.5 text-ink">{row.raw_value || "Dado não reconhecido"}</td>
+                        <td className="px-4 py-2.5 text-ink-muted">{formatDateTime(row.created_at)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <p className="px-4 py-3 text-xs text-ink-muted">
+                  Depois de corrigir, envie a planilha de novo em{" "}
+                  <Link to="/importar" className="text-accent underline-offset-2 hover:underline">
+                    Enviar arquivos
+                  </Link>
+                  .
+                </p>
+              </>
             )}
           </Panel>
         </>
       )}
-
-      <ResolveInsurancePlanModal
-        key={resolvingGroup?.rawValue ?? "none"}
-        isOpen={resolvingGroup !== null}
-        onClose={() => setResolvingGroup(null)}
-        group={resolvingGroup}
-      />
     </div>
   );
 }

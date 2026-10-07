@@ -14,6 +14,7 @@ import { useAuth } from "@/context/AuthContext";
 import type {
   AnnualGoalSuggestion,
   CheckoutSession,
+  SubscriptionOffer,
   SubscriptionStatus,
   DenialRiskThresholdSuggestion,
   HealthScoreCeilingSuggestion,
@@ -26,6 +27,7 @@ import type {
   TenantExport,
   TenantExportDownload,
 } from "@/lib/types";
+import { plural } from "@/lib/plural";
 
 function formatDateTime(value: string): string {
   return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(value));
@@ -52,6 +54,21 @@ function formatCurrency(value: number): string {
  * Só owner inicia checkout (mesmo RBAC do backend, _CAN_CHECKOUT em
  * app/api/v1/endpoints/subscription.py).
  */
+// UX-13: o plano exibido é o contratado (Founders), não o tier interno.
+function ContractedPlanBadge({ tenant }: { tenant: Tenant }) {
+  const { data: subscription } = useQuery({
+    queryKey: ["subscription", "status"],
+    queryFn: () => apiClient.get<SubscriptionStatus>("/api/v1/subscription"),
+  });
+  const { data: offer } = useQuery({
+    queryKey: ["subscription", "offer"],
+    queryFn: () => apiClient.get<SubscriptionOffer>("/api/v1/subscription/offer"),
+    retry: false,
+  });
+  const founders = !!subscription?.founders_member || (!!offer?.available && !!offer.founders);
+  return <Badge tone="accent">{founders ? "Founders" : (PLAN_LABELS[tenant.plan_tier] ?? tenant.plan_tier)}</Badge>;
+}
+
 function SubscriptionPlanPanel({ tenant, isOwner }: { tenant: Tenant; isOwner: boolean }) {
   const navigate = useNavigate();
   const { showError } = useToast();
@@ -72,7 +89,17 @@ function SubscriptionPlanPanel({ tenant, isOwner }: { tenant: Tenant; isOwner: b
     queryKey: ["subscription", "status"],
     queryFn: () => apiClient.get<SubscriptionStatus>("/api/v1/subscription"),
   });
-  if (subscription?.provider === "asaas") {
+  // UX-13: a oferta vendida no cadastro (Founders) é o plano da clínica —
+  // o catálogo antigo (Starter/Professional/Enterprise) não aparece
+  // enquanto essa oferta for a única vendida.
+  const { data: offer } = useQuery({
+    queryKey: ["subscription", "offer"],
+    queryFn: () => apiClient.get<SubscriptionOffer>("/api/v1/subscription/offer"),
+    retry: false,
+  });
+  if (subscription && (subscription.provider === "asaas" || offer?.available)) {
+    const priceCents = subscription.current_price_cents ?? offer?.price_cents ?? null;
+    const isFounders = subscription.founders_member || !!offer?.founders;
     const label: Record<string, string> = {
       active: "Ativa",
       past_due: "Cobrança em aberto",
@@ -84,16 +111,16 @@ function SubscriptionPlanPanel({ tenant, isOwner }: { tenant: Tenant; isOwner: b
         <div className="flex flex-wrap items-center justify-between gap-3 p-4">
           <div className="flex flex-col gap-1">
             <span className="text-sm font-medium text-ink">
-              {subscription.founders_member ? "Plano Founders" : "Assinatura mensal"} · {label[subscription.billing_status] ?? subscription.billing_status}
+              {isFounders ? "Plano Founders" : "Assinatura mensal"} · {label[subscription.billing_status] ?? subscription.billing_status}
             </span>
-            {subscription.current_price_cents !== null && (
-              <span className="text-sm text-ink-muted">{formatCurrency(subscription.current_price_cents / 100)}/mês</span>
-            )}
-            {subscription.founders_member && subscription.price_locked_until && (
+            {priceCents !== null && <span className="text-sm text-ink-muted">{formatCurrency(priceCents / 100)}/mês</span>}
+            {isFounders && subscription.price_locked_until ? (
               <span className="text-2xs text-ink-faint">
                 Preço garantido até {new Intl.DateTimeFormat("pt-BR", { dateStyle: "long", timeZone: "UTC" }).format(new Date(subscription.price_locked_until))}
               </span>
-            )}
+            ) : isFounders && offer?.founders_lock_months ? (
+              <span className="text-2xs text-ink-faint">Preço garantido por {offer.founders_lock_months} meses a partir da assinatura</span>
+            ) : null}
           </div>
           <Button variant="secondary" onClick={() => navigate("/assinatura")}>
             Ver assinatura
@@ -141,7 +168,7 @@ function SubscriptionPlanPanel({ tenant, isOwner }: { tenant: Tenant; isOwner: b
             })}
           </div>
         )}
-        {!isOwner && <p className="mt-3 text-2xs text-ink-faint">Só o papel "owner" pode mudar de plano.</p>}
+        {!isOwner && <p className="mt-3 text-2xs text-ink-faint">Só quem é proprietário(a) da clínica pode mudar de plano.</p>}
       </div>
     </Panel>
   );
@@ -432,7 +459,7 @@ function NoShowThresholdsPanel({ tenant, isOwner }: { tenant: Tenant; isOwner: b
             </div>
             {suggestionQuery.data && suggestionQuery.data.low_threshold === null && (
               <p className="mt-2 text-2xs text-pending">
-                Ainda não há histórico suficiente ({suggestionQuery.data.sample_size} paciente(s) qualificado(s) — são
+                Ainda não há histórico suficiente ({plural(suggestionQuery.data.sample_size, "paciente qualificado", "pacientes qualificados")} — são
                 necessários pelo menos 10) para uma sugestão confiável.
               </p>
             )}
@@ -581,7 +608,7 @@ function DenialRiskThresholdsPanel({ tenant, isOwner }: { tenant: Tenant; isOwne
             </div>
             {suggestionQuery.data && suggestionQuery.data.warning_threshold === null && (
               <p className="mt-2 text-2xs text-pending">
-                Ainda não há histórico suficiente ({suggestionQuery.data.sample_size} mês(es) fechado(s) — são
+                Ainda não há histórico suficiente ({plural(suggestionQuery.data.sample_size, "mês fechado", "meses fechados")} — são
                 necessários pelo menos 6) para uma sugestão confiável.
               </p>
             )}
@@ -1135,7 +1162,7 @@ export function TenantPage() {
                 <TextField label="CNPJ" value={tenant.cnpj} disabled className="mb-0" />
                 <div>
                   <label className="mb-1.5 block text-xs font-medium text-ink-muted">Plano</label>
-                  <Badge tone="accent">{PLAN_LABELS[tenant.plan_tier] ?? tenant.plan_tier}</Badge>
+                  <ContractedPlanBadge tenant={tenant} />
                 </div>
                 <TextField
                   label="Especialidade predominante"
@@ -1147,9 +1174,7 @@ export function TenantPage() {
                 />
               </div>
               <p className="mt-1.5 text-2xs text-ink-faint">
-                Contexto descritivo — hoje não seleciona nenhum benchmark automático de mercado (a Insighta ainda não
-                tem esse dado real e validado por especialidade). Os limiares abaixo continuam calibrados pelo
-                histórico da sua própria clínica.
+                Usada para descrever a clínica. Os alertas continuam calibrados pelo histórico da própria clínica.
               </p>
               <p className="mt-4 text-2xs text-ink-faint">CNPJ não pode ser alterado por aqui — fale com o suporte.</p>
               {isOwner && (

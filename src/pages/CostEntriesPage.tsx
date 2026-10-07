@@ -202,7 +202,7 @@ export function CostEntriesPage() {
         {!isLoading && entries.length > 0 && (
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-border-hairline text-2xs uppercase tracking-wide text-ink-faint">
+              <tr className="border-b border-border-hairline text-xs font-medium text-ink-muted">
                 <th className="px-4 py-2.5 font-medium">Mês</th>
                 <th className="px-4 py-2.5 font-medium">Categoria</th>
                 <th className="px-4 py-2.5 font-medium">Descrição</th>
