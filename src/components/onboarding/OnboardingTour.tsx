@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
 
 export interface TourStep {
-  /** Seletor CSS do item a destacar (ex: `[data-tour-id="/upload"]`) —
+  /** Seletor CSS do item a destacar (ex: `[data-tour-id="/importar"]`) —
    * omitido = passo "centralizado", sem alvo (boas-vindas/despedida). */
   targetSelector?: string;
   title: string;

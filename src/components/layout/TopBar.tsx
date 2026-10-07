@@ -1,3 +1,5 @@
+import { ROLE_LABELS } from "@/lib/roles";
+import { useOnline } from "@/lib/useOnline";
 import { useEffect, useId, useMemo, useRef, useState, type RefObject } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -41,20 +43,20 @@ import { HelpCenterModal } from "./HelpCenterModal";
  * menu do avatar — nunca soltos na barra.
  */
 
-type SystemStatus = "checking" | "operational" | "degraded";
+// UX-31: "⌘K" só no Mac; no Windows/Linux o atalho é Ctrl+K.
+const SHORTCUT_LABEL =
+  typeof navigator !== "undefined" && /Mac|iPhone|iPad/i.test(navigator.platform || navigator.userAgent) ? "⌘K" : "Ctrl K";
 
-const ROLE_LABELS: Record<string, string> = {
-  owner: "Proprietário(a)",
-  admin: "Administrador(a)",
-  financeiro: "Financeiro",
-  atendimento: "Atendimento",
-  auditor: "Auditor(a)",
-};
+type SystemStatus = "checking" | "operational" | "degraded" | "offline";
+
 
 const STATUS_CONFIG: Record<SystemStatus, { label: string; dot: string }> = {
   checking: { label: "Verificando conexão…", dot: "bg-ink-faint" },
-  operational: { label: "Sistema operacional · dados sincronizados", dot: "bg-revenue" },
+  // UX-03: verde só quando há dado importado de fato (ver o texto abaixo);
+  // sem nenhum dado, o ponto fica neutro.
+  operational: { label: "Sistema no ar · nenhum dado importado ainda", dot: "bg-ink-faint" },
   degraded: { label: "Sistema com instabilidade", dot: "bg-denied" },
+  offline: { label: "Sem conexão com a internet", dot: "bg-pending" },
 };
 
 /** Fecha um popover ao clicar fora dele ou apertar Esc. */
@@ -175,7 +177,7 @@ function AskInsightaField({ items, canAsk }: { items: NavItem[]; canAsk: boolean
           }}
           className="min-w-0 flex-1 bg-transparent text-[13px] text-ink outline-none placeholder:text-ink-faint"
         />
-        <kbd className="shrink-0 rounded-md border border-border-hairline px-1.5 py-0.5 font-sans text-[11px] text-ink-faint">⌘K</kbd>
+        <kbd className="shrink-0 rounded-md border border-border-hairline px-1.5 py-0.5 font-sans text-[11px] text-ink-faint">{SHORTCUT_LABEL}</kbd>
       </label>
       {showPanel && (
         <div className="absolute inset-x-0 top-full z-40 mt-2 overflow-hidden rounded-2xl border border-border-hairline bg-canvas-overlay p-1.5 shadow-elevated-lg">
@@ -275,7 +277,7 @@ function AccountMenu({ onOpenHelp }: { onOpenHelp: () => void }) {
         <UserAvatar fullName={fullName} />
         <span className="hidden flex-col items-start leading-tight sm:flex">
           <span className="text-[13px] font-medium text-ink">{profile?.full_name ?? "…"}</span>
-          <span className="text-[11px] text-ink-faint">{ROLE_LABELS[user?.role ?? ""] ?? user?.role}</span>
+          <span className="text-[11px] text-ink-faint">{(user?.role ? ROLE_LABELS[user.role] : "") ?? user?.role}</span>
         </span>
         <ChevronDown aria-hidden size={14} className={cn("text-ink-muted transition-transform", isOpen && "rotate-180")} />
       </button>
@@ -295,7 +297,7 @@ function AccountMenu({ onOpenHelp }: { onOpenHelp: () => void }) {
               <UserAvatar fullName={fullName} />
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium text-ink">{profile?.full_name ?? "…"}</p>
-                <p className="truncate text-xs text-ink-faint">{profile?.email ?? ROLE_LABELS[user?.role ?? ""]}</p>
+                <p className="truncate text-xs text-ink-faint">{profile?.email ?? (user?.role ? ROLE_LABELS[user.role] : "")}</p>
               </div>
             </div>
 
@@ -497,8 +499,11 @@ export function TopBar() {
   const location = useLocation();
   const modulesId = useId();
   const [status, setStatus] = useState<SystemStatus>("checking");
+  const online = useOnline();
+  const shownStatus: SystemStatus = online ? status : "offline";
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isModulesOpen, setIsModulesOpen] = useState(false);
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const modulesButtonRef = useRef<HTMLButtonElement>(null);
   const modulesPanelRef = useRef<HTMLDivElement>(null);
   const modulesRefs = useMemo(
@@ -537,6 +542,7 @@ export function TopBar() {
 
   useEffect(() => {
     setIsModulesOpen(false);
+    setIsMobileNavOpen(false);
   }, [location.pathname]);
 
   const primaryItems = isCoordinatorView
@@ -577,6 +583,17 @@ export function TopBar() {
     <header className="sticky top-0 z-30 border-b border-border-hairline bg-canvas/75 backdrop-blur-[18px]">
       {/* Linha 1 — marca, clínica, busca rápida, notificações e conta */}
       <div className="flex h-16 items-center gap-3 px-4 sm:gap-5 sm:px-8">
+        {/* UX-27: no celular a barra de navegação cortava itens sem aviso;
+            o menu completo abre por este botão. */}
+        <button
+          type="button"
+          className="-ml-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] text-ink-muted hover:bg-canvas-raised/60 md:hidden"
+          aria-label="Abrir menu"
+          aria-expanded={isMobileNavOpen}
+          onClick={() => setIsMobileNavOpen((open) => !open)}
+        >
+          <Menu aria-hidden size={18} />
+        </button>
         <NavLink to="/" className="flex shrink-0 items-center" aria-label="Insighta — Início">
           <BrandMark size="sm" />
         </NavLink>
@@ -595,8 +612,46 @@ export function TopBar() {
         </div>
       </div>
 
+      {isMobileNavOpen && (
+        <nav aria-label="Menu" className="max-h-[70vh] overflow-y-auto border-t border-border-hairline px-4 py-3 md:hidden">
+          <ul className="flex flex-col gap-0.5">
+            {primaryItems.map((item) => (
+              <li key={item.to}>
+                <NavLink
+                  to={item.to}
+                  end={item.to === "/"}
+                  className={({ isActive }) =>
+                    cn("block rounded-[10px] px-3 py-2.5 text-sm font-medium", isActive ? "bg-brand/[0.18] text-ink" : "text-ink-muted hover:bg-canvas-raised/60")
+                  }
+                >
+                  {item.label}
+                </NavLink>
+              </li>
+            ))}
+          </ul>
+          {MODULE_GROUPS.map((group) => {
+            const items = moduleItems.filter((item) => item.group === group.id);
+            if (items.length === 0) return null;
+            return (
+              <div key={group.id} className="mt-3">
+                <p className="px-3 pb-1 text-2xs font-semibold uppercase tracking-[0.08em] text-ink-faint">{group.label}</p>
+                <ul className="flex flex-col gap-0.5">
+                  {items.map((item) => (
+                    <li key={item.to}>
+                      <NavLink to={item.to} className="block rounded-[10px] px-3 py-2 text-sm text-ink-muted hover:bg-canvas-raised/60">
+                        {item.label}
+                      </NavLink>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })}
+        </nav>
+      )}
+
       {/* Linha 2 — navegação principal + Módulos */}
-      <div className="relative border-t border-border-hairline">
+      <div className="relative hidden border-t border-border-hairline md:block">
         <nav aria-label="Navegação principal" className="relative flex h-14 items-center gap-1 overflow-x-auto px-3 sm:px-7">
           {primaryItems.map((item) => {
             const Icon = item.icon!;
@@ -664,9 +719,15 @@ export function TopBar() {
           )}
 
           <span className="ml-auto hidden shrink-0 items-center gap-2 pl-4 text-xs text-ink-faint lg:flex">
-            <span aria-hidden className={cn("h-[7px] w-[7px] rounded-full", STATUS_CONFIG[status].dot)} />
-            {status === "degraded" || !navSummary?.last_import_at
-              ? STATUS_CONFIG[status].label
+            <span
+              aria-hidden
+              className={cn(
+                "h-[7px] w-[7px] rounded-full",
+                shownStatus === "operational" && navSummary?.last_import_at ? "bg-revenue" : STATUS_CONFIG[shownStatus].dot
+              )}
+            />
+            {shownStatus !== "operational" || !navSummary?.last_import_at
+              ? STATUS_CONFIG[shownStatus].label
               : `Dados atualizados ${relativeTime(navSummary.last_import_at)}${
                   navSummary.last_import_source ? ` · última importação de ${navSummary.last_import_source}` : ""
                 }`}

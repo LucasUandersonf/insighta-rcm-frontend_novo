@@ -36,7 +36,7 @@ interface KpiCardProps {
    * Valor em texto com GRADIENTE em vez de cor sólida (ver canvas de
    * design, Main.dc.html: .grad-text-tone + .grad-{tone}) — reservado
    * para a métrica PRINCIPAL de cada dashboard (ex: "Faturamento bruto"
-   * no Painel, "Buraco financeiro"/"Caixa protegido" na Sala de
+   * no Painel, "Cobrado abaixo do contrato"/"Caixa protegido" na Sala de
    * Comando), nunca para todo KPI de um tom só porque tem cor — o
    * canvas usa isso com parcimônia de propósito, é um destaque, não um
    * padrão. Sem efeito em tone="neutral" (gradiente precisa de uma

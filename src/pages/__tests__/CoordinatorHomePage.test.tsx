@@ -7,6 +7,10 @@ import { renderWithProviders } from "@/test/utils";
 import { expectNoA11yViolations } from "@/test/a11y";
 import type { CoordinatorSummary, Demand } from "@/lib/team";
 
+vi.mock("@/context/AuthContext", () => ({
+  useAuth: () => ({ user: { tenant_id: "t1", sub: "u1", role: "financeiro" } }),
+}));
+
 vi.mock("@/lib/api-client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api-client")>();
   return { ...actual, apiClient: { ...actual.apiClient, get: vi.fn(), post: vi.fn() } };

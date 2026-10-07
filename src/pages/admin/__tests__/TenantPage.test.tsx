@@ -457,5 +457,41 @@ describe("TenantPage — exportação dos dados (LGPD, portabilidade)", () => {
     expect(screen.queryByRole("button", { name: /Baixar todos os dados/ })).not.toBeInTheDocument();
     expect(screen.getByText(/pode exportar os dados da clínica/)).toBeInTheDocument();
   });
+
+  it("mostra o plano Founders contratado, sem o catálogo antigo (UX-13)", async () => {
+    vi.mocked(useAuth).mockReturnValue({ user: { tenant_id: "t1", sub: "u1", role: "owner" } } as unknown as ReturnType<
+      typeof useAuth
+    >);
+    mockGetByPath({
+      "/api/v1/tenant/plans/available": [],
+      "/api/v1/subscription/plans": [{ tier: "professional", label: "Professional", monthly_price_cents: 69700, self_service: true }],
+      "/api/v1/subscription/offer": {
+        available: true,
+        plan_tier: "professional",
+        price_cents: 80000,
+        founders: true,
+        founders_slots_total: 20,
+        founders_slots_remaining: 12,
+        founders_lock_months: 24,
+      },
+      "/api/v1/subscription": {
+        plan_tier: "professional",
+        pending_checkout_id: null,
+        billing_status: "pending_payment",
+        founders_member: false,
+        price_locked_until: null,
+        current_price_cents: null,
+        provider: "mock",
+      },
+      "/api/v1/tenant": makeTenant({ plan_tier: "professional" }),
+    });
+
+    renderWithProviders(<TenantPage />);
+
+    expect(await screen.findByText(/Plano Founders/)).toBeInTheDocument();
+    expect(screen.getByText(/R\$\s*800,00\/mês/)).toBeInTheDocument();
+    expect(screen.getByText(/garantido por 24 meses/)).toBeInTheDocument();
+    expect(screen.queryByText("Professional")).not.toBeInTheDocument();
+  });
 });
 

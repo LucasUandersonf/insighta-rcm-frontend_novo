@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/context/AuthContext";
 import { ApiError, apiClient } from "@/lib/api-client";
 import { ACTIVE_STATES, type DirectUploadStatus } from "@/lib/directUpload";
 
@@ -11,8 +12,12 @@ export const DIRECT_UPLOADS_QUERY_KEY = ["ingestion", "direct-uploads"] as const
  * (quem inicia um envio invalida esta chave).
  */
 export function useDirectUploads() {
+  const { user } = useAuth();
+  // UX-35: papel sem acesso à importação recebia 403 a cada tela aberta.
+  const canSee = !!user && ["owner", "admin", "financeiro", "auditor"].includes(user.role);
   return useQuery({
     queryKey: DIRECT_UPLOADS_QUERY_KEY,
+    enabled: canSee,
     queryFn: async () => {
       try {
         const uploads = await apiClient.get<DirectUploadStatus[]>("/api/v1/ingestion/direct-uploads");

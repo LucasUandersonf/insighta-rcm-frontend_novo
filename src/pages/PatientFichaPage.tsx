@@ -1,7 +1,6 @@
-import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
-import { CalendarClock, FileText, Package, Search, UserRound, X } from "lucide-react";
+import { CalendarClock, FileText, Package, UserRound, X } from "lucide-react";
 import { KpiCard } from "@/components/ui/KpiCard";
 import { Panel, EmptyState, LoadingState, ErrorState } from "@/components/ui/Panel";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -10,6 +9,7 @@ import { RiskBadge } from "@/components/ui/RiskBadge";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import type { PatientFicha, PatientFichaClinicalEvolution, PatientSearchItem } from "@/lib/types";
+import { PatientSearchBox } from "@/components/patients/PatientSearchBox";
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
@@ -31,68 +31,6 @@ const APPOINTMENT_STATUS_LABELS: Record<string, string> = {
   cancelled: "Cancelada",
   no_show: "Faltou",
 };
-
-function PatientSearchBox({ onSelect }: { onSelect: (item: PatientSearchItem) => void }) {
-  const [term, setTerm] = useState("");
-  const [debouncedTerm, setDebouncedTerm] = useState("");
-
-  useEffect(() => {
-    const handle = setTimeout(() => setDebouncedTerm(term), 300);
-    return () => clearTimeout(handle);
-  }, [term]);
-
-  const query = useQuery({
-    queryKey: ["patients", "search", debouncedTerm],
-    queryFn: () => apiClient.get<PatientSearchItem[]>(`/api/v1/patients/search?q=${encodeURIComponent(debouncedTerm)}`),
-    enabled: debouncedTerm.trim().length >= 2,
-  });
-
-  return (
-    <div className="mx-auto max-w-lg">
-      <label htmlFor="patient-search" className="mb-1.5 block text-xs font-medium text-ink-muted">
-        Buscar paciente por nome ou CPF
-      </label>
-      <div className="relative">
-        <Search aria-hidden size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-faint" />
-        <input
-          id="patient-search"
-          type="text"
-          value={term}
-          onChange={(e) => setTerm(e.target.value)}
-          placeholder="Ex.: Maria da Silva"
-          className="w-full rounded-md border border-border-default bg-canvas-raised py-2.5 pl-8 pr-3 text-sm text-ink placeholder:text-ink-faint transition-colors focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/15"
-        />
-      </div>
-      {debouncedTerm.trim().length >= 2 && (
-        <div className="mt-1.5 max-h-72 overflow-y-auto rounded-md border border-border-hairline bg-canvas-surface">
-          {query.isLoading && <p className="px-3 py-2.5 text-xs text-ink-faint">Buscando...</p>}
-          {query.data && query.data.length === 0 && (
-            <p className="px-3 py-2.5 text-xs text-ink-faint">Nenhum paciente encontrado com esse nome/CPF.</p>
-          )}
-          {query.data && query.data.length > 0 && (
-            <ul>
-              {query.data.map((item) => (
-                <li key={item.id}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onSelect(item);
-                      setTerm("");
-                    }}
-                    className="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left transition-colors hover:bg-canvas-raised/60"
-                  >
-                    <span className="truncate text-sm text-ink">{item.full_name}</span>
-                    {item.cpf && <span className="shrink-0 font-mono text-2xs text-ink-faint">{item.cpf}</span>}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
 
 /**
  * Ficha do Paciente (Roadmap "Rumo à Nota 9", Fase 4) — pedido direto do

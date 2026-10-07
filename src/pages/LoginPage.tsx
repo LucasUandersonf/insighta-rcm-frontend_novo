@@ -24,7 +24,7 @@ function TenantSelector() {
   async function handleSelect(tenantId: string) {
     try {
       await selectTenant(tenantId);
-      navigate(POST_LOGIN_ROUTE, { replace: true });
+      navigate(postLoginRoute(), { replace: true });
     } catch {
       // loginError já foi setado pelo contexto — nada a fazer aqui.
     }
@@ -72,7 +72,14 @@ function TenantSelector() {
 // gated por RoleProtectedRoute (owner/admin/financeiro/auditor) — quem
 // não tem esse papel só bate no redirect de volta para "/" (Dashboard),
 // um hop a mais, nunca uma tela quebrada.
-const POST_LOGIN_ROUTE = "/decisao";
+const DEFAULT_POST_LOGIN_ROUTE = "/decisao";
+
+/** UX-24: volta para a tela em que a pessoa estava (?next=), só caminho
+ * interno do app (nunca outro site). */
+function postLoginRoute(): string {
+  const next = new URLSearchParams(window.location.search).get("next");
+  return next && next.startsWith("/") && !next.startsWith("//") ? next : DEFAULT_POST_LOGIN_ROUTE;
+}
 
 /** MFA ligado: senha (ou Google) conferiu; falta o código do aplicativo
  * autenticador ou um código de recuperação. */
@@ -85,7 +92,7 @@ function MfaChallenge() {
     e.preventDefault();
     try {
       await verifyMfa(code);
-      navigate(POST_LOGIN_ROUTE, { replace: true });
+      navigate(postLoginRoute(), { replace: true });
     } catch {
       // erro já aparece via loginError
     }
@@ -159,7 +166,7 @@ export function LoginPage() {
       // Se o login exigir seleção de clínica, o AuthContext preenche
       // tenantSelection e este componente troca para o seletor acima —
       // navegar só faz sentido quando o token já foi emitido.
-      navigate(POST_LOGIN_ROUTE, { replace: true });
+      navigate(postLoginRoute(), { replace: true });
     } catch {
       // loginError já foi setado pelo contexto — nada a fazer aqui.
     }
@@ -177,7 +184,7 @@ export function LoginPage() {
       }
       if (!result.requiresTenantSelection) {
         // Login direto — token já emitido pelo contexto.
-        navigate(POST_LOGIN_ROUTE, { replace: true });
+        navigate(postLoginRoute(), { replace: true });
       }
       // Se exigir seleção de clínica, o AuthContext já preencheu
       // tenantSelection e o TenantSelector assume a tela sozinho.

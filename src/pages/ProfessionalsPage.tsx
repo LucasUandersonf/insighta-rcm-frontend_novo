@@ -23,6 +23,7 @@ import type {
   ProfessionalCreateRequest,
   ProfessionalUpdateRequest,
 } from "@/lib/types";
+import { plural } from "@/lib/plural";
 
 // "Mapa de Dados Insighta" — Domínio Profissional (Onda 2).
 const CONTRACT_TYPE_LABELS: Record<ContractType, string> = {
@@ -172,7 +173,7 @@ function PlannedAbsencesEditor({
       const affected = created.appointments_in_period ?? 0;
       if (affected > 0) {
         showError(
-          `Ausência registrada. ${affected} consulta(s) já marcada(s) com este profissional nesse período: remarque ou avise os pacientes na Agenda.`,
+          `Ausência registrada. ${plural(affected, "consulta já marcada", "consultas já marcadas")} com este profissional nesse período: remarque ou avise os pacientes na Agenda.`,
         );
       } else {
         showSuccess("Ausência registrada.");
@@ -497,7 +498,7 @@ export function ProfessionalsPage() {
         {!isLoading && (professionals ?? []).length > 0 && (
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-border-hairline text-2xs uppercase tracking-wide text-ink-faint">
+              <tr className="border-b border-border-hairline text-xs font-medium text-ink-muted">
                 <th className="px-4 py-2.5 font-medium">Nome</th>
                 <th className="px-4 py-2.5 font-medium">Registro</th>
                 <th className="px-4 py-2.5 font-medium">Especialidade</th>

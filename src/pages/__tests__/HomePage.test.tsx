@@ -269,7 +269,7 @@ describe("HomePage", () => {
       );
       renderWithProviders(<HomePage />);
 
-      expect(await screen.findByRole("link", { name: /Defina os coordenadores/ })).toHaveAttribute("href", "/admin/users");
+      expect(await screen.findByRole("link", { name: /Defina os coordenadores/ })).toHaveAttribute("href", "/admin/usuarios");
       expect(screen.getByRole("link", { name: /Confira a saúde da conta/ })).toHaveAttribute("href", "/admin/saude-da-conta");
     });
 
@@ -285,8 +285,8 @@ describe("HomePage", () => {
       expect(await screen.findByText(/Sua clínica ainda não tem dado importado/)).toBeInTheDocument();
       expect(screen.queryByText(/Tudo tranquilo por aqui/)).not.toBeInTheDocument();
 
-      await user.click(screen.getByRole("button", { name: "Ir para Central de Upload" }));
-      expect(navigateMock).toHaveBeenCalledWith("/upload");
+      await user.click(screen.getByRole("button", { name: "Importar dados" }));
+      expect(navigateMock).toHaveBeenCalledWith("/importar");
     });
 
     it("atendimento (sem RBAC de upload) vê pedido pra avisar a equipe, sem botão que levaria a um 403", async () => {
@@ -298,8 +298,40 @@ describe("HomePage", () => {
 
       renderWithProviders(<HomePage />);
 
-      expect(await screen.findByText(/Peça para o owner, administrador\(a\) ou financeiro/)).toBeInTheDocument();
-      expect(screen.queryByRole("button", { name: "Ir para Central de Upload" })).not.toBeInTheDocument();
+      expect(await screen.findByText(/Peça para quem é proprietário\(a\), administrador\(a\) ou do financeiro/)).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Importar dados" })).not.toBeInTheDocument();
+    });
+
+    it("arquivo enviado mas nenhuma linha importada (UX-03): continua no primeiro uso", async () => {
+      mockUser();
+      vi.mocked(apiClient.get).mockImplementation((url: string) => {
+        if (url.includes("executive-narrative"))
+          return Promise.resolve({ period_start: "2026-09-10", period_end: "2026-09-16", narrative: null, generated_at: null, top_priorities: [], recently_resolved: [] } as never);
+        if (url.includes("users/me")) return Promise.resolve(PROFILE as never);
+        if (url.includes("ingestion/files")) return Promise.resolve({ items: [], total: 1, limit: 1, offset: 0 } as never);
+        if (url.includes("data-readiness"))
+          return Promise.resolve({ sources: [], missing: ["faturamento", "agenda"], price_table_coverage_pct: null, plans_without_price_table: [] } as never);
+        return Promise.reject(new Error(`unexpected url in test: ${url}`));
+      });
+      renderWithProviders(<HomePage />);
+      expect(await screen.findByText(/Sua clínica ainda não tem dado importado/)).toBeInTheDocument();
+    });
+
+    it("só faturamento importado (UX-04): manchete diz que falta a agenda, não 'dia tranquilo'", async () => {
+      mockUser();
+      vi.mocked(apiClient.get).mockImplementation((url: string) => {
+        if (url.includes("executive-narrative"))
+          return Promise.resolve({ period_start: "2026-09-10", period_end: "2026-09-16", narrative: null, generated_at: null, top_priorities: [], recently_resolved: [] } as never);
+        if (url.includes("users/me")) return Promise.resolve(PROFILE as never);
+        if (url.includes("ingestion/files")) return Promise.resolve({ items: [], total: 1, limit: 1, offset: 0 } as never);
+        if (url.includes("data-readiness"))
+          return Promise.resolve({ sources: ["faturamento"], missing: ["agenda", "pep"], price_table_coverage_pct: null, plans_without_price_table: [] } as never);
+        return Promise.reject(new Error(`unexpected url in test: ${url}`));
+      });
+      renderWithProviders(<HomePage />);
+      expect(await screen.findByText("Ainda não há dados suficientes para dizer como a clínica está.")).toBeInTheDocument();
+      expect(screen.getByText(/Falta importar: agenda\./)).toBeInTheDocument();
+      expect(screen.queryByText(/Nada pegando fogo/)).not.toBeInTheDocument();
     });
 
     it("com dado importado (total>0), nunca mostra o convite de primeiro uso", async () => {
@@ -330,7 +362,7 @@ describe("HomePage", () => {
             waitlist_waiting: 6,
             periods: [
               { label: "08–12h", text: "Tudo ocupado.", tone: "positive", action_label: null, action_href: null },
-              { label: "12–18h", text: "3 horários vagos.", tone: "warning", action_label: "3 pessoas da lista de espera cabem neles.", action_href: "/waitlist" },
+              { label: "12–18h", text: "3 horários vagos.", tone: "warning", action_label: "3 pessoas da lista de espera cabem neles.", action_href: "/lista-de-espera" },
             ],
           } as never);
         if (url.includes("navigation-summary"))
@@ -339,7 +371,7 @@ describe("HomePage", () => {
             my_open_insights: 0,
             last_import_at: null,
             last_import_source: null,
-            urgent: { text: "Prazo para recorrer de 4 guias da Unimed termina amanhã — são R$ 9.200.", action_label: "Abrir recurso", action_href: "/denial-appeals" },
+            urgent: { text: "Prazo para recorrer de 4 guias da Unimed termina amanhã — são R$ 9.200.", action_label: "Abrir recurso", action_href: "/recursos-de-glosa" },
           } as never);
         return Promise.reject(new Error(`sem mock: ${url}`));
       });
@@ -374,7 +406,7 @@ describe("HomePage", () => {
 
       expect(await screen.findByText("Prazo para recorrer de 4 guias da Unimed termina amanhã — são R$ 9.200.")).toBeInTheDocument();
       expect(await screen.findByText("42 consultas, manhã cheia e 3 buracos à tarde.")).toBeInTheDocument();
-      expect(screen.getByRole("link", { name: "3 pessoas da lista de espera cabem neles." })).toHaveAttribute("href", "/waitlist");
+      expect(screen.getByRole("link", { name: "3 pessoas da lista de espera cabem neles." })).toHaveAttribute("href", "/lista-de-espera");
       expect(screen.getByText(/Leva cerca de 20 minutos/)).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "atribuir a alguém" })).toBeInTheDocument();
     });
@@ -396,7 +428,7 @@ describe("HomePage", () => {
       });
       renderWithProviders(<HomePage />);
 
-      expect(await screen.findByText("Os convênios ainda não devolveram o retorno das cobranças deste período.")).toBeInTheDocument();
+      expect(await screen.findByText("Os convênios ainda não devolveram o retorno das cobranças dos últimos 30 dias.")).toBeInTheDocument();
       expect(screen.getByText("Nenhum convênio pagou cobranças deste período ainda.")).toBeInTheDocument();
       expect(screen.queryByText("Nenhuma recusa de convênio no período.")).not.toBeInTheDocument();
       expect(screen.queryByText("Agenda ocupada")).not.toBeInTheDocument();

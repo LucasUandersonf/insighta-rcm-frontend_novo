@@ -58,7 +58,7 @@ function exportCommandCenterCsv(summary: ExecutiveSummary, dateFrom: string, dat
   const rows: (string | number)[][] = [
     ["Indicador", "Valor", "Período anterior", "Variação (%)"],
     ["Total faturado", summary.total_billed.value, summary.total_billed.previous_value, summary.total_billed.delta_pct ?? ""],
-    ["Buraco financeiro", summary.financial_hole.value, summary.financial_hole.previous_value, summary.financial_hole.delta_pct ?? ""],
+    ["Cobrado abaixo do contrato", summary.financial_hole.value, summary.financial_hole.previous_value, summary.financial_hole.delta_pct ?? ""],
     ["Caixa protegido", summary.total_value_saved.value, summary.total_value_saved.previous_value, summary.total_value_saved.delta_pct ?? ""],
     ["Divergência de recebimento", summary.payment_gap.value, summary.payment_gap.previous_value, summary.payment_gap.delta_pct ?? ""],
     ["Você faturou do que podia (%)", summary.margin_vs_contracted_pct ?? "", "", ""],
@@ -251,7 +251,7 @@ export function ExecutiveOverviewPage() {
                 <h2 className="mb-3 text-2xs font-medium uppercase tracking-wide text-ink-faint">Números do período — para conferência</h2>
                 <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-12">
                   <KpiCard size="compact" colSpan={2} label="Total faturado" value={formatCurrency(summary.total_billed.value)} numericValue={summary.total_billed.value} format={formatCurrency} tone="revenue" trend={trendFrom(summary.total_billed)} />
-                  <KpiCard size="compact" colSpan={2} label="Buraco financeiro" value={formatCurrency(summary.financial_hole.value)} numericValue={summary.financial_hole.value} format={formatCurrency} tone="denied" gradient trend={trendFrom(summary.financial_hole, { invert: true })} />
+                  <KpiCard size="compact" colSpan={2} label="Cobrado abaixo do contrato" value={formatCurrency(summary.financial_hole.value)} numericValue={summary.financial_hole.value} format={formatCurrency} tone="denied" gradient trend={trendFrom(summary.financial_hole, { invert: true })} />
                   <KpiCard size="compact" colSpan={2} label="Caixa protegido" value={formatCurrency(summary.total_value_saved.value)} numericValue={summary.total_value_saved.value} format={formatCurrency} tone="revenue" gradient trend={trendFrom(summary.total_value_saved)} />
                   <KpiCard
                     size="compact"

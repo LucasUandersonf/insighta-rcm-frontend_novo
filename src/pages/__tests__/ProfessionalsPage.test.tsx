@@ -47,7 +47,7 @@ describe("ProfessionalsPage — deep-link do Radar de Profissional Fora do Padr�
       makeProfessional({ id: "p2", full_name: "Dra. Y" }),
     ] as never);
 
-    renderWithProviders(<ProfessionalsPage />, { route: "/professionals?highlight=p2" });
+    renderWithProviders(<ProfessionalsPage />, { route: "/profissionais?highlight=p2" });
 
     await waitFor(() => expect(screen.getByText("Dra. Y")).toBeInTheDocument());
     const highlighted = screen.getByText("Dra. Y").closest("tr");
@@ -130,7 +130,7 @@ describe("ProfessionalsPage — ausências planejadas", () => {
     await user.type(screen.getByLabelText("Início"), "2026-12-20");
     await user.type(screen.getByLabelText("Fim"), "2026-12-22");
     await user.click(screen.getByRole("button", { name: "+ Adicionar" }));
-    expect(await screen.findByText(/2 consulta\(s\) já marcada\(s\)/)).toBeInTheDocument();
+    expect(await screen.findByText(/2 consultas já marcadas/)).toBeInTheDocument();
   });
 
   it("não mostra o editor de ausências ao cadastrar um profissional novo", async () => {

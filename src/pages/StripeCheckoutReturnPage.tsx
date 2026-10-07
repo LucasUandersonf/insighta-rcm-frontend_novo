@@ -57,7 +57,7 @@ export function StripeCheckoutReturnPage() {
         <div className="w-full max-w-sm rounded-xl border border-border-hairline bg-glass p-6 text-center shadow-elevated backdrop-blur-xl">
           <h1 className="text-lg font-semibold text-ink">Você saiu do checkout</h1>
           <p className="mt-2 text-sm leading-relaxed text-ink-muted">Pode tentar de novo a qualquer momento em Minha Clínica.</p>
-          <Button className="mt-4 w-full" onClick={() => navigate("/admin/tenant")}>
+          <Button className="mt-4 w-full" onClick={() => navigate("/admin/clinica")}>
             Voltar para Minha Clínica
           </Button>
         </div>
@@ -83,7 +83,7 @@ export function StripeCheckoutReturnPage() {
           <p className="mt-2 text-sm leading-relaxed text-ink-muted">
             Este link de checkout não existe mais, ou já foi usado. Volte para Minha Clínica e inicie o upgrade de novo.
           </p>
-          <Button className="mt-4 w-full" onClick={() => navigate("/admin/tenant")}>
+          <Button className="mt-4 w-full" onClick={() => navigate("/admin/clinica")}>
             Voltar para Minha Clínica
           </Button>
         </div>
@@ -102,7 +102,7 @@ export function StripeCheckoutReturnPage() {
           <p className="mt-2 text-sm leading-relaxed text-ink-muted">
             Sua assinatura foi confirmada com sucesso. O novo plano já está valendo para a sua clínica.
           </p>
-          <Button className="mt-4 w-full" onClick={() => navigate("/admin/tenant")}>
+          <Button className="mt-4 w-full" onClick={() => navigate("/admin/clinica")}>
             Voltar para Minha Clínica
           </Button>
         </div>

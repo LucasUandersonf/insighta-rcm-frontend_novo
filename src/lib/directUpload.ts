@@ -31,6 +31,8 @@ export interface DirectUploadStatus {
   row_count: number | null;
   error_row_count: number | null;
   already_processed?: boolean;
+  /** UX-02: reenvio que tentou de novo as linhas rejeitadas. */
+  retried?: boolean;
   message?: string | null;
   original_filename?: string | null;
   data_type?: string | null;

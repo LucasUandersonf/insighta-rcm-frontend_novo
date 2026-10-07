@@ -85,7 +85,7 @@ export function FinancialHoleBillingsPanel({ dateFrom, dateTo }: { dateFrom: str
           ser pedido — pior caso primeiro. A correção é sempre na tabela de preços de Contratos, não nesta conta já
           emitida.
         </p>
-        <Button type="button" variant="secondary" size="sm" onClick={() => navigate("/contracts")} className="shrink-0">
+        <Button type="button" variant="secondary" size="sm" onClick={() => navigate("/convenios")} className="shrink-0">
           Ir para Contratos
         </Button>
       </div>

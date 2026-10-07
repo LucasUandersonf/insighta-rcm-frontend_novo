@@ -23,6 +23,16 @@ interface ErrorBoundaryProps {
 
 interface ErrorBoundaryState {
   hasError: boolean;
+  /** UX-23: a tela não abriu porque a conexão caiu (arquivo da tela não baixou). */
+  offline: boolean;
+}
+
+function isConnectionError(error: unknown): boolean {
+  const message = error instanceof Error ? `${error.name} ${error.message}` : String(error);
+  return (
+    (typeof navigator !== "undefined" && navigator.onLine === false) ||
+    /dynamically imported module|Importing a module script failed|ChunkLoadError|Failed to fetch|Load failed|NetworkError/i.test(message)
+  );
 }
 
 /**
@@ -34,11 +44,32 @@ interface ErrorBoundaryState {
  * getDerivedStateFromError/componentDidCatch.
  */
 export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  state: ErrorBoundaryState = { hasError: false };
+  state: ErrorBoundaryState = { hasError: false, offline: false };
 
-  static getDerivedStateFromError(): ErrorBoundaryState {
-    return { hasError: true };
+  static getDerivedStateFromError(error: unknown): ErrorBoundaryState {
+    return { hasError: true, offline: isConnectionError(error) };
   }
+
+  componentDidMount(): void {
+    window.addEventListener("online", this.handleOnline);
+  }
+
+  componentWillUnmount(): void {
+    window.removeEventListener("online", this.handleOnline);
+  }
+
+  // A conexão voltou: a tela tenta abrir de novo sozinha.
+  handleOnline = (): void => {
+    if (this.state.hasError && this.state.offline) this.setState({ hasError: false, offline: false });
+  };
+
+  handleRetry = (): void => {
+    if (this.state.offline) {
+      this.setState({ hasError: false, offline: false });
+      return;
+    }
+    window.location.reload();
+  };
 
   componentDidCatch(error: Error, info: ErrorInfo): void {
     // Reporta ao Sentry quando configurado; no-op silencioso caso
@@ -55,18 +86,24 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       if (this.props.scope === "route") {
         return (
           <div className="rounded-xl border border-denied/25 bg-denied-bg p-6 text-center shadow-elevated backdrop-blur-xl">
-            <h2 className="mb-2 text-sm font-semibold text-denied">Esta tela encontrou um erro</h2>
+            <h2 className="mb-2 text-sm font-semibold text-denied">
+              {this.state.offline ? "Sem conexão: não foi possível abrir esta tela" : "Não foi possível abrir esta tela"}
+            </h2>
             <p className="text-sm text-ink-muted">
-              O restante do sistema continua funcionando normalmente — use o menu ao lado para ir para outra tela.
+              {this.state.offline
+                ? "Parece que a internet caiu. Esta tela abre sozinha quando a conexão voltar — ou clique em Tentar de novo."
+                : "O restante do sistema continua funcionando — use o menu acima para ir para outra tela."}
             </p>
-            <p className="mt-3 text-xs text-ink-faint">
-              Isso já foi registrado. Se o problema persistir nesta tela específica, entre em contato com o suporte.
-            </p>
+            {!this.state.offline && (
+              <p className="mt-3 text-xs text-ink-faint">
+                Isso já foi registrado. Se continuar acontecendo nesta tela, fale com o suporte.
+              </p>
+            )}
             <button
-              onClick={this.handleReload}
+              onClick={this.handleRetry}
               className="mt-4 rounded-md border border-border-subtle bg-canvas-raised/60 px-3 py-2 text-sm font-medium text-ink transition-colors hover:bg-canvas-surface"
             >
-              Recarregar página
+              Tentar de novo
             </button>
           </div>
         );

@@ -7,8 +7,8 @@ import { cn } from "@/lib/cn";
  * para dentro. Viraram um módulo só, com duas vistas.
  */
 const VIEWS = [
-  { to: "/upload", label: "Enviar arquivos" },
-  { to: "/setup", label: "Mapeamento e linhas rejeitadas" },
+  { to: "/importar", label: "Enviar arquivos" },
+  { to: "/importar/corrigir", label: "Linhas para corrigir" },
 ];
 
 export function ImportDataNav() {

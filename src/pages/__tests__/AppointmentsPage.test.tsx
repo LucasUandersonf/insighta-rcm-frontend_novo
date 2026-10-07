@@ -62,13 +62,27 @@ function makeAppointment(overrides: Partial<Appointment> = {}): Appointment {
   };
 }
 
+let mockedPatients: Patient[] = [];
+
 function mockGet(patients: Patient[], appointments: Appointment[] = []) {
+  mockedPatients = patients;
   vi.mocked(apiClient.get).mockImplementation((path: string) => {
+    if (path.startsWith("/api/v1/patients/search"))
+      return Promise.resolve(patients.map((p) => ({ id: p.id, full_name: p.full_name, cpf: null })) as never);
     if (path.startsWith("/api/v1/patients")) return Promise.resolve({ items: patients, total: patients.length, limit: 200, offset: 0 } as never);
     if (path.startsWith("/api/v1/professionals")) return Promise.resolve([] as never);
     if (path.startsWith("/api/v1/appointments/by-patient")) return Promise.resolve(appointments as never);
     return Promise.reject(new Error(`Sem mock para ${path}`));
   });
+}
+
+// UX-14: o paciente é escolhido pela busca (nome ou CPF), não por um select.
+async function pickPatient(user: ReturnType<typeof userEvent.setup>, id: string) {
+  const patient = mockedPatients.find((p) => p.id === id)!;
+  const box = screen.getByLabelText("Buscar paciente por nome ou CPF");
+  await user.clear(box);
+  await user.type(box, patient.full_name.slice(0, 4));
+  await user.click(await screen.findByRole("button", { name: new RegExp(patient.full_name) }, { timeout: 2000 }));
 }
 
 // Pacientes e consultas chegam pela importação da agenda (Redesign 2026:
@@ -77,7 +91,7 @@ describe("AppointmentsPage — dados do paciente", () => {
   it("não tem mais cadastro manual de paciente nem de consulta — a agenda chega pela importação", async () => {
     mockGet([makePatient()]);
     renderWithProviders(<AppointmentsPage />);
-    await waitFor(() => expect(screen.getByLabelText("Ver consultas do paciente")).not.toBeDisabled());
+    await screen.findByLabelText("Buscar paciente por nome ou CPF");
     expect(screen.queryByRole("button", { name: /Novo paciente/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Nova consulta/ })).not.toBeInTheDocument();
   });
@@ -88,8 +102,8 @@ describe("AppointmentsPage — dados do paciente", () => {
     const user = userEvent.setup();
 
     renderWithProviders(<AppointmentsPage />);
-    await waitFor(() => expect(screen.getByLabelText("Ver consultas do paciente")).not.toBeDisabled());
-    await user.selectOptions(screen.getByLabelText("Ver consultas do paciente"), "p1");
+    await screen.findByLabelText("Buscar paciente por nome ou CPF");
+    await pickPatient(user, "p1");
 
     await user.click(await screen.findByRole("button", { name: /Dados de contato/ }));
     await user.selectOptions(await screen.findByLabelText(/Autoriza contato/), "true");
@@ -109,7 +123,7 @@ describe("AppointmentsPage — dados do paciente", () => {
   it("o botão 'Dados de contato' só aparece depois de um paciente ser selecionado", async () => {
     mockGet([makePatient()]);
     renderWithProviders(<AppointmentsPage />);
-    await waitFor(() => expect(screen.getByLabelText("Ver consultas do paciente")).not.toBeDisabled());
+    await screen.findByLabelText("Buscar paciente por nome ou CPF");
     expect(screen.queryByRole("button", { name: /Dados de contato/ })).not.toBeInTheDocument();
   });
 });
@@ -119,7 +133,7 @@ describe("AppointmentsPage — dados do paciente", () => {
 // momento de marcar a consulta, não só depois de criar (ver DECISÃO em
 // PatientService.list_patients_paginated, backend).
 describe("AppointmentsPage — aviso de paciente de alto valor (VIP)", () => {
-  it("marca o paciente VIP na lista e mostra o motivo assim que ele é selecionado", async () => {
+  it("mostra o motivo de paciente VIP assim que ele é selecionado", async () => {
     mockGet([
       makePatient({ id: "p1", full_name: "Maria VIP", is_vip: true, vip_reasons: ["frequente", "indicou outros pacientes"] }),
       makePatient({ id: "p2", full_name: "João Comum", is_vip: false, vip_reasons: [] }),
@@ -127,16 +141,13 @@ describe("AppointmentsPage — aviso de paciente de alto valor (VIP)", () => {
     const user = userEvent.setup();
 
     renderWithProviders(<AppointmentsPage />);
-    const patientSelect = await screen.findByLabelText("Ver consultas do paciente");
-    await waitFor(() => expect(patientSelect).not.toBeDisabled());
-    expect(screen.getByRole("option", { name: "Maria VIP ★ VIP" })).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: "João Comum" })).toBeInTheDocument();
+    await screen.findByLabelText("Buscar paciente por nome ou CPF");
     expect(screen.queryByText(/Paciente de alto valor/)).not.toBeInTheDocument();
 
-    await user.selectOptions(patientSelect, "p1");
+    await pickPatient(user, "p1");
     expect(await screen.findByText(/Paciente de alto valor \(frequente, indicou outros pacientes\)/)).toBeInTheDocument();
 
-    await user.selectOptions(patientSelect, "p2");
+    await pickPatient(user, "p2");
     await waitFor(() => expect(screen.queryByText(/Paciente de alto valor/)).not.toBeInTheDocument());
   });
 });
@@ -152,8 +163,8 @@ describe("AppointmentsPage — registrar atendimento (checkout + funil de upsell
     const user = userEvent.setup();
 
     renderWithProviders(<AppointmentsPage />);
-    await waitFor(() => expect(screen.getByLabelText("Ver consultas do paciente")).not.toBeDisabled());
-    await user.selectOptions(screen.getByLabelText("Ver consultas do paciente"), "p1");
+    await screen.findByLabelText("Buscar paciente por nome ou CPF");
+    await pickPatient(user, "p1");
 
     await user.click(await screen.findByRole("button", { name: /Registrar atendimento/ }));
 
@@ -182,8 +193,8 @@ describe("AppointmentsPage — registrar atendimento (checkout + funil de upsell
     const user = userEvent.setup();
 
     renderWithProviders(<AppointmentsPage />);
-    await waitFor(() => expect(screen.getByLabelText("Ver consultas do paciente")).not.toBeDisabled());
-    await user.selectOptions(screen.getByLabelText("Ver consultas do paciente"), "p1");
+    await screen.findByLabelText("Buscar paciente por nome ou CPF");
+    await pickPatient(user, "p1");
     await user.click(await screen.findByRole("button", { name: /Registrar atendimento/ }));
 
     await user.type(await screen.findByLabelText(/oferecido no checkout/), "Drenagem linfática");
@@ -203,8 +214,8 @@ describe("AppointmentsPage — registrar atendimento (checkout + funil de upsell
     const user = userEvent.setup();
 
     renderWithProviders(<AppointmentsPage />);
-    await waitFor(() => expect(screen.getByLabelText("Ver consultas do paciente")).not.toBeDisabled());
-    await user.selectOptions(screen.getByLabelText("Ver consultas do paciente"), "p1");
+    await screen.findByLabelText("Buscar paciente por nome ou CPF");
+    await pickPatient(user, "p1");
     await user.click(await screen.findByRole("button", { name: /Registrar atendimento/ }));
 
     expect(await screen.findByLabelText(/Resultado da oferta/)).toBeDisabled();
@@ -220,8 +231,8 @@ describe("AppointmentsPage — registrar atendimento (checkout + funil de upsell
     const user = userEvent.setup();
 
     renderWithProviders(<AppointmentsPage />);
-    await waitFor(() => expect(screen.getByLabelText("Ver consultas do paciente")).not.toBeDisabled());
-    await user.selectOptions(screen.getByLabelText("Ver consultas do paciente"), "p1");
+    await screen.findByLabelText("Buscar paciente por nome ou CPF");
+    await pickPatient(user, "p1");
     await user.click(await screen.findByRole("button", { name: /Registrar atendimento/ }));
 
     expect(await screen.findByLabelText("Status")).toHaveValue("completed");
@@ -249,8 +260,8 @@ describe("AppointmentsPage — link de avaliação de satisfação", () => {
     const writeText = vi.spyOn(navigator.clipboard, "writeText").mockResolvedValue(undefined);
 
     renderWithProviders(<AppointmentsPage />);
-    await waitFor(() => expect(screen.getByLabelText("Ver consultas do paciente")).not.toBeDisabled());
-    await user.selectOptions(screen.getByLabelText("Ver consultas do paciente"), "p1");
+    await screen.findByLabelText("Buscar paciente por nome ou CPF");
+    await pickPatient(user, "p1");
 
     await user.click(await screen.findByRole("button", { name: /Link de avaliação/ }));
 
@@ -266,8 +277,8 @@ describe("AppointmentsPage — link de avaliação de satisfação", () => {
     const user = userEvent.setup();
 
     renderWithProviders(<AppointmentsPage />);
-    await waitFor(() => expect(screen.getByLabelText("Ver consultas do paciente")).not.toBeDisabled());
-    await user.selectOptions(screen.getByLabelText("Ver consultas do paciente"), "p1");
+    await screen.findByLabelText("Buscar paciente por nome ou CPF");
+    await pickPatient(user, "p1");
 
     expect(await screen.findByText("Registrar atendimento")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Link de avaliação/ })).not.toBeInTheDocument();
@@ -276,9 +287,9 @@ describe("AppointmentsPage — link de avaliação de satisfação", () => {
   it("mostra a nota já registrada em vez do botão de gerar link", async () => {
     mockGet([makePatient()], [makeAppointment({ status: "completed", visit_satisfaction_score: 4 })]);
     renderWithProviders(<AppointmentsPage />);
-    await waitFor(() => expect(screen.getByLabelText("Ver consultas do paciente")).not.toBeDisabled());
+    await screen.findByLabelText("Buscar paciente por nome ou CPF");
     const user = userEvent.setup();
-    await user.selectOptions(screen.getByLabelText("Ver consultas do paciente"), "p1");
+    await pickPatient(user, "p1");
 
     expect(await screen.findByText("4/5")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Link de avaliação/ })).not.toBeInTheDocument();
@@ -288,9 +299,9 @@ describe("AppointmentsPage — link de avaliação de satisfação", () => {
     mockGet([makePatient()], [makeAppointment({ status: "completed" })]);
 
     const { container } = renderWithProviders(<AppointmentsPage />);
-    await waitFor(() => expect(screen.getByLabelText("Ver consultas do paciente")).not.toBeDisabled());
+    await screen.findByLabelText("Buscar paciente por nome ou CPF");
     const user = userEvent.setup();
-    await user.selectOptions(screen.getByLabelText("Ver consultas do paciente"), "p1");
+    await pickPatient(user, "p1");
     await screen.findByText("Registrar atendimento");
 
     await expectNoA11yViolations(container);
@@ -304,8 +315,8 @@ describe("AppointmentsPage — anonimizar a pedido do titular", () => {
   async function openPatient() {
     const user = userEvent.setup();
     renderWithProviders(<AppointmentsPage />);
-    await waitFor(() => expect(screen.getByLabelText("Ver consultas do paciente")).not.toBeDisabled());
-    await user.selectOptions(screen.getByLabelText("Ver consultas do paciente"), "p1");
+    await screen.findByLabelText("Buscar paciente por nome ou CPF");
+    await pickPatient(user, "p1");
     await user.click(await screen.findByRole("button", { name: /Dados de contato/ }));
     return user;
   }

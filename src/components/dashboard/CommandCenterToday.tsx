@@ -71,7 +71,7 @@ function KpiStrip({ summary, payers }: { summary: ExecutiveSummary; payers?: Pay
     text: string;
   }[] = [
     {
-      label: "Buraco financeiro",
+      label: "Cobrado abaixo do contrato",
       value: formatCurrency(summary.financial_hole.value),
       kpi: summary.financial_hole,
       higherIsBetter: false,
@@ -92,7 +92,7 @@ function KpiStrip({ summary, payers }: { summary: ExecutiveSummary; payers?: Pay
       note: "do valor contratado",
       text:
         shortfall === null
-          ? "Precisa de contrato homologado para comparar com o faturado."
+          ? "Cadastre a tabela de preço dos convênios para comparar com o faturado."
           : shortfall <= 0
             ? "Tudo foi cobrado pelo valor contratado."
             : shortfall < 0.05

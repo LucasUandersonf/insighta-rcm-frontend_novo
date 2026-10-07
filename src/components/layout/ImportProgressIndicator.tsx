@@ -5,16 +5,15 @@ import { Loader2 } from "lucide-react";
 import { useToast } from "@/context/ToastContext";
 import { ACTIVE_STATES, processingPercent, type DirectUploadStatus } from "@/lib/directUpload";
 import { useDirectUploads } from "@/lib/useDirectUploads";
+import { importOutcome, outcomeSentence } from "@/lib/importOutcome";
 
 function finishedMessage(upload: DirectUploadStatus): string {
   const name = upload.original_filename ?? "Arquivo";
   if (upload.already_processed) return upload.message ?? `${name}: este conteúdo já tinha sido importado. Nada foi duplicado.`;
-  const rejected = upload.error_row_count ?? 0;
-  const rows = upload.row_count ?? 0;
-  const base =
-    rejected > 0
-      ? `${name} importado: ${rows} linha(s) lida(s), ${rejected} rejeitada(s). Veja o motivo no histórico de importações.`
-      : `${name} importado: ${rows} linha(s).`;
+  // UX-03/UX-34: diz o que entrou (não "linhas lidas") e sem "linha(s)".
+  const base = `${name}: ${outcomeSentence(upload.row_count, upload.error_row_count)}${
+    (upload.error_row_count ?? 0) > 0 ? " Veja o motivo e como resolver no relatório, em Importar dados." : ""
+  }`;
   const ignored = upload.ignored_columns ?? [];
   return ignored.length > 0 ? `${base} Colunas ignoradas (fora do modelo): ${ignored.join(", ")}.` : base;
 }
@@ -38,7 +37,9 @@ export function ImportProgressIndicator() {
       const before = lastStatus.current.get(upload.upload_id);
       const wasActive = before !== undefined && ACTIVE_STATES.includes(before);
       if (wasActive && upload.status === "processado") {
-        showSuccess(finishedMessage(upload));
+        // Verde só quando entrou alguma coisa (UX-03).
+        const nothing = !upload.already_processed && importOutcome(upload.row_count, upload.error_row_count) === "nada";
+        (nothing ? showError : showSuccess)(finishedMessage(upload));
         finishedAny = true;
       } else if (wasActive && upload.status === "falhou") {
         showError(`${upload.original_filename ?? "Arquivo"}: ${upload.error ?? "não foi possível processar."}`);
@@ -53,7 +54,7 @@ export function ImportProgressIndicator() {
   }, [data, showSuccess, showError, queryClient]);
 
   const active = (data ?? []).filter((u) => ACTIVE_STATES.includes(u.status));
-  if (active.length === 0 || location.pathname === "/upload") return null;
+  if (active.length === 0 || location.pathname === "/importar") return null;
   const first = active[0];
   const percent = processingPercent(first);
   const label =
@@ -63,7 +64,7 @@ export function ImportProgressIndicator() {
 
   return (
     <Link
-      to="/upload"
+      to="/importar"
       role="status"
       aria-live="polite"
       className="fixed bottom-5 right-5 z-40 flex max-w-[calc(100vw-2.5rem)] items-center gap-2 rounded-full border border-border-hairline bg-canvas-surface px-4 py-2 text-sm text-ink shadow-elevated hover:bg-canvas-raised"

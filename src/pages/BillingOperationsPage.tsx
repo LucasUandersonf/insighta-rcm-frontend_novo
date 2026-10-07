@@ -222,7 +222,7 @@ function SettlementTab({ readOnly = false }: { readOnly?: boolean }) {
   return (
     <Panel
       title="Registrar pagamento recebido"
-      subtitle="Liquidação individual — quanto a operadora efetivamente repassou por este faturamento. Para liquidar um lote inteiro de uma vez, use o Template de Glosa na Central de Upload."
+      subtitle="Quanto o convênio pagou por esta cobrança. Para registrar muitos pagamentos de uma vez, envie a planilha de Faturamento com as colunas de valor recebido e glosa em Importar dados."
     >
       <form onSubmit={handleSubmit} className="p-4">
         <BillingSearchPicker selected={selected} onSelect={setSelected} error={fieldErrors["billing"]} />
@@ -895,7 +895,7 @@ function GuiasTab() {
         {!isLoading && (guiasPage?.items ?? []).length > 0 && (
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-border-hairline text-2xs uppercase tracking-wide text-ink-faint">
+              <tr className="border-b border-border-hairline text-xs font-medium text-ink-muted">
                 <th className="px-4 py-2.5 font-medium">Tipo</th>
                 <th className="px-4 py-2.5 font-medium">Número</th>
                 <th className="px-4 py-2.5 font-medium">Convênio</th>
@@ -960,7 +960,7 @@ export function BillingOperationsPage() {
       <PageHeader
         icon={Wallet}
         title="Faturamento & guias"
-        subtitle="Registre o que a operadora efetivamente pagou e cadastre guias TISS avulsas — as duas pontas do ciclo de faturamento que já existiam no sistema sem nenhuma tela."
+        subtitle="Registre o que o convênio pagou e cadastre guias TISS avulsas."
       />
 
       <Tabs

@@ -24,6 +24,7 @@ import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useToast } from "@/context/ToastContext";
 import { useAuth } from "@/context/AuthContext";
+import { PatientSearchBox } from "@/components/patients/PatientSearchBox";
 import type {
   Appointment,
   AppointmentUpdateRequest,
@@ -570,6 +571,7 @@ function SatisfactionLinkModal({
 
 export function AppointmentsPage() {
   const [selectedPatientId, setSelectedPatientId] = useState("");
+  const [selectedPatientName, setSelectedPatientName] = useState("");
   const [isEditPatientModalOpen, setIsEditPatientModalOpen] = useState(false);
   const [registeringAppointment, setRegisteringAppointment] =
     useState<Appointment | null>(null);
@@ -593,7 +595,7 @@ export function AppointmentsPage() {
   // página inteira em produção. limit=200 (teto do endpoint) cobre o
   // seletor por ora; para clínicas com mais de 200 pacientes isto precisa
   // virar um combobox com busca no servidor antes do GA (ver auditoria).
-  const { data: patientsPage, isLoading: patientsLoading } = useQuery({
+  const { data: patientsPage } = useQuery({
     queryKey: ["patients", "for-appointment-selector"],
     queryFn: () =>
       apiClient.get<PaginatedResponse<Patient>>(
@@ -624,21 +626,21 @@ export function AppointmentsPage() {
       />
 
       <div className="flex flex-wrap items-end gap-3">
-        <div className="max-w-xs flex-1">
-          <SelectField
-            label="Ver consultas do paciente"
-            value={selectedPatientId}
-            onChange={(e) => setSelectedPatientId(e.target.value)}
-            disabled={patientsLoading}
-          >
-            <option value="">Selecione um paciente</option>
-            {(patients ?? []).map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.full_name}
-                {p.is_vip ? " ★ VIP" : ""}
-              </option>
-            ))}
-          </SelectField>
+        {/* UX-14: busca por nome ou CPF (a mesma da Ficha), em vez de um
+            select com todos os pacientes da base. */}
+        <div className="w-full max-w-md">
+          <PatientSearchBox
+            className="mb-4"
+            onSelect={(item) => {
+              setSelectedPatientId(item.id);
+              setSelectedPatientName(item.full_name);
+            }}
+          />
+          {selectedPatientId && (
+            <p className="-mt-2 mb-4 text-sm text-ink">
+              Consultas de <strong>{selectedPatientName}</strong>
+            </p>
+          )}
         </div>
         {selectedPatientId && (
           <Button
@@ -682,7 +684,7 @@ export function AppointmentsPage() {
         {!selectedPatientId && (
           <EmptyState
             icon={<UserRound size={17} strokeWidth={1.5} />}
-            message="Selecione um paciente acima para ver as consultas dele."
+            message="Busque um paciente pelo nome ou CPF para ver as consultas dele. Para a agenda com risco de falta, abra Agenda de risco."
           />
         )}
         {selectedPatientId && appointmentsLoading && <LoadingState />}
@@ -702,7 +704,7 @@ export function AppointmentsPage() {
           (appointments ?? []).length > 0 && (
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="border-b border-border-hairline text-2xs uppercase tracking-wide text-ink-faint">
+                <tr className="border-b border-border-hairline text-xs font-medium text-ink-muted">
                   <th className="px-4 py-2.5 font-medium">Data</th>
                   <th className="px-4 py-2.5 font-medium">Status</th>
                   <th className="px-4 py-2.5 font-medium">Procedimento</th>

@@ -29,7 +29,7 @@ describe("PepConformidadePanel", () => {
 
     await waitFor(() => expect(screen.getAllByText("50%").length).toBeGreaterThan(0));
     expect(screen.getAllByText("0%").length).toBeGreaterThan(0);
-    expect(screen.getByText(/1 de 2 atendimento\(s\) concluído\(s\)/)).toBeInTheDocument();
+    expect(screen.getByText(/1 de 2 atendimentos concluídos/)).toBeInTheDocument();
   });
 
   it("travessão quando não há dado no período", async () => {
