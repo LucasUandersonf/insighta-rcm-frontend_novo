@@ -147,8 +147,9 @@ export function SetupPage() {
                         {group.samples
                           .slice(0, 3)
                           .map((s) =>
-                            [s.patient_name ?? "Paciente sem nome", formatMoney(s.charged_value)].filter(Boolean).join(" — ")
+                            [s.patient_name, formatMoney(s.charged_value)].filter(Boolean).join(" — ")
                           )
+                          .filter(Boolean)
                           .join(" · ")}
                         {group.count > 3 ? ` · e mais ${linhas(group.count - 3)}` : ""}
                       </p>

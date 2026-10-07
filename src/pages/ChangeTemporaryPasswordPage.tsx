@@ -1,5 +1,5 @@
-import { useState, type FormEvent } from "react";
-import { takeLoginPassword } from "@/lib/loginMemory";
+import { useEffect, useState, type FormEvent } from "react";
+import { clearLoginPassword, peekLoginPassword } from "@/lib/loginMemory";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { Lock } from "lucide-react";
@@ -23,7 +23,8 @@ export function ChangeTemporaryPasswordPage() {
   const queryClient = useQueryClient();
   const { logout } = useAuth();
   // UX-26: a senha temporária acabou de ser digitada no login — não pede de novo.
-  const [remembered] = useState(() => takeLoginPassword());
+  const [remembered] = useState(() => peekLoginPassword());
+  useEffect(() => clearLoginPassword, []);
   const [current, setCurrent] = useState(remembered ?? "");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -50,6 +51,7 @@ export function ChangeTemporaryPasswordPage() {
         new_password: password,
       });
       if (tokens?.access_token) applySessionTokens(tokens);
+      clearLoginPassword();
       await queryClient.invalidateQueries({ queryKey: ["users", "me"] });
       navigate("/", { replace: true });
     } catch (err) {

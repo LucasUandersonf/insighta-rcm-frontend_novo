@@ -29,8 +29,11 @@ export function ProtectedRoute() {
 }
 
 function TemporaryPasswordGate() {
-  const { data } = useCurrentUserProfile();
+  const { data, isLoading } = useCurrentUserProfile();
   const { pathname } = useLocation();
+  // Enquanto o perfil não chega, não monta as telas: com senha temporária o
+  // backend responde 403 a tudo, e cada tela disparava suas chamadas à toa.
+  if (isLoading && pathname !== CHANGE_TEMPORARY_PASSWORD_PATH) return null;
   if (data?.must_change_password && pathname !== CHANGE_TEMPORARY_PASSWORD_PATH) {
     return <Navigate to={CHANGE_TEMPORARY_PASSWORD_PATH} replace />;
   }

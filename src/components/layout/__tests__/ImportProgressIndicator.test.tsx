@@ -39,7 +39,7 @@ describe("ImportProgressIndicator", () => {
     expect(pill.closest("a")).toHaveAttribute("href", "/importar");
 
     // Próxima consulta (a cada 2 s enquanto há algo em andamento): terminou.
-    await waitFor(() => expect(screen.getByText(/faturamento-2025.xlsx importado: 120000 linha\(s\) lida\(s\), 3 rejeitada\(s\)/)).toBeInTheDocument(), {
+    await waitFor(() => expect(screen.getByText(/faturamento-2025.xlsx: 119.997 linhas entraram; 3 ficaram de fora/)).toBeInTheDocument(), {
       timeout: 4000,
     });
     expect(screen.queryByRole("status", { name: /Importando/ })).not.toBeInTheDocument();

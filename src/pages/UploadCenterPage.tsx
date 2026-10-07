@@ -670,8 +670,8 @@ function BatchUploadTab() {
           </SelectField>
           {dataType === "faturamento" && (
             <p className="mb-4 -mt-2 text-2xs text-ink-faint">
-              Uma linha por procedimento cobrado. Pode mandar logo depois de faturar e mandar de novo quando o convênio pagar ou glosar —
-              a mesma linha (mesmo ID de transação) é atualizada, sem duplicar.
+              Pode enviar logo depois de faturar e de novo quando o convênio pagar ou glosar — a mesma linha (mesmo ID de
+              transação) é atualizada, sem duplicar.
             </p>
           )}
           {dataType === "atendimento" && (
