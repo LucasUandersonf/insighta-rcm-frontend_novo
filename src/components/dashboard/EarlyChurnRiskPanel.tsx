@@ -5,6 +5,7 @@ import { LoadingState, ErrorState, EmptyState } from "@/components/ui/Panel";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import type { EarlyChurnRisk } from "@/lib/types";
+import { formatDateBR } from "@/lib/dates";
 
 /**
  * Raio-X da Receita, frente "Prevendo movimentos" — a lista real por
@@ -19,7 +20,7 @@ import type { EarlyChurnRisk } from "@/lib/types";
  */
 
 function formatDate(iso: string): string {
-  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(iso));
+  return formatDateBR(iso, { day: "2-digit", month: "short", year: "numeric" });
 }
 
 function formatRhythm(item: { avg_interval_days: number; days_since_last: number }): string {

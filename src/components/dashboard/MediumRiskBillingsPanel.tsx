@@ -8,6 +8,7 @@ import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import type { BillingResponse, PaginatedResponse } from "@/lib/types";
 import { denialReasonsText } from "@/lib/denialReasons";
+import { formatDateBR } from "@/lib/dates";
 
 const PAGE_SIZE = 20;
 
@@ -24,9 +25,7 @@ function formatCurrency(value: number): string {
 }
 
 function formatDate(iso: string): string {
-  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).format(
-    new Date(iso)
-  );
+  return formatDateBR(iso, { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 }
 
 /**

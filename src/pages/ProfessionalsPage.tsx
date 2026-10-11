@@ -24,6 +24,7 @@ import type {
   ProfessionalUpdateRequest,
 } from "@/lib/types";
 import { plural } from "@/lib/plural";
+import { formatDateBR } from "@/lib/dates";
 
 // "Mapa de Dados Insighta" — Domínio Profissional (Onda 2).
 const CONTRACT_TYPE_LABELS: Record<ContractType, string> = {
@@ -47,11 +48,6 @@ const CONTRACT_TYPE_LABELS: Record<ContractType, string> = {
 const WEEKDAY_LABELS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 const WEEKDAY_SHORT = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
-function formatDateBR(iso: string): string {
-  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "UTC" }).format(
-    new Date(`${iso}T00:00:00Z`)
-  );
-}
 
 function displayTime(apiTime: string): string {
   return apiTime.slice(0, 5); // "08:00:00" -> "08:00"
@@ -492,7 +488,7 @@ export function ProfessionalsPage() {
         {!isLoading && !error && (professionals ?? []).length === 0 && (
           <EmptyState
             icon={<CalendarClock size={17} strokeWidth={1.5} />}
-            message="Nenhum profissional cadastrado ainda — clique em “Novo profissional” ou envie um lote de faturamento com o nome do profissional na linha."
+            message="Nenhum profissional cadastrado ainda — clique em “Novo profissional” ou importe a planilha de faturamento com o nome do profissional em cada linha."
           />
         )}
         {!isLoading && (professionals ?? []).length > 0 && (

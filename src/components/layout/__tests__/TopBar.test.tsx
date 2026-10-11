@@ -26,6 +26,7 @@ function mockUser(role: CurrentUser["role"]) {
 }
 
 beforeEach(() => {
+  sessionStorage.clear();
   vi.stubGlobal("fetch", vi.fn(() => Promise.resolve({ ok: true } as Response)));
   vi.mocked(apiClient.get).mockImplementation((url: string) => {
     if (url.includes("/tenant")) return Promise.resolve({ trade_name: "Clínica Vila Mariana" } as never);

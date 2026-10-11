@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, useCallback, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { CheckCircle2, X, XCircle } from "lucide-react";
 
@@ -64,13 +64,30 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
+  // UX2-32: quando a sessão cai, o diálogo "Sua sessão expirou" já explica
+  // e guarda o que foi digitado; o erro 401 da mesma requisição não vira
+  // também um aviso no canto.
+  const suppressErrorsUntil = useRef(0);
+  useEffect(() => {
+    const onUnauthorized = () => {
+      suppressErrorsUntil.current = Date.now() + 3000;
+    };
+    window.addEventListener("auth:unauthorized", onUnauthorized);
+    return () => window.removeEventListener("auth:unauthorized", onUnauthorized);
+  }, []);
+
   const push = useCallback(
     (message: string, tone: Toast["tone"]) => {
+      if (tone === "error" && Date.now() < suppressErrorsUntil.current) return;
       const id = nextId++;
       // Auto-dispensa depois de alguns segundos — usuário não precisa
       // fechar manualmente toda confirmação de sucesso.
       const durationMs = tone === "error" ? 6000 : 3500;
-      setToasts((prev) => [...prev, { id, message, tone, durationMs }]);
+      // UX2-22: o mesmo aviso não empilha (clique duplo, duas respostas
+      // iguais): se já está na tela, fica só o que já existe.
+      setToasts((prev) =>
+        prev.some((t) => t.message === message && t.tone === tone) ? prev : [...prev, { id, message, tone, durationMs }]
+      );
       setTimeout(() => remove(id), durationMs);
     },
     [remove]

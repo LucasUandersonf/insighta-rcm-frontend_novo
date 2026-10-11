@@ -26,6 +26,7 @@ import type {
   TenantUsageSummary,
 } from "@/lib/types";
 import { plural } from "@/lib/plural";
+import { formatDateBR } from "@/lib/dates";
 
 const ACTION_LABEL: Record<string, string> = {
   login: "Entrou no painel",
@@ -80,10 +81,7 @@ const STATUS_TONE: Record<TenantEngagementStatus, BadgeTone> = {
 };
 
 function formatDate(iso: string | null): string {
-  if (!iso) return "nunca";
-  return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short" }).format(
-    new Date(iso),
-  );
+  return formatDateBR(iso, { dateStyle: "short" }, "nunca");
 }
 
 function formatDaysAgo(days: number | null): string {

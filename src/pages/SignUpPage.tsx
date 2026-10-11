@@ -10,7 +10,8 @@ import { PasswordStrengthMeter } from "@/components/ui/PasswordStrengthMeter";
 import { Stepper } from "@/components/ui/Stepper";
 import { formatCNPJ, isCompleteCNPJ, isValidCNPJ } from "@/lib/masks";
 import { passwordProblem } from "@/lib/password";
-import { ApiError } from "@/lib/api-client";
+import { useQuery } from "@tanstack/react-query";
+import { ApiError, apiClient } from "@/lib/api-client";
 import type { PlanTier } from "@/lib/types";
 
 /** Estado de navegação vindo do LoginPage quando "Continuar com Google"
@@ -45,8 +46,14 @@ const PLANS: { id: PlanTier; name: string; recommended?: boolean; description: s
   },
 ];
 
+// UX2-03: o cadastro só fala em pagamento quando a cobrança automática está
+// ligada (billing_required em /public/founders); sem ela a clínica entra
+// liberada e a tela não pode prometer um passo que não existe.
+const PAYMENT_STEP = "1. Cadastre a clínica e pague por Pix, boleto ou cartão.";
+const FREE_STEP = "1. Cadastre a clínica. Nesta fase o acesso é liberado sem cobrança.";
+
 const HIGHLIGHTS = [
-  { icon: Building2, text: "1. Cadastre a clínica e pague por Pix, boleto ou cartão." },
+  { icon: Building2, text: PAYMENT_STEP },
   { icon: Upload, text: "2. Envie faturamento, agenda, atendimento, estoque e prontuário — há um modelo pronto para cada um." },
   { icon: Sparkles, text: "3. Receba o jornal da manhã e os alertas com o que merece sua atenção." },
 ];
@@ -67,6 +74,17 @@ export function SignUpPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const googleState = location.state as SignUpLocationState | null;
+
+  const billingQuery = useQuery({
+    queryKey: ["public-founders"],
+    queryFn: () => apiClient.get<{ billing_required?: boolean }>("/api/v1/public/founders", { skipAuth: true }),
+    staleTime: 5 * 60_000,
+    retry: false,
+  });
+  // Na dúvida (endpoint fora), mantém o texto de pagamento: é o modelo
+  // padrão de produção e não promete gratuidade que pode não existir.
+  const billingRequired = billingQuery.data?.billing_required ?? true;
+  const highlights = HIGHLIGHTS.map((h, i) => (i === 0 && !billingRequired ? { ...h, text: FREE_STEP } : h));
 
   const [step, setStep] = useState(1);
   const [tradeName, setTradeName] = useState("");
@@ -109,8 +127,27 @@ export function SignUpPage() {
       if (password !== passwordConfirm) errors.passwordConfirm = "As senhas não coincidem.";
     }
     setFieldErrors(errors);
+    focusFirstError(errors);
     return Object.keys(errors).length === 0;
   }
+
+  // UX2-19: com erro, o foco vai para o primeiro campo errado (teclado e
+  // leitor de tela chegam direto nele), não fica parado no botão.
+  function focusFirstError(errors: FieldErrors) {
+    const order: [keyof FieldErrors, string][] = [
+      ["trade_name", "trade_name"],
+      ["cnpj", "cnpj"],
+      ["owner_name", "owner_name"],
+      ["email", "email"],
+      ["password", "password"],
+      ["_password", "password"],
+      ["passwordConfirm", "passwordConfirm"],
+    ];
+    const first = order.find(([key]) => errors[key]);
+    if (first) window.setTimeout(() => document.getElementById(first[1])?.focus(), 0);
+  }
+
+  const [termsError, setTermsError] = useState<string | null>(null);
 
   function handleContinue() {
     if (validateStep1()) setStep(2);
@@ -146,6 +183,11 @@ export function SignUpPage() {
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
+    if (!termsAccepted) {
+      setTermsError("Para criar a conta, aceite os termos acima.");
+      document.getElementById("terms_accepted")?.focus();
+      return;
+    }
     try {
       await register(
         googleCredential
@@ -169,9 +211,11 @@ export function SignUpPage() {
         for (const c of err.campos) mapped[c.campo.split(".").pop() as keyof FieldErrors] = c.problema;
         setFieldErrors(mapped);
         setStep(1);
+        focusFirstError(mapped);
       } else if (err instanceof ApiError && err.status === 409) {
         setFieldErrors({ cnpj: err.message });
         setStep(1);
+        focusFirstError({ cnpj: err.message });
       }
     }
   }
@@ -181,7 +225,7 @@ export function SignUpPage() {
       eyebrow="Inteligência para clínicas"
       headline="Comece a enxergar sua clínica por inteiro."
       subheadline="Crie a conta, envie as planilhas que seu sistema já exporta e receba os primeiros insights no mesmo dia — sem espera de aprovação."
-      highlights={HIGHLIGHTS}
+      highlights={highlights}
     >
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="w-full max-w-md">
         <AuthFormHeader title="Criar conta" subtitle="Sua clínica, sua conta de proprietário(a) e o plano — em dois passos" />
@@ -349,7 +393,9 @@ export function SignUpPage() {
               </div>
 
               <p className="mt-4 text-2xs text-ink-faint">
-                Depois do cadastro, você paga por Pix, boleto ou cartão e o sistema libera na hora.
+                {billingRequired
+                  ? "Depois do cadastro, você paga por Pix, boleto ou cartão e o sistema libera na hora."
+                  : "Nesta fase o acesso é liberado logo depois do cadastro, sem cobrança. Avisamos por e-mail antes de a cobrança começar."}
               </p>
 
               {/* LGPD ("vamos chegar a 9.5") — aceite explícito, nunca
@@ -359,9 +405,13 @@ export function SignUpPage() {
                 <input
                   id="terms_accepted"
                   type="checkbox"
-                  required
                   checked={termsAccepted}
-                  onChange={(e) => setTermsAccepted(e.target.checked)}
+                  aria-invalid={termsError ? true : undefined}
+                  aria-describedby={termsError ? "terms_error" : undefined}
+                  onChange={(e) => {
+                    setTermsAccepted(e.target.checked);
+                    if (e.target.checked) setTermsError(null);
+                  }}
                   className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded border-border-default text-accent focus:ring-accent"
                 />
                 <span>
@@ -381,6 +431,12 @@ export function SignUpPage() {
                 </span>
               </label>
 
+              {termsError && (
+                <p id="terms_error" role="alert" className="mt-2 text-xs text-denied">
+                  {termsError}
+                </p>
+              )}
+
               {registerError && (
                 <div role="alert" className="mt-4 rounded-md border border-denied/25 bg-denied-bg px-3 py-2 text-xs text-denied">
                   {registerError}
@@ -398,8 +454,9 @@ export function SignUpPage() {
                 </button>
                 <button
                   type="submit"
-                  disabled={isRegistering || !termsAccepted}
-                  className="flex flex-1 items-center justify-center gap-1.5 rounded-[11px] bg-brand px-3 py-2.5 text-sm font-medium text-white transition-all duration-150 hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={isRegistering}
+                  aria-disabled={!termsAccepted || undefined}
+                  className={`flex flex-1 items-center justify-center gap-1.5 rounded-[11px] bg-brand px-3 py-2.5 text-sm font-medium text-white transition-all duration-150 hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60${termsAccepted ? "" : " opacity-60"}`}
                 >
                   {isRegistering ? "Criando conta..." : "Criar conta"}
                 </button>

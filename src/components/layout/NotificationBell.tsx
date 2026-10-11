@@ -98,7 +98,7 @@ export function NotificationBell() {
         onClick={() => setIsOpen((v) => !v)}
         aria-label={unreadCount > 0 ? `Notificações — ${plural(unreadCount, "não lida", "não lidas")}` : "Notificações"}
         aria-expanded={isOpen}
-        className="relative flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[11px] border border-border-hairline text-ink transition-colors hover:bg-canvas-raised/70"
+        className="relative flex h-[38px] w-[38px] max-sm:h-11 max-sm:w-11 shrink-0 items-center justify-center rounded-[11px] border border-border-hairline text-ink transition-colors hover:bg-canvas-raised/70"
       >
         <Bell aria-hidden size={15} strokeWidth={2} />
         {unreadCount > 0 && (

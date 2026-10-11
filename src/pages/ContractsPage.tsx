@@ -1,5 +1,5 @@
 import { DenialModelStatusNote } from "@/components/dashboard/DenialModelStatusNote";
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import {
@@ -19,6 +19,7 @@ import {
 import { Button } from "@/components/ui/Button";
 import { Badge, type BadgeTone } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { TextField, SelectField } from "@/components/ui/FormField";
 import { Pagination } from "@/components/ui/Pagination";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -50,6 +51,7 @@ import type {
   PaginatedResponse,
 } from "@/lib/types";
 import { MoneyInput } from "@/components/ui/MoneyField";
+import { formatDateBR } from "@/lib/dates";
 
 // Desativação (não exclusão) de Operadoras/Planos — achado do usuário:
 // um convênio/plano cadastrado errado ou duplicado não tinha NENHUMA
@@ -68,17 +70,13 @@ function formatMoney(value: number): string {
 }
 
 function formatDate(iso: string): string {
-  return new Intl.DateTimeFormat("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).format(new Date(iso));
+  return formatDateBR(iso, { day: "2-digit", month: "2-digit", year: "numeric", });
 }
 
 const STATUS_LABELS: Record<Contract["status"], string> = {
-  rascunho: "Rascunho (aguardando extração)",
-  em_revisao: "Em revisão (conferir com IA)",
-  homologado: "Homologado",
+  rascunho: "Rascunho (tabela ainda não lida)",
+  em_revisao: "Em conferência",
+  homologado: "Tabela aprovada",
 };
 
 const STATUS_TONE: Record<Contract["status"], BadgeTone> = {
@@ -460,7 +458,7 @@ function ManualContractModal({
       apiClient.post<Contract>("/api/v1/contracts", payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["contracts"] });
-      showSuccess("Contrato cadastrado e homologado com sucesso.");
+      showSuccess("Contrato cadastrado e tabela aprovada.");
       resetAndClose();
     },
     onError: (err) => {
@@ -480,7 +478,18 @@ function ManualContractModal({
     setValidUntil("");
     setItems([{ tuss_code: "", procedure_name: "", agreed_price: 0 }]);
     setFieldErrors({});
+    setConfirmDiscard(false);
     onClose();
+  }
+
+  // UX2-12: Esc ou clique fora não apagam o que foi digitado sem perguntar.
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const filledItems = items.filter((it) => it.tuss_code.trim() || (it.procedure_name ?? "").trim() || it.agreed_price > 0).length;
+  const isDirty = Boolean(planId || validFrom || validUntil) || filledItems > 0;
+  function requestClose() {
+    if (mutation.isPending) return;
+    if (isDirty) setConfirmDiscard(true);
+    else resetAndClose();
   }
 
   function updateItem(index: number, patch: Partial<ContractItemInput>) {
@@ -493,7 +502,7 @@ function ManualContractModal({
     e.preventDefault();
     setFieldErrors({});
     if (!planId) {
-      setFieldErrors({ insurance_plan_id: "Selecione um plano." });
+      setFieldErrors({ insurance_plan_id: "Selecione o convênio." });
       return;
     }
     mutation.mutate({
@@ -505,20 +514,21 @@ function ManualContractModal({
   }
 
   return (
+    <>
     <Modal
       title="Cadastro manual de contrato"
       isOpen={isOpen}
-      onClose={resetAndClose}
+      onClose={requestClose}
       size="2xl"
     >
       <form onSubmit={handleSubmit}>
         <p className="mb-4 text-xs text-ink-faint">
           Para 1-2 procedimentos que você já sabe de cor. Se o contrato tem uma
-          tabela de preços extensa em PDF, use “Enviar PDF (IA)” em vez disso —
-          a IA lê o documento pra você.
+          tabela de preços extensa em PDF, use “Enviar contrato (PDF)” em vez
+          disso: o Insighta lê o documento para você.
         </p>
         <SelectField
-          label="Plano"
+          label="Convênio"
           required
           value={planId}
           onChange={(e) => setPlanId(e.target.value)}
@@ -616,15 +626,29 @@ function ManualContractModal({
         </div>
 
         <div className="mt-5 flex justify-end gap-2">
-          <Button type="button" variant="secondary" onClick={resetAndClose}>
+          <Button type="button" variant="secondary" onClick={requestClose}>
             Cancelar
           </Button>
           <Button type="submit" disabled={mutation.isPending}>
-            {mutation.isPending ? "Salvando..." : "Salvar e homologar"}
+            {mutation.isPending ? "Salvando..." : "Salvar e aprovar tabela"}
           </Button>
         </div>
       </form>
     </Modal>
+    <ConfirmDialog
+      isOpen={confirmDiscard}
+      title="Descartar o que foi digitado?"
+      message={
+        filledItems > 0
+          ? `${filledItems === 1 ? "1 item digitado será descartado" : `${filledItems} itens digitados serão descartados`} junto com o convênio e a vigência.`
+          : "O convênio e a vigência escolhidos serão descartados."
+      }
+      confirmLabel="Descartar"
+      cancelLabel="Continuar editando"
+      onConfirm={resetAndClose}
+      onCancel={() => setConfirmDiscard(false)}
+    />
+    </>
   );
 }
 
@@ -636,10 +660,12 @@ function UploadContractModal({
   isOpen,
   onClose,
   plans,
+  onUploaded,
 }: {
   isOpen: boolean;
   onClose: () => void;
   plans: InsurancePlan[];
+  onUploaded: (contract: Contract) => void;
 }) {
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
@@ -652,12 +678,12 @@ function UploadContractModal({
   const mutation = useMutation({
     mutationFn: (formData: FormData) =>
       apiClient.upload<Contract>("/api/v1/contracts/upload", formData),
-    onSuccess: () => {
+    // UX2-13: a leitura começa sozinha e a conferência abre em seguida.
+    onSuccess: (contract) => {
       queryClient.invalidateQueries({ queryKey: ["contracts"] });
-      showSuccess(
-        "PDF enviado. Agora clique em “Extrair com IA” na linha do contrato para gerar a tabela de preços.",
-      );
+      showSuccess("Contrato enviado. Lendo a tabela de preços para você conferir.");
       resetAndClose();
+      onUploaded(contract);
     },
     onError: (err) => showError(getApiErrorMessage(err)),
   });
@@ -675,7 +701,7 @@ function UploadContractModal({
     e.preventDefault();
     setFieldErrors({});
     if (!planId) {
-      setFieldErrors({ insurance_plan_id: "Selecione um plano." });
+      setFieldErrors({ insurance_plan_id: "Selecione o convênio." });
       return;
     }
     if (!file) {
@@ -692,17 +718,17 @@ function UploadContractModal({
 
   return (
     <Modal
-      title="Enviar PDF do contrato (IA)"
+      title="Enviar contrato (PDF)"
       isOpen={isOpen}
       onClose={resetAndClose}
     >
       <form onSubmit={handleSubmit}>
         <p className="mb-4 text-xs text-ink-faint">
-          A IA lê o PDF e monta a tabela de preços pra você conferir antes de
-          homologar — nada é salvo direto sem revisão humana.
+          O Insighta lê o PDF e monta a tabela de preços para você conferir
+          antes de aprovar. Nada vale sem a sua revisão.
         </p>
         <SelectField
-          label="Plano"
+          label="Convênio"
           required
           value={planId}
           onChange={(e) => setPlanId(e.target.value)}
@@ -814,7 +840,7 @@ function ReviewContractModal({
       );
       queryClient.invalidateQueries({ queryKey: ["contracts"] });
     } else if (job.status === "failed") {
-      showError(job.error ?? "Falha ao extrair o contrato com IA.");
+      showError(job.error ?? "Não foi possível ler a tabela de preços do contrato.");
     }
     setExtractJobId(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -823,6 +849,17 @@ function ReviewContractModal({
   const isExtracting =
     enqueueExtractMutation.isPending ||
     (extractJobId !== null && extractJobQuery.data?.status !== "failed");
+
+  // UX2-13: abrir a conferência já começa a leitura (uma vez por contrato);
+  // o botão "Ler tabela de preços" fica para tentar de novo após uma falha.
+  const autoStartedFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (!contract || contract.status === "homologado" || !contract.pdf_s3_key) return;
+    if (autoStartedFor.current === contract.id) return;
+    autoStartedFor.current = contract.id;
+    enqueueExtractMutation.mutate(contract.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contract?.id]);
 
   const homologateMutation = useMutation({
     mutationFn: ({
@@ -839,7 +876,7 @@ function ReviewContractModal({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["contracts"] });
       showSuccess(
-        "Contrato homologado — a tabela de preços já vale para o motor anti-glosa.",
+        "Tabela aprovada. Os preços já valem na comparação com o faturamento.",
       );
       handleClose();
     },
@@ -850,6 +887,7 @@ function ReviewContractModal({
     setPreview(null);
     setReviewItems([]);
     setExtractJobId(null);
+    autoStartedFor.current = null;
     onClose();
   }
 
@@ -872,8 +910,8 @@ function ReviewContractModal({
     <Modal
       title={
         planName
-          ? `Conferência da extração por IA — ${planName}`
-          : "Conferência da extração por IA"
+          ? `Conferir tabela de preços — ${planName}`
+          : "Conferir tabela de preços"
       }
       isOpen={Boolean(contract)}
       onClose={handleClose}
@@ -882,14 +920,15 @@ function ReviewContractModal({
       {!preview && (
         <div className="py-6 text-center">
           <p className="mb-4 text-sm text-ink-muted">
-            Este contrato ainda não foi extraído. Clique abaixo para a IA ler o
-            PDF e propor a tabela de preços.
+            {isExtracting
+              ? "Lendo o PDF e montando a tabela de preços. Leva alguns segundos."
+              : "A tabela de preços deste contrato ainda não foi lida."}
           </p>
           <Button
             onClick={() => enqueueExtractMutation.mutate(contract.id)}
             disabled={isExtracting}
           >
-            {isExtracting ? "Extraindo com IA..." : "Extrair com IA"}
+            {isExtracting ? "Lendo o contrato..." : "Ler tabela de preços"}
           </Button>
           {enqueueExtractMutation.isError && (
             <p className="mt-3 text-xs text-denied">
@@ -912,8 +951,8 @@ function ReviewContractModal({
             {preview.pages_total
               ? `${extractionPagesNote(preview.pages_total, preview.pages_sent_to_ai)} `
               : ""}
-            Confira e corrija os itens abaixo antes de homologar — só depois de
-            “Salvar e homologar” a tabela passa a valer para o motor anti-glosa.
+            Confira e corrija os itens abaixo. Só depois de “Aprovar tabela” os
+            preços passam a valer na comparação com o faturamento.
           </p>
           <div className="max-h-80 space-y-3 overflow-y-auto">
             {reviewItems.map((item, index) => {
@@ -1006,9 +1045,7 @@ function ReviewContractModal({
                 homologateMutation.isPending || reviewItems.length === 0
               }
             >
-              {homologateMutation.isPending
-                ? "Salvando..."
-                : "Salvar e Homologar"}
+              {homologateMutation.isPending ? "Aprovando..." : "Aprovar tabela"}
             </Button>
           </div>
         </div>
@@ -1086,7 +1123,7 @@ function DeleteDraftContractButton({ contractId }: { contractId: string }) {
 }
 
 export function ContractsPage() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<PayerTabId>(() => {
     const tab = searchParams.get("tab");
     return tab && (PAYER_TAB_IDS as string[]).includes(tab)
@@ -1105,6 +1142,25 @@ export function ContractsPage() {
     null,
   );
   const [contractsOffset, setContractsOffset] = useState(0);
+
+  // UX2-13: vindo de Importar dados › Contratos, "?conferir=<id>" abre a
+  // conferência do contrato recém-enviado (e a leitura começa sozinha).
+  const conferirId = searchParams.get("conferir");
+  const conferirQuery = useQuery({
+    queryKey: ["contracts", "detail", conferirId],
+    queryFn: () => apiClient.get<Contract>(`/api/v1/contracts/${conferirId}`),
+    enabled: Boolean(conferirId),
+    staleTime: Infinity,
+  });
+  const openedConferir = useRef(false);
+  useEffect(() => {
+    if (openedConferir.current || !conferirQuery.data) return;
+    openedConferir.current = true;
+    setReviewingContract(conferirQuery.data);
+    const next = new URLSearchParams(searchParams);
+    next.delete("conferir");
+    setSearchParams(next, { replace: true });
+  }, [conferirQuery.data, searchParams, setSearchParams]);
 
   // Ativos apenas — alimenta os SELECTs de "operadora"/"plano" nos
   // formulários de cadastro novo (Novo plano, Cadastro manual, Enviar
@@ -1447,7 +1503,7 @@ export function ContractsPage() {
                     onClick={() => setIsUploadModalOpen(true)}
                   >
                     <Sparkles size={12} />
-                    Enviar PDF (IA)
+                    Enviar contrato (PDF)
                   </Button>
                 </div>
               }
@@ -1471,7 +1527,7 @@ export function ContractsPage() {
                 <table className="w-full text-left text-sm">
                   <thead>
                     <tr className="border-b border-border-hairline text-xs font-medium text-ink-muted">
-                      <th className="px-4 py-2.5 font-medium">Plano</th>
+                      <th className="px-4 py-2.5 font-medium">Convênio</th>
                       <th className="px-4 py-2.5 font-medium">Vigência</th>
                       <th className="px-4 py-2.5 font-medium">Status</th>
                       <th className="px-4 py-2.5 font-medium">Itens</th>
@@ -1512,7 +1568,7 @@ export function ContractsPage() {
                                 size="xs"
                                 onClick={() => setReviewingContract(c)}
                               >
-                                Extrair / Conferir
+                                {c.status === "rascunho" ? "Ler tabela de preços" : "Conferir tabela"}
                               </Button>
                             )}
                             {c.status === "rascunho" && (
@@ -1561,6 +1617,7 @@ export function ContractsPage() {
         isOpen={isUploadModalOpen}
         onClose={() => setIsUploadModalOpen(false)}
         plans={plans ?? []}
+        onUploaded={(contract) => setReviewingContract(contract)}
       />
       <ReviewContractModal
         contract={reviewingContract}

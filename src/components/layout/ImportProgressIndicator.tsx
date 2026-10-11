@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { Loader2 } from "lucide-react";
+import { Clock, Loader2 } from "lucide-react";
 import { useToast } from "@/context/ToastContext";
 import { ACTIVE_STATES, processingPercent, type DirectUploadStatus } from "@/lib/directUpload";
 import { useDirectUploads } from "@/lib/useDirectUploads";
@@ -57,10 +57,21 @@ export function ImportProgressIndicator() {
   if (active.length === 0 || location.pathname === "/importar") return null;
   const first = active[0];
   const percent = processingPercent(first);
-  const label =
-    active.length > 1
-      ? `Importando ${active.length} arquivos…`
-      : `Importando ${first.original_filename ?? "arquivo"}${percent !== null ? ` — ${percent}%` : "…"}`;
+  // UX2-09: "Importando" só quando algo está sendo processado de fato; na
+  // fila é "Na fila", e atraso aparece aqui também, não só em Importar dados.
+  const delayed = active.some((u) => u.queue_delayed);
+  const allQueued = active.every((u) => u.status === "na_fila");
+  const label = delayed
+    ? active.length > 1
+      ? `${active.length} arquivos com processamento atrasado`
+      : `${first.original_filename ?? "Arquivo"}: processamento atrasado`
+    : allQueued
+      ? active.length > 1
+        ? `${active.length} arquivos na fila…`
+        : `Na fila: ${first.original_filename ?? "arquivo"}…`
+      : active.length > 1
+        ? `Importando ${active.length} arquivos…`
+        : `Importando ${first.original_filename ?? "arquivo"}${percent !== null ? ` — ${percent}%` : "…"}`;
 
   return (
     <Link
@@ -69,7 +80,11 @@ export function ImportProgressIndicator() {
       aria-live="polite"
       className="fixed bottom-5 right-5 z-40 flex max-w-[calc(100vw-2.5rem)] items-center gap-2 rounded-full border border-border-hairline bg-canvas-surface px-4 py-2 text-sm text-ink shadow-elevated hover:bg-canvas-raised"
     >
-      <Loader2 className="h-4 w-4 shrink-0 animate-spin text-accent" aria-hidden />
+      {delayed ? (
+        <Clock className="h-4 w-4 shrink-0 text-pending" aria-hidden />
+      ) : (
+        <Loader2 className="h-4 w-4 shrink-0 animate-spin text-accent" aria-hidden />
+      )}
       <span className="truncate">{label}</span>
     </Link>
   );

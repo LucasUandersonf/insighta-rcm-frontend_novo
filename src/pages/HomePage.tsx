@@ -36,6 +36,7 @@ import type {
   Tenant,
   TodayAgenda,
 } from "@/lib/types";
+import { onboardingStepsFor } from "@/lib/onboardingSteps";
 
 /**
  * Home — "Briefing do dia" (canvas "Insighta RCM — Redesign 2026",
@@ -161,24 +162,17 @@ function FirstRunWizard({ canUpload }: { canUpload: boolean }) {
  * suporte: dados, coordenadores (quem recebe cada alerta) e a checagem
  * completa em Saúde da conta.
  */
-const ONBOARDING_STEPS = [
-  { n: 1, title: "Importe os dados", text: "Envie a planilha do seu sistema em Importar dados — ou baixe o modelo de cada área.", to: "/importar" },
-  {
-    n: 2,
-    title: "Defina os coordenadores",
-    text: "Quem cuida de Agendamento, Faturamento, Estoque e Assistencial recebe os alertas do setor. Convide a pessoa em Usuários.",
-    to: "/admin/usuarios",
-  },
-  { n: 3, title: "Confira a saúde da conta", text: "Contratos, meta, grade dos profissionais e o que mais faltar — com o atalho para resolver.", to: "/admin/saude-da-conta" },
-];
-
 function OnboardingSteps() {
+  const { user } = useAuth();
+  const steps = onboardingStepsFor(user?.role);
   return (
-    <ol className="mt-2 grid w-full gap-3 sm:grid-cols-3">
-      {ONBOARDING_STEPS.map((step) => (
-        <li key={step.n}>
+    <ol className={cn("mt-2 grid w-full gap-3", steps.length > 1 && "sm:grid-cols-3")}>
+      {steps.map((step, i) => (
+        <li key={step.to}>
           <Link to={step.to} className="flex h-full flex-col gap-1 rounded-[14px] border border-border-hairline bg-canvas-surface/60 p-3.5 hover:border-accent/40">
-            <span className="text-2xs font-semibold uppercase tracking-[0.08em] text-accent-muted">Passo {step.n}</span>
+            {steps.length > 1 && (
+              <span className="text-2xs font-semibold uppercase tracking-[0.08em] text-accent-muted">Passo {i + 1}</span>
+            )}
             <span className="text-sm font-medium text-ink">{step.title}</span>
             <span className="text-xs leading-relaxed text-ink-muted">{step.text}</span>
           </Link>
@@ -634,6 +628,7 @@ export function HomePage() {
     ? !readiness.sources.some((s) => ["faturamento", "agenda", "atendimento"].includes(s))
     : ingestionHistory?.total === 0;
   const isFirstRun = !isLoadingIngestion && !(canViewAnalytics && isLoadingReadiness) && hasNoData;
+  const agendaMissing = Array.isArray(readiness?.missing) && readiness.missing.includes("agenda");
   const missingText = readiness ? missingSourcesText(readiness.missing.filter((m) => m === "faturamento" || m === "agenda")) : null;
   const [headline, ...others] = priorities;
   const secondary = others.slice(0, 2);
@@ -758,7 +753,7 @@ export function HomePage() {
   const updatedAt = data?.generated_at ? new Date(data.generated_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : null;
   const nextUpdate = new Date(now.getTime() + REFRESH_MS).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
 
-  const countsSentence = `${plural(critical, "ponto crítico", "pontos críticos")}, ${warning} de atenção e ${plural(positive, "boa notícia", "boas notícias")} desde ontem.`;
+  const countsSentence = `${plural(critical, "ponto crítico", "pontos críticos")}, ${warning} de atenção e ${plural(positive, "boa notícia", "boas notícias")} nesta edição.`;
   const subtitle = isFirstRun
     ? "Sua clínica ainda não tem dado importado — vamos resolver isso."
     : error
@@ -891,9 +886,19 @@ export function HomePage() {
                     <h3 id="agenda-de-hoje" className="text-[11px] font-bold uppercase tracking-[0.12em] text-ink-faint">
                       A agenda de hoje
                     </h3>
-                    <p className="font-serif text-[22px] leading-[1.35] text-ink">{agenda.headline}</p>
+                    {agendaMissing ? (
+                      // UX2-18: sem agenda importada, "nenhuma consulta hoje" lia como agenda vazia.
+                      <p className="font-serif text-[22px] leading-[1.35] text-ink">
+                        Importe a agenda para ver as consultas de hoje.{" "}
+                        <Link to="/importar" className="text-base text-accent hover:underline">
+                          Importar agenda →
+                        </Link>
+                      </p>
+                    ) : (
+                      <p className="font-serif text-[22px] leading-[1.35] text-ink">{agenda.headline}</p>
+                    )}
                     <div className="flex flex-col gap-2.5">
-                      {agenda.periods.map((period) => (
+                      {!agendaMissing && agenda.periods.map((period) => (
                         <div key={period.label} className="grid grid-cols-[72px_minmax(0,1fr)] gap-3 text-sm leading-normal">
                           <span className="tabular text-ink-faint">{period.label}</span>
                           <span className="text-ink-soft">

@@ -145,6 +145,16 @@
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (d) {
         if (!d) return;
+        // UX2-03/14: sem cobrança automática ligada, os textos de pagamento
+        // dão lugar ao modelo real (acesso liberado no cadastro).
+        if (d.billing_required === false) {
+          document.querySelectorAll("[data-billing-free]").forEach(function (el) {
+            el.textContent = el.getAttribute("data-billing-free");
+          });
+          document.querySelectorAll("[data-billing-free-html]").forEach(function (el) {
+            el.innerHTML = el.getAttribute("data-billing-free-html");
+          });
+        }
         var totalEl = document.querySelector("[data-founders-total]");
         remainingEl.textContent = String(d.slots_remaining);
         if (totalEl) totalEl.textContent = String(d.slots_total);

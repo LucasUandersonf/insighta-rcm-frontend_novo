@@ -481,7 +481,7 @@ describe("UploadCenterPage — aba Contratos de convênio (PDF)", () => {
     const form = screen.getByRole("button", { name: "Enviar contrato" }).closest("form")!;
     fireEvent.submit(form);
 
-    expect(await screen.findByText("Selecione um plano.")).toBeInTheDocument();
+    expect(await screen.findByText("Selecione o convênio.")).toBeInTheDocument();
     expect(screen.getByText("Informe a vigência inicial.")).toBeInTheDocument();
     expect(screen.getByText("Selecione o PDF do contrato.")).toBeInTheDocument();
     expect(apiClient.upload).not.toHaveBeenCalled();
@@ -507,7 +507,7 @@ describe("UploadCenterPage — aba Contratos de convênio (PDF)", () => {
     renderWithProviders(<UploadCenterPage />);
     await goToContractsTab();
 
-    const planSelect = await screen.findByLabelText(/Plano/);
+    const planSelect = await screen.findByLabelText(/Convênio/);
     await screen.findByRole("option", { name: "Unimed Regional" });
     fireEvent.change(planSelect, { target: { value: "plan-1" } });
     fireEvent.change(screen.getByLabelText(/Vigência a partir de/), { target: { value: "2026-10-01" } });
@@ -524,8 +524,9 @@ describe("UploadCenterPage — aba Contratos de convênio (PDF)", () => {
     expect(formData.get("valid_from")).toBe("2026-10-01");
     expect((formData.get("file") as File).name).toBe("contrato.pdf");
 
+    // UX2-13: enviar já começa a leitura e leva para a conferência.
     expect(
-      await screen.findByText("PDF enviado. Em Convênios › Contratos, leia a tabela de preços e aprove.")
+      await screen.findByText("Contrato enviado. Lendo a tabela de preços para você conferir.")
     ).toBeInTheDocument();
   });
 });

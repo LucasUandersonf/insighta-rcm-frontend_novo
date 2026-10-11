@@ -16,6 +16,7 @@ import { getApiErrorMessage } from "@/lib/query-client";
 import { useToast } from "@/context/ToastContext";
 import { useAuth } from "@/context/AuthContext";
 import type { Guia, GuiaTipo, InsurancePlan, Lote, LoteCreateRequest, LoteStatus, PaginatedResponse } from "@/lib/types";
+import { formatDateBR } from "@/lib/dates";
 
 const LOTES_PAGE_SIZE = 20;
 
@@ -42,8 +43,7 @@ const STATUS_TONE: Record<LoteStatus, BadgeTone> = {
 };
 
 function formatDate(iso: string | null): string {
-  if (!iso) return "—";
-  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(iso));
+  return formatDateBR(iso, { day: "2-digit", month: "2-digit", year: "numeric" }, "—");
 }
 
 // ---------------------------------------------------------------------
@@ -353,7 +353,7 @@ export function LotesPage() {
       <PageHeader
         icon={Layers}
         title="Lotes de faturamento"
-        subtitle="Agrupe guias do mesmo convênio e tipo, feche o lote e gere a fatura em Faturas — o mesmo fluxo de 'lote' que um ERP de faturamento médico já usa."
+        subtitle="Junte as guias do mesmo convênio e tipo num lote, feche o lote e gere a fatura em Faturas."
         action={
           canWrite ? (
             <Button onClick={() => setIsCreateModalOpen(true)} className="flex items-center gap-1.5">

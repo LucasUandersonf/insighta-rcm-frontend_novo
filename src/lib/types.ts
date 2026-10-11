@@ -1024,6 +1024,10 @@ export interface HealthScore {
   components: HealthScoreComponent[];
   window_days: number;
   trend: HealthScoreTrend | null; // null = ainda não há fotografia de referência (base nova)
+  /** UX2-01: áreas fora da nota por falta de dado. Nota só com 2 de 3 áreas. */
+  missing_components?: { key: string; label: string; reason: string }[];
+  /** UX2-01: título do alerta crítico que limita a nota a 89. */
+  capped_by_alert?: string | null;
 }
 
 // "Equilíbrio Insighta" (Balanced Scorecard, perna Cliente) — resumo de
@@ -2653,6 +2657,9 @@ export interface AskResponse {
   answered_by?: "insighta" | "ia";
   /** "Entendi: qual convênio mais glosa." — só nas respostas prontas. */
   understood?: string | null;
+  /** UX2-26: link para a tela quando a pergunta é "onde fica". */
+  action_label?: string | null;
+  action_href?: string | null;
 }
 
 export interface NegotiationArgument {
@@ -2732,6 +2739,8 @@ export interface AiUsageSummary {
   renews_on: string;
   cost_usd: number;
   items: AiQuotaItem[];
+  /** UX2-04: false = IA desligada; a tela não mostra cota de perguntas à IA. */
+  ai_enabled?: boolean;
 }
 
 /** GET /ingestion/templates — Bloco 2: modelo de importação por perna. */

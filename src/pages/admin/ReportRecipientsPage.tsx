@@ -35,7 +35,7 @@ function formatDateTime(iso: string): string {
 }
 
 const REPORT_TYPE_LABELS: Record<string, string> = {
-  weekly_summary: "Resumo semanal (WhatsApp)",
+  weekly_summary: "Resumo semanal",
   daily_risk_alert: "Alerta de risco de falta (próximas 24h)",
 };
 
@@ -58,14 +58,26 @@ const EMPTY_FORM: RecipientFormValues = {
   report_types: [],
 };
 
+/** UX2-02: canais de envio de fato ligados neste ambiente. */
+function useReportChannels() {
+  return useQuery({
+    queryKey: ["reports", "channels"],
+    queryFn: () => apiClient.get<{ whatsapp: boolean; email: boolean }>("/api/v1/reports/channels"),
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  });
+}
+
 function RecipientModal({
   isOpen,
   onClose,
   editing,
+  whatsappEnabled,
 }: {
   isOpen: boolean;
   onClose: () => void;
   editing: ReportRecipient | null;
+  whatsappEnabled: boolean;
 }) {
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
@@ -142,15 +154,17 @@ function RecipientModal({
           onChange={(e) => setValues((v) => ({ ...v, name: e.target.value }))}
           error={fieldErrors["name"]}
         />
-        <TextField
-          label="WhatsApp (com DDI/DDD)"
-          placeholder="+55 11 91234-5678"
-          value={values.phone_whatsapp}
-          onChange={(e) =>
-            setValues((v) => ({ ...v, phone_whatsapp: e.target.value }))
-          }
-          error={fieldErrors["phone_whatsapp"]}
-        />
+        {whatsappEnabled && (
+          <TextField
+            label="WhatsApp (com DDI/DDD)"
+            placeholder="+55 11 91234-5678"
+            value={values.phone_whatsapp}
+            onChange={(e) =>
+              setValues((v) => ({ ...v, phone_whatsapp: e.target.value }))
+            }
+            error={fieldErrors["phone_whatsapp"]}
+          />
+        )}
         <TextField
           label="E-mail"
           type="email"
@@ -159,7 +173,9 @@ function RecipientModal({
           error={fieldErrors["email"]}
         />
         <p className="-mt-2 mb-4 text-2xs text-ink-faint">
-          Informe pelo menos um canal de contato (WhatsApp ou e-mail).
+          {whatsappEnabled
+            ? "Informe pelo menos um canal de contato (WhatsApp ou e-mail)."
+            : "Os relatórios são enviados por e-mail. O envio por WhatsApp ainda não está disponível."}
         </p>
 
         <label className="mb-1 block text-xs font-medium text-ink-muted">
@@ -194,8 +210,7 @@ function RecipientModal({
           })}
         </div>
         <p className="-mt-2 mb-4 text-2xs text-ink-faint">
-          Nenhum selecionado = recebe todos os tipos de relatório disparados
-          para o tenant.
+          Sem nenhum marcado, a pessoa recebe todos os relatórios da clínica.
         </p>
 
         {fieldErrors["__root__"] && (
@@ -279,11 +294,14 @@ export function ReportRecipientsPage() {
   // um jeito de pedir agora. Sem `period_start`/`period_end` no payload,
   // o backend usa "desde segunda até hoje" por padrão (ver DECISÃO em
   // app/api/v1/endpoints/reports.py).
+  const { data: channels } = useReportChannels();
+  const whatsappEnabled = !!channels?.whatsapp;
   const sendNowMutation = useMutation({
     mutationFn: () =>
       apiClient.post<WeeklyReportResponse>("/api/v1/reports/weekly/send", {}),
     onSuccess: (data) => {
-      if (data.sent_via_whatsapp) showSuccess(data.detail);
+      // Enviado por qualquer canal (e-mail ou WhatsApp) é sucesso.
+      if (data.sent > 0) showSuccess(data.detail);
       else showError(data.detail);
     },
     onError: (err) => showError(getApiErrorMessage(err)),
@@ -300,7 +318,8 @@ export function ReportRecipientsPage() {
         {},
       ),
     onSuccess: (data) => {
-      if (data.sent_via_whatsapp) showSuccess(data.detail);
+      // Enviado por qualquer canal (e-mail ou WhatsApp) é sucesso.
+      if (data.sent > 0) showSuccess(data.detail);
       else showError(data.detail);
     },
     onError: (err) => showError(getApiErrorMessage(err)),
@@ -311,7 +330,7 @@ export function ReportRecipientsPage() {
       <PageHeader
         icon={Send}
         title="Destinatários de relatórios"
-        subtitle="Quem recebe o resumo semanal e o alerta de risco de falta por WhatsApp e e-mail. Até 20 destinatários; e-mails de fora da equipe confirmam pelo link antes de receber."
+        subtitle={`Quem recebe o resumo semanal e o alerta de risco de falta por ${whatsappEnabled ? "WhatsApp e e-mail" : "e-mail"}. Até 20 destinatários; e-mails de fora da equipe confirmam pelo link antes de receber.`}
         action={
           <div className="flex items-center gap-2">
             <Button
@@ -371,7 +390,7 @@ export function ReportRecipientsPage() {
             <thead>
               <tr className="border-b border-border-hairline text-xs font-medium text-ink-muted">
                 <th className="px-4 py-2.5 font-medium">Nome</th>
-                <th className="px-4 py-2.5 font-medium">WhatsApp</th>
+                {whatsappEnabled && <th className="px-4 py-2.5 font-medium">WhatsApp</th>}
                 <th className="px-4 py-2.5 font-medium">E-mail</th>
                 <th className="px-4 py-2.5 font-medium">Recebe</th>
                 <th className="px-4 py-2.5 font-medium">Status</th>
@@ -386,9 +405,11 @@ export function ReportRecipientsPage() {
                   className="border-b border-border-hairline last:border-0 transition-colors hover:bg-canvas-raised/60"
                 >
                   <td className="px-4 py-2.5 text-ink">{r.name}</td>
-                  <td className="tabular px-4 py-2.5 font-mono text-ink-muted">
-                    {r.phone_whatsapp ?? "—"}
-                  </td>
+                  {whatsappEnabled && (
+                    <td className="tabular px-4 py-2.5 font-mono text-ink-muted">
+                      {r.phone_whatsapp ?? "—"}
+                    </td>
+                  )}
                   <td className="px-4 py-2.5 text-ink-muted">
                     {r.email ?? "—"}
                     {r.email && !r.email_confirmed_at ? (
@@ -477,6 +498,7 @@ export function ReportRecipientsPage() {
           valores do registro editado anteriormente (mesmo bug já corrigido
           antes em DenialAppealsPage: estado de modal com referência velha). */}
       <RecipientModal
+        whatsappEnabled={whatsappEnabled}
         key={editingId ?? "new"}
         isOpen={isModalOpen || editingId !== null}
         onClose={() => {

@@ -192,7 +192,24 @@ interface RequestOptions {
   _isRetryAfterRefresh?: boolean;
 }
 
-async function request<T>(
+// UX2-22: clique duplo em "Salvar" mandava duas requisições iguais (o botão
+// só fica desabilitado no render seguinte). Enquanto uma escrita idêntica
+// (mesmo método, caminho e corpo) está em andamento, a segunda reaproveita
+// a resposta da primeira em vez de gravar de novo.
+const inFlightWrites = new Map<string, Promise<unknown>>();
+
+function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const method = options.method ?? "GET";
+  if (method === "GET" || options._isRetryAfterRefresh) return requestOnce<T>(path, options);
+  const key = `${method} ${path} ${options.body === undefined ? "" : JSON.stringify(options.body)}`;
+  const pending = inFlightWrites.get(key);
+  if (pending) return pending as Promise<T>;
+  const promise = requestOnce<T>(path, options).finally(() => inFlightWrites.delete(key));
+  inFlightWrites.set(key, promise);
+  return promise;
+}
+
+async function requestOnce<T>(
   path: string,
   options: RequestOptions = {},
 ): Promise<T> {
@@ -243,7 +260,7 @@ async function request<T>(
     ) {
       const refreshed = await attemptSilentRefresh();
       if (refreshed) {
-        return request<T>(path, { ...options, _isRetryAfterRefresh: true });
+        return requestOnce<T>(path, { ...options, _isRetryAfterRefresh: true });
       }
     }
 

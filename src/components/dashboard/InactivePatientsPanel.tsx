@@ -6,6 +6,7 @@ import { RegisterOutreachButton } from "@/components/dashboard/RegisterOutreachB
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import type { InactivePatients } from "@/lib/types";
+import { formatDateBR } from "@/lib/dates";
 
 /**
  * Carteira de pacientes inativos — a lista real por trás da
@@ -26,7 +27,7 @@ import type { InactivePatients } from "@/lib/types";
  */
 
 function formatDate(iso: string): string {
-  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(iso));
+  return formatDateBR(iso, { day: "2-digit", month: "short", year: "numeric" });
 }
 
 function formatDaysInactive(days: number): string {

@@ -15,6 +15,7 @@ import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import type { BillingResponse, DataReadiness, PaginatedResponse } from "@/lib/types";
 import { denialReasonsText } from "@/lib/denialReasons";
+import { formatDateBR } from "@/lib/dates";
 
 /**
  * Fila de correção (Redesign 2026 — o antigo "Painel" saiu da barra).
@@ -79,9 +80,12 @@ export function BillingRiskQueuePage() {
     missingTables.length > 0
       ? `Sem tabela de preço ${missingTables.length === 1 ? "do convênio" : `dos ${missingTables.length} convênios`} (${missingTables.slice(0, 3).join(", ")}${missingTables.length > 3 ? "…" : ""}), ainda não conferimos os valores cobrados.`
       : "Sem tabela de preço dos convênios, ainda não conferimos os valores cobrados.";
-  const emptyText = lowCoverage
-    ? noCoverageText
-    : "Nenhum faturamento de alto risco em aberto — a fila de correção está limpa.";
+  const noBilling = Array.isArray(readiness?.sources) && !readiness.sources.includes("faturamento");
+  const emptyText = noBilling
+    ? "Nenhuma cobrança importada ainda. Assim que você importar o faturamento, as de maior risco aparecem aqui."
+    : lowCoverage
+      ? noCoverageText
+      : "Nenhum faturamento de alto risco em aberto — a fila de correção está limpa.";
 
   function clearPlanFilter() {
     setSearchParams((params) => {
@@ -168,7 +172,9 @@ export function BillingRiskQueuePage() {
                   ? "Nenhum faturamento de alto risco neste filtro no momento."
                   : lowCoverage
                     ? noCoverageText
-                    : "Nenhum faturamento de alto risco no momento — a fila está limpa."
+                    : noBilling
+                      ? "Nenhuma cobrança importada ainda."
+                      : "Nenhum faturamento de alto risco no momento — a fila está limpa."
               }
             />
           )}
@@ -231,7 +237,5 @@ export function BillingRiskQueuePage() {
 }
 
 function formatDate(iso: string): string {
-  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).format(
-    new Date(iso)
-  );
+  return formatDateBR(iso, { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 }

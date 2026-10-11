@@ -20,6 +20,7 @@ import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { cn } from "@/lib/cn";
 import type { AgendaFocus, InsightSeverity, SmartInsight, SmartInsights } from "@/lib/types";
+import { NO_DATA_TEXT, useNoBillingData } from "@/lib/useDataReadiness";
 
 /**
  * Redesenho da Sala de Comando ("menos BI, mais consultor"): esta
@@ -79,7 +80,7 @@ export type InsightWorkflowSlice = Pick<
 // Fundo do card manchete — degradê diagonal na cor da severidade, igual
 // ao "O que atacar primeiro" do canvas de design (Redesign 2026).
 const CATEGORY_LABEL_SHORT: Partial<Record<string, string>> = {
-  faturamento: "Convênios",
+  faturamento: "Faturamento",
   agenda: "Agenda",
   estoque: "Estoque",
   prontuario: "Prontuário",
@@ -419,6 +420,7 @@ function CategorySection({
 }
 
 function AllClearHero({ scoped = false }: { scoped?: boolean }) {
+  const noBilling = useNoBillingData();
   return (
     <BentoCard colSpan={12} glow="revenue" className="border border-revenue/25 bg-revenue-bg">
       <div className="flex items-start gap-3.5">
@@ -426,9 +428,11 @@ function AllClearHero({ scoped = false }: { scoped?: boolean }) {
           <CheckCircle2 size={17} strokeWidth={2.25} />
         </span>
         <div>
-          <h2 className="font-serif text-[22px] font-medium text-ink">Tudo certo por aqui</h2>
+          <h2 className="font-serif text-[22px] font-medium text-ink">{noBilling ? "Ainda sem dados" : "Tudo certo por aqui"}</h2>
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-ink-muted">
-            {scoped
+            {noBilling
+              ? NO_DATA_TEXT
+              : scoped
               ? "Nenhum desvio relevante nesta área, nesta janela. Os números de apoio estão logo abaixo, caso queira conferir."
               : "Nenhum desvio relevante identificado nesta janela — operação dentro do esperado. Os números de apoio continuam disponíveis logo abaixo, caso queira conferir de qualquer forma."}
           </p>

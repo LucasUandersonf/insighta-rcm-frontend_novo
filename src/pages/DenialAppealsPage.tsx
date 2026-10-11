@@ -35,15 +35,12 @@ import type {
   DenialAppealResolveRequest,
   PaginatedResponse,
 } from "@/lib/types";
+import { formatDateBR } from "@/lib/dates";
 
 const APPEALS_PAGE_SIZE = 20;
 
 function formatDate(iso: string): string {
-  return new Intl.DateTimeFormat("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).format(new Date(iso));
+  return formatDateBR(iso, { day: "2-digit", month: "2-digit", year: "numeric", });
 }
 
 const APPEAL_TYPE_LABELS: Record<AppealType, string> = {
@@ -57,7 +54,7 @@ const STATUS_LABELS: Record<AppealStatus, string> = {
   protocolado: "Protocolado",
   deferido: "Deferido",
   indeferido: "Indeferido",
-  nip_aberta: "NIP aberta na ANS",
+  nip_aberta: "Reclamação aberta na ANS (NIP)",
 };
 
 const STATUS_TONE: Record<AppealStatus, BadgeTone> = {
@@ -280,7 +277,7 @@ function ResolveAppealModal({
         <option value="indeferido">
           Indeferido (operadora manteve a negativa)
         </option>
-        <option value="nip_aberta">Escalar para NIP na ANS</option>
+        <option value="nip_aberta">Abrir reclamação na ANS (NIP)</option>
       </SelectField>
       <TextField
         label="Observações"

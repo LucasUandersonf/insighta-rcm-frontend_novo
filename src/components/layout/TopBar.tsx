@@ -47,15 +47,17 @@ import { HelpCenterModal } from "./HelpCenterModal";
 const SHORTCUT_LABEL =
   typeof navigator !== "undefined" && /Mac|iPhone|iPad/i.test(navigator.platform || navigator.userAgent) ? "⌘K" : "Ctrl K";
 
-type SystemStatus = "checking" | "operational" | "degraded" | "offline";
+type SystemStatus = "checking" | "operational" | "degraded" | "storage_down" | "offline";
 
 
 const STATUS_CONFIG: Record<SystemStatus, { label: string; dot: string }> = {
   checking: { label: "Verificando conexão…", dot: "bg-ink-faint" },
   // UX-03: verde só quando há dado importado de fato (ver o texto abaixo);
   // sem nenhum dado, o ponto fica neutro.
-  operational: { label: "Sistema no ar · nenhum dado importado ainda", dot: "bg-ink-faint" },
+  operational: { label: "Funcionando · nenhum dado importado ainda", dot: "bg-ink-faint" },
   degraded: { label: "Sistema com instabilidade", dot: "bg-denied" },
+  // UX2-10: o resto funciona, mas o envio de arquivos não.
+  storage_down: { label: "Envio de arquivos indisponível agora · o resto funciona", dot: "bg-pending" },
   offline: { label: "Sem conexão com a internet", dot: "bg-pending" },
 };
 
@@ -90,12 +92,30 @@ function normalize(text: string): string {
  * que só narra números já calculados) e, enquanto se digita, sugere os
  * módulos com aquele nome para ir direto. ⌘K / Ctrl+K foca de qualquer lugar.
  */
+const ASK_DRAFT_KEY = "insighta_ask_draft";
+
 function AskInsightaField({ items, canAsk }: { items: NavItem[]; canAsk: boolean }) {
   const navigate = useNavigate();
   const listId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
-  const [query, setQuery] = useState("");
+  // UX2-31: o texto digitado sobrevive a um F5 (rascunho por aba).
+  const [query, setQueryState] = useState(() => {
+    try {
+      return sessionStorage.getItem(ASK_DRAFT_KEY) ?? "";
+    } catch {
+      return "";
+    }
+  });
+  const setQuery = (value: string) => {
+    setQueryState(value);
+    try {
+      if (value) sessionStorage.setItem(ASK_DRAFT_KEY, value);
+      else sessionStorage.removeItem(ASK_DRAFT_KEY);
+    } catch {
+      /* armazenamento bloqueado: sem rascunho */
+    }
+  };
   const [isOpen, setIsOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const ask = useAskInsighta();
@@ -109,10 +129,14 @@ function AskInsightaField({ items, canAsk }: { items: NavItem[]; canAsk: boolean
   }, [items, query]);
 
   const trimmed = query.trim();
-  const options: ({ kind: "ask" } | { kind: "module"; item: NavItem })[] = [
-    ...(canAsk && trimmed.length >= 3 ? [{ kind: "ask" as const }] : []),
-    ...matches.map((item) => ({ kind: "module" as const, item })),
-  ];
+  // UX2-27: "faturas" + Enter ia para a pergunta ("quanto você faturou").
+  // Quando o texto é o nome de uma tela, "Ir para…" vem primeiro.
+  const exactModule = matches.some((item) => normalize(item.label) === normalize(trimmed) || normalize(item.label).startsWith(normalize(trimmed)) && trimmed.split(/\s+/).length <= 2);
+  const askOption = canAsk && trimmed.length >= 3 ? [{ kind: "ask" as const }] : [];
+  const moduleOptions = matches.map((item) => ({ kind: "module" as const, item }));
+  const options: ({ kind: "ask" } | { kind: "module"; item: NavItem })[] = exactModule
+    ? [...moduleOptions, ...askOption]
+    : [...askOption, ...moduleOptions];
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -192,7 +216,21 @@ function AskInsightaField({ items, canAsk }: { items: NavItem[]; canAsk: boolean
                   <>
                     {ask.data.understood && <p className="text-2xs text-ink-faint">{ask.data.understood}</p>}
                     <p className="text-sm leading-relaxed text-ink">{ask.data.answer}</p>
-                    <p className="text-xs text-ink-faint">{ask.data.sources}</p>
+                    {ask.data.action_href && ask.data.action_label && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigate(ask.data!.action_href!);
+                          setQuery("");
+                          setIsOpen(false);
+                          ask.reset();
+                        }}
+                        className="self-start text-sm font-medium text-accent hover:underline"
+                      >
+                        {ask.data.action_label} →
+                      </button>
+                    )}
+                    {ask.data.sources && <p className="text-xs text-ink-faint">{ask.data.sources}</p>}
                     {quotaNote && <p className="text-2xs text-ink-faint">{quotaNote}</p>}
                   </>
                 )}
@@ -536,7 +574,11 @@ export function TopBar() {
   useEffect(() => {
     const apiBase = import.meta.env.VITE_API_BASE_URL as string;
     fetch(`${apiBase}/health`)
-      .then((r) => setStatus(r.ok ? "operational" : "degraded"))
+      .then(async (r) => {
+        if (!r.ok) return setStatus("degraded");
+        const body = (typeof r.json === "function" ? await r.json().catch(() => ({})) : {}) as { storage?: string };
+        setStatus(body.storage === "unreachable" ? "storage_down" : "operational");
+      })
       .catch(() => setStatus("degraded"));
   }, []);
 
@@ -587,14 +629,14 @@ export function TopBar() {
             o menu completo abre por este botão. */}
         <button
           type="button"
-          className="-ml-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] text-ink-muted hover:bg-canvas-raised/60 md:hidden"
+          className="-ml-1 flex h-9 w-9 max-sm:h-11 max-sm:w-11 shrink-0 items-center justify-center rounded-[10px] text-ink-muted hover:bg-canvas-raised/60 md:hidden"
           aria-label="Abrir menu"
           aria-expanded={isMobileNavOpen}
           onClick={() => setIsMobileNavOpen((open) => !open)}
         >
           <Menu aria-hidden size={18} />
         </button>
-        <NavLink to="/" className="flex shrink-0 items-center" aria-label="Insighta — Início">
+        <NavLink to="/" className="flex shrink-0 items-center max-sm:min-h-[44px]" aria-label="Insighta — Início">
           <BrandMark size="sm" />
         </NavLink>
         {tenant?.trade_name && (

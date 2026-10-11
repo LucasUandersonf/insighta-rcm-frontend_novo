@@ -196,7 +196,7 @@ export function ExecutiveOverviewPage() {
               disabled={!summary}
               aria-label="Exportar relatório"
               title="Exportar relatório (CSV)"
-              className="flex h-[38px] w-[38px] items-center justify-center rounded-[11px] border border-border-hairline bg-canvas-raised/40 text-ink transition-colors hover:bg-canvas-raised/70 disabled:opacity-50"
+              className="flex h-[38px] w-[38px] max-sm:h-11 max-sm:w-11 items-center justify-center rounded-[11px] border border-border-hairline bg-canvas-raised/40 text-ink transition-colors hover:bg-canvas-raised/70 disabled:opacity-50"
             >
               <Upload aria-hidden size={15} />
             </button>

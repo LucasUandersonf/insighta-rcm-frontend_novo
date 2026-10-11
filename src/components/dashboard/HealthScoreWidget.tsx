@@ -143,6 +143,11 @@ export function HealthScoreWidget() {
           <p className="mt-1 text-xs leading-relaxed text-ink-muted">
             Combina taxa de glosa, taxa de falta e sucesso em recurso — janela dos últimos {data.window_days} dias.
           </p>
+          {data.capped_by_alert && (
+            <p className="mt-1 text-xs leading-relaxed text-pending">
+              Nota limitada a {Math.round(data.score)} enquanto o alerta crítico “{data.capped_by_alert}” estiver aberto.
+            </p>
+          )}
           <div className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1">
             {data.components.map((c) => (
               <span key={c.key} className="text-2xs text-ink-faint">

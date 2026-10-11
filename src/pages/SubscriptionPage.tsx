@@ -106,12 +106,18 @@ export function SubscriptionPage() {
     );
   }
 
+  // UX2-03: sem cobrança automática ligada (billing_required = false) a
+  // clínica entra liberada. A tela não pode dizer "Assinatura ativa / Tudo
+  // certo com o pagamento" para quem nunca pagou nada.
+  const freeAccess = !status.billing_required && status.access_allowed;
   const canceling = status.billing_status === "canceling";
   const active =
     status.access_allowed && (status.billing_status === "active" || canceling);
   const pastDueInGrace =
     status.billing_status === "past_due" && status.access_allowed;
-  const headline = canceling
+  const headline = freeAccess
+    ? "Acesso liberado"
+    : canceling
     ? "Cancelamento agendado"
     : active
       ? "Assinatura ativa"
@@ -120,7 +126,9 @@ export function SubscriptionPage() {
         : status.billing_status === "canceled"
           ? "Assinatura cancelada"
           : "Falta pouco para liberar a clínica";
-  const subheadline = canceling
+  const subheadline = freeAccess
+    ? "Nesta fase a clínica usa o Insighta sem cobrança automática."
+    : canceling
     ? `Nenhuma cobrança nova será feita. O acesso continua até ${status.access_until ? dateBr(status.access_until) : "o fim do período pago"}.`
     : active
       ? "Tudo certo com o pagamento."
@@ -132,7 +140,19 @@ export function SubscriptionPage() {
     <AuthLayout headline={headline} subheadline={subheadline}>
       <div className="flex w-full max-w-md flex-col gap-4">
         <section className="rounded-xl border border-border-hairline bg-glass p-6 shadow-elevated backdrop-blur-xl">
-          {active ? (
+          {freeAccess ? (
+            <div className="flex flex-col gap-3">
+              <span className="inline-flex items-center gap-2 text-sm font-medium text-revenue">
+                <CheckCircle2 aria-hidden size={16} /> Acesso liberado, sem cobrança
+              </span>
+              <p className="text-sm text-ink-muted">
+                Nenhum pagamento foi cadastrado e nada será cobrado agora. Quando
+                a cobrança for ativada, avisamos antes por e-mail e você escolhe
+                Pix, boleto ou cartão nesta tela.
+              </p>
+              <Button onClick={() => navigate("/")}>Ir para o sistema</Button>
+            </div>
+          ) : active ? (
             <div className="flex flex-col gap-3">
               {canceling ? (
                 <span className="inline-flex items-center gap-2 text-sm font-medium text-ink-muted">
@@ -261,7 +281,7 @@ export function SubscriptionPage() {
         </section>
 
         {!active && isOwner && <DataExportPanel isOwner={isOwner} />}
-        {isOwner && !canceling && status.billing_status !== "canceled" && (
+        {isOwner && !freeAccess && !canceling && status.billing_status !== "canceled" && (
           <CancelSubscriptionPanel />
         )}
         <SupportContactLinks variant="inline" />

@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Download, FileSpreadsheet, UploadCloud, Wand2 } from "lucide-react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Panel, EmptyState, LoadingState, ErrorState } from "@/components/ui/Panel";
 import { Button } from "@/components/ui/Button";
 import { Badge, type BadgeTone } from "@/components/ui/Badge";
@@ -548,6 +548,7 @@ function BatchUploadTab() {
     setFileProblem(null);
     setDetected(null);
     setSavedMappingWarning(null);
+    setSendError(null);
     if (!selected) return;
     const ext = selected.name.toLowerCase().split(".").pop() ?? "";
     if (selected.size === 0) {
@@ -581,8 +582,13 @@ function BatchUploadTab() {
   }
 
   const [sendPercent, setSendPercent] = useState<number | null>(null);
+  // UX2-10: falha no envio (ex.: armazenamento fora) fica na tela, junto do
+  // arquivo ainda selecionado, com "Tentar de novo" — não só num aviso que some.
+  const [sendError, setSendError] = useState<string | null>(null);
   const mutation = useMutation({
-    mutationFn: async (f: File): Promise<{ queued: DirectUploadStatus } | { result: UploadIngestionFileResponse }> => {
+    mutationFn: async ({ f, type }: { f: File; type: DataType }): Promise<{ queued: DirectUploadStatus } | { result: UploadIngestionFileResponse }> => {
+      const dataType = type;
+      setSendError(null);
       setSendPercent(0);
       // Direto ao armazenamento quando o servidor permite: o arquivo é
       // processado em segundo plano e a tela fica livre (painel "Em
@@ -630,8 +636,13 @@ function BatchUploadTab() {
       // Colunas fora do modelo não entram — avisar em vez de calar.
       if (!result.already_processed && result.ignored_columns?.length && result.message) showError(result.message);
     },
-    onError: (err) => showError(getApiErrorMessage(err)),
+    onError: (err) => setSendError(getApiErrorMessage(err)),
   });
+  const send = (type: DataType = dataType) => {
+    if (!file) return;
+    if (type !== dataType) setDataType(type);
+    mutation.mutate({ f: file, type });
+  };
 
   const { data: history, isLoading, error, refetch } = useQuery({
     queryKey: ["ingestion-files", offset],
@@ -710,7 +721,16 @@ function BatchUploadTab() {
               <span>
                 Este arquivo parece de <strong>{DATA_TYPE_LABELS[detected] ?? detected}</strong>, não de {DATA_TYPE_LABELS[dataType]}.
               </span>
-              <Button type="button" size="xs" onClick={() => setDataType(detected as DataType)}>
+              {/* UX2-29: um clique troca o tipo e já envia. */}
+              <Button
+                type="button"
+                size="xs"
+                disabled={!file || !!fileProblem || mutation.isPending || !DATA_TYPES.includes(detected as DataType)}
+                onClick={() => {
+                  setDetected(null);
+                  send(detected as DataType);
+                }}
+              >
                 Enviar como {DATA_TYPE_LABELS[detected] ?? detected}
               </Button>
             </div>
@@ -730,10 +750,32 @@ function BatchUploadTab() {
                 Mapear colunas
               </Button>
             )}
-            <Button disabled={!file || !!fileProblem || mutation.isPending} onClick={() => file && mutation.mutate(file)}>
-              {mutation.isPending ? (sendPercent !== null && sendPercent > 0 ? `Enviando ${sendPercent}%` : "Enviando...") : "Enviar arquivo"}
+            <Button
+              variant={detected && detected !== dataType ? "secondary" : "primary"}
+              disabled={!file || !!fileProblem || mutation.isPending}
+              onClick={() => send()}
+            >
+              {mutation.isPending
+                ? sendPercent !== null && sendPercent > 0
+                  ? `Enviando ${sendPercent}%`
+                  : "Enviando..."
+                : detected && detected !== dataType
+                  ? `Enviar como ${DATA_TYPE_LABELS[dataType]} mesmo assim`
+                  : "Enviar arquivo"}
             </Button>
           </div>
+          {sendError && !mutation.isPending && (
+            <div role="alert" className="mt-3 flex flex-wrap items-center gap-3 rounded-md border border-denied/30 bg-denied-bg px-3 py-2 text-xs text-ink">
+              <span className="min-w-0 flex-1">
+                <strong>Não enviado{file ? `: ${file.name}` : ""}.</strong> {sendError}
+              </span>
+              {file && (
+                <Button type="button" size="xs" onClick={() => send()}>
+                  Tentar de novo
+                </Button>
+              )}
+            </div>
+          )}
           <p className="mt-2 text-2xs text-ink-faint">
             O seu sistema usa outros nomes de coluna? Clique em “Mapear colunas” antes de enviar e diga qual é qual.
           </p>
@@ -1056,7 +1098,7 @@ function BackgroundImportItem({ upload, onOpenReport }: { upload: DirectUploadSt
             {upload.queue_delayed
               ? (upload.queue_message ?? "O processamento está atrasado. O arquivo continua guardado.")
               : upload.status === "na_fila"
-                ? "Aguardando a vez — começa em instantes."
+                ? "Na fila. O processamento começa assim que o serviço pegar o arquivo."
                 : percent === null
                   ? "Lendo a planilha…"
                   : `${formatCount(upload.processed_rows)} de ${formatCount(upload.total_rows)} linhas (${percent}%)`}
@@ -1092,6 +1134,7 @@ function BackgroundImportItem({ upload, onOpenReport }: { upload: DirectUploadSt
 
 function ContractUploadTab() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const { showSuccess, showError } = useToast();
   const [planId, setPlanId] = useState("");
   const [validFrom, setValidFrom] = useState("");
@@ -1105,13 +1148,16 @@ function ContractUploadTab() {
 
   const mutation = useMutation({
     mutationFn: (formData: FormData) => apiClient.upload<Contract>("/api/v1/contracts/upload", formData),
-    onSuccess: () => {
+    // UX2-13: enviar já começa a leitura; a conferência abre sozinha em
+    // Convênios › Contratos (o parâmetro "conferir" dispara a leitura).
+    onSuccess: (contract) => {
       queryClient.invalidateQueries({ queryKey: ["contracts"] });
-      showSuccess("PDF enviado. Em Convênios › Contratos, leia a tabela de preços e aprove.");
+      showSuccess("Contrato enviado. Lendo a tabela de preços para você conferir.");
       setPlanId("");
       setValidFrom("");
       setFile(null);
       setFieldErrors({});
+      navigate(`/convenios?tab=contratos&conferir=${contract.id}`);
     },
     onError: (err) => showError(getApiErrorMessage(err)),
   });
@@ -1120,7 +1166,7 @@ function ContractUploadTab() {
     e.preventDefault();
     setFieldErrors({});
     const errors: Record<string, string> = {};
-    if (!planId) errors.insurance_plan_id = "Selecione um plano.";
+    if (!planId) errors.insurance_plan_id = "Selecione o convênio.";
     if (!validFrom) errors.valid_from = "Informe a vigência inicial.";
     if (!file) errors.file = "Selecione o PDF do contrato.";
     if (Object.keys(errors).length > 0) {
@@ -1137,12 +1183,12 @@ function ContractUploadTab() {
   return (
     <Panel
       title="Enviar contrato de convênio"
-      subtitle="PDF do contrato. O Insighta lê a tabela de preços e você confere antes de aprovar — nada vale sem a sua revisão."
+      subtitle="PDF do contrato. Ao enviar, o Insighta lê a tabela de preços e abre a conferência; nada vale antes de você aprovar."
     >
       <form onSubmit={handleSubmit} className="p-4">
         <div className="grid grid-cols-2 gap-3">
           <SelectField
-            label="Plano"
+            label="Convênio"
             required
             value={planId}
             onChange={(e) => setPlanId(e.target.value)}

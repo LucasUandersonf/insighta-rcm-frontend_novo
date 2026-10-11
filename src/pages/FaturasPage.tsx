@@ -26,6 +26,7 @@ import type {
 } from "@/lib/types";
 import { plural } from "@/lib/plural";
 import { parseMoneyBR } from "@/lib/money";
+import { formatDateBR } from "@/lib/dates";
 
 const FATURAS_PAGE_SIZE = 20;
 
@@ -50,8 +51,7 @@ function money(value: number | null): string {
 }
 
 function formatDate(iso: string | null): string {
-  if (!iso) return "—";
-  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(iso));
+  return formatDateBR(iso, { day: "2-digit", month: "2-digit", year: "numeric" }, "—");
 }
 
 function faturaLabel(f: Pick<Fatura, "serie" | "numero">): string {

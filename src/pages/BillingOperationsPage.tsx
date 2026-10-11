@@ -30,6 +30,7 @@ import type {
   PaginatedResponse,
   PaymentMethod,
 } from "@/lib/types";
+import { formatDateBR } from "@/lib/dates";
 
 // Faturamento & Guias — as DUAS pontas do ciclo de vida da fatura que já
 // funcionavam de ponta a ponta no backend sem nenhuma tela: registrar o
@@ -46,7 +47,7 @@ function formatCurrency(value: number): string {
 }
 
 function formatDate(iso: string): string {
-  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(iso));
+  return formatDateBR(iso, { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
 function formatDateTime(iso: string): string {

@@ -540,12 +540,12 @@ export function IntegrationsPage() {
       <PageHeader
         icon={Plug}
         title="Integrações e webhooks"
-        subtitle="Conecte o ecossistema do cliente: chave de API para ele ENVIAR dado ao Insighta, webhooks para o Insighta AVISAR o sistema dele."
+        subtitle="Ligue o Insighta aos outros sistemas da clínica: uma chave para eles enviarem dados ao Insighta e avisos automáticos (webhooks) do Insighta para eles."
       />
 
       <Panel
         title="Chaves de API"
-        subtitle="Configure no ERP/CRM do cliente — a chave em texto puro só aparece uma vez, na criação."
+        subtitle="Cadastre a chave no sistema de gestão da clínica. Ela aparece por inteiro só uma vez, na criação: copie e guarde."
         action={
           <Button
             onClick={() => setIsModalOpen(true)}

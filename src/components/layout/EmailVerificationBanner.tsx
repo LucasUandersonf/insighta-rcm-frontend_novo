@@ -51,7 +51,7 @@ export function EmailVerificationBanner() {
         ) : (
           <button
             type="button"
-            className="font-medium text-accent underline disabled:opacity-60"
+            className="font-medium text-accent underline disabled:opacity-60 max-sm:min-h-[44px] max-sm:px-2"
             onClick={() => resend.mutate()}
             disabled={resend.isPending}
             aria-label="Reenviar confirmação"
@@ -62,7 +62,7 @@ export function EmailVerificationBanner() {
         <button
           type="button"
           aria-label="Dispensar aviso"
-          className="text-ink-faint hover:text-ink"
+          className="flex items-center justify-center text-ink-faint hover:text-ink max-sm:h-11 max-sm:w-11"
           onClick={() => {
             try {
               sessionStorage.setItem(DISMISS_KEY, "1");

@@ -13,6 +13,7 @@ import { getApiErrorMessage } from "@/lib/query-client";
 import { useToast } from "@/context/ToastContext";
 import type { MarketingSpend, MarketingSpendCreateRequest, MarketingSpendSource, PaginatedResponse } from "@/lib/types";
 import { parseMoneyBR } from "@/lib/money";
+import { formatDateBR } from "@/lib/dates";
 
 const MARKETING_SPEND_PAGE_SIZE = 20;
 
@@ -26,7 +27,7 @@ function formatCurrency(value: number): string {
 }
 
 function formatDate(iso: string): string {
-  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(`${iso}T00:00:00`));
+  return formatDateBR(iso, { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
 function CreateMarketingSpendModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
@@ -72,13 +73,22 @@ function CreateMarketingSpendModal({ isOpen, onClose }: { isOpen: boolean; onClo
       setFieldErrors({ amount_spent: "Informe um valor maior que zero." });
       return;
     }
-    if (!campaignId.trim()) {
-      setFieldErrors({ campaign_id: "Informe o identificador da campanha." });
-      return;
-    }
+    // UX2-30: o código da campanha é opcional. Sem ele, usa o nome (ou
+    // "geral"), e o gasto entra no canal escolhido do mesmo jeito.
+    const code =
+      campaignId.trim() ||
+      campaignName
+        .trim()
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "")
+        .slice(0, 100) ||
+      "geral";
     mutation.mutate({
       source,
-      campaign_id: campaignId.trim(),
+      campaign_id: code,
       campaign_name: campaignName || null,
       amount_spent: parsedAmount,
       spend_date: spendDate,
@@ -89,8 +99,8 @@ function CreateMarketingSpendModal({ isOpen, onClose }: { isOpen: boolean; onClo
     <Modal title="Lançar gasto de marketing" isOpen={isOpen} onClose={resetAndClose}>
       <form onSubmit={handleSubmit}>
         <p className="mb-4 text-xs text-ink-faint">
-          Valor real gasto no dia, por campanha — sem isso, CAC/ROI de marketing sempre mostra a receita adquirida
-          sem nunca mostrar o custo real.
+          Quanto foi gasto no dia em cada canal. Sem esse valor, a tela mostra quanto os pacientes novos
+          trouxeram, mas não quanto custou conquistar cada um.
         </p>
         <SelectField label="Canal" required value={source} onChange={(e) => setSource(e.target.value as MarketingSpendSource)}>
           {(Object.keys(SOURCE_LABELS) as MarketingSpendSource[]).map((s) => (
@@ -99,14 +109,14 @@ function CreateMarketingSpendModal({ isOpen, onClose }: { isOpen: boolean; onClo
             </option>
           ))}
         </SelectField>
+        <TextField label="Nome da campanha (opcional)" value={campaignName} onChange={(e) => setCampaignName(e.target.value)} placeholder="Ex.: Dia das Mães" />
         <TextField
-          label="Identificador da campanha"
-          required
+          label="Código da campanha (opcional)"
           value={campaignId}
           onChange={(e) => setCampaignId(e.target.value)}
           error={fieldErrors["campaign_id"]}
+          placeholder="O mesmo código usado no cadastro do paciente, se houver"
         />
-        <TextField label="Nome da campanha (opcional)" value={campaignName} onChange={(e) => setCampaignName(e.target.value)} />
         <div className="grid grid-cols-2 gap-3">
           <TextField
             label="Valor gasto (R$)"
@@ -178,7 +188,7 @@ export function MarketingSpendPage() {
       <PageHeader
         icon={Megaphone}
         title="Gasto de marketing"
-        subtitle="Gasto real por campanha, dia a dia — alimenta CAC e ROI de marketing na aba Rentabilidade da Sala de Comando."
+        subtitle="Gasto real por canal e campanha, dia a dia. Com ele, a aba Rentabilidade da Sala de Comando mostra o custo para conquistar cada paciente e quanto o marketing devolve."
         action={
           <Button onClick={() => setIsCreateModalOpen(true)} className="flex items-center gap-1.5">
             <Plus size={14} />

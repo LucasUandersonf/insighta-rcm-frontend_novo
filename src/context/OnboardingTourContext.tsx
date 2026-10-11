@@ -1,33 +1,21 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useCompleteOnboarding, useCurrentUserProfile } from "@/lib/useCurrentUserProfile";
-import { ACCOUNT_TOUR_ID, ADMIN_NAV_ITEMS, NAV_ITEMS, tourTargetFor } from "@/lib/navigation";
+import { ACCOUNT_TOUR_ID, NAV_ITEMS, tourTargetFor } from "@/lib/navigation";
+import { onboardingStepsFor } from "@/lib/onboardingSteps";
 import { OnboardingTour, type TourStep } from "@/components/onboarding/OnboardingTour";
 import type { UserRole } from "@/lib/types";
 
 /**
  * Auditoria de UX (UX-12): o tour era de 10 passos sobre telas ainda
- * vazias, e os passos de itens dentro de "Módulos" destacavam o botão
- * fechado. Agora é curto e orientado à primeira tarefa — importar,
- * conferir, ver o primeiro resultado — e só aponta para itens visíveis na
- * barra (placement "primary"); os demais módulos são citados no fim.
+ * vazias. Para quem não importa dados, ele aponta só para o que a pessoa
+ * usa no dia a dia (itens visíveis na barra).
  */
-const TASK_STEPS: { to: string; title: string; description: string }[] = [
-  {
-    to: "/importar",
-    title: "1. Importe sua primeira planilha",
-    description:
-      "Em Importar dados, envie a planilha de faturamento ou de agenda do jeito que sai do seu sistema. Convênios novos são cadastrados sozinhos; o que precisar de ajuste aparece em “Linhas para corrigir”.",
-  },
+const TOUR_STEPS_WITHOUT_IMPORT: { to: string; title: string; description: string }[] = [
   {
     to: "/",
-    title: "2. Confira o resultado",
-    description: "O Início mostra o resumo do dia e, enquanto faltar algo, a lista do que ainda precisa ser importado ou configurado.",
-  },
-  {
-    to: "/decisao",
-    title: "3. Veja o primeiro insight",
-    description: "Na Sala de Comando ficam os alertas com valor em R$ e a ação sugerida — do que mais custa dinheiro para o que menos custa.",
+    title: "Início",
+    description: "O resumo do dia da clínica, com o que merece atenção primeiro.",
   },
   {
     to: "/consultas",
@@ -36,50 +24,50 @@ const TASK_STEPS: { to: string; title: string; description: string }[] = [
   },
 ];
 
-const ADMIN_STEP = {
-  title: "O que falta configurar",
-  description: "Saúde da conta, no menu da sua foto, lista o que falta para os números ficarem completos — convênios, tabelas de preço, equipe — com o atalho para resolver.",
-};
-
 function isVisibleFor(role: UserRole | undefined, roles: UserRole[] | undefined): boolean {
   return !roles || (!!role && roles.includes(role));
 }
 
 /** Monta os passos a partir da MESMA navegação que o usuário vê — um item
- * escondido pelo papel dele nunca vira passo. */
+ * escondido pelo papel dele nunca vira passo.
+ *
+ * UX2-20: quem importa dados vê no tour exatamente os passos dos cartões
+ * da Home (src/lib/onboardingSteps.ts), com a mesma numeração; o "Passo X
+ * de N" do tour é o mesmo "Passo X" do cartão. Quem não importa (recepção,
+ * auditoria) faz um tour curto pelo que usa, sem numerar nada. */
 function useTourSteps(): TourStep[] {
   const { user } = useAuth();
 
   return useMemo(() => {
     const visible = NAV_ITEMS.filter((item) => item.placement === "primary" && isVisibleFor(user?.role, item.roles));
-    const canImport = visible.some((item) => item.to === "/importar");
-    const steps: TourStep[] = [
-      {
-        title: "Bem-vindo ao Insighta",
-        description: canImport
-          ? "Vamos importar sua primeira planilha e ver o primeiro resultado — leva 3 minutos. Dá para pular e rever depois pela Central de Ajuda."
-          : "Um tour curto pelo que você vai usar no dia a dia. Dá para pular e rever depois pela Central de Ajuda.",
-      },
-    ];
+    const importItem = visible.find((item) => item.to === "/importar");
+    if (importItem) {
+      const homeSteps = onboardingStepsFor(user?.role);
+      return homeSteps.map((step, i) => {
+        const isLast = i === homeSteps.length - 1;
+        const target = step.to === "/importar" ? tourTargetFor(importItem) : ACCOUNT_TOUR_ID;
+        const where = step.to === "/importar" ? "" : " Fica no menu da sua foto.";
+        return {
+          targetSelector: `[data-tour-id="${target}"]`,
+          title: step.title,
+          description: `${i === 0 ? "Bem-vindo ao Insighta! Os mesmos passos estão no Início. " : ""}${step.text}${where}${
+            isLast ? " Para rever este tour, abra a Central de Ajuda no menu da sua foto." : ""
+          }`,
+        };
+      });
+    }
 
-    for (const task of TASK_STEPS) {
-      // Consultas só entra no tour de quem não importa dados (recepção).
-      if (task.to === "/consultas" && canImport) continue;
+    const steps: TourStep[] = [];
+    for (const task of TOUR_STEPS_WITHOUT_IMPORT) {
       const item = visible.find((i) => i.to === task.to);
       if (!item) continue;
       steps.push({ targetSelector: `[data-tour-id="${tourTargetFor(item)}"]`, title: task.title, description: task.description });
     }
-
-    if (ADMIN_NAV_ITEMS.some((item) => item.to === "/admin/saude-da-conta" && isVisibleFor(user?.role, item.roles))) {
-      steps.push({ targetSelector: `[data-tour-id="${ACCOUNT_TOUR_ID}"]`, ...ADMIN_STEP });
-    }
-
     steps.push({
       title: "Pronto!",
       description:
-        "Os outros módulos (Fila de correção, Recurso de glosa, Convênios e contratos e mais) ficam em “Módulos”, na barra de cima. Para rever este tour, abra a Central de Ajuda no menu da sua foto.",
+        "Os outros módulos ficam em “Módulos”, na barra de cima. Para rever este tour, abra a Central de Ajuda no menu da sua foto.",
     });
-
     return steps;
   }, [user?.role]);
 }

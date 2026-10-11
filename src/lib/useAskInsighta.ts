@@ -26,6 +26,7 @@ export function useAiUsage(enabled = true) {
 
 /** "Restam 12 de 100 perguntas à IA este mês" — null quando não há cota. */
 export function askQuotaNote(summary: AiUsageSummary | undefined): string | null {
+  if (summary?.ai_enabled === false) return null;
   const ask = Array.isArray(summary?.items) ? summary.items.find((item) => item.kind === "ask") : undefined;
   if (!ask || ask.limit <= 0) return null;
   const left = Math.max(ask.limit - ask.used, 0);

@@ -1,6 +1,6 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ListChecks, TriangleAlert } from "lucide-react";
+import { Download, ListChecks, TriangleAlert } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Panel, EmptyState, LoadingState, ErrorState } from "@/components/ui/Panel";
 import { Button } from "@/components/ui/Button";
@@ -12,6 +12,7 @@ import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useToast } from "@/context/ToastContext";
 import type { RejectedRow, UnknownPlanGroup } from "@/lib/types";
+import { valuesRead } from "@/lib/rejectedRows";
 
 // Linhas para corrigir — o que a importação não conseguiu trazer sozinha.
 //
@@ -73,10 +74,35 @@ export function SetupPage() {
     onError: (err) => showError(getApiErrorMessage(err)),
   });
 
-  const structuralErrorRows = useMemo(
-    () => (rejected.data ?? []).filter((r) => r.reason !== "unknown_insurance_plan"),
-    [rejected.data]
-  );
+  // UX2-15: ordem crescente de linha dentro de cada arquivo (o arquivo mais
+  // recente continua primeiro, como vem da API).
+  const structuralErrorRows = useMemo(() => {
+    const rows = (rejected.data ?? []).filter((r) => r.reason !== "unknown_insurance_plan");
+    const fileOrder = new Map<string, number>();
+    rows.forEach((r) => {
+      if (!fileOrder.has(r.ingestion_file_id)) fileOrder.set(r.ingestion_file_id, fileOrder.size);
+    });
+    return [...rows].sort(
+      (a, b) => fileOrder.get(a.ingestion_file_id)! - fileOrder.get(b.ingestion_file_id)! || a.row_number - b.row_number
+    );
+  }, [rejected.data]);
+  const [downloading, setDownloading] = useState(false);
+  async function downloadRejected() {
+    setDownloading(true);
+    try {
+      const blob = await apiClient.getBlob("/api/v1/ingestion/rejected.xlsx");
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "linhas-para-corrigir.xlsx";
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+    } catch (err) {
+      showError(getApiErrorMessage(err));
+    } finally {
+      setDownloading(false);
+    }
+  }
 
   const groups = unknownPlans.data ?? [];
   const totalUnknown = groups.reduce((sum, g) => sum + g.count, 0);
@@ -172,6 +198,14 @@ export function SetupPage() {
             title="Linhas com dado inválido"
             subtitle="Data, valor ou campo obrigatório que não deu para ler. Corrija essas linhas na planilha e envie o arquivo de novo — só as linhas que faltavam entram."
             glow={structuralErrorRows.length > 0 ? "denied" : "none"}
+            actions={
+              structuralErrorRows.length > 0 ? (
+                <Button type="button" size="xs" variant="secondary" disabled={downloading} onClick={downloadRejected} className="flex items-center gap-1.5">
+                  <Download size={12} aria-hidden />
+                  {downloading ? "Baixando…" : "Baixar linhas com problema (.xlsx)"}
+                </Button>
+              ) : undefined
+            }
           >
             {structuralErrorRows.length === 0 && (
               <EmptyState
@@ -186,6 +220,7 @@ export function SetupPage() {
                     <tr className="border-b border-border-hairline text-xs text-ink-muted">
                       <th className="px-4 py-2.5 font-medium">Linha da planilha</th>
                       <th className="px-4 py-2.5 font-medium">O que corrigir</th>
+                      <th className="px-4 py-2.5 font-medium">Valor lido</th>
                       <th className="px-4 py-2.5 font-medium">Recebido em</th>
                     </tr>
                   </thead>
@@ -194,6 +229,7 @@ export function SetupPage() {
                       <tr key={row.id} className="border-b border-border-hairline last:border-0">
                         <td className="tabular px-4 py-2.5 text-ink-muted">Linha {row.row_number + 1}</td>
                         <td className="px-4 py-2.5 text-ink">{row.raw_value || "Dado não reconhecido"}</td>
+                        <td className="break-all px-4 py-2.5 font-mono text-xs text-ink-muted">{valuesRead(row) || "—"}</td>
                         <td className="px-4 py-2.5 text-ink-muted">{formatDateTime(row.created_at)}</td>
                       </tr>
                     ))}

@@ -48,6 +48,16 @@ describe("SubscriptionPage", () => {
     vi.mocked(useAuth).mockReturnValue({ user: { sub: "u1", role: "owner" }, logout: vi.fn() } as unknown as ReturnType<typeof useAuth>);
   });
 
+  // UX2-03: sem cobrança ligada, nada de "Assinatura ativa / Tudo certo com o pagamento".
+  it("mostra acesso liberado sem cobrança quando o sistema não exige pagamento", async () => {
+    mockGet({ ...PENDING, billing_required: false, access_allowed: true, billing_status: "pending_payment" });
+    renderWithProviders(<SubscriptionPage />);
+    expect(await screen.findByText("Acesso liberado, sem cobrança")).toBeInTheDocument();
+    expect(screen.queryByText(/Assinatura ativa/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Tudo certo com o pagamento/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Cancelar assinatura/ })).not.toBeInTheDocument();
+  });
+
   it("mostra a oferta Founders e abre a fatura do Asaas", async () => {
     mockGet(PENDING);
     vi.mocked(apiClient.post).mockResolvedValue({ checkout_id: "c1", checkout_url: "https://sandbox.asaas.com/i/abc", amount_cents: 80000, plan_tier: "founders" } as never);

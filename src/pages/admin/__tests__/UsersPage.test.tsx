@@ -77,6 +77,9 @@ describe("UsersPage", () => {
     await userEvent.click(await screen.findByRole("button", { name: /Novo usuário/ }));
     await userEvent.type(screen.getByLabelText(/Nome completo/), "Bruno Recepção");
     await userEvent.type(screen.getByLabelText(/E-mail/), "bruno@clinica.com");
+    // UX2-17: sem papel pré-escolhido, "Criar usuário" só libera depois da escolha.
+    expect(screen.getByRole("button", { name: "Criar usuário" })).toBeDisabled();
+    await userEvent.click(screen.getByRole("radio", { name: /Atendimento/ }));
     await userEvent.click(screen.getByRole("button", { name: "Criar usuário" }));
 
     expect(await screen.findByText("Temp-Senha-123")).toBeInTheDocument();
@@ -96,6 +99,9 @@ describe("UsersPage", () => {
     await userEvent.click(await screen.findByRole("button", { name: /Novo usuário/ }));
     await userEvent.type(screen.getByLabelText(/Nome completo/), "Carla Nova");
     await userEvent.type(screen.getByLabelText(/E-mail/), "carla@clinica.com");
+    // UX2-17: sem papel pré-escolhido, "Criar usuário" só libera depois da escolha.
+    expect(screen.getByRole("button", { name: "Criar usuário" })).toBeDisabled();
+    await userEvent.click(screen.getByRole("radio", { name: /Atendimento/ }));
     await userEvent.click(screen.getByRole("button", { name: "Criar usuário" }));
 
     expect(await screen.findByText(/Carla Nova foi criado\(a\), mas a senha temporária não pôde ser mostrada/)).toBeInTheDocument();

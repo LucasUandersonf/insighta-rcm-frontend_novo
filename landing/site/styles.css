@@ -9,8 +9,8 @@
   --mono: "Geist Mono", ui-monospace, monospace;
 }
 *, *::before, *::after { box-sizing: border-box; }
-html { scroll-behavior: smooth; background: var(--p950); }
-body { margin: 0; font-family: var(--font); color: var(--ink); background: #fff; line-height: 1.55; -webkit-font-smoothing: antialiased; }
+html { scroll-behavior: smooth; background: var(--p950); overflow-x: clip; }
+body { margin: 0; font-family: var(--font); color: var(--ink); background: #fff; line-height: 1.55; -webkit-font-smoothing: antialiased; overflow-x: clip; }
 img { display: block; max-width: 100%; height: auto; }
 a { color: inherit; }
 h1, h2, h3, p { margin: 0; }
@@ -130,6 +130,11 @@ h1, h2, h3 { text-wrap: balance; letter-spacing: -.028em; line-height: 1.08; }
 .stabs button.is-on { background: var(--p900); color: #fff; }
 .story { display: grid; grid-template-columns: 1.1fr 1fr; gap: 64px; align-items: center; padding: 56px 0; scroll-margin-top: 150px; }
 .story--rev .story__art { order: 2; }
+/* UX2-33: em 390 px a arte da seção "Age" passava da tela; colunas da grade
+   podem encolher e nada sai da largura da página. */
+.story > * { min-width: 0; }
+.story__art { max-width: 100%; }
+.stabs { max-width: calc(100% - 32px); overflow-x: auto; }
 .story__text h3 { font-size: clamp(26px, 2.6vw, 34px); font-weight: 800; margin: 12px 0 14px; }
 .story__text > p { color: var(--muted); font-size: 17px; margin-bottom: 18px; }
 .kick { display: inline-block; font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--p500); background: var(--p50); padding: 5px 12px; border-radius: 8px; }
@@ -362,6 +367,8 @@ h1, h2, h3 { text-wrap: balance; letter-spacing: -.028em; line-height: 1.08; }
   .facts__in { grid-template-columns: 1fr; }
   .fc__kpis { grid-template-columns: 1fr 1fr; }
   .node { font-size: 10px; padding: 5px 7px; }
+  /* UX2-33: "WhatsApp (em breve)" saía 44 px para fora da tela em 390 px. */
+  .node--out { left: auto; right: 0; translate: 0 -50%; white-space: normal; max-width: 30%; text-align: center; }
   .diagram { margin-inline: 8px; }
   .core { width: 80px; height: 80px; border-radius: 22px; }
 }
