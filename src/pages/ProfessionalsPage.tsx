@@ -427,7 +427,7 @@ export function ProfessionalsPage() {
   });
 
   // Deep-link do botão de ação do Radar de Profissional Fora do Padrão
-  // (ver DECISÃO em smart_insights_engine.py::_professional_outlier_insight,
+  // (ver DECISÃO em app/services/insights (backend)::_professional_outlier_insight,
   // backend): o insight já chega aqui sabendo QUAL profissional disparou
   // o card — a tela rola até a linha exata e a realça, em vez de deixar
   // o usuário procurar sozinho na lista.

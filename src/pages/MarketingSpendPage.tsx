@@ -12,6 +12,7 @@ import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useToast } from "@/context/ToastContext";
 import type { MarketingSpend, MarketingSpendCreateRequest, MarketingSpendSource, PaginatedResponse } from "@/lib/types";
+import { parseMoneyBR } from "@/lib/money";
 
 const MARKETING_SPEND_PAGE_SIZE = 20;
 
@@ -61,8 +62,13 @@ function CreateMarketingSpendModal({ isOpen, onClose }: { isOpen: boolean; onClo
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    const parsedAmount = Number(amountSpent.replace(",", "."));
-    if (!parsedAmount || parsedAmount <= 0) {
+    const parsed = parseMoneyBR(amountSpent);
+    if (!parsed.ok) {
+      setFieldErrors({ amount_spent: parsed.error });
+      return;
+    }
+    const parsedAmount = parsed.value;
+    if (parsedAmount <= 0) {
       setFieldErrors({ amount_spent: "Informe um valor maior que zero." });
       return;
     }

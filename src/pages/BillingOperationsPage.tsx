@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { TextField, SelectField } from "@/components/ui/FormField";
+import { MoneyField } from "@/components/ui/MoneyField";
 import { FilterBar } from "@/components/ui/FilterBar";
 import { Pagination } from "@/components/ui/Pagination";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -14,6 +15,7 @@ import { Tabs, TabPanel } from "@/components/ui/Tabs";
 import { BillingSearchPicker } from "@/components/billing/BillingSearchPicker";
 import { apiClient, ApiError } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
+import { formatMoneyInput, parseMoneyBR } from "@/lib/money";
 import { ConfirmationDeclined, withConfirmation } from "@/lib/confirmable";
 import { useToast } from "@/context/ToastContext";
 import { useAuth } from "@/context/AuthContext";
@@ -186,15 +188,20 @@ function SettlementTab({ readOnly = false }: { readOnly?: boolean }) {
       setFieldErrors({ billing: "Busque e selecione o faturamento a liquidar." });
       return;
     }
-    const value = Number(receivedValue);
-    if (!receivedValue || Number.isNaN(value) || value <= 0) {
+    const parsed = parseMoneyBR(receivedValue);
+    if (!parsed.ok) {
+      setFieldErrors({ received_value: parsed.error });
+      return;
+    }
+    if (parsed.value <= 0) {
       setFieldErrors({ received_value: "Informe um valor recebido maior que zero." });
       return;
     }
-    setPendingSettle({ billing: selected, value });
+    setPendingSettle({ billing: selected, value: parsed.value });
   }
 
   const alreadySettled = selected?.status === "paid";
+  const receivedParsed = receivedValue.trim() ? parseMoneyBR(receivedValue) : null;
 
   if (readOnly) {
     // Auditoria V1, rodada 8 (B2): o auditor confere de onde veio cada
@@ -249,21 +256,20 @@ function SettlementTab({ readOnly = false }: { readOnly?: boolean }) {
         )}
         {selected && !alreadySettled && (
           <>
-            <TextField
+            <MoneyField
               label="Valor recebido"
-              type="number"
-              step="0.01"
-              min="0"
               required
               value={receivedValue}
-              onChange={(e) => setReceivedValue(e.target.value)}
+              onValueChange={setReceivedValue}
               error={fieldErrors["received_value"]}
+              placeholder="Ex.: 1.250,00"
+              showPreview={false}
             />
-            {selected.charged_value !== Number(receivedValue) && receivedValue !== "" && !Number.isNaN(Number(receivedValue)) && (
+            {receivedParsed?.ok && selected.charged_value !== receivedParsed.value && (
               <p className="-mt-2 mb-4 text-2xs text-ink-faint">
                 Cobrado: {formatCurrency(selected.charged_value)} · Diferença:{" "}
-                <span className={Number(receivedValue) < selected.charged_value ? "text-denied" : "text-revenue"}>
-                  {formatCurrency(Number(receivedValue) - selected.charged_value)}
+                <span className={receivedParsed.value < selected.charged_value ? "text-denied" : "text-revenue"}>
+                  {formatCurrency(receivedParsed.value - selected.charged_value)}
                 </span>
               </p>
             )}
@@ -336,16 +342,17 @@ const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
 // operadora) não tinha onde ser registrada pela tela.
 // ---------------------------------------------------------------------
 
+/** Valor positivo em reais ou null (regras em src/lib/money.ts). */
 function parseMoney(value: string): number | null {
-  const n = Number(value.replace(/\./g, "").replace(",", "."));
-  return Number.isFinite(n) && n > 0 ? n : null;
+  const parsed = parseMoneyBR(value);
+  return parsed.ok && parsed.value > 0 ? parsed.value : null;
 }
 
 function GlosaRow({ glosa, billingId }: { glosa: Glosa; billingId: string }) {
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
   const [editing, setEditing] = useState(false);
-  const [value, setValue] = useState(String(glosa.valor_glosado).replace(".", ","));
+  const [value, setValue] = useState(formatMoneyInput(glosa.valor_glosado));
 
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ["glosas", billingId] });

@@ -9,7 +9,7 @@ import type { EarlyChurnRisk } from "@/lib/types";
 /**
  * Raio-X da Receita, frente "Prevendo movimentos" — a lista real por
  * trás do botão "Ver quem está sumindo" do insight de churn antecipado
- * (ver DECISÃO em smart_insights_engine.py::_early_churn_insight).
+ * (ver DECISÃO em app/services/insights (backend)::_early_churn_insight).
  * Diferente de InactivePatientsPanel (piso fixo de 1 ano, igual pra
  * todo mundo), aqui o critério é o PRÓPRIO ritmo de cada paciente —
  * "já está bem além do que costuma esperar entre consultas", mesmo sem

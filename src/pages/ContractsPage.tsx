@@ -49,6 +49,7 @@ import type {
   InsurancePlanType,
   PaginatedResponse,
 } from "@/lib/types";
+import { MoneyInput } from "@/components/ui/MoneyField";
 
 // Desativação (não exclusão) de Operadoras/Planos — achado do usuário:
 // um convênio/plano cadastrado errado ou duplicado não tinha NENHUMA
@@ -589,18 +590,12 @@ function ManualContractModal({
                   updateItem(index, { procedure_name: e.target.value })
                 }
               />
-              <input
+              <MoneyInput
                 className="rounded-sm border border-border bg-canvas-raised px-2 py-1.5 text-sm text-ink"
                 placeholder="Valor (R$)"
-                type="number"
-                step="0.01"
-                min="0.01"
-                value={item.agreed_price || ""}
-                onChange={(e) =>
-                  updateItem(index, {
-                    agreed_price: parseFloat(e.target.value) || 0,
-                  })
-                }
+                aria-label="Valor (R$)"
+                value={item.agreed_price}
+                onValueChange={(agreed_price) => updateItem(index, { agreed_price })}
                 required
               />
               <Button
@@ -949,16 +944,11 @@ function ReviewContractModal({
                         updateItem(index, { procedure_name: e.target.value })
                       }
                     />
-                    <input
+                    <MoneyInput
                       className="tabular rounded-sm border border-transparent bg-transparent px-1 py-1 text-right font-mono text-sm text-ink transition-colors focus:border-border-default focus:bg-canvas-raised focus:outline-none"
-                      type="number"
-                      step="0.01"
+                      aria-label="Valor acordado (R$)"
                       value={item.agreed_price}
-                      onChange={(e) =>
-                        updateItem(index, {
-                          agreed_price: parseFloat(e.target.value) || 0,
-                        })
-                      }
+                      onValueChange={(agreed_price) => updateItem(index, { agreed_price })}
                     />
                     <button
                       type="button"

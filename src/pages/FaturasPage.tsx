@@ -25,6 +25,7 @@ import type {
   PaginatedResponse,
 } from "@/lib/types";
 import { plural } from "@/lib/plural";
+import { parseMoneyBR } from "@/lib/money";
 
 const FATURAS_PAGE_SIZE = 20;
 
@@ -59,10 +60,10 @@ function faturaLabel(f: Pick<Fatura, "serie" | "numero">): string {
 }
 
 /** "1.234,56" ou "1234.56" → 1234.56; texto inválido → NaN. */
+/** Valor em reais ou NaN quando inválido (regras em src/lib/money.ts). */
 export function parseMoney(raw: string): number {
-  const cleaned = raw.trim().replace(/\s|R\$/g, "");
-  const normalized = cleaned.includes(",") ? cleaned.replace(/\./g, "").replace(",", ".") : cleaned;
-  return normalized === "" ? NaN : Number(normalized);
+  const parsed = parseMoneyBR(raw);
+  return parsed.ok ? parsed.value : NaN;
 }
 
 // ---------------------------------------------------------------------

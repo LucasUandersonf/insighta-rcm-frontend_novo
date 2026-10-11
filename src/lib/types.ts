@@ -866,7 +866,7 @@ export type InsightSeverity =
 // "faturamento" | "agenda" — área do card, usada por SmartInsightsFeed.tsx
 // pra agrupar o feed em seções em vez de uma lista única misturando
 // cobrança/glosa com ocupação de agenda (ver DECISÃO em
-// smart_insights_engine.Insight.category, backend). "estrategia" só
+// app/services/insights.Insight.category, backend). "estrategia" só
 // aparece em itens sintéticos da fila (PriorityQueueItem, ver abaixo) —
 // nunca emitido por generate_insights(), então SmartInsightsFeed.tsx
 // nunca precisa saber desse terceiro valor.
@@ -1473,7 +1473,7 @@ export interface UpsellFunnel {
 // Candidatos a recontato (GET /analytics/recall-candidates) — a lista
 // real por trás dos botões de ação dos insights de agenda que apontam
 // pra um dia da semana ou um profissional específico (ver DECISÃO em
-// smart_insights_engine.py::_weekday_drop_insight/_weekday_no_show_rate_insight/
+// app/services/insights (backend)::_weekday_drop_insight/_weekday_no_show_rate_insight/
 // _capacity_drop_insight, backend). Diferente de InactivePatientItem
 // (piso fixo de 365 dias): aqui days_since_last_appointment pode ser
 // bem menor — o critério é só "sem retorno futuro marcado".
@@ -1496,7 +1496,7 @@ export interface RecallCandidates {
 // Contas de "Divergência de Cobrança" (GET /analytics/financial-hole-billings)
 // — a lista real por trás do insight "Você está cobrando menos do que
 // devia de alguns convênios" (ver DECISÃO em
-// smart_insights_engine.py::_financial_hole_insight, backend).
+// app/services/insights (backend)::_financial_hole_insight, backend).
 // `agreed_price` é sempre > `charged_value` (nunca uma linha "certa" ou
 // cobrada a mais aparece aqui).
 export interface FinancialHoleBillingItem {

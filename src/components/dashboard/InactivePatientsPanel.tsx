@@ -10,7 +10,7 @@ import type { InactivePatients } from "@/lib/types";
 /**
  * Carteira de pacientes inativos — a lista real por trás da
  * recomendação "reativar quem já foi cliente e não voltou" do insight
- * de meta anual (ver DECISÃO em smart_insights_engine.py::_annual_goal_insight).
+ * de meta anual (ver DECISÃO em app/services/insights (backend)::_annual_goal_insight).
  * Antes o insight só recomendava em texto, sem lugar nenhum pra levar o
  * clique — esta seção é o destino de `#carteira-inativa`.
  *

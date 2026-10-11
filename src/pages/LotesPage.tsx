@@ -302,7 +302,7 @@ function LoteDetailModal({ lote, planName, onClose }: { lote: Lote | null; planN
 
 /**
  * Achado do Parecer Técnico "Boletim Insighta" (revisão 2): o insight
- * "Tem lote de faturamento aberto há muito tempo" (smart_insights_engine.py
+ * "Tem lote de faturamento aberto há muito tempo" (app/services/insights (backend)
  * / _stale_open_lotes_insight) SEMPRE existiu mas nunca tinha uma tela
  * de destino — o botão de ação ficava propositalmente escondido. Esta
  * tela fecha essa lacuna: gestão completa do endpoint /lotes, que antes

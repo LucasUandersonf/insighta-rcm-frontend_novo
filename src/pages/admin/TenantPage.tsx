@@ -5,6 +5,8 @@ import { Building2, Copy, Download, Link2, Sparkles } from "lucide-react";
 import { Panel, LoadingState, ErrorState } from "@/components/ui/Panel";
 import { Button } from "@/components/ui/Button";
 import { TextField } from "@/components/ui/FormField";
+import { MoneyField } from "@/components/ui/MoneyField";
+import { formatMoneyInput, parseMoneyBR } from "@/lib/money";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Badge } from "@/components/ui/Badge";
 import { apiClient, ApiError } from "@/lib/api-client";
@@ -179,7 +181,7 @@ function SubscriptionPlanPanel({ tenant, isOwner }: { tenant: Tenant; isOwner: b
  * Auditoria Go-Live: campo MANUAL, nunca calculado automaticamente pelo
  * sistema (é uma decisão de negócio da clínica, não uma inferência a
  * partir do histórico). Alimenta o insight de desempenho anual na Sala
- * de Comando (ver smart_insights_engine.py — comparação com o
+ * de Comando (ver app/services/insights (backend) — comparação com o
  * faturamento acumulado no ano e recomendação de CRM/recuperação de
  * pacientes inativos quando abaixo da meta).
  */
@@ -189,7 +191,7 @@ function AnnualGoalPanel({ tenant, isOwner }: { tenant: Tenant; isOwner: boolean
   const [goalInput, setGoalInput] = useState("");
 
   useEffect(() => {
-    setGoalInput(tenant.annual_revenue_goal !== null ? String(tenant.annual_revenue_goal) : "");
+    setGoalInput(formatMoneyInput(tenant.annual_revenue_goal));
   }, [tenant.annual_revenue_goal]);
 
   // Épico F3.3 do Plano Diretor ("Metas e cenários orientados a dados")
@@ -203,7 +205,8 @@ function AnnualGoalPanel({ tenant, isOwner }: { tenant: Tenant; isOwner: boolean
   });
 
   const mutation = useMutation({
-    mutationFn: (annual_revenue_goal: number) => apiClient.patch<Tenant>("/api/v1/tenant", { annual_revenue_goal }),
+    // Texto normalizado ("2400000.00"), nunca float: ver src/lib/money.ts.
+    mutationFn: (annual_revenue_goal: string) => apiClient.patch<Tenant>("/api/v1/tenant", { annual_revenue_goal }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tenant"] });
       showSuccess("Meta de faturamento anual atualizada.");
@@ -213,12 +216,16 @@ function AnnualGoalPanel({ tenant, isOwner }: { tenant: Tenant; isOwner: boolean
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    const parsed = Number(goalInput.replace(",", "."));
-    if (!Number.isFinite(parsed) || parsed <= 0) {
+    const parsed = parseMoneyBR(goalInput);
+    if (!parsed.ok) {
+      showError(parsed.error);
+      return;
+    }
+    if (parsed.value <= 0) {
       showError("Informe um valor de meta maior que zero.");
       return;
     }
-    mutation.mutate(parsed);
+    mutation.mutate(parsed.normalized);
   }
 
   return (
@@ -233,20 +240,18 @@ function AnnualGoalPanel({ tenant, isOwner }: { tenant: Tenant; isOwner: boolean
             Nenhuma meta configurada ainda — sem ela, a Sala de Comando não mostra o insight de desempenho anual.
           </p>
         )}
-        <div className="flex max-w-md items-end gap-3">
-          <TextField
-            label="Meta de faturamento anual (R$)"
-            type="number"
-            min={0.01}
-            step="0.01"
-            value={goalInput}
-            onChange={(e) => setGoalInput(e.target.value)}
-            disabled={!isOwner}
-            placeholder="Ex: 1200000.00"
-            className="mb-0 flex-1"
-          />
+        <div className="flex max-w-md items-start gap-3">
+          <div className="flex-1">
+            <MoneyField
+              label="Meta de faturamento anual (R$)"
+              value={goalInput}
+              onValueChange={setGoalInput}
+              disabled={!isOwner}
+              placeholder="Ex.: 1.200.000,00"
+            />
+          </div>
           {isOwner && (
-            <Button type="submit" disabled={mutation.isPending || !goalInput}>
+            <Button type="submit" className="mt-6" disabled={mutation.isPending || !goalInput}>
               {mutation.isPending ? "Salvando..." : "Salvar meta"}
             </Button>
           )}
@@ -293,7 +298,7 @@ function AnnualGoalPanel({ tenant, isOwner }: { tenant: Tenant; isOwner: boolean
                         type="button"
                         variant="ghost"
                         size="xs"
-                        onClick={() => setGoalInput(String(suggestionQuery.data!.own_trend_suggested_goal))}
+                        onClick={() => setGoalInput(formatMoneyInput(suggestionQuery.data!.own_trend_suggested_goal))}
                       >
                         Usar
                       </Button>
@@ -318,7 +323,7 @@ function AnnualGoalPanel({ tenant, isOwner }: { tenant: Tenant; isOwner: boolean
                         type="button"
                         variant="ghost"
                         size="xs"
-                        onClick={() => setGoalInput(String(suggestionQuery.data!.network_pace_suggested_goal))}
+                        onClick={() => setGoalInput(formatMoneyInput(suggestionQuery.data!.network_pace_suggested_goal))}
                       >
                         Usar
                       </Button>
@@ -494,7 +499,7 @@ function NoShowThresholdsPanel({ tenant, isOwner }: { tenant: Tenant; isOwner: b
 /**
  * Épico F2.1 do Plano Diretor ("Calibração por especialidade/porte") —
  * mesmo padrão de NoShowThresholdsPanel acima, aplicado ao limiar de
- * risco de glosa (denial_risk_pct, ver smart_insights_engine.py). Campos
+ * risco de glosa (denial_risk_pct, ver app/services/insights (backend)). Campos
  * PERCENTUAIS (0-100), não frações.
  */
 function DenialRiskThresholdsPanel({ tenant, isOwner }: { tenant: Tenant; isOwner: boolean }) {

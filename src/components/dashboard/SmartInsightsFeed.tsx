@@ -98,7 +98,7 @@ const HERO_TINT: Record<InsightSeverity, string> = {
  * deveria abrir um detalhe da análise" — antes todo insight era um beco
  * sem saída, o texto apontava um problema mas nunca levava a lugar
  * nenhum). `action_href` vem do backend em 3 formatos (ver DECISÃO em
- * smart_insights_engine.Insight):
+ * app/services/insights.Insight):
  *   "/rota"   -> navega pra outra página (ex: fila de faturamento de
  *                alto risco, que já existe no Painel).
  *   "#tab:id" -> troca de aba dentro da própria Sala de Comando (ex:
@@ -111,7 +111,7 @@ const HERO_TINT: Record<InsightSeverity, string> = {
  *                em vez de só rolar, porque ExecutiveAgendaSummary
  *                precisa SABER o foco pra buscar e mostrar os candidatos
  *                a recontato certos (ver DECISÃO em
- *                smart_insights_engine.py::_weekday_drop_insight/
+ *                app/services/insights (backend)::_weekday_drop_insight/
  *                _capacity_drop_insight).
  * Nunca inventa destino: só aponta pra telas/seções que já existem.
  */
@@ -366,11 +366,11 @@ const CATEGORY_CONFIG: Record<"faturamento" | "agenda" | "estoque" | "prontuario
   agenda: { label: "Agenda & Ocupação", icon: CalendarClock },
   // Achado do Comitê de Liderança Tecnológica ("5 pernas", Sala de
   // Comando 3.0) — primeira categoria nova desde o agrupamento original
-  // em duas seções (ver DECISÃO completa em smart_insights_engine.py::
+  // em duas seções (ver DECISÃO completa em app/services/insights (backend)::
   // _stock_stockout_risk_insight/_stock_expiring_lot_value_insight).
   estoque: { label: "Estoque & Suprimentos", icon: Package },
   // Segunda categoria nova (mesma rodada, template PEP — ver DECISÃO em
-  // smart_insights_engine.py::_pep_documentation_gap_insight/
+  // app/services/insights (backend)::_pep_documentation_gap_insight/
   // _pep_cid_completeness_insight): documentação clínica não é nem
   // faturamento nem agenda, é a perna assistencial/PEP.
   prontuario: { label: "Prontuário & Documentação Clínica", icon: ClipboardList },
@@ -383,7 +383,7 @@ const CATEGORY_CONFIG: Record<"faturamento" | "agenda" | "estoque" | "prontuario
  * seguidos). O card de maior impacto continua como manchete solta, FORA
  * de qualquer seção — é "o problema nº1 agora", não pertence a uma área
  * específica. O resto entra na seção da sua `category` (ver DECISÃO em
- * smart_insights_engine.Insight.category, backend), mantendo a ordem de
+ * app/services/insights.Insight.category, backend), mantendo a ordem de
  * prioridade que o backend já calculou dentro de cada seção. Seção sem
  * nenhum card não aparece — nunca um título "Agenda & Ocupação" sobre um
  * espaço vazio.

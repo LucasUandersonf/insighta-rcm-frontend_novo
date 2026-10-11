@@ -36,7 +36,7 @@ const APPOINTMENT_LIST_PAGE_SIZE = 10;
  * "Agendamentos do período" — tela que faltava depois do Achado 12 da
  * Auditoria de Templates e Insights: os insights de canal de
  * agendamento/motivo de cancelamento concentrado (ver
- * smart_insights_engine.py::_booking_channel_no_show_insight/
+ * app/services/insights (backend)::_booking_channel_no_show_insight/
  * _cancellation_reason_insight, que apontam pra "#agenda-resumo") já
  * tinham o dado exposto pela API, mas não existia NENHUMA tela que
  * listasse agendamentos individuais mostrando QUAL agendamento tem qual
@@ -252,7 +252,7 @@ function agendaFocusTitle(focus: AgendaFocus, recallData: RecallCandidates | und
 /**
  * Card de "candidatos a recontato" — o destino real dos botões "Ver quem
  * costumava vir {dia}"/"Ver candidatos pra agenda de {profissional}" (ver
- * DECISÃO em smart_insights_engine.py::_weekday_drop_insight/
+ * DECISÃO em app/services/insights (backend)::_weekday_drop_insight/
  * _weekday_no_show_rate_insight/_capacity_drop_insight). Só aparece
  * quando `focus` está setado — o gestor chega aqui clicando num botão de
  * insight, nunca por padrão (mesmo espírito de InactivePatientsPanel:
