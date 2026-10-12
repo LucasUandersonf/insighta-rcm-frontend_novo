@@ -52,6 +52,7 @@ import type {
 } from "@/lib/types";
 import { MoneyInput } from "@/components/ui/MoneyField";
 import { formatDateBR } from "@/lib/dates";
+import { useDirtyOnEdit } from "@/lib/unsavedChanges";
 
 // Desativação (não exclusão) de Operadoras/Planos — achado do usuário:
 // um convênio/plano cadastrado errado ou duplicado não tinha NENHUMA
@@ -99,6 +100,7 @@ function CreateConvenioModal({
   isOpen: boolean;
   onClose: () => void;
 }) {
+  const unsaved = useDirtyOnEdit("o cadastro do convênio", isOpen);
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
   const [name, setName] = useState("");
@@ -161,7 +163,7 @@ function CreateConvenioModal({
 
   return (
     <Modal title="Novo convênio" isOpen={isOpen} onClose={resetAndClose}>
-      <form onSubmit={handleSubmit}>
+      <form onChange={unsaved.onChange} onSubmitCapture={unsaved.onSubmit} onSubmit={handleSubmit}>
         <TextField
           label="Nome do convênio"
           placeholder="Ex.: Unimed Nacional"
@@ -217,6 +219,7 @@ function CreateCompanyModal({
   isOpen: boolean;
   onClose: () => void;
 }) {
+  const unsaved = useDirtyOnEdit("o cadastro da operadora", isOpen);
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
   const [name, setName] = useState("");
@@ -265,7 +268,7 @@ function CreateCompanyModal({
 
   return (
     <Modal title="Nova operadora" isOpen={isOpen} onClose={resetAndClose}>
-      <form onSubmit={handleSubmit}>
+      <form onChange={unsaved.onChange} onSubmitCapture={unsaved.onSubmit} onSubmit={handleSubmit}>
         <TextField
           label="Nome da operadora"
           placeholder="Ex: Unimed Nacional"
@@ -316,6 +319,7 @@ function CreatePlanModal({
   onClose: () => void;
   companies: InsuranceCompany[];
 }) {
+  const unsaved = useDirtyOnEdit("o cadastro do plano", isOpen);
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
   const [planType, setPlanType] = useState<InsurancePlanType>("convenio");
@@ -372,7 +376,7 @@ function CreatePlanModal({
 
   return (
     <Modal title="Novo plano" isOpen={isOpen} onClose={resetAndClose}>
-      <form onSubmit={handleSubmit}>
+      <form onChange={unsaved.onChange} onSubmitCapture={unsaved.onSubmit} onSubmit={handleSubmit}>
         <SelectField
           label="Tipo"
           required
@@ -443,6 +447,7 @@ function ManualContractModal({
   onClose: () => void;
   plans: InsurancePlan[];
 }) {
+  const unsaved = useDirtyOnEdit("o contrato", isOpen);
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
   const [planId, setPlanId] = useState("");
@@ -521,7 +526,7 @@ function ManualContractModal({
       onClose={requestClose}
       size="2xl"
     >
-      <form onSubmit={handleSubmit}>
+      <form onChange={unsaved.onChange} onSubmitCapture={unsaved.onSubmit} onSubmit={handleSubmit}>
         <p className="mb-4 text-xs text-ink-faint">
           Para 1-2 procedimentos que você já sabe de cor. Se o contrato tem uma
           tabela de preços extensa em PDF, use “Enviar contrato (PDF)” em vez
@@ -667,6 +672,7 @@ function UploadContractModal({
   plans: InsurancePlan[];
   onUploaded: (contract: Contract) => void;
 }) {
+  const unsaved = useDirtyOnEdit("o envio do contrato", isOpen);
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
   const [planId, setPlanId] = useState("");
@@ -722,7 +728,7 @@ function UploadContractModal({
       isOpen={isOpen}
       onClose={resetAndClose}
     >
-      <form onSubmit={handleSubmit}>
+      <form onChange={unsaved.onChange} onSubmitCapture={unsaved.onSubmit} onSubmit={handleSubmit}>
         <p className="mb-4 text-xs text-ink-faint">
           O Insighta lê o PDF e monta a tabela de preços para você conferir
           antes de aprovar. Nada vale sem a sua revisão.
@@ -964,7 +970,7 @@ function ReviewContractModal({
                   className={cn(
                     "rounded-md border px-3 py-2.5",
                     warning
-                      ? "border-pending/35 bg-pending/[6%]"
+                      ? "border-pending/35 bg-pending/6"
                       : "border-border-subtle",
                   )}
                 >

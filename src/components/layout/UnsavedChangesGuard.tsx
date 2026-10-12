@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useEffect, useRef } from "react";
+import { useBlocker, useLocation } from "react-router-dom";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { clearAllUnsaved, useUnsavedLabels } from "@/lib/unsavedChanges";
 
@@ -9,14 +9,23 @@ function joinLabels(labels: string[]): string {
   return `${unique.slice(0, -1).join(", ")} e ${unique[unique.length - 1]}`;
 }
 
-/** Guarda único de "alterações não salvas" (ver src/lib/unsavedChanges.ts). */
+/**
+ * Guarda único de "alterações não salvas" (ver src/lib/unsavedChanges.ts).
+ *
+ * S5: `useBlocker` do roteador de dados (App.tsx) segura QUALQUER troca de
+ * tela — link, navigate() e o botão Voltar/Avançar do navegador. Fechar ou
+ * recarregar a aba continua no `beforeunload` (o navegador mostra o aviso
+ * dele; nenhum roteador alcança esse caso).
+ */
 export function UnsavedChangesGuard() {
   const labels = useUnsavedLabels();
-  const navigate = useNavigate();
   const location = useLocation();
-  const [pending, setPending] = useState<string | null>(null);
   const dirtyRef = useRef(false);
   dirtyRef.current = labels.length > 0;
+
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) => dirtyRef.current && currentLocation.pathname !== nextLocation.pathname
+  );
 
   // Mudou de tela por outro caminho (salvou e redirecionou, por exemplo): o
   // aviso não acompanha para a próxima.
@@ -25,45 +34,27 @@ export function UnsavedChangesGuard() {
   }, [location.pathname]);
 
   useEffect(() => {
-    function onClick(e: MouseEvent) {
-      if (!dirtyRef.current || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-      const anchor = (e.target as HTMLElement | null)?.closest?.("a[href]") as HTMLAnchorElement | null;
-      if (!anchor || anchor.target === "_blank" || anchor.hasAttribute("download")) return;
-      const url = new URL(anchor.href, window.location.href);
-      if (url.origin !== window.location.origin) return;
-      const next = url.pathname + url.search + url.hash;
-      if (url.pathname === window.location.pathname) return;
-      e.preventDefault();
-      e.stopPropagation();
-      setPending(next);
-    }
     function onBeforeUnload(e: BeforeUnloadEvent) {
       if (!dirtyRef.current) return;
       e.preventDefault();
       e.returnValue = "";
     }
-    document.addEventListener("click", onClick, true);
     window.addEventListener("beforeunload", onBeforeUnload);
-    return () => {
-      document.removeEventListener("click", onClick, true);
-      window.removeEventListener("beforeunload", onBeforeUnload);
-    };
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
   }, []);
 
   const what = joinLabels(labels);
   return (
     <ConfirmDialog
-      isOpen={pending !== null}
+      isOpen={blocker.state === "blocked"}
       title="Sair sem salvar?"
       message={`Você alterou ${what} e não salvou. Se sair agora, a alteração se perde.`}
       confirmLabel="Sair sem salvar"
       cancelLabel="Continuar editando"
-      onCancel={() => setPending(null)}
+      onCancel={() => blocker.reset?.()}
       onConfirm={() => {
-        const target = pending;
-        setPending(null);
         clearAllUnsaved();
-        if (target) navigate(target);
+        blocker.proceed?.();
       }}
     />
   );

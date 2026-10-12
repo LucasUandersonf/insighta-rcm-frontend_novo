@@ -201,7 +201,7 @@ function AskInsightaField({ items, canAsk }: { items: NavItem[]; canAsk: boolean
               choose(options[activeIndex]);
             }
           }}
-          className="min-w-0 flex-1 bg-transparent text-[13px] text-ink outline-none placeholder:text-ink-faint"
+          className="min-w-0 flex-1 bg-transparent text-[13px] text-ink outline-hidden placeholder:text-ink-faint"
         />
         <kbd className="shrink-0 rounded-md border border-border-hairline px-1.5 py-0.5 font-sans text-[11px] text-ink-faint">{SHORTCUT_LABEL}</kbd>
       </label>
@@ -520,7 +520,7 @@ function ModulesPanel({
             </NavLink>
           ))}
           {index === groups.length - 1 && (
-            <div className="mt-auto flex flex-col gap-1.5 rounded-xl border border-accent/25 bg-brand/[0.12] p-3.5">
+            <div className="mt-auto flex flex-col gap-1.5 rounded-xl border border-accent/25 bg-brand/12 p-3.5">
               <span className="text-xs font-semibold text-accent-muted">Dica</span>
               <span className="text-xs leading-snug text-ink-soft">
                 Cada módulo mostra aqui o alerta mais urgente dele — você sabe onde entrar antes de abrir.
@@ -665,7 +665,7 @@ export function TopBar() {
                   to={item.to}
                   end={item.to === "/"}
                   className={({ isActive }) =>
-                    cn("block rounded-[10px] px-3 py-2.5 text-sm font-medium", isActive ? "bg-brand/[0.18] text-ink" : "text-ink-muted hover:bg-canvas-raised/60")
+                    cn("block rounded-[10px] px-3 py-2.5 text-sm font-medium", isActive ? "bg-brand/18 text-ink" : "text-ink-muted hover:bg-canvas-raised/60")
                   }
                 >
                   {item.label}
@@ -709,7 +709,7 @@ export function TopBar() {
                   cn(
                     "flex h-9 shrink-0 items-center gap-2 rounded-[10px] border px-3 text-[13px] font-medium transition-colors",
                     isActive
-                      ? "border-accent/35 bg-brand/[0.18] text-ink"
+                      ? "border-accent/35 bg-brand/18 text-ink"
                       : "border-transparent text-ink-muted hover:bg-canvas-raised/60 hover:text-ink"
                   )
                 }
@@ -743,7 +743,7 @@ export function TopBar() {
                 className={cn(
                   "flex h-9 shrink-0 items-center gap-2 rounded-[10px] border px-3 text-[13px] font-medium transition-colors",
                   currentModule
-                    ? "border-accent/35 bg-brand/[0.18] text-ink"
+                    ? "border-accent/35 bg-brand/18 text-ink"
                     : isModulesOpen
                       ? "border-border-default bg-canvas-raised/70 text-ink"
                       : "border-transparent text-ink-muted hover:bg-canvas-raised/60 hover:text-ink"

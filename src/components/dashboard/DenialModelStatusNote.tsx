@@ -31,7 +31,7 @@ export function DenialModelStatusNote() {
   });
   if (!data || typeof data.status !== "string") return null;
   return (
-    <div className="flex items-start gap-2.5 rounded-xl border border-border-hairline bg-white/[0.03] px-3.5 py-3">
+    <div className="flex items-start gap-2.5 rounded-xl border border-border-hairline bg-white/3 px-3.5 py-3">
       <Sparkles aria-hidden size={14} className="mt-0.5 shrink-0 text-accent" />
       <p className="text-xs leading-relaxed text-ink-muted">{denialModelNote(data)}</p>
     </div>

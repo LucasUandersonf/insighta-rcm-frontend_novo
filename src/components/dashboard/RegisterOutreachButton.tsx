@@ -8,6 +8,7 @@ import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useToast } from "@/context/ToastContext";
 import type { PatientOutreachChannel, PatientOutreachLogCreateRequest, PatientOutreachLogEntry, PatientOutreachOutcome } from "@/lib/types";
+import { useDirtyOnEdit } from "@/lib/unsavedChanges";
 
 export const OUTREACH_CHANNEL_LABELS: Record<PatientOutreachChannel, string> = {
   telefone: "Telefone",
@@ -41,6 +42,7 @@ export function RegisterOutreachButton({
   invalidateKeys: QueryKey[];
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const unsaved = useDirtyOnEdit("o registro de contato", isOpen);
   const [channel, setChannel] = useState<PatientOutreachChannel>("whatsapp");
   const [outcome, setOutcome] = useState<PatientOutreachOutcome>("contatado");
   const [notes, setNotes] = useState("");
@@ -81,7 +83,7 @@ export function RegisterOutreachButton({
         Registrar contato
       </button>
       <Modal title={`Registrar contato — ${patientName}`} isOpen={isOpen} onClose={resetAndClose}>
-        <form onSubmit={handleSubmit}>
+        <form onChange={unsaved.onChange} onSubmitCapture={unsaved.onSubmit} onSubmit={handleSubmit}>
           <SelectField label="Canal" required value={channel} onChange={(e) => setChannel(e.target.value as PatientOutreachChannel)}>
             {(Object.keys(OUTREACH_CHANNEL_LABELS) as PatientOutreachChannel[]).map((c) => (
               <option key={c} value={c}>

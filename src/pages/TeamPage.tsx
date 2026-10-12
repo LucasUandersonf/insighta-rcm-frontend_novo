@@ -88,7 +88,7 @@ function updateLine(d: Demand): string {
 function ScoreCard({ score }: { score: CoordinatorScore }) {
   const pct = score.on_time_pct;
   return (
-    <article className="flex flex-col gap-4 rounded-[18px] border border-border-hairline bg-white/[0.03] p-[22px]">
+    <article className="flex flex-col gap-4 rounded-[18px] border border-border-hairline bg-white/3 p-[22px]">
       <div className="flex items-center gap-3">
         <span className="flex h-[38px] w-[38px] items-center justify-center rounded-full bg-[linear-gradient(135deg,#38BDF8,#6A57E3_55%,#A855F7)] text-[13px] font-semibold text-white">
           {initialsFrom(score.coordinator.full_name)}
@@ -152,7 +152,7 @@ function DeadlineChips({ value, onChange }: { value: string | null; onChange: (v
               }}
               className={cn(
                 "h-[34px] rounded-full border px-3.5 text-[13px]",
-                on ? "border-accent/45 bg-brand/20 text-ink" : "border-white/[0.12] text-ink-muted hover:text-ink"
+                on ? "border-accent/45 bg-brand/20 text-ink" : "border-white/12 text-ink-muted hover:text-ink"
               )}
             >
               {o.label}
@@ -166,7 +166,7 @@ function DeadlineChips({ value, onChange }: { value: string | null; onChange: (v
           aria-label="Data do prazo"
           value={value ?? ""}
           onChange={(e) => onChange(e.target.value || null)}
-          className="h-10 w-48 rounded-xl border border-white/10 bg-white/[0.04] px-3 text-[13px] text-ink"
+          className="h-10 w-48 rounded-xl border border-white/10 bg-white/4 px-3 text-[13px] text-ink"
         />
       )}
     </div>
@@ -217,7 +217,7 @@ function ReassignModal({ demand, mode, onClose }: { demand: Demand | null; mode:
                 onClick={() => setSector(s.sector)}
                 className={cn(
                   "flex w-full items-center gap-3.5 rounded-xl border px-3.5 py-3 text-left",
-                  sector === s.sector ? "border-accent/50 bg-brand/[0.14]" : "border-border-hairline bg-white/[0.02]",
+                  sector === s.sector ? "border-accent/50 bg-brand/[0.14]" : "border-border-hairline bg-white/2",
                   !s.coordinator && "cursor-not-allowed opacity-55"
                 )}
               >
@@ -236,7 +236,7 @@ function ReassignModal({ demand, mode, onClose }: { demand: Demand | null; mode:
           <DeadlineChips value={due} onChange={setDue} />
         </div>
         <div className="flex justify-end gap-2.5">
-          <button type="button" onClick={onClose} className="h-10 rounded-[11px] border border-white/[0.12] px-4 text-[13px] text-ink">
+          <button type="button" onClick={onClose} className="h-10 rounded-[11px] border border-white/12 px-4 text-[13px] text-ink">
             Cancelar
           </button>
           <button
@@ -293,7 +293,7 @@ function DemandDetailModal({ demand, canManage, onClose }: { demand: Demand | nu
                   { onSuccess: () => (showSuccess("Demanda encerrada."), onClose()), onError: (err) => showError(getApiErrorMessage(err)) }
                 )
               }
-              className="h-9 rounded-[10px] border border-white/[0.12] px-3.5 text-xs text-ink"
+              className="h-9 rounded-[10px] border border-white/12 px-3.5 text-xs text-ink"
             >
               Encerrar demanda
             </button>
@@ -365,13 +365,13 @@ export function TeamPage() {
           <h1 className="text-[34px] font-semibold tracking-[-0.02em] text-ink">Equipe</h1>
           <p className="text-sm text-ink-muted">Você enxerga, a equipe resolve. Acompanhe cada demanda até a confirmação nos dados.</p>
         </div>
-        <span className="ml-auto flex h-[38px] items-center gap-2 rounded-[11px] border border-white/10 bg-white/[0.04] px-3.5 text-[13px] text-ink">
+        <span className="ml-auto flex h-[38px] items-center gap-2 rounded-[11px] border border-white/10 bg-white/4 px-3.5 text-[13px] text-ink">
           <CalendarDays aria-hidden size={14} className="text-ink-muted" />
           Este mês
         </span>
       </div>
 
-      <section aria-label="Resumo da equipe" className="grid overflow-hidden rounded-[20px] border border-border-hairline bg-white/[0.025] sm:grid-cols-2 lg:grid-cols-4">
+      <section aria-label="Resumo da equipe" className="grid overflow-hidden rounded-[20px] border border-border-hairline bg-white/2.5 sm:grid-cols-2 lg:grid-cols-4">
         {[
           { label: "Em aberto", value: String(o.open_count), tone: "", text: openSentence(o.open_by_sector) },
           { label: "Atrasadas", value: String(o.overdue_count), tone: o.overdue_count ? "text-[#FF8A8A]" : "", text: overdueSentence(open) },
@@ -410,7 +410,7 @@ export function TeamPage() {
         )}
       </section>
 
-      <section aria-labelledby="demandas" className="flex flex-col gap-3.5 rounded-[20px] border border-border-hairline bg-white/[0.03] p-6">
+      <section aria-labelledby="demandas" className="flex flex-col gap-3.5 rounded-[20px] border border-border-hairline bg-white/3 p-6">
         <div className="flex flex-wrap items-center gap-x-[22px] border-b border-border-hairline">
           <h2 id="demandas" className="mb-3 text-base font-semibold text-ink">
             Demandas
@@ -449,7 +449,7 @@ export function TeamPage() {
                 {rows.map((d) => (
                   <div
                     key={d.id}
-                    className="grid items-center gap-2 rounded-[14px] bg-white/[0.025] p-3.5 md:grid-cols-[120px_minmax(0,1fr)_200px_130px_90px] md:gap-4"
+                    className="grid items-center gap-2 rounded-[14px] bg-white/2.5 p-3.5 md:grid-cols-[120px_minmax(0,1fr)_200px_130px_90px] md:gap-4"
                   >
                     <span>
                       <DemandStatusPill demand={d} />
@@ -475,7 +475,7 @@ export function TeamPage() {
                           {d.nudged_at ? "Cobrar de novo" : "Cobrar"}
                         </button>
                       ) : (
-                        <button type="button" onClick={() => setDetail(d)} className="h-[34px] rounded-[10px] border border-white/[0.12] px-3.5 text-xs text-ink">
+                        <button type="button" onClick={() => setDetail(d)} className="h-[34px] rounded-[10px] border border-white/12 px-3.5 text-xs text-ink">
                           Ver
                         </button>
                       )}
@@ -506,10 +506,10 @@ export function TeamPage() {
                   <button type="button" onClick={() => setReassign({ demand: d, mode: "reatribuir" })} className="h-[34px] rounded-[10px] bg-brand px-3.5 text-xs font-medium text-white">
                     Reatribuir
                   </button>
-                  <button type="button" onClick={() => setReassign({ demand: d, mode: "prazo" })} className="h-[34px] rounded-[10px] border border-white/[0.12] px-3.5 text-xs text-ink">
+                  <button type="button" onClick={() => setReassign({ demand: d, mode: "prazo" })} className="h-[34px] rounded-[10px] border border-white/12 px-3.5 text-xs text-ink">
                     Dar mais prazo
                   </button>
-                  <button type="button" disabled={action.isPending} onClick={() => close(d)} className="h-[34px] rounded-[10px] border border-white/[0.12] px-3.5 text-xs text-ink">
+                  <button type="button" disabled={action.isPending} onClick={() => close(d)} className="h-[34px] rounded-[10px] border border-white/12 px-3.5 text-xs text-ink">
                     Encerrar
                   </button>
                 </div>

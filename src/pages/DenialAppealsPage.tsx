@@ -36,6 +36,7 @@ import type {
   PaginatedResponse,
 } from "@/lib/types";
 import { formatDateBR } from "@/lib/dates";
+import { useDirtyOnEdit } from "@/lib/unsavedChanges";
 
 const APPEALS_PAGE_SIZE = 20;
 
@@ -88,6 +89,7 @@ function CreateAppealModal({
   isOpen: boolean;
   onClose: () => void;
 }) {
+  const unsaved = useDirtyOnEdit("o recurso de glosa", isOpen);
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
   const [selectedBilling, setSelectedBilling] =
@@ -151,7 +153,7 @@ function CreateAppealModal({
       isOpen={isOpen}
       onClose={resetAndClose}
     >
-      <form onSubmit={handleSubmit}>
+      <form onChange={unsaved.onChange} onSubmitCapture={unsaved.onSubmit} onSubmit={handleSubmit}>
         <p className="mb-4 text-xs text-ink-faint">
           Para uma negativa FORMAL recebida da operadora (glosa administrativa
           ou médica) — diferente do alerta de risco pré-envio do Painel

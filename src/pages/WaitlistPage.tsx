@@ -21,6 +21,7 @@ import type {
   WaitlistEntryCreateRequest,
   WaitlistStatus,
 } from "@/lib/types";
+import { useDirtyOnEdit } from "@/lib/unsavedChanges";
 
 const STATUS_LABELS: Record<WaitlistStatus, string> = {
   aguardando: "Aguardando",
@@ -47,6 +48,7 @@ function formatDateTime(iso: string): string {
 }
 
 function CreateWaitlistEntryModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+  const unsaved = useDirtyOnEdit("a entrada na lista de espera", isOpen);
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
   const [patientId, setPatientId] = useState("");
@@ -98,7 +100,7 @@ function CreateWaitlistEntryModal({ isOpen, onClose }: { isOpen: boolean; onClos
 
   return (
     <Modal title="Adicionar à lista de espera" isOpen={isOpen} onClose={resetAndClose}>
-      <form onSubmit={handleSubmit}>
+      <form onChange={unsaved.onChange} onSubmitCapture={unsaved.onSubmit} onSubmit={handleSubmit}>
         <SelectField label="Paciente" required value={patientId} onChange={(e) => setPatientId(e.target.value)}>
           <option value="" disabled>
             Selecione um paciente

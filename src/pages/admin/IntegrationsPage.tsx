@@ -25,6 +25,7 @@ import type {
   WebhookSubscription,
   WebhookSubscriptionCreated,
 } from "@/lib/types";
+import { useDirtyOnEdit } from "@/lib/unsavedChanges";
 
 const DELIVERY_STATUS_LABEL: Record<WebhookDeliveryStatus, string> = {
   pending: "Aguardando retentativa",
@@ -85,6 +86,7 @@ function CreateKeyModal({
   onClose: () => void;
   onCreated: (key: ApiKeyCreated) => void;
 }) {
+  const unsaved = useDirtyOnEdit("a nova chave de API", isOpen);
   const queryClient = useQueryClient();
   const { showError } = useToast();
   const [name, setName] = useState("");
@@ -108,7 +110,7 @@ function CreateKeyModal({
 
   return (
     <Modal title="Nova chave de API" isOpen={isOpen} onClose={onClose}>
-      <form onSubmit={handleSubmit}>
+      <form onChange={unsaved.onChange} onSubmitCapture={unsaved.onSubmit} onSubmit={handleSubmit}>
         <TextField
           label="Nome da chave"
           placeholder="Ex: ERP TotalCare — produção"
@@ -177,6 +179,7 @@ function CreateWebhookModal({
   onClose: () => void;
   onCreated: (webhook: WebhookSubscriptionCreated) => void;
 }) {
+  const unsaved = useDirtyOnEdit("o novo webhook", isOpen);
   const queryClient = useQueryClient();
   const { showError } = useToast();
   const [name, setName] = useState("");
@@ -223,7 +226,7 @@ function CreateWebhookModal({
 
   return (
     <Modal title="Novo webhook" isOpen={isOpen} onClose={onClose}>
-      <form onSubmit={handleSubmit}>
+      <form onChange={unsaved.onChange} onSubmitCapture={unsaved.onSubmit} onSubmit={handleSubmit}>
         <TextField
           label="Nome"
           placeholder="Ex: Slack — financeiro"

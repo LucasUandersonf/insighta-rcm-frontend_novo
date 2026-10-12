@@ -194,7 +194,7 @@ function TodayQueue({ dateFrom, dateTo, workflow }: { dateFrom: string; dateTo: 
               onClick={() => workflow.resolveMutation.mutate(item)}
               aria-label={actioned ? `Feita: ${item.title}` : `Marcar como feita: ${item.title}`}
               className={cn(
-                "mt-px flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-[7px] border transition-colors relative before:absolute before:-inset-[11px] before:content-['']",
+                "mt-px flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-[7px] border transition-colors relative before:absolute before:inset-[-11px] before:content-['']",
                 actioned ? "border-revenue bg-revenue" : "border-ink-faint/60 hover:border-revenue"
               )}
             >

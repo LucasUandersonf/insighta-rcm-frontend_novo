@@ -33,7 +33,7 @@ function ViewToggle({ mode, onChange }: { mode: ViewMode; onChange: (m: ViewMode
           onClick={() => onChange(option)}
           className={cn(
             "rounded px-2 py-1 font-medium transition-colors",
-            mode === option ? "bg-canvas text-ink shadow-sm" : "text-ink-faint hover:text-ink-muted"
+            mode === option ? "bg-canvas text-ink shadow-xs" : "text-ink-faint hover:text-ink-muted"
           )}
         >
           {option === "atendimentos" ? "Atendimentos" : "R$"}

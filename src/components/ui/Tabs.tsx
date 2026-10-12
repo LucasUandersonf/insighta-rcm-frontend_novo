@@ -140,10 +140,10 @@ export function Tabs({
     // vira o único elemento que rola — a página em volta não estica mais.
     <div className="relative">
     {edges.left && (
-      <span aria-hidden className="pointer-events-none absolute inset-y-0 left-0 z-10 w-8 bg-gradient-to-r from-canvas to-transparent" />
+      <span aria-hidden className="pointer-events-none absolute inset-y-0 left-0 z-10 w-8 bg-linear-to-r from-canvas to-transparent" />
     )}
     {edges.right && (
-      <span aria-hidden className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-canvas to-transparent" />
+      <span aria-hidden className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-linear-to-l from-canvas to-transparent" />
     )}
     <div ref={scrollRef} className="overflow-x-auto">
       <div
@@ -176,7 +176,7 @@ export function Tabs({
                 segmented
                   ? "relative flex min-h-[36px] items-center gap-1.5 rounded-lg px-3 text-[13px] font-medium transition-colors"
                   : "relative -mb-px flex min-h-[44px] items-end gap-1.5 pb-3 text-[13px] font-medium transition-colors",
-                segmented && isActive && "bg-canvas-surface shadow-sm",
+                segmented && isActive && "bg-canvas-surface shadow-xs",
                 isActive ? "text-ink" : "text-ink-faint hover:text-ink"
               )}
             >

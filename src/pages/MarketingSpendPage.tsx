@@ -14,6 +14,7 @@ import { useToast } from "@/context/ToastContext";
 import type { MarketingSpend, MarketingSpendCreateRequest, MarketingSpendSource, PaginatedResponse } from "@/lib/types";
 import { parseMoneyBR } from "@/lib/money";
 import { clinicIsoDate, formatDateBR } from "@/lib/dates";
+import { useDirtyOnEdit } from "@/lib/unsavedChanges";
 
 const MARKETING_SPEND_PAGE_SIZE = 20;
 
@@ -31,6 +32,7 @@ function formatDate(iso: string): string {
 }
 
 function CreateMarketingSpendModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+  const unsaved = useDirtyOnEdit("o gasto de marketing", isOpen);
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
   const [source, setSource] = useState<MarketingSpendSource>("meta_ads");
@@ -97,7 +99,7 @@ function CreateMarketingSpendModal({ isOpen, onClose }: { isOpen: boolean; onClo
 
   return (
     <Modal title="Lançar gasto de marketing" isOpen={isOpen} onClose={resetAndClose}>
-      <form onSubmit={handleSubmit}>
+      <form onChange={unsaved.onChange} onSubmitCapture={unsaved.onSubmit} onSubmit={handleSubmit}>
         <p className="mb-4 text-xs text-ink-faint">
           Quanto foi gasto no dia em cada canal. Sem esse valor, a tela mostra quanto os pacientes novos
           trouxeram, mas não quanto custou conquistar cada um.

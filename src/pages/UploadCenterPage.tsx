@@ -40,6 +40,7 @@ import type {
   UploadIngestionFileResponse,
 } from "@/lib/types";
 import { word } from "@/lib/plural";
+import { useDirtyOnEdit } from "@/lib/unsavedChanges";
 
 // Rótulo em português por campo canônico — espelha
 // app/services/column_mapping_service.py::CANONICAL_FIELD_LABELS no
@@ -450,7 +451,7 @@ export function UploadReportModal({ fileId, onClose }: { fileId: string | null; 
           {data.reasons.length > 0 && (
             <ul className="flex flex-col gap-2.5">
               {data.reasons.map((r) => (
-                <li key={r.reason} className="rounded-md border border-pending/30 bg-pending/[6%] px-3 py-2">
+                <li key={r.reason} className="rounded-md border border-pending/30 bg-pending/6 px-3 py-2">
                   <p className="text-xs text-ink">
                     {r.reason} <span className="text-ink-muted">({plural(r.count, "linha", "linhas")})</span>
                   </p>
@@ -722,7 +723,7 @@ function BatchUploadTab() {
             </p>
           )}
           {detected && detected !== dataType && (
-            <div role="status" className="mt-3 flex flex-wrap items-center gap-3 rounded-md border border-pending/30 bg-pending/[6%] px-3 py-2 text-xs text-ink">
+            <div role="status" className="mt-3 flex flex-wrap items-center gap-3 rounded-md border border-pending/30 bg-pending/6 px-3 py-2 text-xs text-ink">
               <span>
                 Este arquivo parece de <strong>{DATA_TYPE_LABELS[detected] ?? detected}</strong>, não de {DATA_TYPE_LABELS[dataType]}.
               </span>
@@ -1138,6 +1139,7 @@ function BackgroundImportItem({ upload, onOpenReport }: { upload: DirectUploadSt
 }
 
 function ContractUploadTab() {
+  const unsaved = useDirtyOnEdit("o envio do contrato");
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { showSuccess, showError } = useToast();
@@ -1190,7 +1192,7 @@ function ContractUploadTab() {
       title="Enviar contrato de convênio"
       subtitle="PDF do contrato. Ao enviar, o Insighta lê a tabela de preços e abre a conferência; nada vale antes de você aprovar."
     >
-      <form onSubmit={handleSubmit} className="p-4">
+      <form onChange={unsaved.onChange} onSubmitCapture={unsaved.onSubmit} onSubmit={handleSubmit} className="p-4">
         <div className="grid grid-cols-2 gap-3">
           <SelectField
             label="Convênio"

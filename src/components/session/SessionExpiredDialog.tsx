@@ -38,7 +38,7 @@ export function SessionExpiredDialog() {
   }
 
   return createPortal(
-    <div role="dialog" aria-modal="true" aria-labelledby="session-expired-title" className="fixed inset-0 z-[90] flex items-center justify-center bg-canvas-deep/70 px-4 backdrop-blur-sm">
+    <div role="dialog" aria-modal="true" aria-labelledby="session-expired-title" className="fixed inset-0 z-90 flex items-center justify-center bg-canvas-deep/70 px-4 backdrop-blur-xs">
       <form onSubmit={handleSubmit} className="w-full max-w-sm rounded-xl border border-border-default bg-canvas-raised p-5 shadow-elevated">
         <h2 id="session-expired-title" className="text-base font-semibold text-ink">
           Sua sessão expirou

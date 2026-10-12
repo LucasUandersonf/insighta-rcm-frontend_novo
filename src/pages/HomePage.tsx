@@ -492,7 +492,7 @@ function AskBox() {
           placeholder={capitalize(askExample(aiUsage?.ai_enabled))}
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
-          className="min-w-0 flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-ink-faint"
+          className="min-w-0 flex-1 bg-transparent text-sm text-ink outline-hidden placeholder:text-ink-faint"
         />
         <button
           type="submit"
@@ -785,7 +785,7 @@ export function HomePage() {
     <div className="flex flex-col">
       <div className="-mt-8 mb-2 flex flex-col">
       {urgentText && (
-        <div role="status" className="-mx-4 flex flex-wrap items-center gap-3.5 border-b border-denied/20 bg-denied/[0.09] px-4 py-2.5 sm:-mx-8 sm:px-8">
+        <div role="status" className="-mx-4 flex flex-wrap items-center gap-3.5 border-b border-denied/20 bg-denied/9 px-4 py-2.5 sm:-mx-8 sm:px-8">
           <span className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.12em] text-denied">
             <span aria-hidden className="h-[7px] w-[7px] rounded-full bg-denied" />
             Urgente

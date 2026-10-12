@@ -22,6 +22,7 @@ import type {
   RiskAlertSendResponse,
   WeeklyReportResponse,
 } from "@/lib/types";
+import { useDirtyOnEdit } from "@/lib/unsavedChanges";
 
 // Espelha app/schemas/report_recipient.py — "" (todos os tipos) é o
 // valor mais comum; os demais existem para restringir um contato a um
@@ -81,6 +82,7 @@ function RecipientModal({
   whatsappEnabled: boolean;
   emailEnabled?: boolean;
 }) {
+  const unsaved = useDirtyOnEdit("o destinatário do relatório", isOpen);
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
   const [values, setValues] = useState<RecipientFormValues>(
@@ -150,7 +152,7 @@ function RecipientModal({
       isOpen={isOpen}
       onClose={resetAndClose}
     >
-      <form onSubmit={handleSubmit}>
+      <form onChange={unsaved.onChange} onSubmitCapture={unsaved.onSubmit} onSubmit={handleSubmit}>
         <TextField
           label="Nome"
           required

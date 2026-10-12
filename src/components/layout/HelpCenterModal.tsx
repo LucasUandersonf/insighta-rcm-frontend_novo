@@ -13,6 +13,7 @@ import { useToast } from "@/context/ToastContext";
 import { cn } from "@/lib/cn";
 import type { SupportRequest, SupportRequestCreateRequest } from "@/lib/types";
 import { SupportContactLinks } from "./SupportContactLinks";
+import { useDirtyOnEdit } from "@/lib/unsavedChanges";
 
 // Perguntas frequentes — conteúdo estático de propósito nesta primeira
 // versão (sem CMS de FAQ ainda): cobre as dúvidas mais prováveis sobre
@@ -144,6 +145,7 @@ const SUPPORT_STATUS_LABELS: Record<SupportRequest["status"], string> = {
 };
 
 function AskQuestionPanel() {
+  const unsaved = useDirtyOnEdit("a mensagem para o suporte");
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
   const [subject, setSubject] = useState("");
@@ -172,7 +174,7 @@ function AskQuestionPanel() {
 
   return (
     <div>
-      <form onSubmit={handleSubmit}>
+      <form onChange={unsaved.onChange} onSubmitCapture={unsaved.onSubmit} onSubmit={handleSubmit}>
         <TextField label="Assunto" required value={subject} onChange={(e) => setSubject(e.target.value)} maxLength={200} />
         <TextareaField
           label="Sua dúvida"

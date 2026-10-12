@@ -8,7 +8,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
    * para ações dentro de um card/linha de tabela (ex: "Nova operadora"
    * no header de um Panel — ver canvas de design, `.btn-sm`/`.btn-xs`
    * em Contratos.dc.html). Existir como prop evita cada página repetir
-   * `className="!px-2.5 !py-1 text-xs"` com `!important` brigando com
+   * `className="px-2.5! py-1! text-xs"` com `!important` brigando com
    * as classes do próprio componente — o que já estava acontecendo em
    * várias páginas antes desta prop existir.
    */

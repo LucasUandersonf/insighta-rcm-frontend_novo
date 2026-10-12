@@ -25,6 +25,7 @@ import type {
 } from "@/lib/types";
 import { plural } from "@/lib/plural";
 import { formatDateBR } from "@/lib/dates";
+import { useDirtyOnEdit } from "@/lib/unsavedChanges";
 
 // "Mapa de Dados Insighta" — Domínio Profissional (Onda 2).
 const CONTRACT_TYPE_LABELS: Record<ContractType, string> = {
@@ -284,6 +285,7 @@ function ProfessionalFormModal({
   /** null = criar; um Professional = editar (formulário pré-preenchido). */
   editing: Professional | null;
 }) {
+  const unsaved = useDirtyOnEdit("o cadastro do profissional", isOpen);
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
   const [form, setForm] = useState<FormState>(
@@ -345,7 +347,7 @@ function ProfessionalFormModal({
 
   return (
     <Modal title={editing ? "Editar profissional" : "Novo profissional"} isOpen={isOpen} onClose={onClose} size="2xl">
-      <form onSubmit={handleSubmit}>
+      <form onChange={unsaved.onChange} onSubmitCapture={unsaved.onSubmit} onSubmit={handleSubmit}>
         <div className="grid grid-cols-1 gap-x-3 sm:grid-cols-2">
           <TextField
             label="Nome completo"

@@ -16,6 +16,7 @@ import { useToast } from "@/context/ToastContext";
 import { useAuth } from "@/context/AuthContext";
 import { SectorCoordinatorsPanel } from "@/components/team/SectorCoordinatorsPanel";
 import type { PasswordResetResponse, PlatformUser, UserCreateRequest, UserRole } from "@/lib/types";
+import { useDirtyOnEdit } from "@/lib/unsavedChanges";
 
 
 // Papéis atribuíveis a um NOVO colaborador — "owner" fica de fora de
@@ -72,6 +73,7 @@ function TemporaryPasswordModal({ password, email, onClose }: { password: string
 }
 
 function CreateUserModal({ isOpen, onClose, onCreated }: { isOpen: boolean; onClose: () => void; onCreated: (temp: string, email: string) => void }) {
+  const unsaved = useDirtyOnEdit("o cadastro do usuário", isOpen);
   const queryClient = useQueryClient();
   const { showError } = useToast();
   const [email, setEmail] = useState("");
@@ -134,7 +136,7 @@ function CreateUserModal({ isOpen, onClose, onCreated }: { isOpen: boolean; onCl
 
   return (
     <Modal title="Novo usuário" isOpen={isOpen} onClose={resetAndClose}>
-      <form onSubmit={handleSubmit}>
+      <form onChange={unsaved.onChange} onSubmitCapture={unsaved.onSubmit} onSubmit={handleSubmit}>
         <TextField
           label="Nome completo"
           required
@@ -162,7 +164,7 @@ function CreateUserModal({ isOpen, onClose, onCreated }: { isOpen: boolean; onCl
                 key={value}
                 className={cn(
                   "flex min-h-[44px] cursor-pointer gap-2 rounded-md border px-3 py-2 text-left transition-colors",
-                  role === value ? "border-accent bg-accent/[6%]" : "border-border-subtle hover:border-border-default"
+                  role === value ? "border-accent bg-accent/6" : "border-border-subtle hover:border-border-default"
                 )}
               >
                 <input
@@ -171,7 +173,7 @@ function CreateUserModal({ isOpen, onClose, onCreated }: { isOpen: boolean; onCl
                   value={value}
                   checked={role === value}
                   onChange={() => setRole(value)}
-                  className="mt-0.5 accent-[var(--accent)]"
+                  className="mt-0.5 accent-(--accent)"
                 />
                 <span>
                   <span className="block text-sm font-medium text-ink">{ROLE_LABELS[value]}</span>

@@ -17,6 +17,7 @@ import { useToast } from "@/context/ToastContext";
 import { useAuth } from "@/context/AuthContext";
 import type { Guia, GuiaTipo, InsurancePlan, Lote, LoteCreateRequest, LoteStatus, PaginatedResponse } from "@/lib/types";
 import { formatDateBR } from "@/lib/dates";
+import { useDirtyOnEdit } from "@/lib/unsavedChanges";
 
 const LOTES_PAGE_SIZE = 20;
 
@@ -51,6 +52,7 @@ function formatDate(iso: string | null): string {
 // ---------------------------------------------------------------------
 
 function CreateLoteModal({ isOpen, onClose, plans }: { isOpen: boolean; onClose: () => void; plans: InsurancePlan[] }) {
+  const unsaved = useDirtyOnEdit("o lote", isOpen);
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
   const [insurancePlanId, setInsurancePlanId] = useState("");
@@ -80,7 +82,7 @@ function CreateLoteModal({ isOpen, onClose, plans }: { isOpen: boolean; onClose:
 
   return (
     <Modal title="Novo lote de faturamento" isOpen={isOpen} onClose={resetAndClose}>
-      <form onSubmit={handleSubmit}>
+      <form onChange={unsaved.onChange} onSubmitCapture={unsaved.onSubmit} onSubmit={handleSubmit}>
         <p className="mb-4 text-xs text-ink-faint">
           Um lote agrupa guias do MESMO convênio e do MESMO tipo — só guias compatíveis podem ser atribuídas a ele
           depois (a mesma regra que 3 ERPs de mercado já seguem).

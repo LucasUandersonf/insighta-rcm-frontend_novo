@@ -31,6 +31,7 @@ import type {
   PaymentMethod,
 } from "@/lib/types";
 import { formatDateBR } from "@/lib/dates";
+import { useDirtyOnEdit } from "@/lib/unsavedChanges";
 
 // Faturamento & Guias — as DUAS pontas do ciclo de vida da fatura que já
 // funcionavam de ponta a ponta no backend sem nenhuma tela: registrar o
@@ -115,6 +116,7 @@ function BillingStatusHistoryTimeline({ billingId }: { billingId: string }) {
 // ---------------------------------------------------------------------
 
 function SettlementTab({ readOnly = false }: { readOnly?: boolean }) {
+  const unsaved = useDirtyOnEdit("a baixa do pagamento");
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
   const [selected, setSelected] = useState<BillingSearchItem | null>(null);
@@ -232,7 +234,7 @@ function SettlementTab({ readOnly = false }: { readOnly?: boolean }) {
       title="Registrar pagamento recebido"
       subtitle="Quanto o convênio pagou por esta cobrança. Para registrar muitos pagamentos de uma vez, envie a planilha de Faturamento com as colunas de valor recebido e glosa em Importar dados."
     >
-      <form onSubmit={handleSubmit} className="p-4">
+      <form onChange={unsaved.onChange} onSubmitCapture={unsaved.onSubmit} onSubmit={handleSubmit} className="p-4">
         <BillingSearchPicker selected={selected} onSelect={setSelected} error={fieldErrors["billing"]} />
         {selected && <BillingStatusHistoryTimeline billingId={selected.id} />}
         {selected && alreadySettled && (
@@ -353,6 +355,7 @@ function GlosaRow({ glosa, billingId }: { glosa: Glosa; billingId: string }) {
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
   const [editing, setEditing] = useState(false);
+  const unsaved = useDirtyOnEdit("o valor da glosa", editing);
   const [value, setValue] = useState(formatMoneyInput(glosa.valor_glosado));
 
   const refresh = () => {
@@ -393,7 +396,7 @@ function GlosaRow({ glosa, billingId }: { glosa: Glosa; billingId: string }) {
       {glosa.imported ? (
         <p className="text-2xs text-ink-faint">Para corrigir, desfaça a importação e envie o arquivo corrigido.</p>
       ) : editing ? (
-        <form
+        <form onChange={unsaved.onChange} onSubmitCapture={unsaved.onSubmit}
           className="flex items-end gap-2"
           onSubmit={(e) => {
             e.preventDefault();
@@ -431,6 +434,7 @@ function GlosaRow({ glosa, billingId }: { glosa: Glosa; billingId: string }) {
 }
 
 function GlosasTab() {
+  const unsaved = useDirtyOnEdit("a glosa");
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
   const [selected, setSelected] = useState<BillingSearchItem | null>(null);
@@ -514,7 +518,7 @@ function GlosasTab() {
                 ))}
               </ul>
             )}
-            <form onSubmit={submit} className="rounded-md border border-border-hairline bg-canvas-raised/40 p-3">
+            <form onChange={unsaved.onChange} onSubmitCapture={unsaved.onSubmit} onSubmit={submit} className="rounded-md border border-border-hairline bg-canvas-raised/40 p-3">
               <p className="mb-2 text-sm font-medium text-ink">Lançar glosa</p>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <TextField
@@ -714,6 +718,7 @@ const GUIA_TIPO_LABELS: Record<GuiaTipo, string> = {
 const GUIAS_PAGE_SIZE = 15;
 
 function GuiasTab() {
+  const unsaved = useDirtyOnEdit("a guia");
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
   const [offset, setOffset] = useState(0);
@@ -803,7 +808,7 @@ function GuiasTab() {
         title="Nova guia"
         subtitle="A maioria das guias já entra sozinha pela ingestão de Faturamento (colunas guia_tipo/guia_numero/guia_senha do template) — use este formulário só para casos avulsos, cadastrados antes do faturamento em si."
       >
-        <form onSubmit={handleSubmit} className="p-4">
+        <form onChange={unsaved.onChange} onSubmitCapture={unsaved.onSubmit} onSubmit={handleSubmit} className="p-4">
           <div className="grid grid-cols-2 gap-3">
             <SelectField
               label="Convênio"
