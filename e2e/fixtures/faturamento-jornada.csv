@@ -1,0 +1,61 @@
+data_atendimento;nome_convenio;codigo_procedimento;valor_liquido;id_transacao;nome_procedimento;cid_principal;nome_profissional_executante;id_paciente_hash;nome_paciente;quantidade_executada;id_lote;valor_recebido;motivo_glosa;data_recebimento
+01/09/2026;Unimed;40301630;45.00;TX0001;Hemograma completo;Z00;Dr. Bruno Lima;pac000;Paciente 000;1;;;Falta de autorização;
+02/09/2026;Unimed;41001010;320.00;TX0002;Ultrassonografia abdominal;Z00;Dra. Ana Souza;pac007;Paciente 007;1;;320.00;;22/09/2026
+03/09/2026;Unimed;41001010;320.00;TX0003;Ultrassonografia abdominal;Z00;Dr. Bruno Lima;pac014;Paciente 014;1;;320.00;;23/09/2026
+04/09/2026;Unimed;41001010;320.00;TX0004;Ultrassonografia abdominal;Z00;Dra. Carla Mendes;pac021;Paciente 021;1;;320.00;;24/09/2026
+05/09/2026;Unimed;10101012;180.00;TX0005;Consulta em consultório;Z00;Dra. Ana Souza;pac028;Paciente 028;1;;180.00;;25/09/2026
+06/09/2026;Bradesco Saúde;40301630;45.00;TX0006;Hemograma completo;Z00;Dra. Ana Souza;pac000;Paciente 000;1;;;;
+07/09/2026;Unimed;10101012;180.00;TX0007;Consulta em consultório;Z00;Dra. Carla Mendes;pac007;Paciente 007;1;;180.00;;27/09/2026
+08/09/2026;Unimed;40301630;45.00;TX0008;Hemograma completo;Z00;Dra. Carla Mendes;pac014;Paciente 014;1;;45.00;;28/09/2026
+09/09/2026;Unimed;10101012;180.00;TX0009;Consulta em consultório;Z00;Dra. Carla Mendes;pac021;Paciente 021;1;;180.00;;29/09/2026
+10/09/2026;Amil;41001010;320.00;TX0010;Ultrassonografia abdominal;Z00;Dra. Ana Souza;pac028;Paciente 028;1;;0.00;Falta de autorização;30/09/2026
+11/09/2026;Amil;41001010;320.00;TX0011;Ultrassonografia abdominal;Z00;Dr. Bruno Lima;pac000;Paciente 000;1;;;;
+12/09/2026;Unimed;10101012;180.00;TX0012;Consulta em consultório;Z00;Dra. Ana Souza;pac007;Paciente 007;1;;180.00;;02/10/2026
+13/09/2026;Unimed;41001010;320.00;TX0013;Ultrassonografia abdominal;Z00;Dr. Bruno Lima;pac014;Paciente 014;1;;320.00;;03/10/2026
+14/09/2026;Unimed;40301630;45.00;TX0014;Hemograma completo;Z00;Dra. Carla Mendes;pac021;Paciente 021;1;;45.00;;04/10/2026
+15/09/2026;Amil;10101012;180.00;TX0015;Consulta em consultório;Z00;Dr. Bruno Lima;pac028;Paciente 028;1;;180.00;;05/10/2026
+16/09/2026;Amil;41001010;320.00;TX0016;Ultrassonografia abdominal;Z00;Dra. Ana Souza;pac000;Paciente 000;1;;;;
+17/09/2026;Amil;10101012;180.00;TX0017;Consulta em consultório;Z00;Dra. Carla Mendes;pac007;Paciente 007;1;;180.00;;07/10/2026
+18/09/2026;Unimed;41001010;320.00;TX0018;Ultrassonografia abdominal;Z00;Dr. Bruno Lima;pac014;Paciente 014;1;;320.00;;08/10/2026
+19/09/2026;Amil;10101012;180.00;TX0019;Consulta em consultório;Z00;Dra. Carla Mendes;pac021;Paciente 021;1;;0.00;Falta de autorização;09/10/2026
+20/09/2026;Amil;10101012;180.00;TX0020;Consulta em consultório;Z00;Dra. Ana Souza;pac028;Paciente 028;1;;180.00;;10/10/2026
+21/09/2026;Unimed;41001010;320.00;TX0021;Ultrassonografia abdominal;Z00;Dr. Bruno Lima;pac000;Paciente 000;1;;;;
+22/09/2026;Amil;41001010;320.00;TX0022;Ultrassonografia abdominal;Z00;Dr. Bruno Lima;pac007;Paciente 007;1;;320.00;;12/10/2026
+23/09/2026;Bradesco Saúde;40301630;45.00;TX0023;Hemograma completo;Z00;Dra. Carla Mendes;pac014;Paciente 014;1;;45.00;;13/10/2026
+24/09/2026;Bradesco Saúde;40301630;45.00;TX0024;Hemograma completo;Z00;Dr. Bruno Lima;pac021;Paciente 021;1;;45.00;;14/10/2026
+25/09/2026;Unimed;10101012;180.00;TX0025;Consulta em consultório;Z00;Dra. Carla Mendes;pac028;Paciente 028;1;;180.00;;15/10/2026
+26/09/2026;Unimed;10101012;180.00;TX0026;Consulta em consultório;Z00;Dra. Carla Mendes;pac000;Paciente 000;1;;;;
+27/09/2026;Amil;40301630;45.00;TX0027;Hemograma completo;Z00;Dr. Bruno Lima;pac007;Paciente 007;1;;45.00;;17/10/2026
+28/09/2026;Amil;40301630;45.00;TX0028;Hemograma completo;Z00;Dr. Bruno Lima;pac014;Paciente 014;1;;0.00;Falta de autorização;18/10/2026
+29/09/2026;Amil;40301630;45.00;TX0029;Hemograma completo;Z00;Dra. Ana Souza;pac021;Paciente 021;1;;45.00;;19/10/2026
+30/09/2026;Amil;10101012;180.00;TX0030;Consulta em consultório;Z00;Dr. Bruno Lima;pac028;Paciente 028;1;;180.00;;20/10/2026
+01/09/2026;Bradesco Saúde;10101012;180.00;TX0031;Consulta em consultório;Z00;Dra. Ana Souza;pac000;Paciente 000;1;;;;
+02/09/2026;Bradesco Saúde;40301630;45.00;TX0032;Hemograma completo;Z00;Dra. Ana Souza;pac007;Paciente 007;1;;45.00;;22/09/2026
+03/09/2026;Unimed;41001010;320.00;TX0033;Ultrassonografia abdominal;Z00;Dra. Carla Mendes;pac014;Paciente 014;1;;320.00;;23/09/2026
+04/09/2026;Bradesco Saúde;41001010;320.00;TX0034;Ultrassonografia abdominal;Z00;Dr. Bruno Lima;pac021;Paciente 021;1;;320.00;;24/09/2026
+05/09/2026;Bradesco Saúde;41001010;320.00;TX0035;Ultrassonografia abdominal;Z00;Dra. Carla Mendes;pac028;Paciente 028;1;;320.00;;25/09/2026
+06/09/2026;Amil;40301630;45.00;TX0036;Hemograma completo;Z00;Dr. Bruno Lima;pac000;Paciente 000;1;;;;
+07/09/2026;Unimed;10101012;180.00;TX0037;Consulta em consultório;Z00;Dr. Bruno Lima;pac007;Paciente 007;1;;0.00;Falta de autorização;27/09/2026
+08/09/2026;Amil;40301630;45.00;TX0038;Hemograma completo;Z00;Dra. Carla Mendes;pac014;Paciente 014;1;;45.00;;28/09/2026
+09/09/2026;Unimed;10101012;180.00;TX0039;Consulta em consultório;Z00;Dra. Carla Mendes;pac021;Paciente 021;1;;180.00;;29/09/2026
+10/09/2026;Bradesco Saúde;41001010;320.00;TX0040;Ultrassonografia abdominal;Z00;Dra. Carla Mendes;pac028;Paciente 028;1;;320.00;;30/09/2026
+11/09/2026;Amil;41001010;320.00;TX0041;Ultrassonografia abdominal;Z00;Dr. Bruno Lima;pac000;Paciente 000;1;;;;
+12/09/2026;Amil;40301630;45.00;TX0042;Hemograma completo;Z00;Dr. Bruno Lima;pac007;Paciente 007;1;;45.00;;02/10/2026
+13/09/2026;Bradesco Saúde;41001010;320.00;TX0043;Ultrassonografia abdominal;Z00;Dra. Ana Souza;pac014;Paciente 014;1;;320.00;;03/10/2026
+14/09/2026;Bradesco Saúde;40301630;45.00;TX0044;Hemograma completo;Z00;Dra. Ana Souza;pac021;Paciente 021;1;;45.00;;04/10/2026
+15/09/2026;Unimed;41001010;320.00;TX0045;Ultrassonografia abdominal;Z00;Dr. Bruno Lima;pac028;Paciente 028;1;;320.00;;05/10/2026
+16/09/2026;Unimed;10101012;180.00;TX0046;Consulta em consultório;Z00;Dr. Bruno Lima;pac000;Paciente 000;1;;;Falta de autorização;
+17/09/2026;Amil;10101012;180.00;TX0047;Consulta em consultório;Z00;Dra. Ana Souza;pac007;Paciente 007;1;;180.00;;07/10/2026
+18/09/2026;Bradesco Saúde;40301630;45.00;TX0048;Hemograma completo;Z00;Dr. Bruno Lima;pac014;Paciente 014;1;;45.00;;08/10/2026
+19/09/2026;Unimed;10101012;180.00;TX0049;Consulta em consultório;Z00;Dr. Bruno Lima;pac021;Paciente 021;1;;180.00;;09/10/2026
+20/09/2026;Amil;40301630;45.00;TX0050;Hemograma completo;Z00;Dr. Bruno Lima;pac028;Paciente 028;1;;45.00;;10/10/2026
+21/09/2026;Bradesco Saúde;10101012;180.00;TX0051;Consulta em consultório;Z00;Dra. Carla Mendes;pac000;Paciente 000;1;;;;
+22/09/2026;Amil;40301630;45.00;TX0052;Hemograma completo;Z00;Dr. Bruno Lima;pac007;Paciente 007;1;;45.00;;12/10/2026
+23/09/2026;Amil;40301630;45.00;TX0053;Hemograma completo;Z00;Dr. Bruno Lima;pac014;Paciente 014;1;;45.00;;13/10/2026
+24/09/2026;Unimed;10101012;180.00;TX0054;Consulta em consultório;Z00;Dra. Ana Souza;pac021;Paciente 021;1;;180.00;;14/10/2026
+25/09/2026;Unimed;10101012;180.00;TX0055;Consulta em consultório;Z00;Dra. Ana Souza;pac028;Paciente 028;1;;0.00;Falta de autorização;15/10/2026
+26/09/2026;Unimed;41001010;320.00;TX0056;Ultrassonografia abdominal;Z00;Dra. Ana Souza;pac000;Paciente 000;1;;;;
+27/09/2026;Amil;40301630;45.00;TX0057;Hemograma completo;Z00;Dra. Ana Souza;pac007;Paciente 007;1;;45.00;;17/10/2026
+28/09/2026;Bradesco Saúde;40301630;45.00;TX0058;Hemograma completo;Z00;Dra. Ana Souza;pac014;Paciente 014;1;;45.00;;18/10/2026
+29/09/2026;Bradesco Saúde;10101012;180.00;TX0059;Consulta em consultório;Z00;Dra. Carla Mendes;pac021;Paciente 021;1;;180.00;;19/10/2026
+30/09/2026;Amil;40301630;45.00;TX0060;Hemograma completo;Z00;Dra. Carla Mendes;pac028;Paciente 028;1;;45.00;;20/10/2026

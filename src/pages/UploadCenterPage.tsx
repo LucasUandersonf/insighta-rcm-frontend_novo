@@ -626,6 +626,11 @@ function BatchUploadTab() {
       }
       const result = outcome.result;
       queryClient.invalidateQueries({ queryKey: ["ingestion-files"] });
+      // S6 (achado do teste de navegador): o selo "Dados atualizados" do topo
+      // e os painéis continuavam dizendo "nenhum dado importado" até o
+      // próximo refetch (5 min). A importação já terminou aqui: renova tudo
+      // que vem de /analytics.
+      queryClient.invalidateQueries({ queryKey: ["analytics"] });
       if (result.already_processed || result.retried) {
         showSuccess(result.message ?? "Este arquivo já tinha sido enviado. Nada foi duplicado.");
         if (result.retried && result.error_row_count > 0) setReportFileId(result.id);
