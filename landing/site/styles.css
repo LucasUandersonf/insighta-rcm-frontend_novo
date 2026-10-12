@@ -378,6 +378,8 @@ h1, h2, h3 { text-wrap: balance; letter-spacing: -.028em; line-height: 1.08; }
 .cookie a { color: var(--p600); text-decoration: underline; }
 .cookie__actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
 .cookie[hidden], .foot__link[hidden] { display: none; }
+/* UX3-08: contato sem destino e promessas que dependem do e-mail somem. */
+[data-contact][hidden], [data-needs-email][hidden] { display: none !important; }
 .foot__link { background: none; border: 0; padding: 0; font: inherit; color: inherit; opacity: .8; cursor: pointer; text-align: left; }
 .foot__link:hover { opacity: 1; text-decoration: underline; }
 @media (max-width: 760px) { .cookie { bottom: calc(76px + env(safe-area-inset-bottom)); } }

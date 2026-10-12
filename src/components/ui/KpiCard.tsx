@@ -136,6 +136,8 @@ export function KpiCard({
           <NarrativeInsight text={narrative} />
         </div>
       )}
+      {/* Compacto: só a frase curta de estado vazio (ex.: "ainda não medido"). */}
+      {compact && narrative && <p className="mt-1.5 text-2xs leading-snug text-ink-faint">{narrative}</p>}
     </BentoCard>
   );
 }

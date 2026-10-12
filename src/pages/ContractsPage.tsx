@@ -1130,7 +1130,20 @@ export function ContractsPage() {
       ? (tab as PayerTabId)
       : "visao-geral";
   });
-  const { windowDays, setWindowDays, dateFrom, dateTo } = useDateWindow(90);
+  // UX3-18: a aba fica no endereço — voltar do navegador reabre a mesma aba.
+  function selectTab(id: PayerTabId) {
+    setActiveTab(id);
+    const next = new URLSearchParams(searchParams);
+    if (id === "visao-geral") next.delete("tab");
+    else next.set("tab", id);
+    setSearchParams(next, { replace: true });
+  }
+  const tabParam = searchParams.get("tab");
+  useEffect(() => {
+    const fromUrl = tabParam && (PAYER_TAB_IDS as string[]).includes(tabParam) ? (tabParam as PayerTabId) : "visao-geral";
+    setActiveTab(fromUrl);
+  }, [tabParam]);
+  const { windowDays, setWindowDays, dateFrom, dateTo, dataUntil } = useDateWindow(90);
   const queryClient = useQueryClient();
   const { showError } = useToast();
   const [isConvenioModalOpen, setIsConvenioModalOpen] = useState(false);
@@ -1265,6 +1278,7 @@ export function ContractsPage() {
             <PeriodWindowSelect
               windowDays={windowDays}
               onChange={setWindowDays}
+              dataUntil={dataUntil}
               options={PAYER_WINDOW_OPTIONS}
             />
           ) : undefined
@@ -1274,7 +1288,7 @@ export function ContractsPage() {
       <Tabs
         groupId={PAYER_TABS_GROUP}
         active={activeTab}
-        onChange={(id) => setActiveTab(id as PayerTabId)}
+        onChange={(id) => selectTab(id as PayerTabId)}
         items={[
           { id: "visao-geral", label: "Visão geral" },
           { id: "glosas", label: "Glosas" },

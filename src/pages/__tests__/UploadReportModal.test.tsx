@@ -28,7 +28,7 @@ describe("UploadReportModal", () => {
     expect(await screen.findByText(/Convênio não cadastrado: “Unimde”\./)).toBeInTheDocument();
     expect(screen.getByText(/de 100 linhas entraram — 3 linhas ficaram de fora/)).toBeInTheDocument();
     expect(screen.getByText("linhas 4, 9, 12 da planilha.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Baixar linhas rejeitadas/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Baixar linhas com problema \(\.xlsx\)/ })).toBeInTheDocument();
   });
 
   it("arquivo 100% rejeitado diz que nada foi importado e oferece resolver o convênio (UX-03/UX-06)", async () => {

@@ -2782,6 +2782,8 @@ export interface DataReadiness {
   missing: string[];
   price_table_coverage_pct: number | null;
   plans_without_price_table: string[];
+  /** UX3-02: último dia com faturamento importado ("AAAA-MM-DD"). */
+  last_billing_date?: string | null;
 }
 
 /** GET /ingestion/rejected/unknown-plans — UX-05. */

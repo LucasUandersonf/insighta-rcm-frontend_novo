@@ -177,6 +177,7 @@ export function visibleItems(items: NavItem[], role: UserRole | undefined): NavI
  * link visível; os que moram num dropdown apontam pro botão que o abre. */
 export const MODULES_TOUR_ID = "nav-modules";
 export const ACCOUNT_TOUR_ID = "nav-account";
+export const ASK_TOUR_ID = "nav-ask";
 
 export function tourTargetFor(item: NavItem): string {
   return item.placement === "primary" ? item.to : MODULES_TOUR_ID;

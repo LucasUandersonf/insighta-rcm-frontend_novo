@@ -18,11 +18,13 @@ landing/
 |---|---|---|
 | `SITE_URL` | domínio da landing de homologação | domínio da landing (depois: `https://insighta.com.br`) |
 | `APP_URL` | frontend de homologação | frontend de produção (depois: `https://app.insighta.com.br`) |
-| `CONTACT_URL` | igual à produção | link do WhatsApp comercial (`https://wa.me/55DDDNUMERO?text=...`). Sem ele: `APP_URL/signup` |
+| `CONTACT_URL` | igual à produção | link do WhatsApp comercial (`https://wa.me/55DDDNUMERO?text=...`). Sem ele, os botões de contato ("Falar com o time", "Tirar uma dúvida antes", "Falar com especialista") somem |
 | `ROBOTS` | `noindex, nofollow` (padrão) | `index, follow` |
 | `CLARITY_ID` | vazio | ID do projeto no Microsoft Clarity (opcional) |
 | `GA4_ID` | vazio | ID de medição do GA4, `G-XXXXXXX` (opcional) |
 | `RAILWAY_DOCKERFILE_PATH` | `landing/Dockerfile` | `landing/Dockerfile` |
+
+A landing consulta a API (vagas Founders e o que está ligado, como o e-mail): o domínio da landing precisa estar em `CORS_ALLOWED_ORIGINS` da API. Sem isso, a página mostra os números escritos no HTML e esconde o que depende do e-mail.
 
 A configuração do serviço fica no painel da Railway (Dockerfile `landing/Dockerfile`, start `/start.sh`, healthcheck `/health`, porta 8080).
 

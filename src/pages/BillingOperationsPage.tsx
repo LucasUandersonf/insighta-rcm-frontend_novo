@@ -949,9 +949,19 @@ function overpayment(p: { billing: BillingSearchItem; value: number }): boolean 
 export function BillingOperationsPage() {
   // Os alertas de coparticipação e de OPME abrem direto na aba certa
   // (?tab=coparticipacao / ?tab=auditoria-opme).
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const requested = searchParams.get("tab") as Tab | null;
   const [tab, setTab] = useState<Tab>(requested && TAB_IDS.includes(requested) ? requested : "pagamento");
+  // UX3-18: a aba fica no endereço (voltar do navegador reabre a mesma).
+  useEffect(() => {
+    if (requested && TAB_IDS.includes(requested)) setTab(requested);
+  }, [requested]);
+  function selectTab(id: Tab) {
+    setTab(id);
+    const next = new URLSearchParams(searchParams);
+    next.set("tab", id);
+    setSearchParams(next, { replace: true });
+  }
   const { user } = useAuth();
 
   if (user?.role === "auditor") {
@@ -974,7 +984,7 @@ export function BillingOperationsPage() {
       <Tabs
         groupId={TABS_GROUP}
         active={tab}
-        onChange={(id) => setTab(id as Tab)}
+        onChange={(id) => selectTab(id as Tab)}
         items={[
           { id: "pagamento", label: "Registrar pagamento" },
           { id: "glosas", label: "Glosas" },

@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
+import { clinicIsoDate } from "@/lib/dates";
 import type { DataReadiness } from "@/lib/types";
 
 /**
@@ -26,3 +27,16 @@ export function useNoBillingData(): boolean {
 
 export const NO_DATA_TEXT =
   "Ainda não há dados para analisar. Importe o faturamento em Importar dados para ver onde a clínica perde dinheiro.";
+
+/**
+ * UX3-02: dia em que as janelas de período terminam. Com a última planilha de
+ * dias atrás, "últimos 30 dias" terminando hoje somava semanas sem dado e a
+ * tela mostrava queda e glosa zero. `dataUntil` só vem preenchido quando a
+ * janela foi puxada para trás (para a tela dizer "dados até 01/10").
+ */
+export function useDataAnchor(): { end: string; dataUntil: string | null } {
+  const { data } = useDataReadiness();
+  const today = clinicIsoDate();
+  const last = typeof data?.last_billing_date === "string" ? data.last_billing_date : null;
+  return last && last < today ? { end: last, dataUntil: last } : { end: today, dataUntil: null };
+}

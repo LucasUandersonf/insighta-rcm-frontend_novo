@@ -13,6 +13,7 @@ import { passwordProblem } from "@/lib/password";
 import { useQuery } from "@tanstack/react-query";
 import { ApiError, apiClient } from "@/lib/api-client";
 import type { PlanTier } from "@/lib/types";
+import { SUPPORT_CONTACTS } from "@/lib/support";
 
 /** Estado de navegação vindo do LoginPage quando "Continuar com Google"
  * detecta que ainda não existe conta com aquele e-mail (ver
@@ -69,6 +70,8 @@ interface FieldErrors {
   passwordConfirm?: string;
 }
 
+const CNPJ_TAKEN = "Já existe uma clínica cadastrada com este CNPJ.";
+
 export function SignUpPage() {
   const { register, registerError, isRegistering, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
@@ -89,6 +92,9 @@ export function SignUpPage() {
   const [step, setStep] = useState(1);
   const [tradeName, setTradeName] = useState("");
   const [cnpj, setCnpj] = useState("");
+  // UX3-13: CNPJ já cadastrado aparece ao sair do campo, com saída
+  // ("Entrar", "Falar com o suporte") — antes só depois do segundo passo.
+  const [cnpjTaken, setCnpjTaken] = useState(false);
   const [ownerName, setOwnerName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -114,6 +120,7 @@ export function SignUpPage() {
     if (!tradeName.trim()) errors.trade_name = "Informe o nome da clínica.";
     if (!isCompleteCNPJ(cnpj)) errors.cnpj = "Informe os 14 dígitos do CNPJ.";
     else if (!isValidCNPJ(cnpj)) errors.cnpj = "CNPJ inválido: os dígitos verificadores não conferem. Confira no cartão CNPJ.";
+    else if (cnpjTaken) errors.cnpj = CNPJ_TAKEN;
     if (!googleCredential) {
       if (!ownerName.trim()) errors.owner_name = "Informe seu nome completo.";
       // UX-18: e-mail inválido é apontado aqui, não só depois de "Criar conta".
@@ -148,6 +155,22 @@ export function SignUpPage() {
   }
 
   const [termsError, setTermsError] = useState<string | null>(null);
+
+  async function checkCnpj() {
+    if (!isCompleteCNPJ(cnpj) || !isValidCNPJ(cnpj)) return;
+    try {
+      const result = await apiClient.get<{ available: boolean }>(
+        `/api/v1/auth/cnpj-available?cnpj=${encodeURIComponent(cnpj)}`,
+        { skipAuth: true }
+      );
+      if (result?.available === false) {
+        setCnpjTaken(true);
+        setFieldErrors((prev) => ({ ...prev, cnpj: CNPJ_TAKEN }));
+      }
+    } catch {
+      // Conferência antecipada é cortesia: sem resposta, o cadastro confere no fim.
+    }
+  }
 
   function handleContinue() {
     if (validateStep1()) setStep(2);
@@ -213,6 +236,7 @@ export function SignUpPage() {
         setStep(1);
         focusFirstError(mapped);
       } else if (err instanceof ApiError && err.status === 409) {
+        setCnpjTaken(true);
         setFieldErrors({ cnpj: err.message });
         setStep(1);
         focusFirstError({ cnpj: err.message });
@@ -252,10 +276,36 @@ export function SignUpPage() {
                 required
                 inputMode="numeric"
                 value={cnpj}
-                onChange={(e) => setCnpj(formatCNPJ(e.target.value))}
+                onChange={(e) => {
+                  setCnpj(formatCNPJ(e.target.value));
+                  if (cnpjTaken) {
+                    setCnpjTaken(false);
+                    setFieldErrors((prev) => ({ ...prev, cnpj: undefined }));
+                  }
+                }}
+                onBlur={() => void checkCnpj()}
                 error={fieldErrors.cnpj}
                 placeholder="00.000.000/0000-00"
               />
+              {cnpjTaken && (
+                <p className="-mt-2 mb-4 flex flex-wrap gap-x-4 gap-y-1 text-xs">
+                  <Link to="/login" className="font-medium text-accent hover:underline">
+                    Entrar na conta da clínica
+                  </Link>
+                  <Link to="/forgot-password" className="font-medium text-accent hover:underline">
+                    Recuperar o acesso
+                  </Link>
+                  {SUPPORT_CONTACTS.whatsappUrl ? (
+                    <a href={SUPPORT_CONTACTS.whatsappUrl} target="_blank" rel="noreferrer" className="font-medium text-accent hover:underline">
+                      Falar com o suporte
+                    </a>
+                  ) : SUPPORT_CONTACTS.email ? (
+                    <a href={`mailto:${SUPPORT_CONTACTS.email}`} className="font-medium text-accent hover:underline">
+                      Falar com o suporte
+                    </a>
+                  ) : null}
+                </p>
+              )}
 
               {googleCredential && googlePrefill ? (
                 <div className="mb-4 flex items-center justify-between gap-3 rounded-lg border border-accent/25 bg-accent-bg px-3.5 py-3">

@@ -165,4 +165,26 @@
       })
       .catch(function () {});
   })();
+
+  // UX3-08: contato sem destino configurado (CONTACT_URL vazio) não vira
+  // link para o cadastro; o botão some.
+  document.querySelectorAll("[data-contact]").forEach(function (el) {
+    var href = (el.getAttribute("href") || "").trim();
+    if (!href || href.indexOf("__") === 0 || href === "#") el.hidden = true;
+  });
+
+  // UX3-08: o que depende do e-mail começa escondido e só aparece quando a
+  // API confirma que o e-mail está ligado (sem resposta, não promete).
+  (function () {
+    var meta = document.querySelector('meta[name="insighta-api"]');
+    var api = meta && meta.getAttribute("content");
+    var items = document.querySelectorAll("[data-needs-email]");
+    if (!api || api.indexOf("__") === 0 || !items.length || !window.fetch) return;
+    fetch(api.replace(/\/$/, "") + "/api/v1/auth/capabilities", { credentials: "omit" })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        if (d && d.email_enabled === true) items.forEach(function (el) { el.hidden = false; });
+      })
+      .catch(function () {});
+  })();
 })();

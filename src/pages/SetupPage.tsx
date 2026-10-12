@@ -86,6 +86,15 @@ export function SetupPage() {
       (a, b) => fileOrder.get(a.ingestion_file_id)! - fileOrder.get(b.ingestion_file_id)! || a.row_number - b.row_number
     );
   }, [rejected.data]);
+  const reasonGroups = useMemo(() => {
+    const map = new Map<string, RejectedRow[]>();
+    for (const row of structuralErrorRows) {
+      const text = row.raw_value || "Dado não reconhecido";
+      const key = text.split(/[:(]/)[0]!.trim() || text;
+      map.set(key, [...(map.get(key) ?? []), row]);
+    }
+    return [...map.entries()].map(([reason, rows]) => ({ reason, rows })).sort((a, b) => b.rows.length - a.rows.length);
+  }, [structuralErrorRows]);
   const [downloading, setDownloading] = useState(false);
   async function downloadRejected() {
     setDownloading(true);
@@ -215,26 +224,28 @@ export function SetupPage() {
             )}
             {structuralErrorRows.length > 0 && (
               <>
-                <table className="w-full text-left text-sm">
-                  <thead>
-                    <tr className="border-b border-border-hairline text-xs text-ink-muted">
-                      <th className="px-4 py-2.5 font-medium">Linha da planilha</th>
-                      <th className="px-4 py-2.5 font-medium">O que corrigir</th>
-                      <th className="px-4 py-2.5 font-medium">Valor lido</th>
-                      <th className="px-4 py-2.5 font-medium">Recebido em</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {structuralErrorRows.map((row) => (
-                      <tr key={row.id} className="border-b border-border-hairline last:border-0">
-                        <td className="tabular px-4 py-2.5 text-ink-muted">Linha {row.row_number + 1}</td>
-                        <td className="px-4 py-2.5 text-ink">{row.raw_value || "Dado não reconhecido"}</td>
-                        <td className="break-all px-4 py-2.5 font-mono text-xs text-ink-muted">{valuesRead(row) || "—"}</td>
-                        <td className="px-4 py-2.5 text-ink-muted">{formatDateTime(row.created_at)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                {/* UX3-26: agrupado por motivo, recolhido — antes era uma tabela
+                    única de 7 mil px no celular. */}
+                <div className="divide-y divide-border-hairline">
+                  {reasonGroups.map((group, index) => (
+                    <details key={group.reason} open={reasonGroups.length === 1 && index === 0} className="group">
+                      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm text-ink hover:bg-canvas-raised/40">
+                        <span className="min-w-0">{group.reason}</span>
+                        <Badge tone="denied">{linhas(group.rows.length)}</Badge>
+                      </summary>
+                      <ul className="divide-y divide-border-hairline bg-canvas-raised/20">
+                        {group.rows.map((row) => (
+                          <li key={row.id} className="flex flex-col gap-0.5 px-4 py-2.5 text-xs sm:flex-row sm:items-baseline sm:gap-4">
+                            <span className="tabular shrink-0 font-medium text-ink-muted sm:w-24">Linha {row.row_number + 1}</span>
+                            {row.raw_value && row.raw_value !== group.reason && <span className="text-ink">{row.raw_value}</span>}
+                            <span className="break-all font-mono text-ink-muted">Valor lido: {valuesRead(row) || "—"}</span>
+                            <span className="text-ink-faint sm:ml-auto">Recebido em {formatDateTime(row.created_at)}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
+                  ))}
+                </div>
                 <p className="px-4 py-3 text-xs text-ink-muted">
                   Depois de corrigir, envie a planilha de novo em{" "}
                   <Link to="/importar" className="text-accent underline-offset-2 hover:underline">

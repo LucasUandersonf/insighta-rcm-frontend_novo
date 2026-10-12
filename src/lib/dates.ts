@@ -27,3 +27,27 @@ export function formatDateBR(
   if (Number.isNaN(date.getTime())) return fallback;
   return new Intl.DateTimeFormat("pt-BR", options).format(date);
 }
+
+const CLINIC_DAY = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "America/Sao_Paulo",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
+/**
+ * "AAAA-MM-DD" do dia em Brasília (UX3-09). `toISOString()` usa o dia em
+ * UTC: depois das 21h já é "amanhã", e o próprio sistema recusava a data
+ * que tinha sugerido ("não pode estar no futuro").
+ */
+export function clinicIsoDate(d: Date = new Date()): string {
+  return CLINIC_DAY.format(d);
+}
+
+/** Soma `days` (pode ser negativo) a uma data "AAAA-MM-DD". */
+export function addDaysIso(iso: string, days: number): string {
+  const d = parseApiDate(iso);
+  d.setDate(d.getDate() + days);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}

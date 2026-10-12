@@ -5,6 +5,8 @@ import { ArrowLeft, CheckCircle2, Mail, ShieldCheck } from "lucide-react";
 import { requestPasswordReset, ApiError } from "@/lib/api-client";
 import { AuthLayout, AuthFormHeader } from "@/components/layout/AuthLayout";
 import { AuthTextField } from "@/components/ui/AuthTextField";
+import { useCapabilities } from "@/lib/capabilities";
+import { SUPPORT_CONTACTS } from "@/lib/support";
 
 // 30 min = mesmo valor de PASSWORD_RESET_TOKEN_EXPIRE_MINUTES no backend
 // (app/core/config.py) — nunca hardcodar um número aqui sem checar lá
@@ -19,6 +21,9 @@ export function ForgotPasswordPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
+  const { data: capabilities } = useCapabilities();
+  // UX3-06: sem e-mail ligado, "você vai receber um link em instantes" era falso.
+  const emailOff = capabilities?.email_enabled === false;
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -46,7 +51,34 @@ export function ForgotPasswordPage() {
       highlights={HIGHLIGHTS}
     >
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="w-full max-w-sm">
-        {sent ? (
+        {emailOff ? (
+          <div className="rounded-xl border border-border-hairline bg-glass p-6 shadow-elevated backdrop-blur-xl">
+            <h1 className="text-lg font-semibold text-ink">Recuperar o acesso</h1>
+            <p className="mt-2 text-sm leading-relaxed text-ink-muted">
+              A recuperação de senha por e-mail ainda não está ativa. Peça ao responsável pela clínica para gerar uma
+              senha temporária em <strong className="font-medium text-ink">Usuários</strong>
+              {SUPPORT_CONTACTS.whatsappUrl || SUPPORT_CONTACTS.email ? ", ou fale com o suporte:" : "."}
+            </p>
+            {(SUPPORT_CONTACTS.whatsappUrl || SUPPORT_CONTACTS.email) && (
+              <p className="mt-2 flex flex-wrap gap-3 text-sm">
+                {SUPPORT_CONTACTS.whatsappUrl && (
+                  <a className="font-medium text-accent hover:underline" href={SUPPORT_CONTACTS.whatsappUrl} target="_blank" rel="noreferrer">
+                    WhatsApp do suporte
+                  </a>
+                )}
+                {SUPPORT_CONTACTS.email && (
+                  <a className="font-medium text-accent hover:underline" href={`mailto:${SUPPORT_CONTACTS.email}`}>
+                    {SUPPORT_CONTACTS.email}
+                  </a>
+                )}
+              </p>
+            )}
+            <Link to="/login" className="mt-5 inline-flex items-center gap-1.5 text-sm font-medium text-accent hover:underline">
+              <ArrowLeft aria-hidden size={14} />
+              Voltar para a tela de login
+            </Link>
+          </div>
+        ) : sent ? (
           <div className="rounded-xl border border-revenue/25 bg-revenue-bg p-6 text-center shadow-elevated backdrop-blur-xl">
             <span className="mb-3 inline-flex h-11 w-11 items-center justify-center rounded-full bg-canvas-surface/70 text-revenue">
               <CheckCircle2 size={20} strokeWidth={2} />

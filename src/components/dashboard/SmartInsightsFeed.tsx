@@ -63,6 +63,16 @@ function formatCurrencyWhole(value: number): string {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(value);
 }
 
+/** UX3-19: o destaque mostra "R$ 96.420" e o texto dizia "R$ 96.419,70" no
+ * mesmo card. Valores em reais dentro do texto seguem o arredondamento do
+ * destaque (sem centavos). */
+export function roundMoneyInText(text: string): string {
+  return text.replace(/R\$\s?(\d{1,3}(?:\.\d{3})*|\d+),(\d{2})\b/g, (_m, intPart: string, cents: string) => {
+    const value = Number(intPart.replace(/\./g, "")) + Number(cents) / 100;
+    return formatCurrencyWhole(Math.round(value));
+  });
+}
+
 export function formatCurrency(value: number): string {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
 }
@@ -256,8 +266,8 @@ export function HeroInsight({
         </div>
         <div className="grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,1fr)_minmax(220px,auto)] md:gap-8">
           <div className="flex flex-col gap-3">
-            <h2 className="font-serif text-[26px] font-medium leading-tight text-ink">{insight.title}</h2>
-            <p className="max-w-3xl text-[15px] leading-relaxed text-ink-soft">{insight.message}</p>
+            <h2 className="font-serif text-[26px] font-medium leading-tight text-ink">{roundMoneyInText(insight.title)}</h2>
+            <p className="max-w-3xl text-[15px] leading-relaxed text-ink-soft">{roundMoneyInText(insight.message)}</p>
           </div>
           {insight.financial_impact !== null && (
             <div className={cn("flex flex-col gap-1.5 md:border-l md:pl-6", cfg.border)}>
@@ -268,7 +278,21 @@ export function HeroInsight({
             </div>
           )}
         </div>
-        {(insight.why_now || insight.what_to_do || insight.if_ignored) && (
+        {insight.playbook && insight.playbook.length > 0 && (
+          <p className="text-[13px] leading-relaxed text-ink-soft">
+            <span className="font-semibold text-ink">Primeiro passo:</span> {insight.playbook[0]}
+          </p>
+        )}
+        {/* UX3-19: o card fechado tem título, valor, primeiro passo e ação;
+            o porquê, o passo a passo e o cálculo abrem sob demanda. */}
+        {(insight.why_now || insight.what_to_do || insight.if_ignored || insight.evidence || insight.method || insight.track_record) && (
+          <details className="group rounded-[14px] border border-border-hairline bg-canvas/40">
+            <summary className="cursor-pointer list-none px-3.5 py-2.5 text-xs font-medium text-ink-muted hover:text-ink">
+              <span className="group-open:hidden">Ver por que agora, o passo a passo e como calculamos</span>
+              <span className="hidden group-open:inline">Esconder detalhes</span>
+            </summary>
+            <div className="flex flex-col gap-3 px-3.5 pb-3.5">
+              {(insight.why_now || insight.what_to_do || insight.if_ignored) && (
           <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
             <GuidanceBox label="Por que agora" text={insight.why_now} />
             <div className="flex flex-col gap-1.5 rounded-[14px] border border-border-hairline bg-canvas/50 p-3.5">
@@ -287,6 +311,9 @@ export function HeroInsight({
           </div>
         )}
         <InsightBasis insight={insight} />
+            </div>
+          </details>
+        )}
         <div className="flex flex-wrap items-center gap-2.5">
           <InsightActionButton insight={insight} onNavigateTab={onNavigateTab} onFocusAgenda={onFocusAgenda} toneClass={cfg.text} primary />
           <InsightWorkflowButtons
@@ -326,11 +353,11 @@ export function SecondaryInsightCard({
             <Badge tone={cfg.badgeTone}>{cfg.label}</Badge>
             {insight.is_new && <Badge tone="novo">Novo</Badge>}
           </span>
-          <p className="mt-2.5 text-[15px] font-semibold leading-snug text-ink">{insight.title}</p>
-          <p className="mt-2 text-[13px] leading-relaxed text-ink-muted">{insight.message}</p>
+          <p className="mt-2.5 text-[15px] font-semibold leading-snug text-ink">{roundMoneyInText(insight.title)}</p>
+          <p className="mt-2 text-[13px] leading-relaxed text-ink-muted">{roundMoneyInText(insight.message)}</p>
           {insight.financial_impact !== null && (
             <p className={cn("mt-2 text-[13px] font-semibold", impactTone(insight, cfg.text))}>
-              {impactLabel(insight, true)}: {formatCurrency(insight.financial_impact)}
+              {impactLabel(insight, true)}: {formatCurrencyWhole(insight.financial_impact)}
             </p>
           )}
           {insight.playbook && insight.playbook.length > 0 && (
@@ -338,7 +365,12 @@ export function SecondaryInsightCard({
               <span className="font-semibold text-ink">Primeiro passo:</span> {insight.playbook[0]}
             </p>
           )}
-          <InsightBasis insight={insight} compact />
+          {(insight.evidence || insight.method || insight.track_record) && (
+            <details className="mt-2">
+              <summary className="cursor-pointer list-none text-xs font-medium text-ink-faint hover:text-ink">Como calculamos</summary>
+              <InsightBasis insight={insight} compact />
+            </details>
+          )}
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <InsightActionButton insight={insight} onNavigateTab={onNavigateTab} onFocusAgenda={onFocusAgenda} toneClass={cfg.text} />
             <ActionedBadge actioned={actioned} />

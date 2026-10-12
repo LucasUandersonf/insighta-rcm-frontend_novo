@@ -1,8 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useCompleteOnboarding, useCurrentUserProfile } from "@/lib/useCurrentUserProfile";
-import { ACCOUNT_TOUR_ID, NAV_ITEMS, tourTargetFor } from "@/lib/navigation";
-import { onboardingStepsFor } from "@/lib/onboardingSteps";
+import { ACCOUNT_TOUR_ID, ASK_TOUR_ID, NAV_ITEMS, tourTargetFor } from "@/lib/navigation";
 import { OnboardingTour, type TourStep } from "@/components/onboarding/OnboardingTour";
 import type { UserRole } from "@/lib/types";
 
@@ -31,10 +30,9 @@ function isVisibleFor(role: UserRole | undefined, roles: UserRole[] | undefined)
 /** Monta os passos a partir da MESMA navegação que o usuário vê — um item
  * escondido pelo papel dele nunca vira passo.
  *
- * UX2-20: quem importa dados vê no tour exatamente os passos dos cartões
- * da Home (src/lib/onboardingSteps.ts), com a mesma numeração; o "Passo X
- * de N" do tour é o mesmo "Passo X" do cartão. Quem não importa (recepção,
- * auditoria) faz um tour curto pelo que usa, sem numerar nada. */
+ * UX3-20: quem importa dados vê onde ficam Importar, Pergunte e o menu da
+ * foto (os passos já estão nos cartões do Início). Quem não importa
+ * (recepção, auditoria) faz um tour curto pelo que usa. */
 function useTourSteps(): TourStep[] {
   const { user } = useAuth();
 
@@ -42,19 +40,30 @@ function useTourSteps(): TourStep[] {
     const visible = NAV_ITEMS.filter((item) => item.placement === "primary" && isVisibleFor(user?.role, item.roles));
     const importItem = visible.find((item) => item.to === "/importar");
     if (importItem) {
-      const homeSteps = onboardingStepsFor(user?.role);
-      return homeSteps.map((step, i) => {
-        const isLast = i === homeSteps.length - 1;
-        const target = step.to === "/importar" ? tourTargetFor(importItem) : ACCOUNT_TOUR_ID;
-        const where = step.to === "/importar" ? "" : " Fica no menu da sua foto.";
-        return {
-          targetSelector: `[data-tour-id="${target}"]`,
-          title: step.title,
-          description: `${i === 0 ? "Bem-vindo ao Insighta! Os mesmos passos estão no Início. " : ""}${step.text}${where}${
-            isLast ? " Para rever este tour, abra a Central de Ajuda no menu da sua foto." : ""
-          }`,
-        };
+      // UX3-20: o tour repetia os cartões do Início. Agora ele mostra ONDE
+      // ficam as coisas (os passos já estão na Home): importar, perguntar e
+      // o menu da foto.
+      const canAsk = !!user?.role && ["owner", "admin", "financeiro", "auditor"].includes(user.role);
+      const tips: TourStep[] = [
+        {
+          targetSelector: `[data-tour-id="${tourTargetFor(importItem)}"]`,
+          title: "Importar dados",
+          description: "Bem-vindo ao Insighta! É aqui que entram as planilhas do seu sistema (faturamento, agenda). Os primeiros passos estão no Início.",
+        },
+      ];
+      if (canAsk) {
+        tips.push({
+          targetSelector: `[data-tour-id="${ASK_TOUR_ID}"]`,
+          title: "Pergunte ao Insighta",
+          description: "Pergunte em português, como numa conversa: “qual convênio mais glosa?”, “quanto faturei em setembro?”.",
+        });
+      }
+      tips.push({
+        targetSelector: `[data-tour-id="${ACCOUNT_TOUR_ID}"]`,
+        title: "Menu da sua foto",
+        description: "Minha clínica, usuários, convênios e a Central de Ajuda (onde dá para rever este tour).",
       });
+      return tips;
     }
 
     const steps: TourStep[] = [];

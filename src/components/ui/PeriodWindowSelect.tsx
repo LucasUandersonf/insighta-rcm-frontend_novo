@@ -2,6 +2,7 @@ import { useRef } from "react";
 import { ChevronDown } from "lucide-react";
 import { DEFAULT_WINDOW_OPTIONS, type WindowOption } from "@/lib/useDateWindow";
 import { useOnline } from "@/lib/useOnline";
+import { formatDateBR } from "@/lib/dates";
 
 /** Seletor de janela de período (dropdown "Últimos N dias") — mesmo
  * controle usado por Sala de Comando e Painel, extraído para os dois
@@ -11,10 +12,13 @@ export function PeriodWindowSelect({
   windowDays,
   onChange,
   options = DEFAULT_WINDOW_OPTIONS,
+  dataUntil = null,
 }: {
   windowDays: number;
   onChange: (days: number) => void;
   options?: WindowOption[];
+  /** UX3-02: a janela termina no último dia com dados, não hoje. */
+  dataUntil?: string | null;
 }) {
   // UX2-25: sem internet, trocar o período não busca nada novo — os números
   // na tela continuam os do período anterior. Diz isso em vez de deixar
@@ -43,7 +47,12 @@ export function PeriodWindowSelect({
           </option>
         ))}
       </select>
-      <ChevronDown aria-hidden size={15} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-ink-faint" />
+      <ChevronDown aria-hidden size={15} className="pointer-events-none absolute right-3 top-[19px] -translate-y-1/2 text-ink-faint" />
+      {dataUntil && !stale && (
+        <p className="mt-1 text-2xs text-ink-faint">
+          Até {formatDateBR(dataUntil, { day: "2-digit", month: "2-digit" })}, último dia com faturamento importado.
+        </p>
+      )}
     </div>
   );
 }

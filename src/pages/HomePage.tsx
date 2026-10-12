@@ -7,10 +7,13 @@ import { LoadingState } from "@/components/ui/Panel";
 import { Button } from "@/components/ui/Button";
 import { formatCurrency } from "@/components/dashboard/SmartInsightsFeed";
 import { AssignModal, insightItemKey, toQueueItem, useInsightWorkflow } from "@/components/dashboard/InsightWorkflowActions";
+import { addDaysIso, clinicIsoDate, formatDateBR } from "@/lib/dates";
+import { useDataAnchor } from "@/lib/useDataReadiness";
+import { useCapabilities } from "@/lib/capabilities";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { describeTrend } from "@/lib/narrative";
-import { askQuotaNote, useAiUsage, useAskInsighta } from "@/lib/useAskInsighta";
+import { askExample, askQuotaNote, useAiUsage, useAskInsighta } from "@/lib/useAskInsighta";
 import { firstNameFrom, useCurrentUserProfile } from "@/lib/useCurrentUserProfile";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
@@ -97,16 +100,9 @@ function capitalize(text: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
-function toIsoDate(d: Date): string {
-  return d.toISOString().slice(0, 10);
-}
-
-function windowFor(days: number, offsetDays = 0): { from: string; to: string } {
-  const end = new Date();
-  end.setDate(end.getDate() - offsetDays);
-  const start = new Date(end);
-  start.setDate(start.getDate() - (days - 1));
-  return { from: toIsoDate(start), to: toIsoDate(end) };
+function windowFor(days: number, offsetDays = 0, anchor: string = clinicIsoDate()): { from: string; to: string } {
+  const end = addDaysIso(anchor, -offsetDays);
+  return { from: addDaysIso(end, -(days - 1)), to: end };
 }
 
 /**
@@ -219,7 +215,9 @@ function SetupChecklist({ health, readiness }: { health?: AccountHealth; readine
   return (
     <details open className="mt-6 rounded-[14px] border border-border-hairline bg-canvas-surface/60">
       <summary className="flex cursor-pointer flex-wrap items-center gap-2 px-4 py-3 text-sm font-medium text-ink">
-        Configuração da clínica: {done} de {items.length} prontos
+        {/* UX3-21: mesma conta e mesma frase de Saúde da conta. */}
+        Configuração da clínica: {pending.length} {pending.length === 1 ? "item precisa" : "itens precisam"} de atenção
+        <span className="text-xs font-normal text-ink-muted">({done} de {items.length} prontos)</span>
         <span className="text-xs font-normal text-ink-muted">— o que falta para os números ficarem completos</span>
       </summary>
       <ul className="divide-y divide-border-hairline border-t border-border-hairline">
@@ -475,8 +473,8 @@ function CompareSelect({ value, onChange }: { value: CompareId; onChange: (id: C
 function AskBox() {
   const [question, setQuestion] = useState("");
   const ask = useAskInsighta();
-  const { data: aiUsage } = useAiUsage(Boolean(ask.data));
-  const quotaNote = askQuotaNote(aiUsage);
+  const { data: aiUsage } = useAiUsage();
+  const quotaNote = ask.data ? askQuotaNote(aiUsage) : null;
   function submit(e: FormEvent) {
     e.preventDefault();
     if (question.trim().length >= 3) ask.mutate(question.trim());
@@ -491,7 +489,7 @@ function AskBox() {
         <input
           type="text"
           aria-label="Sua pergunta"
-          placeholder="Por que a glosa subiu este mês?"
+          placeholder={capitalize(askExample(aiUsage?.ai_enabled))}
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
           className="min-w-0 flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-ink-faint"
@@ -535,8 +533,19 @@ export function HomePage() {
   const canUpload = !!user && _CAN_UPLOAD_ROLES.includes(user.role);
   const [compare, setCompare] = useState<CompareId>("mes");
   const compareOption = COMPARE_OPTIONS.find((o) => o.id === compare)!;
-  const current = windowFor(compareOption.days);
-  const previous = windowFor(compareOption.days, compareOption.days);
+  // UX3-02: a janela termina no último dia com faturamento quando ele já passou.
+  const { end: anchor, dataUntil } = useDataAnchor();
+  const current = windowFor(compareOption.days, 0, anchor);
+  const previous = windowFor(compareOption.days, compareOption.days, anchor);
+  const untilText = dataUntil ? formatDateBR(dataUntil, { day: "2-digit", month: "2-digit" }) : null;
+  const panoramaLabel = untilText
+    ? compareOption.days === 1
+      ? untilText
+      : `${compareOption.days} dias até ${untilText}`
+    : compareOption.panorama;
+  // "Nada glosado {inWindow}": "hoje", "em 01/10", "nos últimos 7 dias", "nos 30 dias até 01/10".
+  const inWindow = compareOption.days === 1 ? (untilText ? `em ${untilText}` : "hoje") : `nos ${panoramaLabel}`;
+  const ofWindow = compareOption.days === 1 ? (untilText ? `de ${untilText}` : "de hoje") : `dos ${panoramaLabel}`;
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["analytics", "executive-narrative"],
@@ -559,6 +568,7 @@ export function HomePage() {
     queryFn: () => apiClient.get<AccountHealth>("/api/v1/tenant/account-health"),
     enabled: canManageTeam,
     retry: false,
+    refetchOnMount: "always",
   });
   const { data: tenant } = useQuery({ queryKey: ["tenant"], queryFn: () => apiClient.get<Tenant>("/api/v1/tenant"), retry: false });
   const { data: nav } = useQuery({
@@ -584,7 +594,7 @@ export function HomePage() {
     enabled: canViewAnalytics,
     retry: false,
   });
-  const wideWindow = windowFor(90);
+  const wideWindow = windowFor(90, 0, anchor);
   const { data: payers90 } = useQuery({
     queryKey: ["analytics", "payer-overview", wideWindow.from, wideWindow.to],
     queryFn: () => apiClient.get<PayerOverview>(`/api/v1/analytics/payer-overview?date_from=${wideWindow.from}&date_to=${wideWindow.to}`),
@@ -610,6 +620,7 @@ export function HomePage() {
     enabled: canViewAnalytics,
     retry: false,
   });
+  const { data: capabilities } = useCapabilities();
   const emailBriefing = useMutation({
     mutationFn: () => apiClient.post<BriefingEmailResult>("/api/v1/analytics/briefing/email", {}),
     onSuccess: (result) =>
@@ -656,8 +667,8 @@ export function HomePage() {
       favorable: null,
       read:
         payers90 && payers90.total_denied > 0
-          ? `Nada glosado nos ${compareOption.panorama}. Nos últimos 90 dias foram ${compactCurrency.format(payers90.total_denied)}.`
-          : `Os convênios ainda não devolveram o retorno das cobranças dos ${compareOption.panorama}.`,
+          ? `Nada glosado ${inWindow}. Nos 90 dias até ${untilText ?? "hoje"} foram ${compactCurrency.format(payers90.total_denied)}.`
+          : `Os convênios ainda não devolveram o retorno das cobranças ${ofWindow}.`,
     });
   } else if (payers) {
     const prev = previousPayers?.total_denied ?? null;
@@ -671,8 +682,8 @@ export function HomePage() {
       read:
         payers.total_denied === 0
           ? payers90 && payers90.total_denied > 0
-            ? `Nada glosado nos ${compareOption.panorama}. Nos últimos 90 dias foram ${compactCurrency.format(payers90.total_denied)}.`
-            : `Nenhuma glosa nos ${compareOption.panorama}.`
+            ? `Nada glosado ${inWindow}. Nos 90 dias até ${untilText ?? "hoje"} foram ${compactCurrency.format(payers90.total_denied)}.`
+            : `Nenhuma glosa ${inWindow}.`
           : topShare >= 40
             ? `${Math.round(topShare)}% disso vem de um só convênio: ${topDenied.name}.`
             : describeTrend("o valor glosado", payers.total_denied, deltaPct, { shape: "currency" }),
@@ -835,10 +846,13 @@ export function HomePage() {
             {canViewAnalytics && (
               <div className="flex flex-wrap gap-2.5">
                 <CompareSelect value={compare} onChange={setCompare} />
-                <Button type="button" variant="secondary" onClick={() => emailBriefing.mutate()} disabled={emailBriefing.isPending} className="inline-flex h-[38px] items-center gap-2">
-                  <ArrowUp aria-hidden size={14} className="rotate-45" />
-                  Enviar por e-mail
-                </Button>
+                {/* UX3-06: sem e-mail ligado, o botão prometia um envio que não acontece. */}
+                {capabilities?.email_enabled !== false && (
+                  <Button type="button" variant="secondary" onClick={() => emailBriefing.mutate()} disabled={emailBriefing.isPending} className="inline-flex h-[38px] items-center gap-2">
+                    <ArrowUp aria-hidden size={14} className="rotate-45" />
+                    Enviar por e-mail
+                  </Button>
+                )}
               </div>
             )}
           </div>
@@ -864,7 +878,7 @@ export function HomePage() {
             ) : (
               <CalmHeadline missingText={missingText} />
             )}
-            {rows.length > 0 && <Panorama rows={rows} windowLabel={compareOption.panorama} />}
+            {rows.length > 0 && <Panorama rows={rows} windowLabel={panoramaLabel} />}
           </div>
 
           <Rule strong />
@@ -928,13 +942,22 @@ export function HomePage() {
               {goodItems.length > 0 ? (
                 <div className="grid grid-cols-1 gap-7 sm:grid-cols-3">
                   {goodItems.map((item) => (
-                    <div key={item.text} className="flex flex-col gap-2">
-                      <span className="flex items-center gap-2 font-serif text-[30px] font-semibold text-revenue">
-                        {item.value === "Resolvido" && <CheckCircle2 aria-hidden size={22} />}
-                        {item.value}
-                      </span>
-                      <span className="text-sm leading-[1.55] text-ink-soft">{item.text}</span>
-                    </div>
+                    item.value === "Resolvido" ? (
+                      // UX3-25: o título é o que melhorou; "Resolvido" vira selo
+                      // (três "Resolvido" grandes e iguais não diziam nada).
+                      <div key={item.text} className="flex flex-col gap-2">
+                        <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-revenue-bg px-2.5 py-0.5 text-xs font-semibold text-revenue">
+                          <CheckCircle2 aria-hidden size={13} />
+                          Resolvido
+                        </span>
+                        <span className="font-serif text-[19px] font-medium leading-snug text-ink">{item.text}</span>
+                      </div>
+                    ) : (
+                      <div key={item.text} className="flex flex-col gap-2">
+                        <span className="font-serif text-[30px] font-semibold text-revenue">{item.value}</span>
+                        <span className="text-sm leading-[1.55] text-ink-soft">{item.text}</span>
+                      </div>
+                    )
                   ))}
                 </div>
               ) : (

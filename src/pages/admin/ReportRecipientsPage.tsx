@@ -73,11 +73,13 @@ function RecipientModal({
   onClose,
   editing,
   whatsappEnabled,
+  emailEnabled = true,
 }: {
   isOpen: boolean;
   onClose: () => void;
   editing: ReportRecipient | null;
   whatsappEnabled: boolean;
+  emailEnabled?: boolean;
 }) {
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
@@ -107,7 +109,9 @@ function RecipientModal({
       // Rodada 8 (A2): e-mail de fora da equipe confirma pelo link antes de receber.
       showSuccess(
         saved?.email && !saved.email_confirmed_at
-          ? `${base} Enviamos um link para ${saved.email}: os relatórios por e-mail começam depois que a pessoa confirmar.`
+          ? emailEnabled
+            ? `${base} Enviamos um link para ${saved.email}: os relatórios por e-mail começam depois que a pessoa confirmar.`
+            : `${base} O link de confirmação sai quando o envio de e-mails for ativado.`
           : base,
       );
       resetAndClose();
@@ -296,6 +300,9 @@ export function ReportRecipientsPage() {
   // app/api/v1/endpoints/reports.py).
   const { data: channels } = useReportChannels();
   const whatsappEnabled = !!channels?.whatsapp;
+  // UX3-07: com nenhum canal ligado, o destinatário não recebe nada — a tela
+  // diz isso antes do cadastro, e o status não é "Ativo".
+  const noChannel = channels !== undefined && !channels.whatsapp && !channels.email;
   const sendNowMutation = useMutation({
     mutationFn: () =>
       apiClient.post<WeeklyReportResponse>("/api/v1/reports/weekly/send", {}),
@@ -336,7 +343,8 @@ export function ReportRecipientsPage() {
             <Button
               variant="secondary"
               onClick={() => sendNowMutation.mutate()}
-              disabled={sendNowMutation.isPending}
+              disabled={sendNowMutation.isPending || noChannel}
+              title={noChannel ? "O envio de e-mails ainda não está ativo." : undefined}
               className="flex items-center gap-1.5"
             >
               <Zap size={14} />
@@ -347,7 +355,8 @@ export function ReportRecipientsPage() {
             <Button
               variant="secondary"
               onClick={() => sendRiskAlertNowMutation.mutate()}
-              disabled={sendRiskAlertNowMutation.isPending}
+              disabled={sendRiskAlertNowMutation.isPending || noChannel}
+              title={noChannel ? "O envio de e-mails ainda não está ativo." : undefined}
               className="flex items-center gap-1.5"
             >
               <AlertTriangle size={14} />
@@ -365,6 +374,13 @@ export function ReportRecipientsPage() {
           </div>
         }
       />
+
+      {noChannel && (
+        <div role="status" className="rounded-xl border border-pending/30 bg-pending-bg px-4 py-3 text-sm text-ink">
+          O envio de e-mails ainda não está ativo nesta instalação. Você pode cadastrar os destinatários agora; os
+          relatórios começam a sair quando o e-mail for ativado pelo suporte.
+        </div>
+      )}
 
       <Panel>
         {isLoading && <LoadingState variant="table" rows={3} />}
@@ -430,9 +446,13 @@ export function ReportRecipientsPage() {
                     {reportTypesLabel(r.report_types)}
                   </td>
                   <td className="px-4 py-2.5">
-                    <Badge tone={r.active ? "revenue" : "neutral"}>
-                      {r.active ? "Ativo" : "Inativo"}
-                    </Badge>
+                    {r.active && noChannel ? (
+                      <Badge tone="pending">Aguardando o e-mail ser ativado</Badge>
+                    ) : (
+                      <Badge tone={r.active ? "revenue" : "neutral"}>
+                        {r.active ? "Ativo" : "Inativo"}
+                      </Badge>
+                    )}
                   </td>
                   <td className="px-4 py-2.5 text-xs">
                     {!r.last_delivery_at ? (
@@ -499,6 +519,7 @@ export function ReportRecipientsPage() {
           antes em DenialAppealsPage: estado de modal com referência velha). */}
       <RecipientModal
         whatsappEnabled={whatsappEnabled}
+        emailEnabled={channels?.email !== false}
         key={editingId ?? "new"}
         isOpen={isModalOpen || editingId !== null}
         onClose={() => {

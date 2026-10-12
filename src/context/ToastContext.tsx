@@ -2,16 +2,23 @@ import { createContext, useContext, useEffect, useRef, useState, useCallback, ty
 import { AnimatePresence, motion } from "framer-motion";
 import { CheckCircle2, X, XCircle } from "lucide-react";
 
+/** UX3-15: ação opcional no aviso ("Ver relatório"), em vez de mandar a pessoa procurar. */
+export interface ToastAction {
+  label: string;
+  onClick: () => void;
+}
+
 interface Toast {
   id: number;
   message: string;
   tone: "success" | "error";
   durationMs: number;
+  action?: ToastAction;
 }
 
 interface ToastContextValue {
-  showSuccess: (message: string) => void;
-  showError: (message: string) => void;
+  showSuccess: (message: string, action?: ToastAction) => void;
+  showError: (message: string, action?: ToastAction) => void;
 }
 
 const ToastContext = createContext<ToastContextValue | undefined>(undefined);
@@ -35,7 +42,21 @@ function ToastCard({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }
         <span aria-hidden className={isSuccess ? "mt-0.5 shrink-0 text-revenue" : "mt-0.5 shrink-0 text-denied"}>
           {isSuccess ? <CheckCircle2 size={16} /> : <XCircle size={16} />}
         </span>
-        <p className="flex-1 text-sm leading-relaxed text-ink">{toast.message}</p>
+        <div className="flex-1">
+          <p className="text-sm leading-relaxed text-ink">{toast.message}</p>
+          {toast.action && (
+            <button
+              type="button"
+              onClick={() => {
+                toast.action?.onClick();
+                onDismiss();
+              }}
+              className="mt-1.5 text-sm font-medium text-accent hover:underline"
+            >
+              {toast.action.label}
+            </button>
+          )}
+        </div>
         <button
           onClick={onDismiss}
           aria-label="Fechar notificação"
@@ -77,29 +98,32 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const push = useCallback(
-    (message: string, tone: Toast["tone"]) => {
+    (message: string, tone: Toast["tone"], action?: ToastAction) => {
       if (tone === "error" && Date.now() < suppressErrorsUntil.current) return;
       const id = nextId++;
       // Auto-dispensa depois de alguns segundos — usuário não precisa
       // fechar manualmente toda confirmação de sucesso.
-      const durationMs = tone === "error" ? 6000 : 3500;
+      // Com ação, mais tempo para a pessoa ler e clicar.
+      const durationMs = action ? 9000 : tone === "error" ? 6000 : 3500;
       // UX2-22: o mesmo aviso não empilha (clique duplo, duas respostas
       // iguais): se já está na tela, fica só o que já existe.
       setToasts((prev) =>
-        prev.some((t) => t.message === message && t.tone === tone) ? prev : [...prev, { id, message, tone, durationMs }]
+        prev.some((t) => t.message === message && t.tone === tone) ? prev : [...prev, { id, message, tone, durationMs, action }]
       );
       setTimeout(() => remove(id), durationMs);
     },
     [remove]
   );
 
-  const showSuccess = useCallback((message: string) => push(message, "success"), [push]);
-  const showError = useCallback((message: string) => push(message, "error"), [push]);
+  const showSuccess = useCallback((message: string, action?: ToastAction) => push(message, "success", action), [push]);
+  const showError = useCallback((message: string, action?: ToastAction) => push(message, "error", action), [push]);
 
   return (
     <ToastContext.Provider value={{ showSuccess, showError }}>
       {children}
-      <div className="pointer-events-none fixed bottom-4 right-4 z-50 flex flex-col gap-2">
+      {/* UX3-15: no alto, à direita, abaixo da barra — embaixo cobria o botão
+          principal dos formulários ("Enviar arquivo"). */}
+      <div className="pointer-events-none fixed right-4 top-[76px] z-50 flex flex-col gap-2 max-sm:left-4">
         <AnimatePresence>
           {toasts.map((t) => (
             <ToastCard key={t.id} toast={t} onDismiss={() => remove(t.id)} />

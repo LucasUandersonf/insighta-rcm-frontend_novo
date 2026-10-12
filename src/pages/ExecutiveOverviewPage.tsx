@@ -120,13 +120,21 @@ export function normalizeCommandCenterTab(value: string | null): TabId {
  * Oportunidades e Rentabilidade foram para Faturamento e Agenda.
  */
 export function ExecutiveOverviewPage() {
-  const { windowDays, setWindowDays, dateFrom, dateTo } = useDateWindow(30);
+  const { windowDays, setWindowDays, dateFrom, dateTo, dataUntil } = useDateWindow(30);
   const { data: profile } = useCurrentUserProfile();
   // Deep-link de aba a partir de fora da Sala de Comando: "?tab=" válido
   // manda; aba antiga cai onde o conteúdo foi parar (LEGACY_TABS);
   // ausente ou inválido abre em "Hoje" (nunca quebra por link velho).
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<TabId>(() => normalizeCommandCenterTab(searchParams.get("tab")));
+  // UX3-18: a aba escolhida vai para o endereço — voltar do navegador reabre a mesma.
+  function selectTab(id: TabId) {
+    setActiveTab(id);
+    const next = new URLSearchParams(searchParams);
+    next.set("tab", id);
+    next.delete("scrollTo");
+    setSearchParams(next, { replace: true });
+  }
   const navigateTab = (id: string) => setActiveTab(normalizeCommandCenterTab(id));
   // Foco de agenda (ver AgendaFocus, lib/types.ts) — disparado pelos
   // botões de ação dos insights de queda de agenda/agenda ociosa (ver
@@ -189,7 +197,7 @@ export function ExecutiveOverviewPage() {
         greeting={profile ? `${timeOfDayGreeting()}, ${firstNameFrom(profile.full_name)}.` : undefined}
         action={
           <>
-            <PeriodWindowSelect windowDays={windowDays} onChange={setWindowDays} />
+            <PeriodWindowSelect windowDays={windowDays} onChange={setWindowDays} dataUntil={dataUntil} />
             <button
               type="button"
               onClick={() => summary && exportCommandCenterCsv(summary, dateFrom, dateTo)}
@@ -213,7 +221,7 @@ export function ExecutiveOverviewPage() {
       <Tabs
         groupId={TABS_GROUP}
         active={activeTab}
-        onChange={(id) => setActiveTab(id as TabId)}
+        onChange={(id) => selectTab(id as TabId)}
         items={[
           { id: "hoje", label: "Hoje", icon: ListChecks },
           { id: "faturamento", label: "Faturamento", icon: Receipt },
@@ -251,8 +259,16 @@ export function ExecutiveOverviewPage() {
                 <h2 className="mb-3 text-2xs font-medium uppercase tracking-wide text-ink-faint">Números do período — para conferência</h2>
                 <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-12">
                   <KpiCard size="compact" colSpan={2} label="Total faturado" value={formatCurrency(summary.total_billed.value)} numericValue={summary.total_billed.value} format={formatCurrency} tone="revenue" trend={trendFrom(summary.total_billed)} />
-                  <KpiCard size="compact" colSpan={2} label="Cobrado abaixo do contrato" value={formatCurrency(summary.financial_hole.value)} numericValue={summary.financial_hole.value} format={formatCurrency} tone="denied" gradient trend={trendFrom(summary.financial_hole, { invert: true })} />
-                  <KpiCard size="compact" colSpan={2} label="Caixa protegido" value={formatCurrency(summary.total_value_saved.value)} numericValue={summary.total_value_saved.value} format={formatCurrency} tone="revenue" gradient trend={trendFrom(summary.total_value_saved)} />
+                  {summary.margin_vs_contracted_pct !== null ? (
+                    <KpiCard size="compact" colSpan={2} label="Cobrado abaixo do contrato" value={formatCurrency(summary.financial_hole.value)} numericValue={summary.financial_hole.value} format={formatCurrency} tone="denied" gradient trend={trendFrom(summary.financial_hole, { invert: true })} />
+                  ) : (
+                    <KpiCard size="compact" colSpan={2} label="Cobrado abaixo do contrato" value="—" tone="neutral" narrative="Cadastre a tabela de preço dos convênios para medir." />
+                  )}
+                  {summary.total_value_saved.value > 0 || summary.total_value_saved.previous_value > 0 ? (
+                    <KpiCard size="compact" colSpan={2} label="Caixa protegido" value={formatCurrency(summary.total_value_saved.value)} numericValue={summary.total_value_saved.value} format={formatCurrency} tone="revenue" gradient trend={trendFrom(summary.total_value_saved)} />
+                  ) : (
+                    <KpiCard size="compact" colSpan={2} label="Caixa protegido" value="—" tone="neutral" narrative="Aparece quando as guias passam pela checagem de risco antes do envio." />
+                  )}
                   <KpiCard
                     size="compact"
                     colSpan={2}

@@ -6,6 +6,8 @@ import { Panel, LoadingState, ErrorState } from "@/components/ui/Panel";
 import { Button } from "@/components/ui/Button";
 import { TextField } from "@/components/ui/FormField";
 import { MoneyField } from "@/components/ui/MoneyField";
+import { clinicIsoDate } from "@/lib/dates";
+import { useUnsavedChanges } from "@/lib/unsavedChanges";
 import { formatMoneyInput, parseMoneyBR } from "@/lib/money";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Badge } from "@/components/ui/Badge";
@@ -193,6 +195,7 @@ function AnnualGoalPanel({ tenant, isOwner }: { tenant: Tenant; isOwner: boolean
   useEffect(() => {
     setGoalInput(formatMoneyInput(tenant.annual_revenue_goal));
   }, [tenant.annual_revenue_goal]);
+  useUnsavedChanges(isOwner && goalInput !== formatMoneyInput(tenant.annual_revenue_goal), "a meta de faturamento");
 
   // Épico F3.3 do Plano Diretor ("Metas e cenários orientados a dados")
   // — "meta anual sugerida (crescimento histórico + percentil de
@@ -359,6 +362,12 @@ function NoShowThresholdsPanel({ tenant, isOwner }: { tenant: Tenant; isOwner: b
     setLowInput(tenant.no_show_low_threshold !== null ? String(tenant.no_show_low_threshold * 100) : "");
     setMediumInput(tenant.no_show_medium_threshold !== null ? String(tenant.no_show_medium_threshold * 100) : "");
   }, [tenant.no_show_low_threshold, tenant.no_show_medium_threshold]);
+  useUnsavedChanges(
+    isOwner &&
+      (lowInput !== (tenant.no_show_low_threshold !== null ? String(tenant.no_show_low_threshold * 100) : "") ||
+        mediumInput !== (tenant.no_show_medium_threshold !== null ? String(tenant.no_show_medium_threshold * 100) : "")),
+    "os limites de risco de falta"
+  );
 
   // Sugestão calculada do HISTÓRICO REAL desta clínica (mediana/P85 da
   // taxa de falta por paciente) — buscada só quando o usuário pede
@@ -512,6 +521,12 @@ function DenialRiskThresholdsPanel({ tenant, isOwner }: { tenant: Tenant; isOwne
     setWarningInput(tenant.denial_risk_warning_threshold !== null ? String(tenant.denial_risk_warning_threshold) : "");
     setCriticalInput(tenant.denial_risk_critical_threshold !== null ? String(tenant.denial_risk_critical_threshold) : "");
   }, [tenant.denial_risk_warning_threshold, tenant.denial_risk_critical_threshold]);
+  useUnsavedChanges(
+    isOwner &&
+      (warningInput !== (tenant.denial_risk_warning_threshold !== null ? String(tenant.denial_risk_warning_threshold) : "") ||
+        criticalInput !== (tenant.denial_risk_critical_threshold !== null ? String(tenant.denial_risk_critical_threshold) : "")),
+    "os limites de risco de glosa"
+  );
 
   const suggestionQuery = useQuery({
     queryKey: ["tenant", "denial-risk-thresholds", "suggested"],
@@ -660,6 +675,12 @@ function HealthScoreCeilingsPanel({ tenant, isOwner }: { tenant: Tenant; isOwner
     setDenialInput(tenant.health_score_denial_ceiling !== null ? String(tenant.health_score_denial_ceiling * 100) : "");
     setNoShowInput(tenant.health_score_no_show_ceiling !== null ? String(tenant.health_score_no_show_ceiling * 100) : "");
   }, [tenant.health_score_denial_ceiling, tenant.health_score_no_show_ceiling]);
+  useUnsavedChanges(
+    isOwner &&
+      (denialInput !== (tenant.health_score_denial_ceiling !== null ? String(tenant.health_score_denial_ceiling * 100) : "") ||
+        noShowInput !== (tenant.health_score_no_show_ceiling !== null ? String(tenant.health_score_no_show_ceiling * 100) : "")),
+    "os tetos da nota de saúde"
+  );
 
   const suggestionQuery = useQuery({
     queryKey: ["tenant", "health-score-ceilings", "suggested"],
@@ -1019,7 +1040,7 @@ export function DataExportPanel({ isOwner }: { isOwner: boolean }) {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `insighta-dados-${new Date().toISOString().slice(0, 10)}.zip`;
+    link.download = `insighta-dados-${clinicIsoDate()}.zip`;
     link.click();
     setTimeout(() => URL.revokeObjectURL(url), 10_000);
     showSuccess("Exportação pronta. O arquivo foi baixado.");
@@ -1130,6 +1151,10 @@ export function TenantPage() {
       setSpecialty(tenant.specialty ?? "");
     }
   }, [tenant]);
+  useUnsavedChanges(
+    !!tenant && isOwner && (legalName !== tenant.legal_name || tradeName !== tenant.trade_name || specialty !== (tenant.specialty ?? "")),
+    "os dados da clínica"
+  );
 
   const mutation = useMutation({
     mutationFn: () =>

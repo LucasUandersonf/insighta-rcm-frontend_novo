@@ -13,12 +13,13 @@ import { UserAvatar } from "@/components/ui/UserAvatar";
 import { useCurrentUserProfile } from "@/lib/useCurrentUserProfile";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
-import { askQuotaNote, useAiUsage, useAskInsighta } from "@/lib/useAskInsighta";
+import { askExample, askQuotaNote, useAiUsage, useAskInsighta } from "@/lib/useAskInsighta";
 import { cn } from "@/lib/cn";
 import { isManagerProfile, useCoordinatorSummary, useTeamOverview, useTeamProfile } from "@/lib/team";
 import {
   ACCOUNT_TOUR_ID,
   ADMIN_NAV_ITEMS,
+  ASK_TOUR_ID,
   MODULES_TOUR_ID,
   MODULE_GROUPS,
   NAV_ITEMS,
@@ -120,6 +121,7 @@ function AskInsightaField({ items, canAsk }: { items: NavItem[]; canAsk: boolean
   const [activeIndex, setActiveIndex] = useState(0);
   const ask = useAskInsighta();
   const { data: aiUsage } = useAiUsage(Boolean(ask.data));
+  const { data: aiUsageForExample } = useAiUsage(canAsk);
   const quotaNote = askQuotaNote(aiUsage);
 
   const matches = useMemo(() => {
@@ -167,7 +169,7 @@ function AskInsightaField({ items, canAsk }: { items: NavItem[]; canAsk: boolean
   const showPanel = isOpen && (trimmed.length > 0 || ask.isPending || !!ask.data || !!ask.error);
 
   return (
-    <div ref={wrapperRef} className="relative ml-3 hidden max-w-[520px] flex-1 md:block">
+    <div ref={wrapperRef} data-tour-id={ASK_TOUR_ID} className="relative ml-3 hidden max-w-[520px] flex-1 md:block">
       <label className="flex h-[38px] items-center gap-2.5 rounded-[11px] border border-border-hairline bg-canvas-raised/40 px-3 focus-within:border-accent/50">
         <Sparkles aria-hidden size={15} className="shrink-0 text-accent-muted" />
         <input
@@ -178,7 +180,7 @@ function AskInsightaField({ items, canAsk }: { items: NavItem[]; canAsk: boolean
           aria-expanded={showPanel}
           aria-controls={listId}
           aria-autocomplete="list"
-          placeholder={canAsk ? "Pergunte ao Insighta: “por que a glosa subiu este mês?”" : "Ir para um módulo (ex.: lista de espera, consultas)"}
+          placeholder={canAsk ? `Pergunte ao Insighta: “${askExample(aiUsageForExample?.ai_enabled)}”` : "Ir para um módulo (ex.: lista de espera, consultas)"}
           value={query}
           onChange={(e) => {
             setQuery(e.target.value);
@@ -622,7 +624,7 @@ export function TopBar() {
   const currentModule = moduleItems.find((item) => isInside(item.to) || (item.matches ?? []).some(isInside));
 
   return (
-    <header className="sticky top-0 z-30 border-b border-border-hairline bg-canvas/75 backdrop-blur-[18px]">
+    <header className="sticky top-0 z-30 border-b border-border-hairline bg-canvas backdrop-blur-[18px]">
       {/* Linha 1 — marca, clínica, busca rápida, notificações e conta */}
       <div className="flex h-16 items-center gap-3 px-4 sm:gap-5 sm:px-8">
         {/* UX-27: no celular a barra de navegação cortava itens sem aviso;

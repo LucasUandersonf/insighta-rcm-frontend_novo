@@ -15,7 +15,7 @@ import type {
   SmartInsights,
   WeeklyTrend,
 } from "@/lib/types";
-import { NO_DATA_TEXT, useNoBillingData } from "@/lib/useDataReadiness";
+import { NO_DATA_TEXT, useDataReadiness, useNoBillingData } from "@/lib/useDataReadiness";
 
 /**
  * Aba "Hoje" da Sala de Comando — canvas "Insighta RCM — Redesign 2026"
@@ -63,6 +63,19 @@ function KpiStrip({ summary, payers }: { summary: ExecutiveSummary; payers?: Pay
   const slowest = payers?.verdicts.find((v) => v.kind === "slowest");
   const margin = summary.margin_vs_contracted_pct;
   const shortfall = margin !== null ? 100 - margin : null;
+  // UX3-03: sem tabela de preço, nada foi conferido; "R$ 0,00 abaixo do
+  // contrato" lia como "nenhuma perda". Mesmo estado vazio do card vizinho.
+  const holeMeasured = margin !== null;
+  // Medido só onde há tabela de preço: a frase diz quanto do faturado entrou na conta.
+  const { data: readiness } = useDataReadiness();
+  const coverage = readiness?.price_table_coverage_pct ?? null;
+  const coverageNote =
+    coverage !== null && coverage < 99.5
+      ? ` Conferido em ${Math.round(coverage)}% do faturado de convênio (só os convênios com tabela de preço).`
+      : "";
+  // Nada passou pela checagem antes do envio (ex.: só planilha importada):
+  // "R$ 0,00 protegido" não é medição.
+  const savedMeasured = summary.total_value_saved.value > 0 || summary.total_value_saved.previous_value > 0;
   const cells: {
     label: string;
     value: string;
@@ -73,17 +86,23 @@ function KpiStrip({ summary, payers }: { summary: ExecutiveSummary; payers?: Pay
   }[] = [
     {
       label: "Cobrado abaixo do contrato",
-      value: formatCurrency(summary.financial_hole.value),
-      kpi: summary.financial_hole,
+      value: holeMeasured ? formatCurrency(summary.financial_hole.value) : "—",
+      kpi: holeMeasured ? summary.financial_hole : null,
       higherIsBetter: false,
-      text: describeTrend("o que foi cobrado abaixo do contratado", summary.financial_hole.value, summary.financial_hole.delta_pct, { shape: "currency" }),
+      note: "ainda não medido",
+      text: holeMeasured
+        ? describeTrend("o que foi cobrado abaixo do contratado", summary.financial_hole.value, summary.financial_hole.delta_pct, { shape: "currency" }) + coverageNote
+        : "Cadastre a tabela de preço dos convênios (em Convênios › Contratos) para medir.",
     },
     {
       label: "Caixa protegido",
-      value: formatCurrency(summary.total_value_saved.value),
-      kpi: summary.total_value_saved,
+      value: savedMeasured ? formatCurrency(summary.total_value_saved.value) : "—",
+      kpi: savedMeasured ? summary.total_value_saved : null,
       higherIsBetter: true,
-      text: "Guias que o motor de risco segurou e corrigiu antes de ir para o convênio.",
+      note: "ainda não medido",
+      text: savedMeasured
+        ? "Guias que o motor de risco segurou e corrigiu antes de ir para o convênio."
+        : "Aparece quando as guias passam pela checagem de risco antes do envio (Faturamento › Fila de risco).",
     },
     {
       label: "Você faturou do que podia",

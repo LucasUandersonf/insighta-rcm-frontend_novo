@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { Clock, Loader2 } from "lucide-react";
 import { useToast } from "@/context/ToastContext";
@@ -12,7 +12,7 @@ function finishedMessage(upload: DirectUploadStatus): string {
   if (upload.already_processed) return upload.message ?? `${name}: este conteúdo já tinha sido importado. Nada foi duplicado.`;
   // UX-03/UX-34: diz o que entrou (não "linhas lidas") e sem "linha(s)".
   const base = `${name}: ${outcomeSentence(upload.row_count, upload.error_row_count)}${
-    (upload.error_row_count ?? 0) > 0 ? " Veja o motivo e como resolver no relatório, em Importar dados." : ""
+    (upload.error_row_count ?? 0) > 0 ? " Veja o motivo e como resolver no relatório." : ""
   }`;
   const ignored = upload.ignored_columns ?? [];
   return ignored.length > 0 ? `${base} Colunas ignoradas (fora do modelo): ${ignored.join(", ")}.` : base;
@@ -28,6 +28,7 @@ export function ImportProgressIndicator() {
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
   const location = useLocation();
+  const navigate = useNavigate();
   const lastStatus = useRef<Map<string, DirectUploadStatus["status"]>>(new Map());
 
   useEffect(() => {
@@ -39,7 +40,12 @@ export function ImportProgressIndicator() {
       if (wasActive && upload.status === "processado") {
         // Verde só quando entrou alguma coisa (UX-03).
         const nothing = !upload.already_processed && importOutcome(upload.row_count, upload.error_row_count) === "nada";
-        (nothing ? showError : showSuccess)(finishedMessage(upload));
+        const fileId = upload.ingestion_file_id;
+        const report =
+          (upload.error_row_count ?? 0) > 0 && fileId
+            ? { label: "Ver relatório", onClick: () => navigate(`/importar?relatorio=${fileId}`) }
+            : undefined;
+        (nothing ? showError : showSuccess)(finishedMessage(upload), report);
         finishedAny = true;
       } else if (wasActive && upload.status === "falhou") {
         showError(`${upload.original_filename ?? "Arquivo"}: ${upload.error ?? "não foi possível processar."}`);
@@ -51,7 +57,7 @@ export function ImportProgressIndicator() {
       // Números de todas as telas mudaram com a importação.
       queryClient.invalidateQueries({ predicate: (q) => q.queryKey[0] !== "ingestion" || q.queryKey[1] !== "direct-uploads" });
     }
-  }, [data, showSuccess, showError, queryClient]);
+  }, [data, showSuccess, showError, queryClient, navigate]);
 
   const active = (data ?? []).filter((u) => ACTIVE_STATES.includes(u.status));
   if (active.length === 0 || location.pathname === "/importar") return null;

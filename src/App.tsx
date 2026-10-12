@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/context/AuthContext";
 import { ToastProvider } from "@/context/ToastContext";
 import { ModalStackProvider } from "@/context/ModalStackContext";
@@ -21,6 +21,7 @@ import { HomeRouter, LegacyRedirect, ManagerProfileRoute } from "@/routes/TeamRo
 // agora é seu próprio chunk, baixado só quando a rota é de fato visitada
 // — ver também `build.rollupOptions.output.manualChunks` em
 // vite.config.ts, que separa as bibliotecas de terceiros do mesmo jeito.
+const NotFoundPage = lazy(() => import("@/pages/NotFoundPage").then((m) => ({ default: m.NotFoundPage })));
 const LoginPage = lazy(() => import("@/pages/LoginPage").then((m) => ({ default: m.LoginPage })));
 const SignUpPage = lazy(() => import("@/pages/SignUpPage").then((m) => ({ default: m.SignUpPage })));
 const TermsOfServicePage = lazy(() => import("@/pages/TermsOfServicePage").then((m) => ({ default: m.TermsOfServicePage })));
@@ -158,6 +159,8 @@ export default function App() {
                 {/* O antigo Painel saiu (Redesign 2026) — o que ele tinha de
                     trabalho virou a Fila de correção. Links antigos seguem valendo. */}
                 <Route path="/painel" element={<LegacyRedirect to="/fila-correcao" />} />
+                {/* UX3-23: endereço que não existe mostra "Não encontramos esta tela". */}
+                <Route path="*" element={<NotFoundPage />} />
                 {/* UX-32: endereços em português; os antigos (em inglês) continuam
                     valendo — links de e-mail, favoritos e insights já salvos. */}
                 <Route path="/upload" element={<LegacyRedirect to="/importar" />} />
@@ -286,7 +289,6 @@ export default function App() {
                   o resultado, nunca coleta cartão. */}
               <Route path="/checkout/stripe/:checkoutId" element={<StripeCheckoutReturnPage />} />
             </Route>
-            <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
             </Suspense>
           </BrowserRouter>

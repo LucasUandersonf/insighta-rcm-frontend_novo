@@ -4,7 +4,9 @@ export PORT="${PORT:-8080}"
 export SITE_URL="${SITE_URL:-http://localhost:${PORT}}"
 export APP_URL="${APP_URL:-https://insighta-rcm-frontendnovo-production.up.railway.app}"
 export API_URL="${API_URL:-https://insighta-rcm-backendnovo-production.up.railway.app}"
-export CONTACT_URL="${CONTACT_URL:-${APP_URL}/signup}"
+# UX3-08: sem canal de contato configurado, os botões "Falar com o time" somem
+# (antes levavam ao cadastro, que não é conversa).
+export CONTACT_URL="${CONTACT_URL:-}"
 export CLARITY_ID="${CLARITY_ID:-}"
 export GA4_ID="${GA4_ID:-}"
 export ROBOTS="${ROBOTS:-noindex, nofollow}"

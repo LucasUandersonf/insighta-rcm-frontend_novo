@@ -64,13 +64,18 @@ export function Tabs({
   onChange,
   groupId,
   className,
+  variant = "underline",
 }: {
   items: TabItem[];
   active: string;
   onChange: (id: string) => void;
   groupId: string;
   className?: string;
+  /** UX3-16: "segmented" para um segundo nível de abas dentro de outro —
+   * duas fileiras com o mesmo sublinhado pareciam o mesmo nível. */
+  variant?: "underline" | "segmented";
 }) {
+  const segmented = variant === "segmented";
   const buttonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   // UX2-24: no celular as abas passam da tela; uma sombra na borda mostra
   // que dá para rolar para o lado, e a aba ativa entra na tela sozinha.
@@ -145,7 +150,9 @@ export function Tabs({
         role="tablist"
         aria-orientation="horizontal"
         className={cn(
-          "flex min-w-full gap-6 whitespace-nowrap border-b border-border-hairline",
+          segmented
+            ? "inline-flex gap-1 whitespace-nowrap rounded-[11px] border border-border-hairline bg-canvas-raised/40 p-1"
+            : "flex min-w-full gap-6 whitespace-nowrap border-b border-border-hairline",
           className
         )}
       >
@@ -166,11 +173,14 @@ export function Tabs({
               onClick={() => onChange(item.id)}
               onKeyDown={(e) => handleKeyDown(e, index)}
               className={cn(
-                "relative -mb-px flex min-h-[44px] items-end gap-1.5 pb-3 text-[13px] font-medium transition-colors",
+                segmented
+                  ? "relative flex min-h-[36px] items-center gap-1.5 rounded-lg px-3 text-[13px] font-medium transition-colors"
+                  : "relative -mb-px flex min-h-[44px] items-end gap-1.5 pb-3 text-[13px] font-medium transition-colors",
+                segmented && isActive && "bg-canvas-surface shadow-sm",
                 isActive ? "text-ink" : "text-ink-faint hover:text-ink"
               )}
             >
-              {isActive && (
+              {isActive && !segmented && (
                 <motion.span
                   layoutId={`tabs-active-pill-${groupId}`}
                   className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-accent"

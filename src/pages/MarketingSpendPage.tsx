@@ -13,7 +13,7 @@ import { getApiErrorMessage } from "@/lib/query-client";
 import { useToast } from "@/context/ToastContext";
 import type { MarketingSpend, MarketingSpendCreateRequest, MarketingSpendSource, PaginatedResponse } from "@/lib/types";
 import { parseMoneyBR } from "@/lib/money";
-import { formatDateBR } from "@/lib/dates";
+import { clinicIsoDate, formatDateBR } from "@/lib/dates";
 
 const MARKETING_SPEND_PAGE_SIZE = 20;
 
@@ -37,7 +37,7 @@ function CreateMarketingSpendModal({ isOpen, onClose }: { isOpen: boolean; onClo
   const [campaignId, setCampaignId] = useState("");
   const [campaignName, setCampaignName] = useState("");
   const [amountSpent, setAmountSpent] = useState("");
-  const [spendDate, setSpendDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [spendDate, setSpendDate] = useState(() => clinicIsoDate());
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const mutation = useMutation({

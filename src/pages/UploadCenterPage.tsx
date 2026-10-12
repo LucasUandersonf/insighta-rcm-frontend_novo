@@ -475,13 +475,13 @@ export function UploadReportModal({ fileId, onClose }: { fileId: string | null; 
                 size="sm"
                 className="flex items-center gap-1.5"
                 onClick={() =>
-                  saveBlob(`/api/v1/ingestion/files/${data.ingestion_file_id}/report.csv`, `linhas-rejeitadas-${data.ingestion_file_id}.csv`).catch((err) =>
+                  saveBlob(`/api/v1/ingestion/files/${data.ingestion_file_id}/rejected.xlsx`, "linhas-para-corrigir.xlsx").catch((err) =>
                     showError(getApiErrorMessage(err))
                   )
                 }
               >
                 <Download size={14} />
-                Baixar linhas rejeitadas (CSV)
+                Baixar linhas com problema (.xlsx)
               </Button>
             </div>
           )}
@@ -526,7 +526,12 @@ function BatchUploadTab() {
   );
   const [offset, setOffset] = useState(0);
   const [isMappingModalOpen, setIsMappingModalOpen] = useState(false);
-  const [reportFileId, setReportFileId] = useState<string | null>(null);
+  // UX3-15: "Ver relatório" no aviso de fim da importação abre direto aqui.
+  const [reportFileId, setReportFileId] = useState<string | null>(() => searchParams.get("relatorio"));
+  const reportParam = searchParams.get("relatorio");
+  useEffect(() => {
+    if (reportParam) setReportFileId(reportParam);
+  }, [reportParam]);
   const [undoFile, setUndoFile] = useState<IngestionFileEntry | null>(null);
   const { user } = useAuth();
   const canUndo = !!user && ["owner", "admin"].includes(user.role);
@@ -1267,6 +1272,7 @@ export function UploadCenterPage() {
 
       <Tabs
         groupId={TABS_GROUP}
+        variant="segmented"
         active={tab}
         onChange={(id) => setTab(id as Tab)}
         items={[
