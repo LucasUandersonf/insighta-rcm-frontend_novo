@@ -1,4 +1,4 @@
-// Insighta landing v5 — interações. A página funciona sem JS (conteúdo todo no HTML).
+// Insighta landing v7 — interações. A página funciona sem JS (conteúdo todo no HTML).
 (function () {
   var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -89,6 +89,26 @@
       it.addEventListener("click", function () { touched = true; open(k); });
     });
     if (!reduce) setInterval(function () { if (!touched) open((idx + 1) % items.length); }, 4200);
+  }
+
+  // Calculadora de perda: conta feita no navegador, nada é enviado.
+  var calcForm = document.querySelector("[data-calc]");
+  if (calcForm) {
+    var brl = function (v) { return "R$ " + Math.round(v).toLocaleString("pt-BR"); };
+    var num = function (name) { var v = parseFloat(calcForm.elements[name].value); return isFinite(v) && v > 0 ? v : 0; };
+    var outs = {};
+    document.querySelectorAll("[data-out]").forEach(function (el) { outs[el.getAttribute("data-out")] = el; });
+    var recalc = function () {
+      var fat = num("fat"), glosaPct = Math.min(num("glosa"), 50) / 100, cons = num("cons"), faltaPct = Math.min(num("falta"), 60) / 100, ticket = num("ticket");
+      var glosa = fat * glosaPct * 0.5, repasse = fat * 0.015, recurso = fat * glosaPct * 0.1, faltas = cons * faltaPct * 0.2 * ticket;
+      var total = glosa + repasse + recurso + faltas, dez = total * 0.1;
+      outs.glosa.textContent = brl(glosa); outs.repasse.textContent = brl(repasse); outs.recurso.textContent = brl(recurso);
+      outs.faltas.textContent = brl(faltas); outs.total.textContent = brl(total); outs.dez.textContent = brl(dez);
+      outs.mult.textContent = (dez / 800).toLocaleString("pt-BR", { maximumFractionDigits: 1, minimumFractionDigits: 1 }) + "×";
+    };
+    calcForm.addEventListener("input", recalc);
+    calcForm.addEventListener("submit", function (e) { e.preventDefault(); });
+    recalc();
   }
 
   // Menu no celular

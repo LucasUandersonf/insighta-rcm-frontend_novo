@@ -2,6 +2,23 @@
 
 Status: **v6 publicada em `landing/site/` em 13/10/2026** (v5 no mesmo dia), a partir da copy aprovada pelo Lucas (caderno de copy v2). A v4 (25/09/2026) foi a base visual. Preço em vigor: oferta Founders, R$ 800/mês com preço travado por 24 meses (20 vagas, contagem ao vivo pela API).
 
+## v7 (13/10/2026): o playbook comercial na landing
+
+Fonte: Playbook Comercial (Bloco 1 · PMM e Bloco 2 · Marca). A landing passa a abrir pelo caixa e a provar valor com o Extrato de Resultado.
+
+| Mudança | Onde |
+|---|---|
+| Headline "Sua clínica fatura muito. Quanto fica no caixa?"; subtítulo mantém "a inteligência da sua clínica" e promete o extrato todo dia 1 | Hero, título, descrição |
+| CTA principal leva à calculadora; secundário "Ver uma demonstração de 20 minutos" | Hero, Como começar |
+| Como funciona em 3 passos (conectar, receber o que fazer, ver o resultado em reais) | `#como-funciona` |
+| Calculadora de perda: faturamento, glosa, consultas, faltas e ticket; premissas abertas em cada linha (50% da glosa evitável, 1,5% de repasse abaixo da tabela, 10% de recurso fora do prazo, 20% das faltas recuperáveis); conta feita no navegador, nada é enviado | `#calculadora` |
+| Vitrine do Extrato de Resultado (exemplo marcado como fictício) e "Se não valer, cancele" | `#extrato` |
+| Comparativo ERP × planilhas × consultoria × Insighta (cartões no celular) | `#comparativo` |
+| Oferta Founders responde "vocês são novos" como redução de risco | Planos |
+| FAQ com 12 perguntas: valor do plano, empresa nova, ERP com relatório, consultoria, exportação do ERP | `#faq` |
+
+Nota: conversão 8,5 → **9,0** (página). O que ainda separa de 9,5+: depoimento real, vídeo do sistema e o preço regular como âncora.
+
 ## v6.1 (13/10/2026): oferta Founders e integração pelo ERP
 
 Decisões do Lucas: os Founders levam **todas as funcionalidades novas** dos 24 meses sem custo extra e, depois, decidem se continuam; o preço regular aparece como âncora quando for definido; não há implantação acompanhada nem suporte de integração: a equipe do ERP da clínica integra pela documentação técnica da API (`docs/integracao/API_INTEGRACAO.md` no backend).

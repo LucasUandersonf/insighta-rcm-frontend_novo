@@ -477,3 +477,78 @@ h1, h2, h3 { text-wrap: balance; letter-spacing: -.028em; line-height: 1.08; }
 .plan__lock { font-size: 13px; color: rgb(255 255 255 / .7); margin-top: -8px; }
 .plan__lock [hidden] { display: none; }
 @media (max-width: 760px) { .why { grid-template-columns: 1fr; } }
+
+/* v7 — como funciona, calculadora, Extrato, comparativo de 4 colunas */
+.how-s { padding-top: 90px; padding-bottom: 60px; }
+.how { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; counter-reset: none; }
+.how__step { position: relative; background: #fff; border: 1px solid var(--line); border-radius: 22px; padding: 28px 26px 26px; display: grid; gap: 10px; align-content: start; box-shadow: var(--sh); }
+.how__n { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; font-weight: 800; color: #fff; background: var(--p500); font-size: 17px; }
+.how__step h3 { font-size: 21px; font-weight: 800; }
+.how__step p { color: var(--muted); font-size: 15.5px; }
+
+.calc-s { background: linear-gradient(180deg, var(--p950), var(--p800)); color: #fff; }
+.calc { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: 48px; align-items: start; }
+.calc__intro h2 { font-size: clamp(28px, 3.4vw, 42px); font-weight: 800; margin: 12px 0 14px; }
+.calc__intro > p { color: rgb(255 255 255 / .78); font-size: 17px; max-width: 520px; }
+.calc-s .kick { background: rgb(255 255 255 / .1); color: #fff; }
+.calc__form { display: grid; grid-template-columns: minmax(0, 1fr) 160px; gap: 12px 16px; align-items: center; margin-top: 26px; }
+.calc__form label { font-size: 15px; font-weight: 600; color: rgb(255 255 255 / .9); }
+.calc__form label span { font-weight: 500; color: rgb(255 255 255 / .55); font-size: 13px; margin-left: 4px; }
+.calc__form input { width: 100%; font: inherit; font-size: 16px; font-variant-numeric: tabular-nums; padding: 11px 12px; border-radius: 12px; border: 1px solid rgb(255 255 255 / .2); background: rgb(255 255 255 / .07); color: #fff; text-align: right; }
+.calc__form input:focus-visible { outline: 3px solid var(--p400); outline-offset: 1px; }
+.calc__out { background: #fff; color: var(--ink); border-radius: 26px; padding: 28px; display: grid; gap: 4px; box-shadow: 0 40px 90px rgb(0 0 0 / .35); }
+.calc__row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; align-items: start; padding: 13px 0; border-bottom: 1px solid var(--line); }
+.calc__row b { font-size: 16px; }
+.calc__row small { display: block; color: var(--faint); font-size: 12.5px; margin-top: 2px; }
+.calc__row span { font-weight: 700; font-variant-numeric: tabular-nums; font-size: 17px; white-space: nowrap; }
+.calc__total { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 16px 0 6px; }
+.calc__total span { font-weight: 700; color: var(--muted); }
+.calc__total b { white-space: nowrap; font-size: clamp(28px, 3.4vw, 40px); font-weight: 800; letter-spacing: -.03em; color: var(--red); font-variant-numeric: tabular-nums; }
+.calc__roi { background: #e9f8f1; border-radius: 14px; padding: 14px 16px; margin: 6px 0 16px; color: #075e41; font-size: 15px; }
+.calc__roi b { font-variant-numeric: tabular-nums; }
+.calc__note { font-size: 12.5px; color: var(--faint); text-align: center; margin-top: 10px; }
+
+.extrato-s { background: var(--soft); }
+.extrato { display: grid; grid-template-columns: minmax(0, .95fr) minmax(0, 1fr); gap: 56px; align-items: center; }
+.extrato__doc { background: #fff; border: 1px solid var(--line); border-radius: 22px; padding: 28px; box-shadow: 0 30px 70px rgb(47 28 106 / .16); display: grid; gap: 8px; position: relative; }
+.extrato__doc::before { content: ""; position: absolute; inset: 10px -10px -10px 10px; border-radius: 22px; border: 1px solid var(--line); background: #fff; z-index: -1; }
+.doc__head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 6px; }
+.doc__head span { font-weight: 800; font-size: 17px; }
+.doc__head small { color: var(--faint); font-size: 13px; }
+.doc__label { color: var(--muted); font-size: 14px; }
+.doc__big { font-size: clamp(40px, 5vw, 56px); font-weight: 800; letter-spacing: -.04em; color: var(--green); line-height: 1; font-variant-numeric: tabular-nums; }
+.doc__mult { font-size: 14px; color: var(--ink); font-weight: 600; }
+.doc__rows { display: grid; gap: 0; margin: 10px 0 4px; }
+.doc__rows div { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 15px; }
+.doc__rows b { font-variant-numeric: tabular-nums; }
+.doc__item { font-size: 13.5px; color: var(--muted); }
+.extrato__text h2 { font-size: clamp(28px, 3.4vw, 42px); font-weight: 800; margin: 12px 0 14px; }
+.extrato__text > p { color: var(--muted); font-size: 17px; margin-bottom: 18px; }
+
+.vs4 table { min-width: 760px; }
+.vs4 thead th { color: var(--muted) !important; }
+.vs4 thead th.vs4__ins { color: var(--green) !important; }
+.vs4 td { color: var(--muted); }
+.vs4 td.vs4__ins { background: #eefaf5; color: var(--ink); font-weight: 600; }
+.plans-new { max-width: 760px; margin: 14px auto 0; color: var(--muted); font-size: 17px; }
+
+@media (max-width: 900px) {
+  .how, .calc, .extrato { grid-template-columns: 1fr; }
+  .extrato__doc::before { display: none; }
+}
+@media (max-width: 760px) {
+  .calc__form { grid-template-columns: 1fr; gap: 6px; }
+  .calc__form input { margin-bottom: 8px; text-align: left; }
+  .calc__out { padding: 22px; }
+  /* Comparativo de 4 colunas no celular: um cartão por critério. */
+  .vs4 { overflow: visible; border: 0; box-shadow: none; background: transparent; }
+  .vs4 table { min-width: 0; }
+  .vs4 thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .vs4 tbody { display: grid; gap: 12px; }
+  .vs4 tr { display: grid; background: #fff; border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+  .vs4 th, .vs4 td { border: 0; width: auto; padding: 9px 16px; background: transparent; }
+  .vs4 tbody th { width: auto; padding-top: 14px; color: var(--ink); font-family: var(--font); font-size: 15px; font-weight: 800; letter-spacing: 0; text-transform: none; }
+  .vs4 td::before { content: attr(data-l); display: block; font-family: var(--mono); font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: var(--faint); margin-bottom: 1px; }
+  .vs4 td.vs4__ins { background: #eefaf5; }
+  .vs4 td.vs4__ins::before { color: var(--green); }
+}
