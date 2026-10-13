@@ -1,6 +1,33 @@
 # Landing Insighta: estratégia completa
 
-Status: **aprovada pelo Lucas em 25/09/2026** e publicada em `landing/site/`. Preços R$ 297 / R$ 697 (catálogo do sistema). Sem oferta de fundadores nem garantia nesta versão.
+Status: **v5 publicada em `landing/site/` em 13/10/2026**, a partir da copy aprovada pelo Lucas (caderno de copy v2). A v4 (25/09/2026) foi a base visual. Preço em vigor: oferta Founders, R$ 800/mês com preço travado por 24 meses (20 vagas, contagem ao vivo pela API).
+
+## v5 (13/10/2026): o que mudou e por quê
+
+Nota da v4 no diagnóstico: **7,0/10**. Faltava a dor do gestor na abertura, metade do produto ficava de fora, o WhatsApp aparecia como "em breve", a demonstração citava "autorização prévia" (que o motor não confere) e o único caminho era a compra.
+
+| Mudança | Onde |
+|---|---|
+| Abertura pela dor: "Sua clínica atende muito. O Insighta mostra quanto fica e recupera o que está escapando." | Hero |
+| CTA duplo: "Ver quanto minha clínica perde" (cadastro) + "Agendar demonstração" (WhatsApp comercial; sem `CONTACT_URL`, vira "Ver tudo o que ele faz") | Hero, Como começar, Chamada final |
+| Manifesto "Para onde está indo a receita?" com os quatro vazamentos | `#dores` |
+| Dez pilares no formato dor → solução → "No bolso", cobrindo todo o produto | `#recursos` |
+| Rotina do gestor (5h15, segunda 7h, a cada 2h, demanda, reavaliação) | `#relatorios` |
+| Tabela de contraste com 10 linhas (cartões no celular) | `#comparativo` |
+| Segurança com 2FA/Google, auditoria de 5 anos, exportação e documentos LGPD | Confiança |
+| "Autorização prévia" trocada por "CID ausente" nas demonstrações | Palco, Pergunte, Detecta, Equipe de IA |
+| "Em breve" removido de WhatsApp, IA e relatório (decisão do Lucas) | Relatórios, diagrama, perguntas frequentes |
+| JSON-LD: oferta Founders R$ 800 no lugar de 297/697; FAQ com 9 perguntas | `<head>` |
+
+**Ativações antes de ligar o tráfego pago** (a página já vende estes recursos):
+
+| Recurso | Falta |
+|---|---|
+| Jornal da manhã, Pergunte (perguntas complexas), leitura de contrato escaneado, minuta redigida pela IA | Chave da API de IA na produção |
+| Relatório semanal e alertas no WhatsApp | Conta WhatsApp Business e modelo de mensagem aprovado na Meta (envio para números individuais) |
+| Briefing por e-mail | SMTP (a página já esconde este item enquanto o e-mail estiver desligado) |
+| Elegibilidade e autorização com as operadoras | Conector com cada operadora; marcado "em integração" na página |
+| ROI de marketing | Funciona; o investimento por campanha é lançado pela clínica |
 
 ## 0. Diagnóstico da v3 (feedback do Lucas + gravações da Hostinger)
 
@@ -33,6 +60,13 @@ Status: **aprovada pelo Lucas em 25/09/2026** e publicada em `landing/site/`. Pr
 | Comparativo com a rede (anonimizado) | `network_benchmark_service.py` |
 | Webhooks | `webhook_retry_job` + Central de integrações |
 | Backup diário testado | `app/scripts/ops/pg_backup.py`, com `BACKUP_OK` na produção em 25/09 |
+| Seis conferências anti-glosa (v5) | `denial_risk_engine.py`: CID ausente, código faltando, sem contrato, duplicada, valor fora da tabela, procedimento × paciente |
+| Rentabilidade, custos, Health Score (v5) | `analytics/rentabilidade.py`, `cost_entry_service.py`, `health_score_engine.py` |
+| Pacientes e marketing (v5) | `rfm_engine.py`, `public_satisfaction_service.py`, `marketing_spend_service.py`, `patient_outreach_log_service.py` |
+| Lista de espera (v5) | `waitlist_entry_service.py` (paciente, profissional e janela de horário) |
+| Consolidado de unidades (v5) | `organization_service.py` (convite com verificação) |
+| 2FA, login com Google, auditoria 5 anos, exportação (v5) | `mfa_service.py`, `google_oauth_client.py`, job de retenção da auditoria, `tenant_export_service.py` |
+| Elegibilidade com operadoras (v5, "em integração") | `payer_eligibility_service.py` com `NotConfiguredTissEligibilityClient` |
 | Preços R$ 297 / R$ 697 / sob consulta | `payment_provider.py`: `PLAN_CATALOG`, **marcado como PLACEHOLDER** |
 | Itens de cada plano | Mesma lista da tela de cadastro (`SignUpPage.tsx`) |
 

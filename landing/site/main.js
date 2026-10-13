@@ -1,4 +1,4 @@
-// Insighta landing v4 — interações. A página funciona sem JS (conteúdo todo no HTML).
+// Insighta landing v5 — interações. A página funciona sem JS (conteúdo todo no HTML).
 (function () {
   var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -172,6 +172,10 @@
     var href = (el.getAttribute("href") || "").trim();
     if (!href || href.indexOf("__") === 0 || href === "#") el.hidden = true;
   });
+  // Sem contato configurado, o segundo botão do topo vira "Ver tudo o que ele faz".
+  var heroDemo = document.querySelector('.hero [data-contact]');
+  var heroAlt = document.querySelector('[data-contact-alt]');
+  if (heroDemo && heroAlt && heroDemo.hidden) heroAlt.hidden = false;
 
   // UX3-08: o que depende do e-mail começa escondido e só aparece quando a
   // API confirma que o e-mail está ligado (sem resposta, não promete).

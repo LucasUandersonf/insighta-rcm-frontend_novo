@@ -35,7 +35,7 @@ Trocar o domínio ou o WhatsApp é só mudar a variável. Não precisa mexer no 
 ## Regras de conteúdo
 - **Nada inventado:** sem depoimentos, logos de clientes ou números de resultado que não existam. As demonstrações são marcadas como dados fictícios.
 - **Toda promessa tem lastro no código** (tabela da seção 1 do `ESTRATEGIA.md`). Mudou o produto (horário de job, número de análises, preço), atualize a página e a tabela.
-- Toda promessa precisa corresponder a algo que o produto faz hoje.
+- Toda promessa precisa corresponder a algo que o produto já tem construído. Recursos que dependem só de ligar uma chave (IA, WhatsApp, e-mail) entram sem "em breve" por decisão do Lucas (13/10/2026); o que ainda precisa ser construído leva a etiqueta "em integração". Ver a seção 1 do `ESTRATEGIA.md` e ligue essas chaves antes do tráfego pago.
 - `src/__tests__/landing.test.ts` protege o SEO (título, descrição, canonical, h1 único, JSON-LD), os CTAs e as âncoras.
 
 ## Ver localmente
