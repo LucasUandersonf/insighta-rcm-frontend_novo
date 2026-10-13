@@ -65,6 +65,14 @@
     },
     {
      "@type": "Question",
+     "name": "Já tenho ERP com relatórios e um BI. Por que preciso do Insighta?",
+     "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "O Insighta usa os dados que você já tem. A diferença é que o relatório e o BI mostram o passado e esperam alguém interpretar. O Insighta interpreta: aponta o que mudou e por quê, mostra no máximo 5 prioridades por dia em ordem de impacto, manda cada uma ao coordenador do setor e confere todo dia se foi resolvido."
+     }
+    },
+    {
+     "@type": "Question",
      "name": "Como sei se está valendo o que eu pago?",
      "acceptedAnswer": {
       "@type": "Answer",
@@ -81,10 +89,18 @@
     },
     {
      "@type": "Question",
-     "name": "Meu ERP já tem relatório. Por que preciso do Insighta?",
+     "name": "Como acompanho se a equipe resolveu o que foi combinado?",
      "acceptedAnswer": {
       "@type": "Answer",
-      "text": "O Insighta usa os dados do seu ERP. A diferença é que o relatório mostra o passado e espera alguém interpretar; o Insighta interpreta, avisa antes do envio, diz quem resolve e mede quanto voltou."
+      "text": "Cada insight pode virar uma demanda para o coordenador do setor, com tela própria para cada um. Todo dia, às 5h, o Insighta reavalia o problema e mostra se foi resolvido e quanto voltou. A reunião passa a começar pelo que já foi feito."
+     }
+    },
+    {
+     "@type": "Question",
+     "name": "Ele pega erro de cadastro e de tabela?",
+     "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "Sim. Antes do envio, seis conferências apontam CID ausente, código faltando, cobrança sem contrato, cobrança duplicada, valor fora da tabela e procedimento incompatível com o paciente. Depois do pagamento, o Insighta compara o que o convênio pagou com a tabela do contrato e avisa quando a clínica cobrou ou recebeu abaixo dela."
      }
     },
     {
@@ -113,10 +129,10 @@
     },
     {
      "@type": "Question",
-     "name": "Como o Insighta ajuda na agenda?",
+     "name": "Funciona no celular?",
      "acceptedAnswer": {
       "@type": "Answer",
-      "text": "Ele calcula o risco de falta de cada consulta pelo histórico do paciente, avisa a cada 2 horas quem confirmar, mostra os horários ociosos de cada profissional e ajuda a encaixar quem está na lista de espera."
+      "text": "Sim. O Insighta abre no navegador do celular: Sala de Comando, demandas da equipe e Extrato. O relatório semanal e os alertas chegam no WhatsApp."
      }
     },
     {
@@ -162,12 +178,12 @@
     <div class="wrap nav__in">
       <a href="/" class="nav__logo" aria-label="Insighta — início"><img src="/assets/insighta-logo-dark.png" alt="Insighta" width="124" height="35" /></a>
       <nav class="nav__menu" aria-label="Principal">
-        <a href="#como-funciona">Como funciona</a>
+        <a href="#dores">O dia a dia</a>
+        <a href="#com-insighta">Com o Insighta</a>
         <a href="#calculadora">Calcule sua perda</a>
-        <a href="#extrato">Extrato de Resultado</a>
+        <a href="#extrato">Extrato</a>
         <a href="#recursos">Módulos</a>
         <a href="#planos">Planos</a>
-        <a href="#faq">Perguntas</a>
       </nav>
       <div class="nav__cta">
         <a href="__APP_URL__/login" class="nav__link">Entrar</a>
@@ -184,7 +200,7 @@
       <div class="wrap hero__copy reveal">
         <p class="eyebrow-pill"><span class="live"></span> A inteligência artificial da sua clínica</p>
         <h1>Sua clínica fatura muito. <span class="grad">Quanto fica no caixa?</span></h1>
-        <p class="hero__sub">O Insighta é a inteligência da sua clínica: confere cada guia antes do envio, cada repasse contra o contrato e cada horário da agenda, e diz à equipe o que corrigir primeiro. Todo dia 1, você recebe um extrato em reais com quanto ele devolveu ao caixa, para comparar com o que paga por ele.</p>
+        <p class="hero__sub">O Insighta é a inteligência da sua clínica: lê agenda, pacientes, faturamento e estoque, mostra no máximo 5 prioridades por dia, manda cada uma para o coordenador que resolve e confere se foi feito. Todo dia 1, um extrato em reais mostra quanto voltou ao caixa.</p>
         <div class="hero__ctas">
           <a href="#calculadora" class="btn btn--primary btn--lg">Ver quanto minha clínica pode recuperar</a>
           <a href="__CONTACT_URL__" class="btn btn--ghost btn--lg" data-cta="hero-demo" data-contact>Ver uma demonstração de 20 minutos</a>
@@ -251,35 +267,46 @@
     </section>
 
 
-    <!-- ================= MANIFESTO: a dor ================= -->
+    <!-- ================= ATO 2: as dores do gestor ================= -->
     <section class="section leaks-s" id="dores">
       <div class="wrap">
         <div class="head reveal">
-          <h2>Você sabe quanto a clínica atendeu. <span class="grad">Mas sabe para onde ela está indo?</span></h2>
-          <p>Cada consulta marcada, cada falta, cada guia, cada item que sai do estoque vira um dado. Eles ficam espalhados em relatórios que ninguém tem tempo de ler, e as decisões são tomadas na intuição. Enquanto isso, a clínica perde em quatro frentes ao mesmo tempo.</p>
+          <h2>Dado você tem de sobra. <span class="grad">O que falta é visão.</span></h2>
+          <p>Mil relatórios, um BI cheio de gráficos e um faturamento que só diz se o mês foi verde ou vermelho. Nenhum deles responde ao que importa: para onde a clínica está indo, e o que fazer amanhã de manhã.</p>
         </div>
-        <div class="leaks">
-          <article class="leak reveal"><span class="leak__n">Agenda</span><h3>A cadeira vazia</h3><p>O paciente que faltou sem avisar, a tarde de terça sempre ociosa, o horário que abriu e ninguém encaixou.</p></article>
-          <article class="leak reveal" style="--d:.06s"><span class="leak__n">Pacientes</span><h3>O paciente que some</h3><p>Quem mais gastava não volta há três meses. Quem saiu insatisfeito não reclamou: só não voltou.</p></article>
-          <article class="leak reveal" style="--d:.12s"><span class="leak__n">Financeiro</span><h3>O dinheiro que escapa</h3><p>A guia glosada por um CID esquecido, o repasse abaixo da tabela, o material usado e nunca cobrado.</p></article>
-          <article class="leak reveal" style="--d:.18s"><span class="leak__n">Equipe</span><h3>A prioridade que ninguém tem</h3><p>Cada setor apaga o incêndio da vez. Ninguém sabe o que importa primeiro, nem se o problema de ontem foi resolvido.</p></article>
+        <div class="leaks leaks--8">
+          <article class="leak reveal" style="--d:0.00s"><span class="leak__n">BI</span><h3>“Tenho painel, mas não tenho resposta.”</h3><p>O BI mostra trinta gráficos. Nenhum diz o que mudou, por que mudou e quem precisa agir. A interpretação continua no seu colo.</p></article>
+          <article class="leak reveal" style="--d:0.06s"><span class="leak__n">Relatórios</span><h3>“São mil relatórios e nenhum caminho.”</h3><p>Cada sistema gera o seu. No fim, sobra informação e falta a visão de para onde a clínica está indo.</p></article>
+          <article class="leak reveal" style="--d:0.12s"><span class="leak__n">Faturamento</span><h3>“Só sei se o mês foi verde ou vermelho.”</h3><p>O mês fechou abaixo. Foi a agenda, a glosa ou um convênio pagando menos? O número total não conta.</p></article>
+          <article class="leak reveal" style="--d:0.18s"><span class="leak__n">Reuniões</span><h3>“A reunião decide. Depois, ninguém sabe se foi feito.”</h3><p>Os problemas são discutidos e divididos. Na reunião seguinte, ninguém sabe se resolveu, nem quanto custou esperar.</p></article>
+          <article class="leak reveal" style="--d:0.00s"><span class="leak__n">Cadastro e lançamento</span><h3>“A glosa nasce no balcão.”</h3><p>Um CID esquecido no cadastro, um código lançado errado, uma cobrança duplicada. O erro pequeno da entrada vira dinheiro perdido 45 dias depois.</p></article>
+          <article class="leak reveal" style="--d:0.06s"><span class="leak__n">Tabelas e contratos</span><h3>“Cobro menos do que o contrato garante.”</h3><p>A tabela foi cadastrada errada, o aditivo não entrou, e a clínica cobra abaixo do valor negociado, todo mês, sem ninguém perceber.</p></article>
+          <article class="leak reveal" style="--d:0.12s"><span class="leak__n">Oportunidades</span><h3>“O dinheiro vaza por onde ninguém olha.”</h3><p>A tarde de terça vazia, o paciente que mais gastava e parou de vir, o material usado e não cobrado. Oportunidade perdida não aparece em relatório.</p></article>
+          <article class="leak reveal" style="--d:0.18s"><span class="leak__n">Equipe</span><h3>“Não sei se a equipe está fazendo um bom trabalho.”</h3><p>Cada setor diz que está tudo certo. Sem medir o que foi resolvido, a saúde do negócio vira impressão.</p></article>
         </div>
-        <p class="leaks__punch reveal">Painéis mostram o passado e deixam a interpretação com você. <b>O Insighta é a inteligência da sua clínica: lê tudo o que acontece, encontra o que importa, explica o porquê e diz quem precisa agir, antes que vire prejuízo.</b></p>
       </div>
     </section>
 
-    <!-- ================= COMO FUNCIONA (3 passos) ================= -->
-    <section class="section how-s" id="como-funciona">
+    <!-- ================= ATO 2b: um mês na sua clínica ================= -->
+    <section class="section mes-s" id="um-mes">
       <div class="wrap">
         <div class="head reveal">
-          <h2>Três passos. <span class="grad">Nenhum projeto de implantação.</span></h2>
-          <p>Funciona em cima do sistema que a clínica já usa.</p>
+          <span class="kick kick--red">Um mês comum</span>
+          <h2>Trinta dias na sua clínica. <span class="grad">Ninguém estava olhando.</span></h2>
+          <p>Nada aqui é exagero. É o que acontece quando os dados existem, mas ninguém transforma dado em decisão, decisão em tarefa e tarefa em resultado medido.</p>
         </div>
-        <ol class="how">
-          <li class="how__step reveal"><span class="how__n">1</span><h3>Conecte o que você já tem</h3><p>Exporte a planilha de faturamento e de agenda do seu sistema, ou peça à equipe do seu ERP para integrar pela nossa API documentada. Para começar, basta o faturamento.</p></li>
-          <li class="how__step reveal" style="--d:.08s"><span class="how__n">2</span><h3>Receba o que fazer, todo dia</h3><p>O Insighta roda 47 análises e mostra no máximo 5 prioridades por dia, em ordem de impacto no caixa. Cada uma vai direto para quem resolve.</p></li>
-          <li class="how__step reveal" style="--d:.16s"><span class="how__n">3</span><h3>Veja o resultado em reais</h3><p>Todo dia 1, o Extrato de Resultado mostra quanto foi salvo antes do envio, quanto foi recuperado em recurso e quanto voltou com os problemas resolvidos.</p></li>
+        <ol class="mes">
+          <li class="mes__d mes__d--bad reveal" style="--d:0.00s"><span class="mes__day">Dia 2</span><div><h3>A guia sai sem CID.</h3><p>A recepção cadastra o atendimento sem o CID. Ninguém percebe. A guia entra no lote.</p></div></li>
+          <li class="mes__d mes__d--bad reveal" style="--d:0.05s"><span class="mes__day">Dia 5</span><div><h3>O código é lançado errado.</h3><p>O faturamento lança o procedimento com o código trocado e uma cobrança em duplicidade. As duas seguem para o convênio.</p></div></li>
+          <li class="mes__d mes__d--bad reveal" style="--d:0.10s"><span class="mes__day">Dia 8</span><div><h3>Terça à tarde, seis horários vazios.</h3><p>O mesmo vazio da semana passada. Na fila de espera, havia gente querendo vir antes.</p></div></li>
+          <li class="mes__d mes__d--bad reveal" style="--d:0.15s"><span class="mes__day">Dia 11</span><div><h3>O convênio paga abaixo do contrato.</h3><p>A tabela foi cadastrada com o valor antigo. A clínica cobra menos do que negociou, e ninguém confere o pagamento contra o contrato.</p></div></li>
+          <li class="mes__d mes__d--bad reveal" style="--d:0.00s"><span class="mes__day">Dia 15</span><div><h3>Reunião de gestão.</h3><p>Três problemas, três responsáveis, uma ata. Ninguém volta ao assunto até a próxima reunião.</p></div></li>
+          <li class="mes__d mes__d--bad reveal" style="--d:0.05s"><span class="mes__day">Dia 19</span><div><h3>Você abre o BI.</h3><p>Vinte gráficos, nenhuma resposta. Você fecha e volta para o operacional.</p></div></li>
+          <li class="mes__d mes__d--bad reveal" style="--d:0.10s"><span class="mes__day">Dia 23</span><div><h3>A paciente que vinha todo mês some.</h3><p>Noventa dias sem voltar. Ela era das que mais gastavam. Ninguém liga.</p></div></li>
+          <li class="mes__d mes__d--bad reveal" style="--d:0.15s"><span class="mes__day">Dia 30</span><div><h3>O mês fecha no vermelho.</h3><p>Você não sabe se foi a agenda, a glosa ou o convênio. E daqui a 45 dias chega o demonstrativo com as glosas do dia 2 e do dia 5.</p></div></li>
         </ol>
+        <p class="mes__punch reveal">Cada um desses dias tem um custo. <a href="#calculadora" class="link-arrow">Quanto é o da sua clínica? →</a></p>
+        <p class="sample">Cenário ilustrativo.</p>
       </div>
     </section>
 
@@ -309,10 +336,54 @@
           <div class="calc__row"><div><b>Recurso que perde o prazo</b><small>10% da glosa sem recurso no prazo</small></div><span data-out="recurso">R$ 1.600</span></div>
           <div class="calc__row"><div><b>Faltas que dá para recuperar</b><small>20% das faltas confirmadas ou encaixadas × ticket médio</small></div><span data-out="faltas">R$ 7.200</span></div>
           <div class="calc__total"><span>Em jogo por mês</span><b data-out="total">R$ 22.800</b></div>
+          <p class="calc__inaction">Esperar mais um trimestre para decidir deixa <b data-out="tri">R$ 68.400</b> em jogo, saindo do caixa enquanto ninguém olha.</p>
           <div class="calc__roi"><p>Se o Insighta recuperar só <b>10%</b> disso, são <b data-out="dez">R$ 2.280</b> por mês contra <b>R$ 800</b> de assinatura: <b data-out="mult">2,9×</b> o valor do plano.</p></div>
           <a href="__APP_URL__/signup" class="btn btn--primary btn--lg btn--block" data-cta="calculadora">Ver os números reais da minha clínica</a>
           <p class="calc__note">Estimativa com os números que você digitou. Nada é enviado: a conta é feita no seu navegador.</p>
         </div>
+      </div>
+    </section>
+
+    <!-- ================= ATO 4: o mesmo mês, com o Insighta ================= -->
+    <section class="section mes-s mes-s--ok" id="com-insighta">
+      <div class="wrap">
+        <div class="head reveal">
+          <span class="kick">O mesmo mês</span>
+          <h2>Agora, os mesmos trinta dias <span class="grad">com o Insighta.</span></h2>
+          <p>Cada dia que custava dinheiro vira um alerta, uma tarefa com dono e um resultado conferido. Você tem a clínica na palma da mão, sem abrir um relatório.</p>
+        </div>
+        <ol class="mes">
+          <li class="mes__d mes__d--ok reveal" style="--d:0.00s"><span class="mes__day">Dia 2</span><div><h3>A guia sem CID é barrada antes do envio.</h3><p>A conferência aponta o CID ausente antes de a guia entrar no lote. O faturamento corrige em minutos.</p></div></li>
+          <li class="mes__d mes__d--ok reveal" style="--d:0.05s"><span class="mes__day">Dia 5</span><div><h3>Código errado e duplicidade, apontados.</h3><p>As seis conferências pegam o código faltando e a cobrança duplicada. Nada sai errado para o convênio.</p></div></li>
+          <li class="mes__d mes__d--ok reveal" style="--d:0.10s"><span class="mes__day">Dia 8</span><div><h3>O jornal das 5h15 avisa da terça vazia.</h3><p>A recepção recebe a demanda e oferece os horários a quem está na lista de espera.</p></div></li>
+          <li class="mes__d mes__d--ok reveal" style="--d:0.15s"><span class="mes__day">Dia 11</span><div><h3>Pagamento conferido contra o contrato.</h3><p>“Cobrado abaixo do contrato” aparece em alerta, com a diferença em reais e o argumento pronto para cobrar e corrigir a tabela.</p></div></li>
+          <li class="mes__d mes__d--ok reveal" style="--d:0.00s"><span class="mes__day">Dia 15</span><div><h3>Da sua cadeira, um clique vira tarefa.</h3><p>O insight vai como demanda para o coordenador do setor, que trata e devolve. A reavaliação diária, às 5h, mostra o que foi resolvido.</p></div></li>
+          <li class="mes__d mes__d--ok reveal" style="--d:0.05s"><span class="mes__day">Dia 19</span><div><h3>Até 5 prioridades, e não vinte gráficos.</h3><p>A Sala de Comando ordena o que fazer por impacto em reais, cada item com o botão “Como calculamos”. No computador ou no celular.</p></div></li>
+          <li class="mes__d mes__d--ok reveal" style="--d:0.10s"><span class="mes__day">Dia 23</span><div><h3>A paciente aparece antes de sumir de vez.</h3><p>Ela passou do próprio intervalo entre consultas e entra na lista de alto valor que sumiu. A recepção liga.</p></div></li>
+          <li class="mes__d mes__d--ok reveal" style="--d:0.15s"><span class="mes__day">Dia 30</span><div><h3>Você sabe por que o mês fechou como fechou.</h3><p>Health Score do mês, relatório de segunda no WhatsApp e, no dia 1, o Extrato de Resultado em reais para você e a equipe.</p></div></li>
+        </ol>
+        <div class="gains">
+          <div class="gain reveal"><b>Visão, e não só verde ou vermelho</b><p>47 insights em cinco segmentos: agenda, pacientes, financeiro, operação e equipe. Você sabe o que mudou, por quê e quanto vale.</p></div>
+          <div class="gain reveal" style="--d:.06s"><b>Da sua cadeira para o coordenador</b><p>Cada insight vira demanda para o setor certo, com o motivo e o impacto. Ninguém precisa esperar a próxima reunião.</p></div>
+          <div class="gain reveal" style="--d:.12s"><b>Acompanhamento que não depende de ata</b><p>Todo dia, às 5h, o Insighta reavalia cada problema: resolvido ou não, e quanto voltou.</p></div>
+          <div class="gain reveal" style="--d:.18s"><b>No fim do mês, a mesma página para todos</b><p>Gestor e equipe olham o Extrato de Resultado e o Health Score e entendem para onde a clínica está indo.</p></div>
+        </div>
+        <p class="sample">Cenário ilustrativo.</p>
+      </div>
+    </section>
+
+    <!-- ================= COMO FUNCIONA (3 passos) ================= -->
+    <section class="section how-s" id="como-funciona">
+      <div class="wrap">
+        <div class="head reveal">
+          <h2>Três passos. <span class="grad">Nenhum projeto de implantação.</span></h2>
+          <p>Funciona em cima do sistema que a clínica já usa.</p>
+        </div>
+        <ol class="how">
+          <li class="how__step reveal"><span class="how__n">1</span><h3>Conecte o que você já tem</h3><p>Exporte a planilha de faturamento e de agenda do seu sistema, ou peça à equipe do seu ERP para integrar pela nossa API documentada. Para começar, basta o faturamento.</p></li>
+          <li class="how__step reveal" style="--d:.08s"><span class="how__n">2</span><h3>Receba o que fazer, todo dia</h3><p>O Insighta roda 47 análises e mostra no máximo 5 prioridades por dia, em ordem de impacto no caixa. Cada uma vai direto para quem resolve.</p></li>
+          <li class="how__step reveal" style="--d:.16s"><span class="how__n">3</span><h3>Veja o resultado em reais</h3><p>Todo dia 1, o Extrato de Resultado mostra quanto foi salvo antes do envio, quanto foi recuperado em recurso e quanto voltou com os problemas resolvidos.</p></li>
+        </ol>
       </div>
     </section>
 
@@ -335,24 +406,38 @@
         <div class="extrato__text reveal" style="--d:.1s">
           <span class="kick">Prova de resultado</span>
           <h2>Todo dia 1, o retorno em reais. <span class="grad">Se não valer, cancele.</span></h2>
-          <p>Software que não mede o próprio resultado vira custo. O Insighta manda, no primeiro dia de cada mês, um extrato para você e os sócios, no WhatsApp e no e-mail.</p>
+          <p>No fim do mês, você e a equipe não precisam montar relatório para entender para onde a clínica foi. No dia 1, o Insighta manda o extrato para você e os sócios, no WhatsApp e no e-mail. Software que não mede o próprio resultado vira custo.</p>
           <ul class="ticks">
             <li><b>Só entra o que foi medido:</b> cobrança corrigida antes do envio, recurso deferido e problema resolvido com ganho conferido na reavaliação.</li>
             <li><b>Cada valor com a regra de cálculo</b>, no botão "Como calculamos".</li>
             <li><b>Comparado com o valor do plano</b>, para você saber se está valendo a pena.</li>
             <li><b>O acumulado desde a entrada</b>, para a diretoria ver o histórico.</li>
+            <li><b>Quem resolveu cada item</b>, para a reunião de fechamento reconhecer quem fez o trabalho.</li>
           </ul>
         </div>
       </div>
     </section>
 
-    <!-- ================= INTELIGÊNCIA: abas com rolagem + prompt (Hostinger Build/Launch/Grow/Manage) ================= -->
-    <section class="section intel" id="inteligencia">
+    <!-- ================= ATO 6: tudo o que ele faz, em abas ================= -->
+    <section class="section all-s" id="recursos">
       <div class="wrap">
         <div class="head reveal">
-          <h2>Não é um painel. <span class="grad">É a inteligência que lê a clínica por você.</span></h2>
-          <p>Um ciclo que roda sozinho, todos os dias, em todas as áreas da clínica.</p>
+          <span class="kick">Tudo o que ele faz</span>
+          <h2>Uma inteligência. <span class="grad">A clínica inteira.</span></h2>
+          <p>47 análises em cinco áreas, uma Equipe de IA e relatórios que chegam sozinhos. Escolha a área que mais dói hoje.</p>
         </div>
+        <div class="tabs reveal" role="tablist" aria-label="Áreas do Insighta">
+          <button type="button" role="tab" id="tab-inteligencia" aria-controls="inteligencia" aria-selected="true" class="is-on">Inteligência</button>
+          <button type="button" role="tab" id="tab-agenda" aria-controls="agenda" aria-selected="false">Agenda</button>
+          <button type="button" role="tab" id="tab-pacientes" aria-controls="pacientes" aria-selected="false">Pacientes</button>
+          <button type="button" role="tab" id="tab-financeiro" aria-controls="financeiro" aria-selected="false">Financeiro</button>
+          <button type="button" role="tab" id="tab-estoque" aria-controls="estoque" aria-selected="false">Estoque e margem</button>
+          <button type="button" role="tab" id="tab-equipe-ia" aria-controls="equipe-ia" aria-selected="false">Equipe e IA</button>
+          <button type="button" role="tab" id="tab-relatorios" aria-controls="relatorios" aria-selected="false">Relatórios</button>
+          <button type="button" role="tab" id="tab-integracao" aria-controls="integracao" aria-selected="false">Integração</button>
+        </div>
+        <div class="tpanel" role="tabpanel" id="inteligencia" aria-labelledby="tab-inteligencia" tabindex="0">
+          <div class="tpanel__head"><h3>Não é um painel. É a inteligência que lê a clínica por você.</h3><p>Um ciclo que roda sozinho, todos os dias: detecta, explica, prioriza, manda para quem resolve, mede e aprende.</p></div>
         <ol class="loop reveal" aria-label="Como a inteligência trabalha">
           <li><b>Detecta</b><span>47 análises rodando sozinhas</span></li>
           <li><b>Explica</b><span>“Como calculamos” em cada uma</span></li>
@@ -361,13 +446,6 @@
           <li><b>Mede</b><span>resolveu? quanto voltou?</span></li>
           <li><b>Aprende</b><span>recalibra com a sua clínica</span></li>
         </ol>
-        <div class="stabs" role="tablist" aria-label="O que a inteligência faz">
-          <button class="is-on" data-go="i1">Pergunta</button>
-          <button data-go="i2">Detecta</button>
-          <button data-go="i3">Prevê</button>
-          <button data-go="i4">Age</button>
-        </div>
-
         <div class="story" id="i1">
           <div class="story__art reveal">
             <div class="device">
@@ -433,31 +511,10 @@
           </div>
         </div>
 
-        <div class="story story--rev" id="i4">
-          <div class="story__art reveal">
-            <div class="device device--light">
-              <p class="mono">Demanda enviada · Recepção</p>
-              <div class="task">
-                <div class="task__row"><span class="av">LC</span><div><b>Lucas → Ana (coord. recepção)</b><p>7 pacientes com risco alto de falta amanhã. Confirmar hoje.</p></div></div>
-                <div class="task__flow"><span class="is-done">Enviada</span><span class="is-done">Recebida</span><span class="is-now">Em tratamento</span><span>Resolvida</span></div>
-                <div class="task__row task__row--ai"><span class="av av--ai">✦</span><div><b>Reavaliação de hoje, 5h</b><p>5 de 7 confirmados, 1 horário encaixado da lista de espera.</p></div></div>
-              </div>
-            </div>
-          </div>
-          <div class="story__text reveal" style="--d:.1s">
-            <span class="kick">Age</span>
-            <h3>Transforma cada alerta em trabalho feito.</h3>
-            <p>O gestor envia o alerta para o coordenador do setor, que trata e devolve: a recepção confirma quem pode faltar, o faturamento corrige a guia, o estoque remaneja o que vai vencer. O sistema <b>reavalia todo dia</b> se o problema foi resolvido e quanto voltou, e aprende com cada resultado.</p>
-            <a href="#diagnostico" class="link-arrow">Ver na minha clínica →</a>
-          </div>
+
         </div>
-      </div>
-    </section>
-
-
-    <!-- ================= AGENDA em destaque ================= -->
-    <section class="section agenda-s" id="agenda">
-      <div class="wrap">
+        <div class="tpanel" role="tabpanel" id="agenda" aria-labelledby="tab-agenda" tabindex="0">
+          <div class="tpanel__head"><h3>Cada horário que abre vira consulta.</h3><p>Previsão de falta, agenda de risco, lista de espera e a operação do atendimento, profissional por profissional.</p></div>
         <div class="story">
           <div class="story__art reveal">
             <div class="device device--light">
@@ -485,21 +542,8 @@
               <li><b>Atraso e tempo de espera</b> por profissional, antes que derrubem a satisfação</li>
               <li><b>Cancelamentos por motivo</b> e faltas por canal de agendamento</li>
             </ul>
-            <a href="#recursos" class="link-arrow">Ver todos os módulos →</a>
           </div>
         </div>
-      </div>
-    </section>
-
-    <!-- ================= MÓDULOS (dor → solução → bolso) ================= -->
-    <section class="section pillars-s" id="recursos">
-      <div class="wrap">
-        <div class="head reveal">
-          <h2>Uma inteligência. <span class="grad">A clínica inteira.</span></h2>
-          <p>Cinco áreas, 47 análises e um só lugar para decidir. Para cada dor de quem dirige a clínica, o que o Insighta faz e quanto isso vale.</p>
-        </div>
-        <nav class="pchips reveal" aria-label="Módulos"><a href="#p-agenda">Agenda e operação</a><a href="#p-pacientes">Pacientes e crescimento</a><a href="#p-glosa">Financeiro e convênios</a><a href="#p-margem">Margem e estoque</a><a href="#p-sala">Gestão e equipe</a></nav>
-        <h3 class="mgroup reveal">Agenda e operação</h3>
         <div class="pillars">
           <article class="pcard reveal" id="p-agenda" style="--d:0.0s">
             <span class="kick">Agenda</span>
@@ -516,7 +560,10 @@
             <p class="pcard__bolso">Paciente bem atendido volta, indica e não troca de clínica.</p>
           </article>
         </div>
-        <h3 class="mgroup reveal">Pacientes e crescimento</h3>
+
+        </div>
+        <div class="tpanel" role="tabpanel" id="pacientes" aria-labelledby="tab-pacientes" tabindex="0">
+          <div class="tpanel__head"><h3>Saiba quem são seus melhores pacientes, e quem está indo embora.</h3><p>Paciente que some não reclama: só não volta. O Insighta avisa antes que ele vire estatística.</p></div>
         <div class="pillars">
           <article class="pcard reveal" id="p-pacientes" style="--d:0.0s">
             <span class="kick">Pacientes</span>
@@ -533,7 +580,10 @@
             <p class="pcard__bolso">Verba de marketing no canal que gera receita.</p>
           </article>
         </div>
-        <h3 class="mgroup reveal">Financeiro e convênios</h3>
+
+        </div>
+        <div class="tpanel" role="tabpanel" id="financeiro" aria-labelledby="tab-financeiro" tabindex="0">
+          <div class="tpanel__head"><h3>Glosa, contrato e caixa conferidos todo dia.</h3><p>Da guia com erro de cadastro à tabela cadastrada abaixo do contrato: o dinheiro que escapa aparece antes de sair.</p></div>
         <div class="pillars">
           <article class="pcard reveal" id="p-glosa" style="--d:0.0s">
             <span class="kick">Anti-Glosa com IA</span>
@@ -557,7 +607,10 @@
             <p class="pcard__bolso">Decisão de investimento com o caixa à vista, e não com a esperança.</p>
           </article>
         </div>
-        <h3 class="mgroup reveal">Margem e estoque</h3>
+
+        </div>
+        <div class="tpanel" role="tabpanel" id="estoque" aria-labelledby="tab-estoque" tabindex="0">
+          <div class="tpanel__head"><h3>Saiba o que dá lucro, e o que fica na prateleira.</h3><p>Rentabilidade por procedimento, profissional e convênio, Health Score mensal e estoque sem ruptura nem vencimento.</p></div>
         <div class="pillars">
           <article class="pcard reveal" id="p-margem" style="--d:0.0s">
             <span class="kick">Margem e rentabilidade</span>
@@ -574,7 +627,28 @@
             <p class="pcard__bolso">Menos perda na prateleira e nenhum material sem cobrança.</p>
           </article>
         </div>
-        <h3 class="mgroup reveal">Gestão e equipe</h3>
+
+        </div>
+        <div class="tpanel" role="tabpanel" id="equipe-ia" aria-labelledby="tab-equipe-ia" tabindex="0">
+          <div class="tpanel__head"><h3>Da sua cadeira para o setor certo, com acompanhamento.</h3><p>Demandas com dono, reavaliação diária e uma equipe de inteligência artificial no mesmo plano, sem custo extra.</p></div>
+        <div class="story story--rev" id="i4">
+          <div class="story__art reveal">
+            <div class="device device--light">
+              <p class="mono">Demanda enviada · Recepção</p>
+              <div class="task">
+                <div class="task__row"><span class="av">LC</span><div><b>Lucas → Ana (coord. recepção)</b><p>7 pacientes com risco alto de falta amanhã. Confirmar hoje.</p></div></div>
+                <div class="task__flow"><span class="is-done">Enviada</span><span class="is-done">Recebida</span><span class="is-now">Em tratamento</span><span>Resolvida</span></div>
+                <div class="task__row task__row--ai"><span class="av av--ai">✦</span><div><b>Reavaliação de hoje, 5h</b><p>5 de 7 confirmados, 1 horário encaixado da lista de espera.</p></div></div>
+              </div>
+            </div>
+          </div>
+          <div class="story__text reveal" style="--d:.1s">
+            <span class="kick">Demandas</span>
+            <h3>Transforma cada alerta em trabalho feito.</h3>
+            <p>O gestor envia o alerta para o coordenador do setor, que trata e devolve: a recepção confirma quem pode faltar, o faturamento corrige a guia, o estoque remaneja o que vai vencer. O sistema <b>reavalia todo dia</b> se o problema foi resolvido e quanto voltou, e aprende com cada resultado.</p>
+            <a href="#diagnostico" class="link-arrow">Ver na minha clínica →</a>
+          </div>
+        </div>
         <div class="pillars">
           <article class="pcard reveal" id="p-sala" style="--d:0.0s">
             <span class="kick">Sala de Comando</span>
@@ -597,21 +671,9 @@
             <ul class="ticks"><li><b>Consolidado de várias unidades</b>, com convite seguro para vincular cada uma</li><li><b>Comparativo anônimo</b>: glosa e preço de contrato contra a média</li></ul>
             <p class="pcard__bolso">Veja qual unidade puxa o resultado e aja nela primeiro.</p>
           </article>
-          <article class="pcard reveal" id="p-integracao" style="--d:0.06s">
-            <span class="kick">Encaixa no que você já tem</span>
-            <h3>Sem trocar de sistema. Quem integra é o seu ERP.</h3>
-            <p class="pcard__pain">Medo de mais um sistema, mais um treinamento e meses de implantação.</p>
-            <ul class="ticks"><li><b>Planilha CSV ou Excel</b> do seu sistema atual, com modelos prontos para cinco fontes</li><li><b>Mapeamento de colunas</b>, relatório linha por linha e desfazer importação</li><li><b>API documentada</b> para a equipe do seu ERP integrar sozinha: chave de API, envio automático e webhooks assinados</li><li><b>Próxima camada:</b> elegibilidade e autorização direto com as operadoras <span class="soon">em integração</span></li></ul>
-            
-          </article>
         </div>
-      </div>
-    </section>
-
-    <!-- ================= EQUIPE DE IA: sanfona escura (Hostinger "AI co-worker") ================= -->
-    <section class="section team" id="equipe-ia">
-      <div class="wrap">
-        <div class="team__head reveal">
+        <div class="team tdark reveal">
+          <div class="team__head">
           <h2>Uma equipe de inteligência artificial.<br /><span class="grad">No mesmo plano, sem custo extra.</span></h2>
           <p>Cinco especialistas que não tiram férias, não esquecem prazo e explicam cada conta: da manchete do dia à agenda de amanhã, da guia em risco ao contrato do convênio.</p>
         </div>
@@ -657,16 +719,11 @@
           </article>
         </div>
         <p class="team__note reveal">Conversas ilustrativas com dados fictícios. O sistema calcula, a IA redige. Os nomes dos pacientes são mascarados antes de qualquer uso de IA.</p>
-      </div>
-    </section>
-
-    <!-- ================= RELATÓRIOS (glamour) ================= -->
-    <section class="section reports" id="relatorios">
-      <div class="wrap">
-        <div class="head reveal">
-          <h2>Você chega e <span class="grad">a análise já está feita.</span></h2>
-          <p>A semana do gestor com o Insighta: os relatórios chegam sozinhos, no horário certo, para as pessoas certas.</p>
         </div>
+
+        </div>
+        <div class="tpanel" role="tabpanel" id="relatorios" aria-labelledby="tab-relatorios" tabindex="0">
+          <div class="tpanel__head"><h3>Você chega e a análise já está feita.</h3><p>Os relatórios chegam sozinhos, no horário certo, para as pessoas certas. Sem login, sem pedir relatório para ninguém.</p></div>
         <div class="rep">
           <div class="rep__phone reveal">
             <div class="phone">
@@ -698,12 +755,12 @@
             <div class="tl reveal" style="--d:.3s" data-needs-email hidden><span class="tl__time">quando quiser</span><div><h3>Briefing por e-mail</h3><p>Um clique na Home envia o resumo do dia para o seu e-mail.</p></div></div>
           </div>
         </div>
-      </div>
-    </section>
 
-    <!-- ================= AUTOMAÇÕES: diagrama de nós (Hostinger) ================= -->
-    <section class="section flow">
-      <div class="wrap flow__in">
+        </div>
+        <div class="tpanel" role="tabpanel" id="integracao" aria-labelledby="tab-integracao" tabindex="0">
+          <div class="tpanel__head"><h3>Sem trocar de sistema. Quem integra é o seu ERP.</h3><p>Os dados entram pelo que o seu sistema já exporta, e as respostas saem por onde a sua equipe já está.</p></div>
+        <div class="flow tdark">
+        <div class="wrap flow__in">
         <div class="flow__text reveal">
           <h2>Conectado ao que a clínica já tem.</h2>
           <p>Os dados entram pelo que seu sistema já exporta. A inteligência trabalha no meio. As respostas saem por onde a sua equipe já está.</p>
@@ -740,14 +797,21 @@
           <div class="node node--out" style="--x:100%;--y:79%">Equipe</div>
         </div>
       </div>
-    </section>
+        </div>
+        <div class="pillars pillars--one">
+          <article class="pcard reveal" id="p-integracao" style="--d:0.06s">
+            <span class="kick">Encaixa no que você já tem</span>
+            <h3>Sem trocar de sistema. Quem integra é o seu ERP.</h3>
+            <p class="pcard__pain">Medo de mais um sistema, mais um treinamento e meses de implantação.</p>
+            <ul class="ticks"><li><b>Planilha CSV ou Excel</b> do seu sistema atual, com modelos prontos para cinco fontes</li><li><b>Mapeamento de colunas</b>, relatório linha por linha e desfazer importação</li><li><b>API documentada</b> para a equipe do seu ERP integrar sozinha: chave de API, envio automático e webhooks assinados</li><li><b>Próxima camada:</b> elegibilidade e autorização direto com as operadoras <span class="soon">em integração</span></li></ul>
+            
+          </article>
+        </div>
 
-    <!-- ================= 47 ANÁLISES (letreiro) ================= -->
-    <section class="section analyses">
-      <div class="wrap head reveal">
-        <h2><span data-count="47">47</span> análises rodando sozinhas.</h2>
-        <p>Agenda, pacientes, financeiro, operação e equipe. Cada análise com a fonte do dado e a regra de cálculo à vista, no botão “Como calculamos”.</p>
+        </div>
       </div>
+      <div class="analyses">
+        <p class="analyses__t"><b><span data-count="47">47</span> análises rodando sozinhas</b>, cada uma com a fonte do dado e a regra de cálculo no botão “Como calculamos”.</p>
       <div class="marquee" aria-label="Exemplos de análises">
         <div class="marquee__row"><div class="marquee__track">
           <span>Cobrado abaixo do contrato</span><span>Glosa por convênio</span><span>Pagou menos sem recurso</span><span>Prazo de recurso vencendo</span><span>Previsão de glosa no envio</span><span>Cobrança sem retorno TISS</span><span>Lote parado</span><span>Contrato vencendo</span><span>Concentração de receita</span><span>Prazo de pagamento</span>
@@ -761,6 +825,7 @@
           <span>Paciente de alto valor sumiu</span><span>Não voltou à 2ª consulta</span><span>Insatisfeito sem retorno</span><span>ROI de marketing</span><span>Material usado e não cobrado</span><span>Estoque vencendo</span><span>Ruptura de estoque</span><span>OPME sem documentação</span><span>Prontuário sem CID</span><span>Rentabilidade por procedimento</span>
           <span>Paciente de alto valor sumiu</span><span>Não voltou à 2ª consulta</span><span>Insatisfeito sem retorno</span><span>ROI de marketing</span><span>Material usado e não cobrado</span><span>Estoque vencendo</span><span>Ruptura de estoque</span><span>OPME sem documentação</span><span>Prontuário sem CID</span><span>Rentabilidade por procedimento</span>
         </div></div>
+      </div>
       </div>
     </section>
 
@@ -860,13 +925,15 @@
         <div class="head reveal"><h2>Perguntas frequentes</h2></div>
         <div class="faq reveal">
           <details open><summary>O Insighta é só para faturamento?</summary><p>Não. O Insighta é a inteligência da clínica inteira: agenda e faltas, pacientes e satisfação, financeiro e convênios, estoque, prontuário e equipe. São 47 análises em cinco áreas.</p></details>
+          <details><summary>Já tenho ERP com relatórios e um BI. Por que preciso do Insighta?</summary><p>O Insighta usa os dados que você já tem. A diferença é que o relatório e o BI mostram o passado e esperam alguém interpretar. O Insighta interpreta: aponta o que mudou e por quê, mostra no máximo 5 prioridades por dia em ordem de impacto, manda cada uma ao coordenador do setor e confere todo dia se foi resolvido.</p></details>
           <details><summary>Como sei se está valendo o que eu pago?</summary><p>Todo dia 1 você recebe o Extrato de Resultado: quanto foi salvo antes do envio, quanto foi recuperado em recurso e quanto voltou com os problemas resolvidos, comparado com o valor do plano. Só entra o que foi medido. Se não valer, você cancela sem multa.</p></details>
           <details><summary>Vocês são novos. Por que confiar?</summary><p>Por isso existe a oferta de fundador: preço travado por 24 meses, todas as funcionalidades novas incluídas e cancelamento sem multa. Cada número mostra a fonte e a regra de cálculo, e o Extrato mede o resultado todo mês.</p></details>
-          <details><summary>Meu ERP já tem relatório. Por que preciso do Insighta?</summary><p>O Insighta usa os dados do seu ERP. A diferença é que o relatório mostra o passado e espera alguém interpretar; o Insighta interpreta, avisa antes do envio, diz quem resolve e mede quanto voltou.</p></details>
+          <details><summary>Como acompanho se a equipe resolveu o que foi combinado?</summary><p>Cada insight pode virar uma demanda para o coordenador do setor, com tela própria para cada um. Todo dia, às 5h, o Insighta reavalia o problema e mostra se foi resolvido e quanto voltou. A reunião passa a começar pelo que já foi feito.</p></details>
+          <details><summary>Ele pega erro de cadastro e de tabela?</summary><p>Sim. Antes do envio, seis conferências apontam CID ausente, código faltando, cobrança sem contrato, cobrança duplicada, valor fora da tabela e procedimento incompatível com o paciente. Depois do pagamento, o Insighta compara o que o convênio pagou com a tabela do contrato e avisa quando a clínica cobrou ou recebeu abaixo dela.</p></details>
           <details><summary>Já uso uma consultoria de faturamento.</summary><p>Ela vai trabalhar melhor com o Insighta: recebe as guias de risco antes do envio, os prazos de recurso e as divergências de repasse prontas. E você passa a medir o resultado dela também.</p></details>
           <details><summary>É difícil exportar os relatórios do meu ERP?</summary><p>Para começar, basta a planilha de faturamento, em CSV ou Excel, com as colunas que o seu sistema já exporta. O Insighta reconhece as colunas e mostra linha por linha o que ajustar. A integração automática fica com a equipe do seu ERP, pela nossa API documentada.</p></details>
           <details><summary>A inteligência artificial pode inventar um número?</summary><p>Não. No Insighta o sistema calcula e a IA só redige. Todo número escrito pela IA é conferido contra os dados calculados; se não bater, o texto é descartado.</p></details>
-          <details><summary>Como o Insighta ajuda na agenda?</summary><p>Ele calcula o risco de falta de cada consulta pelo histórico do paciente, avisa a cada 2 horas quem confirmar, mostra os horários ociosos de cada profissional e ajuda a encaixar quem está na lista de espera.</p></details>
+          <details><summary>Funciona no celular?</summary><p>Sim. O Insighta abre no navegador do celular: Sala de Comando, demandas da equipe e Extrato. O relatório semanal e os alertas chegam no WhatsApp.</p></details>
           <details><summary>Minha equipe vai ter mais trabalho?</summary><p>Menos. A análise que hoje é feita à mão passa a ser automática, e cada setor recebe só o que precisa resolver, já com o motivo.</p></details>
           <details><summary>O que acontece depois dos 24 meses de Founders?</summary><p>Você decide. Continua com o Insighta pelo preço da tabela vigente, avisado por e-mail com 30 dias de antecedência, ou cancela sem multa. Nos 24 meses, todas as funcionalidades novas entram no seu plano sem custo extra.</p></details>
           <details><summary>Os dados dos pacientes vão para a IA?</summary><p>Os nomes são mascarados antes de qualquer uso de IA e voltam ao nome real só na tela da clínica. Cada clínica é isolada no banco de dados.</p></details>
@@ -879,7 +946,7 @@
       <div class="aurora" aria-hidden="true"><i></i><i></i></div>
       <div class="wrap final__in reveal">
         <h2>Sua clínica não precisa de mais burocracia.<br /><span class="grad">Ela precisa de inteligência.</span></h2>
-        <p class="final__lead">Cada semana sem conferência é mais uma semana de glosas evitáveis, repasses abaixo do contrato, cadeiras vazias e decisões na intuição. Importe o faturamento e veja, em minutos, quanto da sua receita fica no caixa.</p>
+        <p class="final__lead">O próximo mês vai ter um dia 2, um dia 11 e uma reunião no dia 15. A diferença é se alguém vai estar olhando. Importe o faturamento e veja, em minutos, para onde a sua clínica está indo.</p>
         <div class="final__ctas">
           <a href="__APP_URL__/signup" class="btn btn--white btn--lg" data-cta="final">Ver o diagnóstico da minha clínica</a>
           <a href="__CONTACT_URL__" class="btn btn--ghost btn--lg" data-cta="final-demo" data-contact>Agendar demonstração</a>
@@ -892,7 +959,7 @@
   <footer class="foot">
     <div class="wrap foot__cols">
       <div><img src="/assets/insighta-logo-dark.png" alt="Insighta" width="124" height="35" /><p>A inteligência da sua clínica.</p></div>
-      <div><b>Produto</b><a href="#como-funciona">Como funciona</a><a href="#calculadora">Calcule sua perda</a><a href="#extrato">Extrato de Resultado</a><a href="#inteligencia">Inteligência</a><a href="#agenda">Agenda</a><a href="#recursos">Módulos</a><a href="#equipe-ia">Equipe de IA</a><a href="#relatorios">Relatórios</a><a href="#comparativo">Comparativo</a><a href="#planos">Planos</a></div>
+      <div><b>Produto</b><a href="#um-mes">Um mês na clínica</a><a href="#com-insighta">Com o Insighta</a><a href="#como-funciona">Como funciona</a><a href="#calculadora">Calcule sua perda</a><a href="#extrato">Extrato de Resultado</a><a href="#inteligencia">Inteligência</a><a href="#agenda">Agenda</a><a href="#recursos">Módulos</a><a href="#equipe-ia">Equipe de IA</a><a href="#relatorios">Relatórios</a><a href="#comparativo">Comparativo</a><a href="#planos">Planos</a><a href="#faq">Perguntas</a></div>
       <div><b>Ajuda</b><a href="#faq">Perguntas frequentes</a><a href="__CONTACT_URL__" data-contact>Falar com especialista</a><a href="__APP_URL__/login">Entrar</a></div>
       <div><b>Legal</b><a href="__APP_URL__/termos">Termos de Uso</a><a href="__APP_URL__/privacidade">Privacidade</a><a href="__APP_URL__/status">Status do sistema</a><button type="button" class="foot__link" data-cookie-prefs hidden>Preferências de cookies</button></div>
     </div>

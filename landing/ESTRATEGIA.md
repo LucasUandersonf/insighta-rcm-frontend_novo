@@ -249,3 +249,26 @@ São 14 dias de teste (cerca de R$ 1.600). A verba vai para o canal com menor **
 2. Preços: manter R$ 297 / R$ 697 do catálogo atual ou definir outros.
 3. Oferta de fundadores e garantia: sim ou não, e em quais termos.
 4. WhatsApp comercial para o botão "Falar com especialista".
+
+## v8 — a história do mês do gestor (7 atos)
+
+A v7 vendia bem, mas o meio da página era um catálogo de recursos. A v8 conta o mês do gestor:
+
+1. **Hero**: a pergunta do caixa. O subtítulo agora fala de prioridades, tarefas para o coordenador e acompanhamento.
+2. **Dores (#dores) e "Um mês na sua clínica" (#um-mes)**:
+   - 8 dores na voz do gestor: BI sem resposta, mil relatórios, faturamento só verde ou vermelho, reunião sem acompanhamento, erro de cadastro e lançamento, tabela abaixo do contrato, oportunidade que vaza e equipe sem medição.
+   - Depois, uma linha do tempo do dia 2 ao dia 30, marcada como cenário ilustrativo.
+3. **Calculadora** com o custo de não agir: o total × 3, "mais um trimestre", em `data-out="tri"`.
+4. **"O mesmo mês, com o Insighta" (#com-insighta)**:
+   - Os mesmos dias, cada um resolvido por um recurso real: as seis conferências, o jornal das 5h15, a conferência contra o contrato, a demanda ao coordenador, a reavaliação às 5h, as 5 prioridades da Sala, o paciente de alto valor que sumiu, o Health Score, o relatório de segunda e o Extrato.
+   - Fecha com 4 ganhos: visão, tarefa, acompanhamento e a página do fim do mês.
+5. **Como funciona e Extrato**: o Extrato agora fala com o gestor e a equipe ("quem resolveu cada item").
+6. **Tudo o que ele faz (#recursos)**:
+   - Abas para Inteligência, Agenda, Pacientes, Financeiro, Estoque e margem, Equipe e IA, Relatórios e Integração.
+   - Juntam as antigas seções de inteligência, agenda, módulos, equipe de IA, relatórios, fluxo e letreiro.
+   - Sem JS, todos os painéis aparecem. Um link para algo dentro de um painel (rodapé, `#agenda`, `#p-glosa`) abre a aba antes de rolar.
+7. **Comparativo, confiança, Founders, FAQ e chamada final**:
+   - FAQ com 14 perguntas; as novas cobrem BI, acompanhamento da equipe, erro de cadastro e de tabela, e celular.
+   - A chamada final retoma o mês ("um dia 2, um dia 11 e uma reunião no dia 15").
+
+Regra mantida: nenhum depoimento, logo ou número de resultado inventado. As linhas do tempo são marcadas como cenário ilustrativo.

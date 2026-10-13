@@ -1,4 +1,4 @@
-// Insighta landing v7 — interações. A página funciona sem JS (conteúdo todo no HTML).
+// Insighta landing v8 — interações. A página funciona sem JS (conteúdo todo no HTML).
 (function () {
   var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -63,19 +63,42 @@
     }
   }
 
-  // Abas fixas: acompanham a rolagem e rolam até a história ao clicar
-  var tabs = document.querySelectorAll(".stabs button");
-  tabs.forEach(function (b) {
-    b.addEventListener("click", function () { document.getElementById(b.getAttribute("data-go")).scrollIntoView({ behavior: reduce ? "auto" : "smooth" }); });
-  });
-  if (io) {
-    var storyObs = new IntersectionObserver(function (es) {
-      es.forEach(function (e) {
-        if (!e.isIntersecting) return;
-        tabs.forEach(function (b) { b.classList.toggle("is-on", b.getAttribute("data-go") === e.target.id); });
+  // Ato 6: abas por área. Sem JS, todos os painéis ficam visíveis.
+  var tabBtns = [].slice.call(document.querySelectorAll('.tabs [role="tab"]'));
+  if (tabBtns.length) {
+    document.documentElement.classList.add("js");
+    var openTab = function (id, focus) {
+      tabBtns.forEach(function (b) {
+        var on = b.getAttribute("aria-controls") === id;
+        b.classList.toggle("is-on", on);
+        b.setAttribute("aria-selected", String(on));
+        b.tabIndex = on ? 0 : -1;
+        document.getElementById(b.getAttribute("aria-controls")).hidden = !on;
+        if (on && focus) b.focus();
       });
-    }, { rootMargin: "-45% 0px -45% 0px" });
-    document.querySelectorAll(".story").forEach(function (s) { storyObs.observe(s); });
+    };
+    tabBtns.forEach(function (b, k) {
+      b.addEventListener("click", function () { openTab(b.getAttribute("aria-controls")); });
+      b.addEventListener("keydown", function (e) {
+        var d = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
+        if (!d) return;
+        e.preventDefault();
+        openTab(tabBtns[(k + d + tabBtns.length) % tabBtns.length].getAttribute("aria-controls"), true);
+      });
+    });
+    // Link para algo dentro de um painel (rodapé, #agenda, #p-glosa…) abre o painel antes de rolar.
+    var reveal = function (hash) {
+      var el = hash && hash.length > 1 && document.getElementById(hash.slice(1));
+      var panel = el && el.closest(".tpanel");
+      if (panel && panel.hidden) openTab(panel.id);
+    };
+    document.addEventListener("click", function (e) {
+      var a = e.target.closest('a[href^="#"]');
+      if (a) reveal(a.getAttribute("href"));
+    });
+    openTab(tabBtns[0].getAttribute("aria-controls"));
+    reveal(location.hash);
+    if (location.hash) { var t = document.getElementById(location.hash.slice(1)); if (t) t.scrollIntoView(); }
   }
 
   // Sanfona da equipe de IA: abre ao passar o mouse/clicar; gira sozinha até o usuário interagir
@@ -104,6 +127,7 @@
       var total = glosa + repasse + recurso + faltas, dez = total * 0.1;
       outs.glosa.textContent = brl(glosa); outs.repasse.textContent = brl(repasse); outs.recurso.textContent = brl(recurso);
       outs.faltas.textContent = brl(faltas); outs.total.textContent = brl(total); outs.dez.textContent = brl(dez);
+      if (outs.tri) outs.tri.textContent = brl(total * 3);
       outs.mult.textContent = (dez / 800).toLocaleString("pt-BR", { maximumFractionDigits: 1, minimumFractionDigits: 1 }) + "×";
     };
     calcForm.addEventListener("input", recalc);

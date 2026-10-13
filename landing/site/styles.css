@@ -552,3 +552,59 @@ h1, h2, h3 { text-wrap: balance; letter-spacing: -.028em; line-height: 1.08; }
   .vs4 td.vs4__ins { background: #eefaf5; }
   .vs4 td.vs4__ins::before { color: var(--green); }
 }
+
+/* ===== v8: a história do mês do gestor ===== */
+.leaks--8 h3 { font-size: 18.5px; line-height: 1.22; }
+.kick--red { color: var(--red); background: #fdecef; }
+.head .kick { margin-bottom: 14px; }
+.mes-s { background: #fff; }
+.mes-s--ok { background: linear-gradient(180deg, var(--p50), #fff 60%); }
+.mes-s .sample { color: var(--faint); text-align: center; }
+.mes { list-style: none; padding: 0; margin: 0 auto; max-width: 980px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 18px; }
+.mes__d { display: grid; grid-template-columns: 74px minmax(0, 1fr); gap: 16px; align-items: start; background: #fff; border: 1px solid var(--line); border-radius: 18px; padding: 18px 20px; }
+.mes__day { font-family: var(--mono); font-size: 13px; font-weight: 500; text-align: center; padding: 6px 0; border-radius: 8px; }
+.mes__d--bad .mes__day { color: var(--red); background: #fdecef; }
+.mes__d--ok { border-color: var(--p100); box-shadow: var(--sh); }
+.mes__d--ok .mes__day { color: var(--green); background: #e9f8f1; }
+.mes__d h3 { font-size: 17.5px; font-weight: 800; line-height: 1.25; }
+.mes__d p { color: var(--muted); font-size: 15px; margin-top: 4px; }
+.mes__punch { text-align: center; margin-top: 30px; font-size: 19px; font-weight: 700; }
+.calc__inaction { margin: 4px 0 12px; padding: 12px 16px; border-radius: 14px; background: #fdecef; color: #8f1d30; font-size: 15px; }
+.calc__inaction b { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.gains { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-top: 36px; }
+.gain { background: var(--p900); color: #fff; border-radius: 18px; padding: 20px; display: grid; gap: 8px; align-content: start; }
+.gain b { font-size: 17px; font-weight: 800; line-height: 1.25; }
+.gain p { color: rgb(255 255 255 / .74); font-size: 14.5px; }
+
+/* Ato 6: abas */
+.all-s { padding-bottom: 70px; }
+.tabs { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; width: fit-content; max-width: 100%; margin: 0 auto 34px; padding: 6px; border-radius: 22px; background: #fff; border: 1px solid var(--line); box-shadow: var(--sh); }
+.tabs button { font: inherit; font-weight: 700; font-size: 15px; padding: 9px 18px; border-radius: 99px; border: 0; background: transparent; color: var(--ink); cursor: pointer; transition: background .2s, color .2s; }
+.tabs button:hover { background: var(--p50); }
+.tabs button.is-on { background: var(--p900); color: #fff; }
+.tpanel { outline: none; }
+.tpanel + .tpanel { margin-top: 70px; }
+.js .tpanel + .tpanel { margin-top: 0; }
+.tpanel__head { text-align: center; max-width: 760px; margin: 0 auto 28px; }
+.tpanel__head h3 { font-size: clamp(24px, 2.6vw, 32px); font-weight: 800; }
+.tpanel__head p { color: var(--muted); font-size: 17px; margin-top: 10px; }
+.tpanel .loop { margin-top: 0; }
+.tpanel .story { padding: 36px 0; }
+.tpanel .pillars { margin-top: 20px; }
+.pillars--one { grid-template-columns: minmax(0, 760px); justify-content: center; }
+.tdark { border-radius: 28px; padding: 48px 44px; margin-top: 28px; }
+.tdark .flow__in { width: 100%; }
+.all-s .analyses { margin-top: 70px; background: transparent; }
+.analyses__t { text-align: center; color: var(--muted); font-size: 17px; max-width: 760px; margin: 0 auto 24px; padding: 0 20px; }
+.analyses__t b { color: var(--ink); }
+
+@media (max-width: 1100px) { .gains { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 760px) {
+  .mes { grid-template-columns: 1fr; }
+  .mes__d { grid-template-columns: 60px minmax(0, 1fr); gap: 12px; padding: 16px; }
+  .gains { grid-template-columns: 1fr; }
+  .tabs { flex-wrap: nowrap; overflow-x: auto; justify-content: flex-start; border-radius: 99px; scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tabs button { white-space: nowrap; flex: none; padding: 9px 14px; font-size: 14px; }
+  .tdark { padding: 32px 20px; border-radius: 22px; }
+}
