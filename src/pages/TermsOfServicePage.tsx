@@ -60,8 +60,10 @@ export function TermsOfServicePage() {
         <li>
           <strong>Oferta Founders:</strong> as 20 primeiras clínicas a concluir o primeiro pagamento pagam{" "}
           <strong>R$ 800,00 por mês</strong>, sem reajuste por <strong>24 meses</strong> contados do primeiro pagamento.
-          A vaga é reservada por 48 horas depois de gerada a primeira fatura. Terminados os 24 meses, passa a valer o preço
-          da tabela vigente, com aviso por e-mail pelo menos 30 dias antes.
+          A vaga é reservada por 48 horas depois de gerada a primeira fatura. Durante os 24 meses,{" "}
+          <strong>todas as funcionalidades novas</strong> lançadas na Plataforma entram no plano Founders, sem custo
+          adicional. Terminados os 24 meses, a Clínica decide: continua, pelo preço da tabela vigente (avisado por e-mail
+          pelo menos 30 dias antes), ou cancela sem multa.
         </li>
         <li>
           Fora da oferta Founders, vale o preço informado na contratação, reajustado uma vez por ano pelo IPCA, com aviso

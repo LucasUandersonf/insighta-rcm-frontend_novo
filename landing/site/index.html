@@ -81,10 +81,26 @@
     },
     {
      "@type": "Question",
+     "name": "Quem faz a integração com o meu sistema?",
+     "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "A equipe do próprio ERP da clínica. O Insighta tem uma documentação técnica da API (chave de API, envio automático dos dados e webhooks assinados) para o time do seu sistema integrar sem depender de nós. Enquanto isso, a clínica pode importar as planilhas pelo navegador."
+     }
+    },
+    {
+     "@type": "Question",
      "name": "Como o Insighta ajuda na agenda?",
      "acceptedAnswer": {
       "@type": "Answer",
       "text": "Ele calcula o risco de falta de cada consulta pelo histórico do paciente, avisa a cada 2 horas quem confirmar, mostra os horários ociosos de cada profissional e ajuda a encaixar quem está na lista de espera."
+     }
+    },
+    {
+     "@type": "Question",
+     "name": "O que acontece depois dos 24 meses de Founders?",
+     "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "Você decide. Continua com o Insighta pelo preço da tabela vigente, avisado por e-mail com 30 dias de antecedência, ou cancela sem multa. Nos 24 meses, todas as funcionalidades novas entram no seu plano sem custo extra."
      }
     },
     {
@@ -167,7 +183,7 @@
           <a href="__CONTACT_URL__" class="btn btn--ghost btn--lg" data-cta="hero-demo" data-contact>Agendar demonstração</a>
           <a href="#recursos" class="btn btn--ghost btn--lg" data-contact-alt hidden>Ver tudo o que ele faz</a>
         </div>
-        <p class="hero__trust"><span data-billing-free="✓ Acesso liberado no cadastro">✓ Pix, boleto ou cartão</span><span>✓ Sem trocar de sistema</span><span>✓ Primeiro diagnóstico minutos depois de importar</span><span>✓ Dados protegidos pela LGPD</span></p>
+        <p class="hero__trust"><span data-billing-free="✓ Acesso liberado no cadastro">✓ Pix, boleto ou cartão</span><span>✓ Sem trocar de sistema</span><span>✓ Preço Founders travado por 24 meses</span><span>✓ Dados protegidos pela LGPD</span></p>
       </div>
 
       <!-- palco: 4 etapas que se revezam (Hostinger: Launch → Grow) -->
@@ -498,9 +514,9 @@
           </article>
           <article class="pcard reveal" id="p-integracao" style="--d:0.06s">
             <span class="kick">Encaixa no que você já tem</span>
-            <h3>Sem trocar de sistema. Sem projeto de implantação.</h3>
+            <h3>Sem trocar de sistema. Quem integra é o seu ERP.</h3>
             <p class="pcard__pain">Medo de mais um sistema, mais um treinamento e meses de implantação.</p>
-            <ul class="ticks"><li><b>Planilha CSV ou Excel</b> do seu sistema atual, com modelos prontos para cinco fontes</li><li><b>Mapeamento de colunas</b>, relatório linha por linha e desfazer importação</li><li><b>Webhooks e chave de API</b> para ligar a outros sistemas</li><li><b>Próxima camada:</b> elegibilidade e autorização direto com as operadoras <span class="soon">em integração</span></li></ul>
+            <ul class="ticks"><li><b>Planilha CSV ou Excel</b> do seu sistema atual, com modelos prontos para cinco fontes</li><li><b>Mapeamento de colunas</b>, relatório linha por linha e desfazer importação</li><li><b>API documentada</b> para a equipe do seu ERP integrar sozinha: chave de API, envio automático e webhooks assinados</li><li><b>Próxima camada:</b> elegibilidade e autorização direto com as operadoras <span class="soon">em integração</span></li></ul>
             
           </article>
         </div>
@@ -606,7 +622,7 @@
         <div class="flow__text reveal">
           <h2>Conectado ao que a clínica já tem.</h2>
           <p>Os dados entram pelo que seu sistema já exporta. A inteligência trabalha no meio. As respostas saem por onde a sua equipe já está.</p>
-          <ul class="ticks ticks--light"><li>CSV ou Excel, com modelos prontos e mapeamento de colunas</li><li>Contrato em PDF, até escaneado</li><li>Relatório e alertas no WhatsApp da diretoria</li><li>Webhooks e chave de API para ligar a outros sistemas</li></ul>
+          <ul class="ticks ticks--light"><li>CSV ou Excel, com modelos prontos e mapeamento de colunas</li><li>Contrato em PDF, até escaneado</li><li>Relatório e alertas no WhatsApp da diretoria</li><li>API documentada: a equipe do seu ERP integra com chave de API e webhooks</li></ul>
         </div>
         <div class="diagram reveal" style="--d:.1s" aria-label="Fluxo de dados do Insighta">
           <svg viewBox="0 0 600 420" class="diagram__svg" aria-hidden="true">
@@ -709,23 +725,29 @@
     <section class="section plans-s" id="planos">
       <div class="wrap">
         <div class="head reveal">
-          <h2>Oferta Founders: as 20 primeiras clínicas travam o preço por 24 meses.</h2>
-          <p data-billing-free="Toda a equipe de IA incluída, usuários ilimitados, sem custo de implantação. Nesta fase o acesso é liberado logo depois do cadastro, sem cobrança.">Toda a equipe de IA incluída, usuários ilimitados, sem custo de implantação. O primeiro diagnóstico sai minutos depois da importação.</p>
+          <h2>Seja uma das 20 clínicas <span class="grad">fundadoras do Insighta.</span></h2>
+          <p data-billing-free="R$ 800/mês travados por 24 meses. Todas as funcionalidades novas lançadas nesse período entram no seu plano, sem custo extra. Depois dos 24 meses, você decide se continua. Nesta fase o acesso é liberado logo depois do cadastro, sem cobrança.">R$ 800/mês travados por 24 meses. Todas as funcionalidades novas lançadas nesse período entram no seu plano, sem custo extra. Depois dos 24 meses, você decide: continua com o Insighta ou cancela, sem multa.</p>
         </div>
-        <ul class="perks reveal"><li>✓ Preço garantido por 24 meses</li><li>✓ Pix, boleto ou cartão</li><li>✓ Nota fiscal todo mês</li></ul>
+        <div class="why reveal">
+          <div><b>Preço de fundador</b><p>R$ 800/mês congelados por 2 anos, sem reajuste.</p></div>
+          <div><b>Tudo o que vier, incluído</b><p>Cada módulo e funcionalidade nova entra no seu plano sem custo extra.</p></div>
+          <div><b>Sem amarra</b><p>Cancele quando quiser, sem multa. Depois dos 24 meses, a decisão é sua.</p></div>
+        </div>
+        <ul class="perks reveal"><li>✓ Pix, boleto ou cartão</li><li>✓ Nota fiscal todo mês</li><li>✓ Sem custo de implantação</li></ul>
         <div class="plans">
           <article class="plan plan--pop reveal">
             <span class="plan__tag" data-founders-tag>Restam <b data-founders-remaining>20</b> de <b data-founders-total>20</b> vagas</span>
             <h3>Founders</h3><p class="plan__d">Para as 20 primeiras clínicas que entrarem.</p>
             <p class="plan__price">R$ 800<span>/mês</span></p>
+            <p class="plan__lock">Travado por 24 meses<span data-regular-price hidden></span></p>
             <a href="__APP_URL__/signup" class="btn btn--primary btn--block" data-cta="plano-founders">Garantir minha vaga</a>
-            <ul class="ticks"><li>Todos os módulos: agenda, pacientes, financeiro, estoque e equipe</li><li>47 análises e Sala de Comando</li><li>Equipe de IA e relatório semanal no WhatsApp</li><li>Anti-glosa, contratos e previsão de caixa</li><li>Usuários ilimitados da equipe</li><li>Preço travado por 24 meses</li></ul>
+            <ul class="ticks"><li>Preço congelado por 2 anos, sem reajuste</li><li><b>Todas as funcionalidades novas incluídas</b></li><li>Todos os módulos: agenda, pacientes, financeiro, estoque e equipe</li><li>47 análises, Sala de Comando e Equipe de IA</li><li>Relatório semanal no WhatsApp</li><li>Usuários ilimitados</li><li>Cancele quando quiser, sem multa</li></ul>
           </article>
           <article class="plan reveal" style="--d:.08s">
             <h3>Redes e grupos</h3><p class="plan__d">Para mais de uma unidade.</p>
             <p class="plan__price plan__price--sm">Sob consulta</p>
             <a href="__CONTACT_URL__" class="btn btn--outline btn--block" data-cta="plano-rede" data-contact>Falar com o time</a>
-            <ul class="ticks"><li>Tudo do Founders</li><li>Consolidado de várias unidades</li><li>Comparativo anônimo com a rede</li><li>Suporte prioritário</li></ul>
+            <ul class="ticks"><li>Tudo do Founders</li><li>Consolidado de várias unidades</li><li>Comparativo anônimo com a rede</li><li>Integração por API em todas as unidades</li></ul>
           </article>
         </div>
       </div>
@@ -736,7 +758,7 @@
       <div class="wrap diag__in reveal">
         <div>
           <h2>Em poucos minutos a clínica já está usando.</h2>
-          <ol class="diag__steps"><li><b>Crie a conta</b> com o CNPJ da clínica.</li><li data-billing-free-html="&lt;b&gt;Acesso liberado&lt;/b&gt; logo depois do cadastro, sem cobrança nesta fase."><b>Pague por Pix, boleto ou cartão</b> na página segura do Asaas. Pix e cartão liberam em minutos.</li><li><b>Envie o faturamento</b> do seu sistema e veja onde está o dinheiro.</li></ol>
+          <ol class="diag__steps"><li><b>Crie a conta</b> com o CNPJ da clínica.</li><li data-billing-free-html="&lt;b&gt;Acesso liberado&lt;/b&gt; logo depois do cadastro, sem cobrança nesta fase."><b>Pague por Pix, boleto ou cartão</b> na página segura do Asaas. Pix e cartão liberam em minutos.</li><li><b>Conecte os dados:</b> importe as planilhas do seu sistema pelo navegador, ou peça à equipe do seu ERP para integrar pela nossa API documentada.</li></ol>
         </div>
         <div class="diag__cta">
           <a href="__APP_URL__/signup" class="btn btn--primary btn--lg btn--block" data-cta="diagnostico">Ver o diagnóstico da minha clínica</a>
@@ -754,7 +776,9 @@
           <details open><summary>O Insighta é só para faturamento?</summary><p>Não. O Insighta é a inteligência da clínica inteira: agenda e faltas, pacientes e satisfação, financeiro e convênios, estoque, prontuário e equipe. São 47 análises em cinco áreas.</p></details>
           <details><summary>A inteligência artificial pode inventar um número?</summary><p>Não. No Insighta o sistema calcula e a IA só redige. Todo número escrito pela IA é conferido contra os dados calculados; se não bater, o texto é descartado.</p></details>
           <details><summary>Preciso trocar o sistema que a clínica já usa?</summary><p>Não. O Insighta usa os relatórios que o seu sistema já exporta, em CSV ou Excel. Há modelos prontos e um relatório que aponta linha por linha o que ajustar.</p></details>
+          <details><summary>Quem faz a integração com o meu sistema?</summary><p>A equipe do próprio ERP da clínica. O Insighta tem uma documentação técnica da API (chave de API, envio automático dos dados e webhooks assinados) para o time do seu sistema integrar sem depender de nós. Enquanto isso, a clínica pode importar as planilhas pelo navegador.</p></details>
           <details><summary>Como o Insighta ajuda na agenda?</summary><p>Ele calcula o risco de falta de cada consulta pelo histórico do paciente, avisa a cada 2 horas quem confirmar, mostra os horários ociosos de cada profissional e ajuda a encaixar quem está na lista de espera.</p></details>
+          <details><summary>O que acontece depois dos 24 meses de Founders?</summary><p>Você decide. Continua com o Insighta pelo preço da tabela vigente, avisado por e-mail com 30 dias de antecedência, ou cancela sem multa. Nos 24 meses, todas as funcionalidades novas entram no seu plano sem custo extra.</p></details>
           <details><summary>Minha equipe vai ter mais trabalho?</summary><p>Menos. A análise que hoje é feita à mão passa a ser automática, e cada setor recebe só o que precisa resolver, já com o motivo.</p></details>
           <details><summary>Como o relatório semanal chega?</summary><p>Toda segunda às 7h, em PDF, no WhatsApp de cada sócio e diretor cadastrado, com um resumo na mensagem: faturamento, glosa evitada, agenda e faltas previstas. Também fica disponível no sistema.</p></details>
           <details><summary>Funciona para rede com várias unidades?</summary><p>Sim. Cada unidade tem seus números, e a diretoria vê o consolidado da rede em uma tela.</p></details>

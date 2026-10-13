@@ -2,6 +2,22 @@
 
 Status: **v6 publicada em `landing/site/` em 13/10/2026** (v5 no mesmo dia), a partir da copy aprovada pelo Lucas (caderno de copy v2). A v4 (25/09/2026) foi a base visual. Preço em vigor: oferta Founders, R$ 800/mês com preço travado por 24 meses (20 vagas, contagem ao vivo pela API).
 
+## v6.1 (13/10/2026): oferta Founders e integração pelo ERP
+
+Decisões do Lucas: os Founders levam **todas as funcionalidades novas** dos 24 meses sem custo extra e, depois, decidem se continuam; o preço regular aparece como âncora quando for definido; não há implantação acompanhada nem suporte de integração: a equipe do ERP da clínica integra pela documentação técnica da API (`docs/integracao/API_INTEGRACAO.md` no backend).
+
+| Mudança | Onde |
+|---|---|
+| "Seja uma das 20 clínicas fundadoras": preço travado, funcionalidades novas incluídas, decisão aos 24 meses, cancelamento sem multa | Planos |
+| Três razões para entrar agora (preço de fundador, tudo o que vier incluído, sem amarra) | Planos |
+| Preço regular ao lado do Founders, lido de `regular_price_cents` em `/public/founders` (escondido enquanto `REGULAR_PRICE_CENTS` estiver vazio) | Planos |
+| "Suporte prioritário" saiu do plano de redes; entrou "Integração por API em todas as unidades" | Planos |
+| Integração pelo ERP com API documentada; planilha pelo navegador enquanto isso | Como começar, módulo Integração, diagrama |
+| Perguntas novas: "Quem faz a integração?" e "O que acontece depois dos 24 meses?" | FAQ |
+| Termos de Uso, cadastro e versão dos documentos (2026-10-13) com a cláusula nova | App e backend |
+
+Nota de conversão: 7,8 → **8,5**. A oferta passa a responder ao medo de ser o primeiro cliente.
+
 ## v6 (13/10/2026): de "RCM com IA" para "a inteligência da clínica"
 
 Feedback do Lucas sobre a v5: a página ainda lia como um sistema de faturamento médico (RCM). O Insighta é um sistema de inteligência para a clínica inteira; faturamento é um dos módulos.

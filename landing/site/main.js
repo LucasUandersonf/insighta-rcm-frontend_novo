@@ -155,6 +155,12 @@
             el.innerHTML = el.getAttribute("data-billing-free-html");
           });
         }
+        // Âncora: preço regular depois das vagas Founders, quando definido.
+        var regEl = document.querySelector("[data-regular-price]");
+        if (regEl && typeof d.regular_price_cents === "number" && d.regular_price_cents > 0) {
+          regEl.textContent = " · depois das vagas: R$ " + (d.regular_price_cents / 100).toLocaleString("pt-BR") + "/mês";
+          regEl.hidden = false;
+        }
         var totalEl = document.querySelector("[data-founders-total]");
         remainingEl.textContent = String(d.slots_remaining);
         if (totalEl) totalEl.textContent = String(d.slots_total);

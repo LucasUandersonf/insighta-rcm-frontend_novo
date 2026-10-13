@@ -467,3 +467,13 @@ h1, h2, h3 { text-wrap: balance; letter-spacing: -.028em; line-height: 1.08; }
 .pchips + .mgroup { margin-top: 8px; }
 @media (max-width: 1100px) { .loop { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 560px) { .loop { grid-template-columns: repeat(2, minmax(0, 1fr)); } .slot { grid-template-columns: 48px minmax(0, 1fr); } .slot em { grid-column: 2; justify-self: start; } }
+
+/* v6.1 — oferta Founders */
+.why { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; max-width: 980px; margin: -20px auto 28px; }
+.why div { background: var(--p50); border: 1px solid var(--p100); border-radius: 18px; padding: 18px 20px; display: grid; gap: 6px; }
+.why b { font-size: 17px; font-weight: 800; color: var(--p900); }
+.why p { color: var(--muted); font-size: 14.5px; }
+.why + .perks { margin-top: 0; }
+.plan__lock { font-size: 13px; color: rgb(255 255 255 / .7); margin-top: -8px; }
+.plan__lock [hidden] { display: none; }
+@media (max-width: 760px) { .why { grid-template-columns: 1fr; } }

@@ -37,7 +37,7 @@ const PLANS: { id: PlanTier; name: string; recommended?: boolean; description: s
     id: "professional",
     name: "Founders · R$ 800/mês",
     recommended: true,
-    description: "Preço garantido por 24 meses para as 20 primeiras clínicas.",
+    description: "Preço garantido por 24 meses e todas as funcionalidades novas incluídas, para as 20 primeiras clínicas.",
     features: [
       "Sala de Comando e painel completos",
       "Motor anti-glosa e recurso de glosa",
