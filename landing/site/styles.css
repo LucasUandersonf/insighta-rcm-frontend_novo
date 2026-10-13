@@ -442,3 +442,28 @@ h1, h2, h3 { text-wrap: balance; letter-spacing: -.028em; line-height: 1.08; }
   .vs__old::before { content: "Antes"; color: var(--red); }
   .vs__new::before { content: "Com o Insighta"; color: var(--green); }
 }
+
+/* v6 — ciclo da inteligência, agenda em destaque, módulos agrupados */
+.loop { list-style: none; padding: 0; margin: -20px auto 40px; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; counter-reset: loop; max-width: 1080px; }
+.loop li { counter-increment: loop; position: relative; display: grid; gap: 4px; padding: 16px 14px 14px; border-radius: 16px; background: var(--p50); border: 1px solid var(--p100); text-align: left; }
+.loop li::before { content: counter(loop); font-family: var(--mono); font-size: 12px; color: var(--p400); }
+.loop b { font-size: 17px; font-weight: 800; color: var(--p900); }
+.loop span { font-size: 13px; color: var(--muted); line-height: 1.35; }
+.agenda-s { background: linear-gradient(180deg, var(--p50), #fff); padding-top: 70px; }
+.agenda-s .story { padding: 0; }
+.agenda-s .ticks { font-size: 15.5px; margin-bottom: 18px; }
+.slots { display: grid; gap: 8px; margin: 14px 0; }
+.slot { display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 11px 14px; border-radius: 12px; border: 1px solid var(--line); background: #fff; font-size: 14px; }
+.slot b { font-family: var(--mono); font-weight: 500; color: var(--p600); }
+.slot span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.slot--free { border-style: dashed; border-color: var(--p200); background: var(--p50); }
+.risk { font-style: normal; font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 99px; white-space: nowrap; }
+.risk--hi { background: #fde8eb; color: var(--red); }
+.risk--mid { background: #fff1e6; color: var(--amber); }
+.risk--lo { background: #eef0f4; color: var(--muted); }
+.risk--ok { background: #e6f7f0; color: var(--green); }
+.mgroup { font-size: 13px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--p500); margin: 44px 0 16px; display: flex; align-items: center; gap: 14px; }
+.mgroup::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+.pchips + .mgroup { margin-top: 8px; }
+@media (max-width: 1100px) { .loop { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .loop { grid-template-columns: repeat(2, minmax(0, 1fr)); } .slot { grid-template-columns: 48px minmax(0, 1fr); } .slot em { grid-column: 2; justify-self: start; } }

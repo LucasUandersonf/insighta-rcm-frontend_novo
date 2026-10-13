@@ -1,6 +1,25 @@
 # Landing Insighta: estratégia completa
 
-Status: **v5 publicada em `landing/site/` em 13/10/2026**, a partir da copy aprovada pelo Lucas (caderno de copy v2). A v4 (25/09/2026) foi a base visual. Preço em vigor: oferta Founders, R$ 800/mês com preço travado por 24 meses (20 vagas, contagem ao vivo pela API).
+Status: **v6 publicada em `landing/site/` em 13/10/2026** (v5 no mesmo dia), a partir da copy aprovada pelo Lucas (caderno de copy v2). A v4 (25/09/2026) foi a base visual. Preço em vigor: oferta Founders, R$ 800/mês com preço travado por 24 meses (20 vagas, contagem ao vivo pela API).
+
+## v6 (13/10/2026): de "RCM com IA" para "a inteligência da clínica"
+
+Feedback do Lucas sobre a v5: a página ainda lia como um sistema de faturamento médico (RCM). O Insighta é um sistema de inteligência para a clínica inteira; faturamento é um dos módulos.
+
+| Mudança | Onde |
+|---|---|
+| Tese: "Para onde a sua clínica está indo? O Insighta sabe, e diz o que fazer hoje." | Hero, título e descrição |
+| Palco atravessa as áreas: agenda ociosa, paciente que sumiu, risco de glosa, estoque vencendo; etapa 4 vira "Melhora" | Hero |
+| Manifesto com quatro frentes: agenda, pacientes, financeiro, equipe | `#dores` |
+| Ciclo da inteligência: Detecta, Explica, Prioriza, Age, Mede, Aprende | `#inteligencia` |
+| Histórias com exemplos de pacientes, insights de cinco áreas e demanda para a recepção | `#inteligencia` |
+| Seção própria da agenda: risco de falta, agenda de risco, alerta, lista de espera, grade ociosa, atraso e espera | `#agenda` |
+| Módulos agrupados em cinco áreas com o mesmo peso (Agenda e operação, Pacientes e crescimento, Financeiro e convênios, Margem e estoque, Gestão e equipe); entram os cartões Operação e qualidade, Marketing e Estoque e OPME | `#recursos` |
+| Equipe de IA abre pelo Jornalista da manhã e pelo Previsor de agenda | `#equipe-ia` |
+| Contraste "Painéis mostram o passado. O Insighta diz o que fazer." com dez áreas | `#comparativo` |
+| Pergunta frequente nova: "O Insighta é só para faturamento?" e "Como o Insighta ajuda na agenda?" | `#faq` |
+
+Nota: 8,5 (v5) → **8,6** (v6). O ganho vem de posicionamento e clareza; o que falta para 9+ continua sendo prova social real e IA/WhatsApp ligados antes do anúncio.
 
 ## v5 (13/10/2026): o que mudou e por quê
 
