@@ -20,6 +20,7 @@ import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { cn } from "@/lib/cn";
 import type { AgendaFocus, InsightSeverity, SmartInsight, SmartInsights } from "@/lib/types";
+import { NO_DATA_TEXT, useNoBillingData } from "@/lib/useDataReadiness";
 
 /**
  * Redesenho da Sala de Comando ("menos BI, mais consultor"): esta
@@ -62,6 +63,16 @@ function formatCurrencyWhole(value: number): string {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(value);
 }
 
+/** UX3-19: o destaque mostra "R$ 96.420" e o texto dizia "R$ 96.419,70" no
+ * mesmo card. Valores em reais dentro do texto seguem o arredondamento do
+ * destaque (sem centavos). */
+export function roundMoneyInText(text: string): string {
+  return text.replace(/R\$\s?(\d{1,3}(?:\.\d{3})*|\d+),(\d{2})\b/g, (_m, intPart: string, cents: string) => {
+    const value = Number(intPart.replace(/\./g, "")) + Number(cents) / 100;
+    return formatCurrencyWhole(Math.round(value));
+  });
+}
+
 export function formatCurrency(value: number): string {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
 }
@@ -79,7 +90,7 @@ export type InsightWorkflowSlice = Pick<
 // Fundo do card manchete — degradê diagonal na cor da severidade, igual
 // ao "O que atacar primeiro" do canvas de design (Redesign 2026).
 const CATEGORY_LABEL_SHORT: Partial<Record<string, string>> = {
-  faturamento: "Convênios",
+  faturamento: "Faturamento",
   agenda: "Agenda",
   estoque: "Estoque",
   prontuario: "Prontuário",
@@ -98,7 +109,7 @@ const HERO_TINT: Record<InsightSeverity, string> = {
  * deveria abrir um detalhe da análise" — antes todo insight era um beco
  * sem saída, o texto apontava um problema mas nunca levava a lugar
  * nenhum). `action_href` vem do backend em 3 formatos (ver DECISÃO em
- * smart_insights_engine.Insight):
+ * app/services/insights.Insight):
  *   "/rota"   -> navega pra outra página (ex: fila de faturamento de
  *                alto risco, que já existe no Painel).
  *   "#tab:id" -> troca de aba dentro da própria Sala de Comando (ex:
@@ -111,7 +122,7 @@ const HERO_TINT: Record<InsightSeverity, string> = {
  *                em vez de só rolar, porque ExecutiveAgendaSummary
  *                precisa SABER o foco pra buscar e mostrar os candidatos
  *                a recontato certos (ver DECISÃO em
- *                smart_insights_engine.py::_weekday_drop_insight/
+ *                app/services/insights (backend)::_weekday_drop_insight/
  *                _capacity_drop_insight).
  * Nunca inventa destino: só aponta pra telas/seções que já existem.
  */
@@ -255,8 +266,8 @@ export function HeroInsight({
         </div>
         <div className="grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,1fr)_minmax(220px,auto)] md:gap-8">
           <div className="flex flex-col gap-3">
-            <h2 className="font-serif text-[26px] font-medium leading-tight text-ink">{insight.title}</h2>
-            <p className="max-w-3xl text-[15px] leading-relaxed text-ink-soft">{insight.message}</p>
+            <h2 className="font-serif text-[26px] font-medium leading-tight text-ink">{roundMoneyInText(insight.title)}</h2>
+            <p className="max-w-3xl text-[15px] leading-relaxed text-ink-soft">{roundMoneyInText(insight.message)}</p>
           </div>
           {insight.financial_impact !== null && (
             <div className={cn("flex flex-col gap-1.5 md:border-l md:pl-6", cfg.border)}>
@@ -267,7 +278,21 @@ export function HeroInsight({
             </div>
           )}
         </div>
-        {(insight.why_now || insight.what_to_do || insight.if_ignored) && (
+        {insight.playbook && insight.playbook.length > 0 && (
+          <p className="text-[13px] leading-relaxed text-ink-soft">
+            <span className="font-semibold text-ink">Primeiro passo:</span> {insight.playbook[0]}
+          </p>
+        )}
+        {/* UX3-19: o card fechado tem título, valor, primeiro passo e ação;
+            o porquê, o passo a passo e o cálculo abrem sob demanda. */}
+        {(insight.why_now || insight.what_to_do || insight.if_ignored || insight.evidence || insight.method || insight.track_record) && (
+          <details className="group rounded-[14px] border border-border-hairline bg-canvas/40">
+            <summary className="cursor-pointer list-none px-3.5 py-2.5 text-xs font-medium text-ink-muted hover:text-ink">
+              <span className="group-open:hidden">Ver por que agora, o passo a passo e como calculamos</span>
+              <span className="hidden group-open:inline">Esconder detalhes</span>
+            </summary>
+            <div className="flex flex-col gap-3 px-3.5 pb-3.5">
+              {(insight.why_now || insight.what_to_do || insight.if_ignored) && (
           <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
             <GuidanceBox label="Por que agora" text={insight.why_now} />
             <div className="flex flex-col gap-1.5 rounded-[14px] border border-border-hairline bg-canvas/50 p-3.5">
@@ -286,6 +311,9 @@ export function HeroInsight({
           </div>
         )}
         <InsightBasis insight={insight} />
+            </div>
+          </details>
+        )}
         <div className="flex flex-wrap items-center gap-2.5">
           <InsightActionButton insight={insight} onNavigateTab={onNavigateTab} onFocusAgenda={onFocusAgenda} toneClass={cfg.text} primary />
           <InsightWorkflowButtons
@@ -325,11 +353,11 @@ export function SecondaryInsightCard({
             <Badge tone={cfg.badgeTone}>{cfg.label}</Badge>
             {insight.is_new && <Badge tone="novo">Novo</Badge>}
           </span>
-          <p className="mt-2.5 text-[15px] font-semibold leading-snug text-ink">{insight.title}</p>
-          <p className="mt-2 text-[13px] leading-relaxed text-ink-muted">{insight.message}</p>
+          <p className="mt-2.5 text-[15px] font-semibold leading-snug text-ink">{roundMoneyInText(insight.title)}</p>
+          <p className="mt-2 text-[13px] leading-relaxed text-ink-muted">{roundMoneyInText(insight.message)}</p>
           {insight.financial_impact !== null && (
             <p className={cn("mt-2 text-[13px] font-semibold", impactTone(insight, cfg.text))}>
-              {impactLabel(insight, true)}: {formatCurrency(insight.financial_impact)}
+              {impactLabel(insight, true)}: {formatCurrencyWhole(insight.financial_impact)}
             </p>
           )}
           {insight.playbook && insight.playbook.length > 0 && (
@@ -337,7 +365,12 @@ export function SecondaryInsightCard({
               <span className="font-semibold text-ink">Primeiro passo:</span> {insight.playbook[0]}
             </p>
           )}
-          <InsightBasis insight={insight} compact />
+          {(insight.evidence || insight.method || insight.track_record) && (
+            <details className="mt-2">
+              <summary className="cursor-pointer list-none text-xs font-medium text-ink-faint hover:text-ink">Como calculamos</summary>
+              <InsightBasis insight={insight} compact />
+            </details>
+          )}
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <InsightActionButton insight={insight} onNavigateTab={onNavigateTab} onFocusAgenda={onFocusAgenda} toneClass={cfg.text} />
             <ActionedBadge actioned={actioned} />
@@ -366,11 +399,11 @@ const CATEGORY_CONFIG: Record<"faturamento" | "agenda" | "estoque" | "prontuario
   agenda: { label: "Agenda & Ocupação", icon: CalendarClock },
   // Achado do Comitê de Liderança Tecnológica ("5 pernas", Sala de
   // Comando 3.0) — primeira categoria nova desde o agrupamento original
-  // em duas seções (ver DECISÃO completa em smart_insights_engine.py::
+  // em duas seções (ver DECISÃO completa em app/services/insights (backend)::
   // _stock_stockout_risk_insight/_stock_expiring_lot_value_insight).
   estoque: { label: "Estoque & Suprimentos", icon: Package },
   // Segunda categoria nova (mesma rodada, template PEP — ver DECISÃO em
-  // smart_insights_engine.py::_pep_documentation_gap_insight/
+  // app/services/insights (backend)::_pep_documentation_gap_insight/
   // _pep_cid_completeness_insight): documentação clínica não é nem
   // faturamento nem agenda, é a perna assistencial/PEP.
   prontuario: { label: "Prontuário & Documentação Clínica", icon: ClipboardList },
@@ -383,7 +416,7 @@ const CATEGORY_CONFIG: Record<"faturamento" | "agenda" | "estoque" | "prontuario
  * seguidos). O card de maior impacto continua como manchete solta, FORA
  * de qualquer seção — é "o problema nº1 agora", não pertence a uma área
  * específica. O resto entra na seção da sua `category` (ver DECISÃO em
- * smart_insights_engine.Insight.category, backend), mantendo a ordem de
+ * app/services/insights.Insight.category, backend), mantendo a ordem de
  * prioridade que o backend já calculou dentro de cada seção. Seção sem
  * nenhum card não aparece — nunca um título "Agenda & Ocupação" sobre um
  * espaço vazio.
@@ -419,6 +452,7 @@ function CategorySection({
 }
 
 function AllClearHero({ scoped = false }: { scoped?: boolean }) {
+  const noBilling = useNoBillingData();
   return (
     <BentoCard colSpan={12} glow="revenue" className="border border-revenue/25 bg-revenue-bg">
       <div className="flex items-start gap-3.5">
@@ -426,9 +460,11 @@ function AllClearHero({ scoped = false }: { scoped?: boolean }) {
           <CheckCircle2 size={17} strokeWidth={2.25} />
         </span>
         <div>
-          <h2 className="font-serif text-[22px] font-medium text-ink">Tudo certo por aqui</h2>
+          <h2 className="font-serif text-[22px] font-medium text-ink">{noBilling ? "Ainda sem dados" : "Tudo certo por aqui"}</h2>
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-ink-muted">
-            {scoped
+            {noBilling
+              ? NO_DATA_TEXT
+              : scoped
               ? "Nenhum desvio relevante nesta área, nesta janela. Os números de apoio estão logo abaixo, caso queira conferir."
               : "Nenhum desvio relevante identificado nesta janela — operação dentro do esperado. Os números de apoio continuam disponíveis logo abaixo, caso queira conferir de qualquer forma."}
           </p>

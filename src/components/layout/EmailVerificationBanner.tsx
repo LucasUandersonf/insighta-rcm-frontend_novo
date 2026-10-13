@@ -5,6 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useCurrentUserProfile } from "@/lib/useCurrentUserProfile";
+import { useCapabilities } from "@/lib/capabilities";
 
 /** Aviso fixo enquanto o e-mail do cadastro não foi confirmado: sem
  * confirmação, a assinatura fica bloqueada e a nota fiscal não chega. */
@@ -21,6 +22,7 @@ function wasDismissed(): boolean {
 export function EmailVerificationBanner() {
   const { data: profile } = useCurrentUserProfile();
   const { user } = useAuth();
+  const { data: capabilities } = useCapabilities();
   const [feedback, setFeedback] = useState<string | null>(null);
   // Qualidade percebida: aviso fixo em toda tela era ruído; dá para
   // dispensar nesta sessão (volta no próximo acesso até confirmar).
@@ -28,11 +30,19 @@ export function EmailVerificationBanner() {
   const resend = useMutation({
     mutationFn: () => apiClient.post<{ status: string; email?: string }>("/api/v1/auth/verify-email/resend"),
     onSuccess: (data) =>
-      setFeedback(data.status === "ja_confirmado" ? "Seu e-mail já está confirmado." : `Enviamos um novo link para ${data.email}.`),
+      setFeedback(
+        data.status === "ja_confirmado"
+          ? "Seu e-mail já está confirmado."
+          : data.status === "indisponivel"
+            ? "O envio de e-mails ainda não está ativo. Fale com o suporte para confirmar."
+            : `Enviamos um novo link para ${data.email}.`
+      ),
     onError: (err) => setFeedback(getApiErrorMessage(err)),
   });
 
   if (!profile || profile.email_verified_at !== null || dismissed) return null; // undefined = API antiga; confirmado = some
+  // UX3-06: sem e-mail ligado, nenhum link foi enviado e nada depende dele.
+  if (capabilities?.email_enabled === false) return null;
   // UX-25: só o dono assina; para a equipe, "sem isso não dá para assinar" não se aplica.
   const isOwner = user?.role === "owner";
 
@@ -43,7 +53,7 @@ export function EmailVerificationBanner() {
         <p className="min-w-0 flex-1 text-ink">
           Confirme seu e-mail <strong className="font-semibold break-all">{profile.email}</strong>
           <span className="hidden sm:inline">
-            {" "}pelo link que enviamos{isOwner ? " — é ele que libera a assinatura e a nota fiscal" : ""}.
+            {" "}pelo link que enviamos{isOwner && capabilities?.billing_enabled ? " — é ele que libera a assinatura e a nota fiscal" : ""}.
           </span>
         </p>
         {feedback ? (
@@ -51,7 +61,7 @@ export function EmailVerificationBanner() {
         ) : (
           <button
             type="button"
-            className="font-medium text-accent underline disabled:opacity-60"
+            className="font-medium text-accent underline disabled:opacity-60 max-sm:min-h-[44px] max-sm:px-2"
             onClick={() => resend.mutate()}
             disabled={resend.isPending}
             aria-label="Reenviar confirmação"
@@ -62,7 +72,7 @@ export function EmailVerificationBanner() {
         <button
           type="button"
           aria-label="Dispensar aviso"
-          className="text-ink-faint hover:text-ink"
+          className="flex items-center justify-center text-ink-faint hover:text-ink max-sm:h-11 max-sm:w-11"
           onClick={() => {
             try {
               sessionStorage.setItem(DISMISS_KEY, "1");

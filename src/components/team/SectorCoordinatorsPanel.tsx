@@ -41,7 +41,7 @@ export function SectorCoordinatorsPanel({ users }: { users: PlatformUser[] }) {
               value={s.coordinator?.id ?? ""}
               disabled={mutation.isPending}
               onChange={(e) => mutation.mutate({ sector: s.sector, coordinator_id: e.target.value || null })}
-              className="h-10 rounded-xl border border-white/10 bg-white/[0.04] px-3 text-[13px] text-ink"
+              className="h-10 rounded-xl border border-white/10 bg-white/4 px-3 text-[13px] text-ink"
             >
               <option value="">Sem coordenador</option>
               {candidates.map((u) => (

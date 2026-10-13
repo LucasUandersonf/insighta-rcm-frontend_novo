@@ -25,7 +25,7 @@ export function EnvironmentBanner() {
   return (
     <div
       role="status"
-      className="relative z-[60] flex items-center justify-center gap-2 bg-amber-500 px-4 py-1 text-center text-xs font-semibold tracking-wide text-black"
+      className="relative z-60 flex items-center justify-center gap-2 bg-amber-500 px-4 py-1 text-center text-xs font-semibold tracking-wide text-black"
     >
       <span aria-hidden="true">●</span>
       HOMOLOGAÇÃO — ambiente de testes com dados fictícios. Não use dados reais de pacientes.

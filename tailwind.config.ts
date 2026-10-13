@@ -1,5 +1,4 @@
 import type { Config } from "tailwindcss";
-import tailwindcssAnimate from "tailwindcss-animate";
 
 // DECISÃO DE DESIGN — v2 (refactor 2026, "Bento / Tactile Precision")
 // -----------------------------------------------------------------
@@ -171,5 +170,5 @@ export default {
       },
     },
   },
-  plugins: [tailwindcssAnimate],
+
 } satisfies Config;

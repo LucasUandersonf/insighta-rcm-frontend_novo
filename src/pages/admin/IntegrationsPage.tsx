@@ -25,6 +25,7 @@ import type {
   WebhookSubscription,
   WebhookSubscriptionCreated,
 } from "@/lib/types";
+import { useDirtyOnEdit } from "@/lib/unsavedChanges";
 
 const DELIVERY_STATUS_LABEL: Record<WebhookDeliveryStatus, string> = {
   pending: "Aguardando retentativa",
@@ -85,6 +86,7 @@ function CreateKeyModal({
   onClose: () => void;
   onCreated: (key: ApiKeyCreated) => void;
 }) {
+  const unsaved = useDirtyOnEdit("a nova chave de API", isOpen);
   const queryClient = useQueryClient();
   const { showError } = useToast();
   const [name, setName] = useState("");
@@ -108,7 +110,7 @@ function CreateKeyModal({
 
   return (
     <Modal title="Nova chave de API" isOpen={isOpen} onClose={onClose}>
-      <form onSubmit={handleSubmit}>
+      <form onChange={unsaved.onChange} onSubmitCapture={unsaved.onSubmit} onSubmit={handleSubmit}>
         <TextField
           label="Nome da chave"
           placeholder="Ex: ERP TotalCare — produção"
@@ -177,6 +179,7 @@ function CreateWebhookModal({
   onClose: () => void;
   onCreated: (webhook: WebhookSubscriptionCreated) => void;
 }) {
+  const unsaved = useDirtyOnEdit("o novo webhook", isOpen);
   const queryClient = useQueryClient();
   const { showError } = useToast();
   const [name, setName] = useState("");
@@ -223,7 +226,7 @@ function CreateWebhookModal({
 
   return (
     <Modal title="Novo webhook" isOpen={isOpen} onClose={onClose}>
-      <form onSubmit={handleSubmit}>
+      <form onChange={unsaved.onChange} onSubmitCapture={unsaved.onSubmit} onSubmit={handleSubmit}>
         <TextField
           label="Nome"
           placeholder="Ex: Slack — financeiro"
@@ -540,12 +543,12 @@ export function IntegrationsPage() {
       <PageHeader
         icon={Plug}
         title="Integrações e webhooks"
-        subtitle="Conecte o ecossistema do cliente: chave de API para ele ENVIAR dado ao Insighta, webhooks para o Insighta AVISAR o sistema dele."
+        subtitle="Ligue o Insighta aos outros sistemas da clínica: uma chave para eles enviarem dados ao Insighta e avisos automáticos (webhooks) do Insighta para eles."
       />
 
       <Panel
         title="Chaves de API"
-        subtitle="Configure no ERP/CRM do cliente — a chave em texto puro só aparece uma vez, na criação."
+        subtitle="Cadastre a chave no sistema de gestão da clínica. Ela aparece por inteiro só uma vez, na criação: copie e guarde."
         action={
           <Button
             onClick={() => setIsModalOpen(true)}

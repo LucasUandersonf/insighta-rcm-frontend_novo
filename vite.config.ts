@@ -1,6 +1,7 @@
 import { fileURLToPath, URL } from "node:url";
 import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
 
 // resolve.alias É NECESSÁRIO aqui, separado do "paths" no tsconfig.json:
 // o tsconfig só ensina o TypeScript (checagem de tipos/editor) a entender
@@ -8,7 +9,7 @@ import react from "@vitejs/plugin-react";
 // isso aqui, todo import "@/..." quebraria em tempo de execução mesmo
 // passando na checagem de tipos.
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),

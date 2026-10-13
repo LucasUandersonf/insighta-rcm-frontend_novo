@@ -1,6 +1,6 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ListChecks, TriangleAlert } from "lucide-react";
+import { Download, ListChecks, TriangleAlert } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Panel, EmptyState, LoadingState, ErrorState } from "@/components/ui/Panel";
 import { Button } from "@/components/ui/Button";
@@ -12,6 +12,7 @@ import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useToast } from "@/context/ToastContext";
 import type { RejectedRow, UnknownPlanGroup } from "@/lib/types";
+import { valuesRead } from "@/lib/rejectedRows";
 
 // Linhas para corrigir — o que a importação não conseguiu trazer sozinha.
 //
@@ -73,10 +74,44 @@ export function SetupPage() {
     onError: (err) => showError(getApiErrorMessage(err)),
   });
 
-  const structuralErrorRows = useMemo(
-    () => (rejected.data ?? []).filter((r) => r.reason !== "unknown_insurance_plan"),
-    [rejected.data]
-  );
+  // UX2-15: ordem crescente de linha dentro de cada arquivo (o arquivo mais
+  // recente continua primeiro, como vem da API).
+  const structuralErrorRows = useMemo(() => {
+    const rows = (rejected.data ?? []).filter((r) => r.reason !== "unknown_insurance_plan");
+    const fileOrder = new Map<string, number>();
+    rows.forEach((r) => {
+      if (!fileOrder.has(r.ingestion_file_id)) fileOrder.set(r.ingestion_file_id, fileOrder.size);
+    });
+    return [...rows].sort(
+      (a, b) => fileOrder.get(a.ingestion_file_id)! - fileOrder.get(b.ingestion_file_id)! || a.row_number - b.row_number
+    );
+  }, [rejected.data]);
+  const reasonGroups = useMemo(() => {
+    const map = new Map<string, RejectedRow[]>();
+    for (const row of structuralErrorRows) {
+      const text = row.raw_value || "Dado não reconhecido";
+      const key = text.split(/[:(]/)[0]!.trim() || text;
+      map.set(key, [...(map.get(key) ?? []), row]);
+    }
+    return [...map.entries()].map(([reason, rows]) => ({ reason, rows })).sort((a, b) => b.rows.length - a.rows.length);
+  }, [structuralErrorRows]);
+  const [downloading, setDownloading] = useState(false);
+  async function downloadRejected() {
+    setDownloading(true);
+    try {
+      const blob = await apiClient.getBlob("/api/v1/ingestion/rejected.xlsx");
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "linhas-para-corrigir.xlsx";
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+    } catch (err) {
+      showError(getApiErrorMessage(err));
+    } finally {
+      setDownloading(false);
+    }
+  }
 
   const groups = unknownPlans.data ?? [];
   const totalUnknown = groups.reduce((sum, g) => sum + g.count, 0);
@@ -172,6 +207,14 @@ export function SetupPage() {
             title="Linhas com dado inválido"
             subtitle="Data, valor ou campo obrigatório que não deu para ler. Corrija essas linhas na planilha e envie o arquivo de novo — só as linhas que faltavam entram."
             glow={structuralErrorRows.length > 0 ? "denied" : "none"}
+            actions={
+              structuralErrorRows.length > 0 ? (
+                <Button type="button" size="xs" variant="secondary" disabled={downloading} onClick={downloadRejected} className="flex items-center gap-1.5">
+                  <Download size={12} aria-hidden />
+                  {downloading ? "Baixando…" : "Baixar linhas com problema (.xlsx)"}
+                </Button>
+              ) : undefined
+            }
           >
             {structuralErrorRows.length === 0 && (
               <EmptyState
@@ -181,24 +224,28 @@ export function SetupPage() {
             )}
             {structuralErrorRows.length > 0 && (
               <>
-                <table className="w-full text-left text-sm">
-                  <thead>
-                    <tr className="border-b border-border-hairline text-xs text-ink-muted">
-                      <th className="px-4 py-2.5 font-medium">Linha da planilha</th>
-                      <th className="px-4 py-2.5 font-medium">O que corrigir</th>
-                      <th className="px-4 py-2.5 font-medium">Recebido em</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {structuralErrorRows.map((row) => (
-                      <tr key={row.id} className="border-b border-border-hairline last:border-0">
-                        <td className="tabular px-4 py-2.5 text-ink-muted">Linha {row.row_number + 1}</td>
-                        <td className="px-4 py-2.5 text-ink">{row.raw_value || "Dado não reconhecido"}</td>
-                        <td className="px-4 py-2.5 text-ink-muted">{formatDateTime(row.created_at)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                {/* UX3-26: agrupado por motivo, recolhido — antes era uma tabela
+                    única de 7 mil px no celular. */}
+                <div className="divide-y divide-border-hairline">
+                  {reasonGroups.map((group, index) => (
+                    <details key={group.reason} open={reasonGroups.length === 1 && index === 0} className="group">
+                      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm text-ink hover:bg-canvas-raised/40">
+                        <span className="min-w-0">{group.reason}</span>
+                        <Badge tone="denied">{linhas(group.rows.length)}</Badge>
+                      </summary>
+                      <ul className="divide-y divide-border-hairline bg-canvas-raised/20">
+                        {group.rows.map((row) => (
+                          <li key={row.id} className="flex flex-col gap-0.5 px-4 py-2.5 text-xs sm:flex-row sm:items-baseline sm:gap-4">
+                            <span className="tabular shrink-0 font-medium text-ink-muted sm:w-24">Linha {row.row_number + 1}</span>
+                            {row.raw_value && row.raw_value !== group.reason && <span className="text-ink">{row.raw_value}</span>}
+                            <span className="break-all font-mono text-ink-muted">Valor lido: {valuesRead(row) || "—"}</span>
+                            <span className="text-ink-faint sm:ml-auto">Recebido em {formatDateTime(row.created_at)}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
+                  ))}
+                </div>
                 <p className="px-4 py-3 text-xs text-ink-muted">
                   Depois de corrigir, envie a planilha de novo em{" "}
                   <Link to="/importar" className="text-accent underline-offset-2 hover:underline">

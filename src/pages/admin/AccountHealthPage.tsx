@@ -40,7 +40,7 @@ export function AccountHealthPage() {
           data
             ? data.attention_count === 0
               ? "Tudo configurado — o Insighta está trabalhando com dados completos."
-              : `${data.attention_count} ${data.attention_count === 1 ? "item precisa" : "itens precisam"} de atenção para o Insighta funcionar por completo.`
+              : `${data.attention_count} ${data.attention_count === 1 ? "item precisa" : "itens precisam"} de atenção para o Insighta funcionar por completo (${data.ok_count} de ${data.checks.length} prontos).`
             : "O que está ligado e o que falta para o Insighta funcionar por completo."
         }
       />

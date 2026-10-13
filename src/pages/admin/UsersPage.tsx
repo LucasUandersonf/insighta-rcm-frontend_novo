@@ -1,4 +1,5 @@
 import { ROLE_DESCRIPTIONS, ROLE_LABELS } from "@/lib/roles";
+import { cn } from "@/lib/cn";
 import { useState, type FormEvent } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Users } from "lucide-react";
@@ -6,7 +7,7 @@ import { Panel, EmptyState, LoadingState, ErrorState } from "@/components/ui/Pan
 import { Button } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Modal } from "@/components/ui/Modal";
-import { TextField, SelectField } from "@/components/ui/FormField";
+import { TextField } from "@/components/ui/FormField";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Badge } from "@/components/ui/Badge";
 import { apiClient, ApiError } from "@/lib/api-client";
@@ -15,6 +16,7 @@ import { useToast } from "@/context/ToastContext";
 import { useAuth } from "@/context/AuthContext";
 import { SectorCoordinatorsPanel } from "@/components/team/SectorCoordinatorsPanel";
 import type { PasswordResetResponse, PlatformUser, UserCreateRequest, UserRole } from "@/lib/types";
+import { useDirtyOnEdit } from "@/lib/unsavedChanges";
 
 
 // Papéis atribuíveis a um NOVO colaborador — "owner" fica de fora de
@@ -71,11 +73,14 @@ function TemporaryPasswordModal({ password, email, onClose }: { password: string
 }
 
 function CreateUserModal({ isOpen, onClose, onCreated }: { isOpen: boolean; onClose: () => void; onCreated: (temp: string, email: string) => void }) {
+  const unsaved = useDirtyOnEdit("o cadastro do usuário", isOpen);
   const queryClient = useQueryClient();
   const { showError } = useToast();
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
-  const [role, setRole] = useState<UserRole>("financeiro");
+  // UX2-17: sem papel pré-escolhido — quem convida a recepção com pressa não
+  // pode dar acesso a faturamento e glosas por engano.
+  const [role, setRole] = useState<UserRole | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const mutation = useMutation({
@@ -114,7 +119,7 @@ function CreateUserModal({ isOpen, onClose, onCreated }: { isOpen: boolean; onCl
   function resetAndClose() {
     setEmail("");
     setFullName("");
-    setRole("financeiro");
+    setRole(null);
     setFieldErrors({});
     onClose();
   }
@@ -122,12 +127,16 @@ function CreateUserModal({ isOpen, onClose, onCreated }: { isOpen: boolean; onCl
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setFieldErrors({});
+    if (!role) {
+      setFieldErrors({ role: "Escolha o papel: ele define o que a pessoa vê e pode fazer." });
+      return;
+    }
     mutation.mutate({ email, full_name: fullName, role });
   }
 
   return (
     <Modal title="Novo usuário" isOpen={isOpen} onClose={resetAndClose}>
-      <form onSubmit={handleSubmit}>
+      <form onChange={unsaved.onChange} onSubmitCapture={unsaved.onSubmit} onSubmit={handleSubmit}>
         <TextField
           label="Nome completo"
           required
@@ -145,14 +154,39 @@ function CreateUserModal({ isOpen, onClose, onCreated }: { isOpen: boolean; onCl
           error={fieldErrors["email"]}
           placeholder="camila.rezende@vitalis.com.br"
         />
-        <SelectField label="Papel" value={role} onChange={(e) => setRole(e.target.value as UserRole)}>
-          {CREATABLE_ROLES.map((value) => (
-            <option key={value} value={value}>
-              {ROLE_LABELS[value]}
-            </option>
-          ))}
-        </SelectField>
-        <p className="-mt-2 mb-2 text-xs text-ink-muted">{ROLE_DESCRIPTIONS[role]}</p>
+        <fieldset className="mb-3">
+          <legend className="mb-1.5 text-xs font-medium text-ink-muted">
+            Papel <span className="text-denied">*</span>
+          </legend>
+          <div role="radiogroup" aria-label="Papel" className="grid gap-2 sm:grid-cols-2">
+            {CREATABLE_ROLES.map((value) => (
+              <label
+                key={value}
+                className={cn(
+                  "flex min-h-[44px] cursor-pointer gap-2 rounded-md border px-3 py-2 text-left transition-colors",
+                  role === value ? "border-accent bg-accent/6" : "border-border-subtle hover:border-border-default"
+                )}
+              >
+                <input
+                  type="radio"
+                  name="new-user-role"
+                  value={value}
+                  checked={role === value}
+                  onChange={() => setRole(value)}
+                  className="mt-0.5 accent-(--accent)"
+                />
+                <span>
+                  <span className="block text-sm font-medium text-ink">{ROLE_LABELS[value]}</span>
+                  <span className="block text-2xs text-ink-muted">{ROLE_DESCRIPTIONS[value]}</span>
+                </span>
+              </label>
+            ))}
+          </div>
+          {fieldErrors["role"] && <p className="mt-1 text-2xs text-denied">{fieldErrors["role"]}</p>}
+        </fieldset>
+        {!role && (
+          <p className="mb-2 text-2xs text-pending">Escolha um papel para liberar “Criar usuário”: ele define o que a pessoa vê e pode fazer.</p>
+        )}
         <p className="mb-4 text-2xs text-ink-faint">
           Uma senha temporária será gerada e mostrada uma vez, com um botão para copiar o convite (link + senha) e mandar ao colaborador.
         </p>
@@ -160,7 +194,7 @@ function CreateUserModal({ isOpen, onClose, onCreated }: { isOpen: boolean; onCl
           <Button type="button" variant="secondary" onClick={resetAndClose}>
             Cancelar
           </Button>
-          <Button type="submit" disabled={mutation.isPending}>
+          <Button type="submit" disabled={mutation.isPending || !role} title={!role ? "Escolha o papel antes de criar" : undefined}>
             {mutation.isPending ? "Criando..." : "Criar usuário"}
           </Button>
         </div>

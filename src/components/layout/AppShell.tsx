@@ -3,6 +3,7 @@ import { Outlet, useLocation } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { EmailVerificationBanner } from "./EmailVerificationBanner";
 import { OfflineBanner } from "./OfflineBanner";
+import { UnsavedChangesGuard } from "./UnsavedChangesGuard";
 import { ImportProgressIndicator } from "./ImportProgressIndicator";
 import { TopBar } from "./TopBar";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -50,6 +51,7 @@ export function AppShell() {
           <OfflineBanner />
           <EmailVerificationBanner />
           <ImportProgressIndicator />
+          <UnsavedChangesGuard />
           <main id="main-content" className="mx-auto w-full max-w-[1680px] px-4 pb-14 pt-8 sm:px-8">
             <ErrorBoundary scope="route" key={location.pathname}>
               <AnimatePresence mode="wait">

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { TextField, SelectField } from "@/components/ui/FormField";
+import { MoneyField } from "@/components/ui/MoneyField";
 import { FilterBar } from "@/components/ui/FilterBar";
 import { Pagination } from "@/components/ui/Pagination";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -14,6 +15,7 @@ import { Tabs, TabPanel } from "@/components/ui/Tabs";
 import { BillingSearchPicker } from "@/components/billing/BillingSearchPicker";
 import { apiClient, ApiError } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
+import { formatMoneyInput, parseMoneyBR } from "@/lib/money";
 import { ConfirmationDeclined, withConfirmation } from "@/lib/confirmable";
 import { useToast } from "@/context/ToastContext";
 import { useAuth } from "@/context/AuthContext";
@@ -28,6 +30,8 @@ import type {
   PaginatedResponse,
   PaymentMethod,
 } from "@/lib/types";
+import { formatDateBR } from "@/lib/dates";
+import { useDirtyOnEdit } from "@/lib/unsavedChanges";
 
 // Faturamento & Guias — as DUAS pontas do ciclo de vida da fatura que já
 // funcionavam de ponta a ponta no backend sem nenhuma tela: registrar o
@@ -44,7 +48,7 @@ function formatCurrency(value: number): string {
 }
 
 function formatDate(iso: string): string {
-  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(iso));
+  return formatDateBR(iso, { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
 function formatDateTime(iso: string): string {
@@ -112,6 +116,7 @@ function BillingStatusHistoryTimeline({ billingId }: { billingId: string }) {
 // ---------------------------------------------------------------------
 
 function SettlementTab({ readOnly = false }: { readOnly?: boolean }) {
+  const unsaved = useDirtyOnEdit("a baixa do pagamento");
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
   const [selected, setSelected] = useState<BillingSearchItem | null>(null);
@@ -186,15 +191,20 @@ function SettlementTab({ readOnly = false }: { readOnly?: boolean }) {
       setFieldErrors({ billing: "Busque e selecione o faturamento a liquidar." });
       return;
     }
-    const value = Number(receivedValue);
-    if (!receivedValue || Number.isNaN(value) || value <= 0) {
+    const parsed = parseMoneyBR(receivedValue);
+    if (!parsed.ok) {
+      setFieldErrors({ received_value: parsed.error });
+      return;
+    }
+    if (parsed.value <= 0) {
       setFieldErrors({ received_value: "Informe um valor recebido maior que zero." });
       return;
     }
-    setPendingSettle({ billing: selected, value });
+    setPendingSettle({ billing: selected, value: parsed.value });
   }
 
   const alreadySettled = selected?.status === "paid";
+  const receivedParsed = receivedValue.trim() ? parseMoneyBR(receivedValue) : null;
 
   if (readOnly) {
     // Auditoria V1, rodada 8 (B2): o auditor confere de onde veio cada
@@ -224,7 +234,7 @@ function SettlementTab({ readOnly = false }: { readOnly?: boolean }) {
       title="Registrar pagamento recebido"
       subtitle="Quanto o convênio pagou por esta cobrança. Para registrar muitos pagamentos de uma vez, envie a planilha de Faturamento com as colunas de valor recebido e glosa em Importar dados."
     >
-      <form onSubmit={handleSubmit} className="p-4">
+      <form onChange={unsaved.onChange} onSubmitCapture={unsaved.onSubmit} onSubmit={handleSubmit} className="p-4">
         <BillingSearchPicker selected={selected} onSelect={setSelected} error={fieldErrors["billing"]} />
         {selected && <BillingStatusHistoryTimeline billingId={selected.id} />}
         {selected && alreadySettled && (
@@ -249,21 +259,20 @@ function SettlementTab({ readOnly = false }: { readOnly?: boolean }) {
         )}
         {selected && !alreadySettled && (
           <>
-            <TextField
+            <MoneyField
               label="Valor recebido"
-              type="number"
-              step="0.01"
-              min="0"
               required
               value={receivedValue}
-              onChange={(e) => setReceivedValue(e.target.value)}
+              onValueChange={setReceivedValue}
               error={fieldErrors["received_value"]}
+              placeholder="Ex.: 1.250,00"
+              showPreview={false}
             />
-            {selected.charged_value !== Number(receivedValue) && receivedValue !== "" && !Number.isNaN(Number(receivedValue)) && (
+            {receivedParsed?.ok && selected.charged_value !== receivedParsed.value && (
               <p className="-mt-2 mb-4 text-2xs text-ink-faint">
                 Cobrado: {formatCurrency(selected.charged_value)} · Diferença:{" "}
-                <span className={Number(receivedValue) < selected.charged_value ? "text-denied" : "text-revenue"}>
-                  {formatCurrency(Number(receivedValue) - selected.charged_value)}
+                <span className={receivedParsed.value < selected.charged_value ? "text-denied" : "text-revenue"}>
+                  {formatCurrency(receivedParsed.value - selected.charged_value)}
                 </span>
               </p>
             )}
@@ -336,16 +345,18 @@ const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
 // operadora) não tinha onde ser registrada pela tela.
 // ---------------------------------------------------------------------
 
+/** Valor positivo em reais ou null (regras em src/lib/money.ts). */
 function parseMoney(value: string): number | null {
-  const n = Number(value.replace(/\./g, "").replace(",", "."));
-  return Number.isFinite(n) && n > 0 ? n : null;
+  const parsed = parseMoneyBR(value);
+  return parsed.ok && parsed.value > 0 ? parsed.value : null;
 }
 
 function GlosaRow({ glosa, billingId }: { glosa: Glosa; billingId: string }) {
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
   const [editing, setEditing] = useState(false);
-  const [value, setValue] = useState(String(glosa.valor_glosado).replace(".", ","));
+  const unsaved = useDirtyOnEdit("o valor da glosa", editing);
+  const [value, setValue] = useState(formatMoneyInput(glosa.valor_glosado));
 
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ["glosas", billingId] });
@@ -385,7 +396,7 @@ function GlosaRow({ glosa, billingId }: { glosa: Glosa; billingId: string }) {
       {glosa.imported ? (
         <p className="text-2xs text-ink-faint">Para corrigir, desfaça a importação e envie o arquivo corrigido.</p>
       ) : editing ? (
-        <form
+        <form onChange={unsaved.onChange} onSubmitCapture={unsaved.onSubmit}
           className="flex items-end gap-2"
           onSubmit={(e) => {
             e.preventDefault();
@@ -423,6 +434,7 @@ function GlosaRow({ glosa, billingId }: { glosa: Glosa; billingId: string }) {
 }
 
 function GlosasTab() {
+  const unsaved = useDirtyOnEdit("a glosa");
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
   const [selected, setSelected] = useState<BillingSearchItem | null>(null);
@@ -506,7 +518,7 @@ function GlosasTab() {
                 ))}
               </ul>
             )}
-            <form onSubmit={submit} className="rounded-md border border-border-hairline bg-canvas-raised/40 p-3">
+            <form onChange={unsaved.onChange} onSubmitCapture={unsaved.onSubmit} onSubmit={submit} className="rounded-md border border-border-hairline bg-canvas-raised/40 p-3">
               <p className="mb-2 text-sm font-medium text-ink">Lançar glosa</p>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <TextField
@@ -706,6 +718,7 @@ const GUIA_TIPO_LABELS: Record<GuiaTipo, string> = {
 const GUIAS_PAGE_SIZE = 15;
 
 function GuiasTab() {
+  const unsaved = useDirtyOnEdit("a guia");
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
   const [offset, setOffset] = useState(0);
@@ -795,7 +808,7 @@ function GuiasTab() {
         title="Nova guia"
         subtitle="A maioria das guias já entra sozinha pela ingestão de Faturamento (colunas guia_tipo/guia_numero/guia_senha do template) — use este formulário só para casos avulsos, cadastrados antes do faturamento em si."
       >
-        <form onSubmit={handleSubmit} className="p-4">
+        <form onChange={unsaved.onChange} onSubmitCapture={unsaved.onSubmit} onSubmit={handleSubmit} className="p-4">
           <div className="grid grid-cols-2 gap-3">
             <SelectField
               label="Convênio"
@@ -941,9 +954,19 @@ function overpayment(p: { billing: BillingSearchItem; value: number }): boolean 
 export function BillingOperationsPage() {
   // Os alertas de coparticipação e de OPME abrem direto na aba certa
   // (?tab=coparticipacao / ?tab=auditoria-opme).
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const requested = searchParams.get("tab") as Tab | null;
   const [tab, setTab] = useState<Tab>(requested && TAB_IDS.includes(requested) ? requested : "pagamento");
+  // UX3-18: a aba fica no endereço (voltar do navegador reabre a mesma).
+  useEffect(() => {
+    if (requested && TAB_IDS.includes(requested)) setTab(requested);
+  }, [requested]);
+  function selectTab(id: Tab) {
+    setTab(id);
+    const next = new URLSearchParams(searchParams);
+    next.set("tab", id);
+    setSearchParams(next, { replace: true });
+  }
   const { user } = useAuth();
 
   if (user?.role === "auditor") {
@@ -966,7 +989,7 @@ export function BillingOperationsPage() {
       <Tabs
         groupId={TABS_GROUP}
         active={tab}
-        onChange={(id) => setTab(id as Tab)}
+        onChange={(id) => selectTab(id as Tab)}
         items={[
           { id: "pagamento", label: "Registrar pagamento" },
           { id: "glosas", label: "Glosas" },

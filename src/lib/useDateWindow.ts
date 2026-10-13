@@ -1,5 +1,8 @@
 import { useMemo, useState } from "react";
 
+import { addDaysIso } from "@/lib/dates";
+import { useDataAnchor } from "@/lib/useDataReadiness";
+
 export interface WindowOption {
   days: number;
   label: string;
@@ -10,10 +13,6 @@ export const DEFAULT_WINDOW_OPTIONS: WindowOption[] = [
   { days: 14, label: "Últimos 14 dias" },
   { days: 30, label: "Últimos 30 dias" },
 ];
-
-function toIsoDate(d: Date): string {
-  return d.toISOString().slice(0, 10);
-}
 
 /**
  * Janela de período (N dias terminando hoje) compartilhada entre Sala de
@@ -32,13 +31,20 @@ export function useDateWindow(initialDays = 7) {
   // manda vira ambíguo pro usuário).
   const [singleDay, setSingleDay] = useState<string | null>(null);
 
+  const { end, dataUntil } = useDataAnchor();
+
   const { dateFrom, dateTo } = useMemo(() => {
     if (singleDay) return { dateFrom: singleDay, dateTo: singleDay };
-    const end = new Date();
-    const start = new Date();
-    start.setDate(end.getDate() - (windowDays - 1));
-    return { dateFrom: toIsoDate(start), dateTo: toIsoDate(end) };
-  }, [windowDays, singleDay]);
+    return { dateFrom: addDaysIso(end, -(windowDays - 1)), dateTo: end };
+  }, [windowDays, singleDay, end]);
 
-  return { windowDays, setWindowDays, singleDay, setSingleDay, dateFrom, dateTo };
+  return {
+    windowDays,
+    setWindowDays,
+    singleDay,
+    setSingleDay,
+    dateFrom,
+    dateTo,
+    dataUntil: singleDay ? null : dataUntil,
+  };
 }

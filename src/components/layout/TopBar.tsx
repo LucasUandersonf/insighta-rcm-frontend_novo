@@ -13,12 +13,13 @@ import { UserAvatar } from "@/components/ui/UserAvatar";
 import { useCurrentUserProfile } from "@/lib/useCurrentUserProfile";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
-import { askQuotaNote, useAiUsage, useAskInsighta } from "@/lib/useAskInsighta";
+import { askExample, askQuotaNote, useAiUsage, useAskInsighta } from "@/lib/useAskInsighta";
 import { cn } from "@/lib/cn";
 import { isManagerProfile, useCoordinatorSummary, useTeamOverview, useTeamProfile } from "@/lib/team";
 import {
   ACCOUNT_TOUR_ID,
   ADMIN_NAV_ITEMS,
+  ASK_TOUR_ID,
   MODULES_TOUR_ID,
   MODULE_GROUPS,
   NAV_ITEMS,
@@ -47,15 +48,17 @@ import { HelpCenterModal } from "./HelpCenterModal";
 const SHORTCUT_LABEL =
   typeof navigator !== "undefined" && /Mac|iPhone|iPad/i.test(navigator.platform || navigator.userAgent) ? "⌘K" : "Ctrl K";
 
-type SystemStatus = "checking" | "operational" | "degraded" | "offline";
+type SystemStatus = "checking" | "operational" | "degraded" | "storage_down" | "offline";
 
 
 const STATUS_CONFIG: Record<SystemStatus, { label: string; dot: string }> = {
   checking: { label: "Verificando conexão…", dot: "bg-ink-faint" },
   // UX-03: verde só quando há dado importado de fato (ver o texto abaixo);
   // sem nenhum dado, o ponto fica neutro.
-  operational: { label: "Sistema no ar · nenhum dado importado ainda", dot: "bg-ink-faint" },
+  operational: { label: "Funcionando · nenhum dado importado ainda", dot: "bg-ink-faint" },
   degraded: { label: "Sistema com instabilidade", dot: "bg-denied" },
+  // UX2-10: o resto funciona, mas o envio de arquivos não.
+  storage_down: { label: "Envio de arquivos indisponível agora · o resto funciona", dot: "bg-pending" },
   offline: { label: "Sem conexão com a internet", dot: "bg-pending" },
 };
 
@@ -90,16 +93,35 @@ function normalize(text: string): string {
  * que só narra números já calculados) e, enquanto se digita, sugere os
  * módulos com aquele nome para ir direto. ⌘K / Ctrl+K foca de qualquer lugar.
  */
+const ASK_DRAFT_KEY = "insighta_ask_draft";
+
 function AskInsightaField({ items, canAsk }: { items: NavItem[]; canAsk: boolean }) {
   const navigate = useNavigate();
   const listId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
-  const [query, setQuery] = useState("");
+  // UX2-31: o texto digitado sobrevive a um F5 (rascunho por aba).
+  const [query, setQueryState] = useState(() => {
+    try {
+      return sessionStorage.getItem(ASK_DRAFT_KEY) ?? "";
+    } catch {
+      return "";
+    }
+  });
+  const setQuery = (value: string) => {
+    setQueryState(value);
+    try {
+      if (value) sessionStorage.setItem(ASK_DRAFT_KEY, value);
+      else sessionStorage.removeItem(ASK_DRAFT_KEY);
+    } catch {
+      /* armazenamento bloqueado: sem rascunho */
+    }
+  };
   const [isOpen, setIsOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const ask = useAskInsighta();
   const { data: aiUsage } = useAiUsage(Boolean(ask.data));
+  const { data: aiUsageForExample } = useAiUsage(canAsk);
   const quotaNote = askQuotaNote(aiUsage);
 
   const matches = useMemo(() => {
@@ -109,10 +131,14 @@ function AskInsightaField({ items, canAsk }: { items: NavItem[]; canAsk: boolean
   }, [items, query]);
 
   const trimmed = query.trim();
-  const options: ({ kind: "ask" } | { kind: "module"; item: NavItem })[] = [
-    ...(canAsk && trimmed.length >= 3 ? [{ kind: "ask" as const }] : []),
-    ...matches.map((item) => ({ kind: "module" as const, item })),
-  ];
+  // UX2-27: "faturas" + Enter ia para a pergunta ("quanto você faturou").
+  // Quando o texto é o nome de uma tela, "Ir para…" vem primeiro.
+  const exactModule = matches.some((item) => normalize(item.label) === normalize(trimmed) || normalize(item.label).startsWith(normalize(trimmed)) && trimmed.split(/\s+/).length <= 2);
+  const askOption = canAsk && trimmed.length >= 3 ? [{ kind: "ask" as const }] : [];
+  const moduleOptions = matches.map((item) => ({ kind: "module" as const, item }));
+  const options: ({ kind: "ask" } | { kind: "module"; item: NavItem })[] = exactModule
+    ? [...moduleOptions, ...askOption]
+    : [...askOption, ...moduleOptions];
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -143,7 +169,7 @@ function AskInsightaField({ items, canAsk }: { items: NavItem[]; canAsk: boolean
   const showPanel = isOpen && (trimmed.length > 0 || ask.isPending || !!ask.data || !!ask.error);
 
   return (
-    <div ref={wrapperRef} className="relative ml-3 hidden max-w-[520px] flex-1 md:block">
+    <div ref={wrapperRef} data-tour-id={ASK_TOUR_ID} className="relative ml-3 hidden max-w-[520px] flex-1 md:block">
       <label className="flex h-[38px] items-center gap-2.5 rounded-[11px] border border-border-hairline bg-canvas-raised/40 px-3 focus-within:border-accent/50">
         <Sparkles aria-hidden size={15} className="shrink-0 text-accent-muted" />
         <input
@@ -154,7 +180,7 @@ function AskInsightaField({ items, canAsk }: { items: NavItem[]; canAsk: boolean
           aria-expanded={showPanel}
           aria-controls={listId}
           aria-autocomplete="list"
-          placeholder={canAsk ? "Pergunte ao Insighta: “por que a glosa subiu este mês?”" : "Ir para um módulo (ex.: lista de espera, consultas)"}
+          placeholder={canAsk ? `Pergunte ao Insighta: “${askExample(aiUsageForExample?.ai_enabled)}”` : "Ir para um módulo (ex.: lista de espera, consultas)"}
           value={query}
           onChange={(e) => {
             setQuery(e.target.value);
@@ -175,7 +201,7 @@ function AskInsightaField({ items, canAsk }: { items: NavItem[]; canAsk: boolean
               choose(options[activeIndex]);
             }
           }}
-          className="min-w-0 flex-1 bg-transparent text-[13px] text-ink outline-none placeholder:text-ink-faint"
+          className="min-w-0 flex-1 bg-transparent text-[13px] text-ink outline-hidden placeholder:text-ink-faint"
         />
         <kbd className="shrink-0 rounded-md border border-border-hairline px-1.5 py-0.5 font-sans text-[11px] text-ink-faint">{SHORTCUT_LABEL}</kbd>
       </label>
@@ -192,7 +218,21 @@ function AskInsightaField({ items, canAsk }: { items: NavItem[]; canAsk: boolean
                   <>
                     {ask.data.understood && <p className="text-2xs text-ink-faint">{ask.data.understood}</p>}
                     <p className="text-sm leading-relaxed text-ink">{ask.data.answer}</p>
-                    <p className="text-xs text-ink-faint">{ask.data.sources}</p>
+                    {ask.data.action_href && ask.data.action_label && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigate(ask.data!.action_href!);
+                          setQuery("");
+                          setIsOpen(false);
+                          ask.reset();
+                        }}
+                        className="self-start text-sm font-medium text-accent hover:underline"
+                      >
+                        {ask.data.action_label} →
+                      </button>
+                    )}
+                    {ask.data.sources && <p className="text-xs text-ink-faint">{ask.data.sources}</p>}
                     {quotaNote && <p className="text-2xs text-ink-faint">{quotaNote}</p>}
                   </>
                 )}
@@ -480,7 +520,7 @@ function ModulesPanel({
             </NavLink>
           ))}
           {index === groups.length - 1 && (
-            <div className="mt-auto flex flex-col gap-1.5 rounded-xl border border-accent/25 bg-brand/[0.12] p-3.5">
+            <div className="mt-auto flex flex-col gap-1.5 rounded-xl border border-accent/25 bg-brand/12 p-3.5">
               <span className="text-xs font-semibold text-accent-muted">Dica</span>
               <span className="text-xs leading-snug text-ink-soft">
                 Cada módulo mostra aqui o alerta mais urgente dele — você sabe onde entrar antes de abrir.
@@ -536,7 +576,11 @@ export function TopBar() {
   useEffect(() => {
     const apiBase = import.meta.env.VITE_API_BASE_URL as string;
     fetch(`${apiBase}/health`)
-      .then((r) => setStatus(r.ok ? "operational" : "degraded"))
+      .then(async (r) => {
+        if (!r.ok) return setStatus("degraded");
+        const body = (typeof r.json === "function" ? await r.json().catch(() => ({})) : {}) as { storage?: string };
+        setStatus(body.storage === "unreachable" ? "storage_down" : "operational");
+      })
       .catch(() => setStatus("degraded"));
   }, []);
 
@@ -580,21 +624,21 @@ export function TopBar() {
   const currentModule = moduleItems.find((item) => isInside(item.to) || (item.matches ?? []).some(isInside));
 
   return (
-    <header className="sticky top-0 z-30 border-b border-border-hairline bg-canvas/75 backdrop-blur-[18px]">
+    <header className="sticky top-0 z-30 border-b border-border-hairline bg-canvas backdrop-blur-[18px]">
       {/* Linha 1 — marca, clínica, busca rápida, notificações e conta */}
       <div className="flex h-16 items-center gap-3 px-4 sm:gap-5 sm:px-8">
         {/* UX-27: no celular a barra de navegação cortava itens sem aviso;
             o menu completo abre por este botão. */}
         <button
           type="button"
-          className="-ml-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] text-ink-muted hover:bg-canvas-raised/60 md:hidden"
+          className="-ml-1 flex h-9 w-9 max-sm:h-11 max-sm:w-11 shrink-0 items-center justify-center rounded-[10px] text-ink-muted hover:bg-canvas-raised/60 md:hidden"
           aria-label="Abrir menu"
           aria-expanded={isMobileNavOpen}
           onClick={() => setIsMobileNavOpen((open) => !open)}
         >
           <Menu aria-hidden size={18} />
         </button>
-        <NavLink to="/" className="flex shrink-0 items-center" aria-label="Insighta — Início">
+        <NavLink to="/" className="flex shrink-0 items-center max-sm:min-h-[44px]" aria-label="Insighta — Início">
           <BrandMark size="sm" />
         </NavLink>
         {tenant?.trade_name && (
@@ -621,7 +665,7 @@ export function TopBar() {
                   to={item.to}
                   end={item.to === "/"}
                   className={({ isActive }) =>
-                    cn("block rounded-[10px] px-3 py-2.5 text-sm font-medium", isActive ? "bg-brand/[0.18] text-ink" : "text-ink-muted hover:bg-canvas-raised/60")
+                    cn("block rounded-[10px] px-3 py-2.5 text-sm font-medium", isActive ? "bg-brand/18 text-ink" : "text-ink-muted hover:bg-canvas-raised/60")
                   }
                 >
                   {item.label}
@@ -665,7 +709,7 @@ export function TopBar() {
                   cn(
                     "flex h-9 shrink-0 items-center gap-2 rounded-[10px] border px-3 text-[13px] font-medium transition-colors",
                     isActive
-                      ? "border-accent/35 bg-brand/[0.18] text-ink"
+                      ? "border-accent/35 bg-brand/18 text-ink"
                       : "border-transparent text-ink-muted hover:bg-canvas-raised/60 hover:text-ink"
                   )
                 }
@@ -699,7 +743,7 @@ export function TopBar() {
                 className={cn(
                   "flex h-9 shrink-0 items-center gap-2 rounded-[10px] border px-3 text-[13px] font-medium transition-colors",
                   currentModule
-                    ? "border-accent/35 bg-brand/[0.18] text-ink"
+                    ? "border-accent/35 bg-brand/18 text-ink"
                     : isModulesOpen
                       ? "border-border-default bg-canvas-raised/70 text-ink"
                       : "border-transparent text-ink-muted hover:bg-canvas-raised/60 hover:text-ink"

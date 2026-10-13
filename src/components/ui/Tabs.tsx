@@ -1,4 +1,4 @@
-import { useRef, type KeyboardEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { motion } from "framer-motion";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/cn";
@@ -64,14 +64,40 @@ export function Tabs({
   onChange,
   groupId,
   className,
+  variant = "underline",
 }: {
   items: TabItem[];
   active: string;
   onChange: (id: string) => void;
   groupId: string;
   className?: string;
+  /** UX3-16: "segmented" para um segundo nível de abas dentro de outro —
+   * duas fileiras com o mesmo sublinhado pareciam o mesmo nível. */
+  variant?: "underline" | "segmented";
 }) {
+  const segmented = variant === "segmented";
   const buttonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  // UX2-24: no celular as abas passam da tela; uma sombra na borda mostra
+  // que dá para rolar para o lado, e a aba ativa entra na tela sozinha.
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [edges, setEdges] = useState({ left: false, right: false });
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const update = () =>
+      setEdges({ left: el.scrollLeft > 2, right: el.scrollLeft + el.clientWidth < el.scrollWidth - 2 });
+    update();
+    el.addEventListener("scroll", update, { passive: true });
+    const observer = typeof ResizeObserver !== "undefined" ? new ResizeObserver(update) : null;
+    observer?.observe(el);
+    return () => {
+      el.removeEventListener("scroll", update);
+      observer?.disconnect();
+    };
+  }, [items.length]);
+  useEffect(() => {
+    buttonRefs.current[active]?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+  }, [active]);
 
   function focusAndActivate(index: number) {
     const clamped = (index + items.length) % items.length;
@@ -112,12 +138,21 @@ export function Tabs({
     // bloqueando clique nas abas depois da 2ª/3ª (confirmado via Playwright
     // real, não só um teste unitário). Fix: um wrapper com `overflow-x-auto`
     // vira o único elemento que rola — a página em volta não estica mais.
-    <div className="overflow-x-auto">
+    <div className="relative">
+    {edges.left && (
+      <span aria-hidden className="pointer-events-none absolute inset-y-0 left-0 z-10 w-8 bg-linear-to-r from-canvas to-transparent" />
+    )}
+    {edges.right && (
+      <span aria-hidden className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-linear-to-l from-canvas to-transparent" />
+    )}
+    <div ref={scrollRef} className="overflow-x-auto">
       <div
         role="tablist"
         aria-orientation="horizontal"
         className={cn(
-          "flex min-w-full gap-6 whitespace-nowrap border-b border-border-hairline",
+          segmented
+            ? "inline-flex gap-1 whitespace-nowrap rounded-[11px] border border-border-hairline bg-canvas-raised/40 p-1"
+            : "flex min-w-full gap-6 whitespace-nowrap border-b border-border-hairline",
           className
         )}
       >
@@ -138,11 +173,14 @@ export function Tabs({
               onClick={() => onChange(item.id)}
               onKeyDown={(e) => handleKeyDown(e, index)}
               className={cn(
-                "relative -mb-px flex items-center gap-1.5 pb-3 text-[13px] font-medium transition-colors",
+                segmented
+                  ? "relative flex min-h-[36px] items-center gap-1.5 rounded-lg px-3 text-[13px] font-medium transition-colors"
+                  : "relative -mb-px flex min-h-[44px] items-end gap-1.5 pb-3 text-[13px] font-medium transition-colors",
+                segmented && isActive && "bg-canvas-surface shadow-xs",
                 isActive ? "text-ink" : "text-ink-faint hover:text-ink"
               )}
             >
-              {isActive && (
+              {isActive && !segmented && (
                 <motion.span
                   layoutId={`tabs-active-pill-${groupId}`}
                   className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-accent"
@@ -157,6 +195,7 @@ export function Tabs({
           );
         })}
       </div>
+    </div>
     </div>
   );
 }

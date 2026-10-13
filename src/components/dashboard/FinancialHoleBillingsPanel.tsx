@@ -15,7 +15,7 @@ const PAGE_SIZE = 15;
 /**
  * Contas reais por trás do insight "Você está cobrando menos do que
  * devia de alguns convênios" (ver DECISÃO em
- * smart_insights_engine.py::_financial_hole_insight) — achado do
+ * app/services/insights (backend)::_financial_hole_insight) — achado do
  * usuário: o card só dizia QUANTO no total, nunca QUAIS contas
  * corrigir. Destino de `#buraco-financeiro`. A correção em si (ajustar
  * a tabela de preços) continua em Contratos — este painel é onde

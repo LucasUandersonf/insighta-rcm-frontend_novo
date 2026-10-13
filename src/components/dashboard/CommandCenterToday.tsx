@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
 import { ArrowDownRight, ArrowUpRight, Check, Minus } from "lucide-react";
 import { HeroInsight, SecondaryInsightCard, formatCurrency } from "@/components/dashboard/SmartInsightsFeed";
 import { AssignModal, insightItemKey, useInsightWorkflow } from "@/components/dashboard/InsightWorkflowActions";
@@ -15,6 +16,7 @@ import type {
   SmartInsights,
   WeeklyTrend,
 } from "@/lib/types";
+import { NO_DATA_TEXT, useDataReadiness, useNoBillingData } from "@/lib/useDataReadiness";
 
 /**
  * Aba "Hoje" da Sala de Comando — canvas "Insighta RCM — Redesign 2026"
@@ -62,6 +64,19 @@ function KpiStrip({ summary, payers }: { summary: ExecutiveSummary; payers?: Pay
   const slowest = payers?.verdicts.find((v) => v.kind === "slowest");
   const margin = summary.margin_vs_contracted_pct;
   const shortfall = margin !== null ? 100 - margin : null;
+  // UX3-03: sem tabela de preço, nada foi conferido; "R$ 0,00 abaixo do
+  // contrato" lia como "nenhuma perda". Mesmo estado vazio do card vizinho.
+  const holeMeasured = margin !== null;
+  // Medido só onde há tabela de preço: a frase diz quanto do faturado entrou na conta.
+  const { data: readiness } = useDataReadiness();
+  const coverage = readiness?.price_table_coverage_pct ?? null;
+  const coverageNote =
+    coverage !== null && coverage < 99.5
+      ? ` Conferido em ${Math.round(coverage)}% do faturado de convênio (só os convênios com tabela de preço).`
+      : "";
+  // Nada passou pela checagem antes do envio (ex.: só planilha importada):
+  // "R$ 0,00 protegido" não é medição.
+  const savedMeasured = summary.total_value_saved.value > 0 || summary.total_value_saved.previous_value > 0;
   const cells: {
     label: string;
     value: string;
@@ -72,17 +87,23 @@ function KpiStrip({ summary, payers }: { summary: ExecutiveSummary; payers?: Pay
   }[] = [
     {
       label: "Cobrado abaixo do contrato",
-      value: formatCurrency(summary.financial_hole.value),
-      kpi: summary.financial_hole,
+      value: holeMeasured ? formatCurrency(summary.financial_hole.value) : "—",
+      kpi: holeMeasured ? summary.financial_hole : null,
       higherIsBetter: false,
-      text: describeTrend("o que foi cobrado abaixo do contratado", summary.financial_hole.value, summary.financial_hole.delta_pct, { shape: "currency" }),
+      note: "ainda não medido",
+      text: holeMeasured
+        ? describeTrend("o que foi cobrado abaixo do contratado", summary.financial_hole.value, summary.financial_hole.delta_pct, { shape: "currency" }) + coverageNote
+        : "Cadastre a tabela de preço dos convênios (em Convênios › Contratos) para medir.",
     },
     {
       label: "Caixa protegido",
-      value: formatCurrency(summary.total_value_saved.value),
-      kpi: summary.total_value_saved,
+      value: savedMeasured ? formatCurrency(summary.total_value_saved.value) : "—",
+      kpi: savedMeasured ? summary.total_value_saved : null,
       higherIsBetter: true,
-      text: "Guias que o motor de risco segurou e corrigiu antes de ir para o convênio.",
+      note: "ainda não medido",
+      text: savedMeasured
+        ? "Guias que o motor de risco segurou e corrigiu antes de ir para o convênio."
+        : "Aparece quando as guias passam pela checagem de risco antes do envio (Faturamento › Fila de risco).",
     },
     {
       label: "Você faturou do que podia",
@@ -135,6 +156,7 @@ function KpiStrip({ summary, payers }: { summary: ExecutiveSummary; payers?: Pay
 export const MAX_TODAY_PRIORITIES = 5;
 
 function TodayQueue({ dateFrom, dateTo, workflow }: { dateFrom: string; dateTo: string; workflow: ReturnType<typeof useInsightWorkflow> }) {
+  const noBilling = useNoBillingData();
   const { data, isLoading } = useQuery({
     queryKey: ["analytics", "priority-queue", dateFrom, dateTo],
     queryFn: () => apiClient.get<PriorityQueue>(`/api/v1/analytics/priority-queue?date_from=${dateFrom}&date_to=${dateTo}`),
@@ -159,7 +181,9 @@ function TodayQueue({ dateFrom, dateTo, workflow }: { dateFrom: string; dateTo: 
       )}
       {isLoading && <p className="text-sm text-ink-muted">Carregando a fila…</p>}
       {!isLoading && items.length === 0 && (
-        <p className="text-sm leading-relaxed text-ink-muted">Nenhuma ação prioritária agora — os alertas abertos estão sob controle nesta janela.</p>
+        <p className="text-sm leading-relaxed text-ink-muted">
+          {noBilling ? NO_DATA_TEXT : "Nenhuma ação prioritária agora — os alertas abertos estão sob controle nesta janela."}
+        </p>
       )}
       {items.map((item) => {
         const actioned = workflow.actionedKeys[insightItemKey(item)];
@@ -171,7 +195,7 @@ function TodayQueue({ dateFrom, dateTo, workflow }: { dateFrom: string; dateTo: 
               onClick={() => workflow.resolveMutation.mutate(item)}
               aria-label={actioned ? `Feita: ${item.title}` : `Marcar como feita: ${item.title}`}
               className={cn(
-                "mt-px flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-[7px] border transition-colors",
+                "mt-px flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-[7px] border transition-colors relative before:absolute before:inset-[-11px] before:content-['']",
                 actioned ? "border-revenue bg-revenue" : "border-ink-faint/60 hover:border-revenue"
               )}
             >
@@ -180,7 +204,7 @@ function TodayQueue({ dateFrom, dateTo, workflow }: { dateFrom: string; dateTo: 
             <div className="flex min-w-0 flex-col gap-1">
               <span className={cn("text-[13px] font-medium leading-snug", actioned ? "text-ink-faint line-through" : "text-ink")}>{item.title}</span>
               <span className="text-xs text-ink-faint">
-                {CATEGORY_LABEL[item.category] ?? "Geral"} · {item.source === "raiox" ? "Raio-X" : "insight"}
+                {CATEGORY_LABEL[item.category] ?? "Geral"} · {item.source === "raiox" ? "Painel de receita" : "Alerta"}
                 {actioned === "atribuido" && " · atribuído"}
               </span>
             </div>
@@ -199,7 +223,7 @@ function TodayQueue({ dateFrom, dateTo, workflow }: { dateFrom: string; dateTo: 
         </p>
       )}
       <p className="mt-1 text-xs leading-normal text-ink-faint">
-        A fila junta insights e itens do Raio-X, na ordem que mais devolve dinheiro por minuto de trabalho.
+        A fila junta os alertas e os itens dos painéis de receita, na ordem que mais devolve dinheiro por minuto de trabalho.
       </p>
     </aside>
   );
@@ -276,6 +300,7 @@ export function CommandCenterToday({
   onNavigateTab: (tabId: string) => void;
   onFocusAgenda: (focus: AgendaFocus) => void;
 }) {
+  const noBilling = useNoBillingData();
   const workflow = useInsightWorkflow();
   const { data: insights } = useQuery({
     queryKey: ["analytics", "smart-insights", dateFrom, dateTo],
@@ -322,7 +347,7 @@ export function CommandCenterToday({
           ) : (
             insights && (
               <p className="rounded-[20px] border border-revenue/25 bg-revenue-bg p-6 text-sm text-ink-muted">
-                Nenhum desvio relevante nesta janela — operação dentro do esperado.
+                {noBilling ? NO_DATA_TEXT : "Nenhum desvio relevante nesta janela — operação dentro do esperado."}
               </p>
             )
           )}
@@ -385,6 +410,9 @@ export function CommandCenterToday({
               <div className="mt-auto flex flex-col gap-1 rounded-[14px] border border-revenue/20 bg-revenue/[0.07] p-4">
                 <span className="text-xs text-ink-muted">Recuperado com o Insighta este mês</span>
                 <span className="tabular text-[26px] font-semibold tracking-[-0.02em] text-revenue">{formatCurrency(recovered.total)}</span>
+                <Link to="/resultado" className="text-xs font-medium text-accent-muted hover:underline">
+                  Ver o Extrato de Resultado do mês →
+                </Link>
               </div>
             </section>
           )}

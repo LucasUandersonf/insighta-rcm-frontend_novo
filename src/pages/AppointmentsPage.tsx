@@ -34,6 +34,7 @@ import type {
   PreferredTimeWindow,
   SatisfactionLinkResponse,
 } from "@/lib/types";
+import { useDirtyOnEdit } from "@/lib/unsavedChanges";
 
 /** Instante ISO -> "AAAA-MM-DDTHH:mm" no horário de Brasília (campo datetime-local). */
 function toClinicInput(iso: string): string {
@@ -149,6 +150,7 @@ function EditPatientContactModal({
   patient: Patient | null;
   patients: Patient[];
 }) {
+  const unsaved = useDirtyOnEdit("o contato do paciente", isOpen);
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
   const [referredBy, setReferredBy] = useState("");
@@ -223,7 +225,7 @@ function EditPatientContactModal({
       isOpen={isOpen}
       onClose={onClose}
     >
-      <form onSubmit={handleSubmit}>
+      <form onChange={unsaved.onChange} onSubmitCapture={unsaved.onSubmit} onSubmit={handleSubmit}>
         {anonymized ? (
           <p className="mb-3 text-sm text-ink-muted">
             Paciente anonimizado a pedido do titular: o cadastro não pode mais ser editado.
@@ -336,6 +338,7 @@ function RegisterVisitModal({
   onClose: () => void;
   appointment: Appointment | null;
 }) {
+  const unsaved = useDirtyOnEdit("o registro do atendimento", isOpen);
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
   const [status, setStatus] = useState("");
@@ -421,7 +424,7 @@ function RegisterVisitModal({
 
   return (
     <Modal title="Registrar atendimento" isOpen={isOpen} onClose={onClose}>
-      <form onSubmit={handleSubmit}>
+      <form onChange={unsaved.onChange} onSubmitCapture={unsaved.onSubmit} onSubmit={handleSubmit}>
         <SelectField
           label="Status"
           value={status}

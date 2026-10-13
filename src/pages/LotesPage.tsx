@@ -16,6 +16,8 @@ import { getApiErrorMessage } from "@/lib/query-client";
 import { useToast } from "@/context/ToastContext";
 import { useAuth } from "@/context/AuthContext";
 import type { Guia, GuiaTipo, InsurancePlan, Lote, LoteCreateRequest, LoteStatus, PaginatedResponse } from "@/lib/types";
+import { formatDateBR } from "@/lib/dates";
+import { useDirtyOnEdit } from "@/lib/unsavedChanges";
 
 const LOTES_PAGE_SIZE = 20;
 
@@ -42,8 +44,7 @@ const STATUS_TONE: Record<LoteStatus, BadgeTone> = {
 };
 
 function formatDate(iso: string | null): string {
-  if (!iso) return "—";
-  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(iso));
+  return formatDateBR(iso, { day: "2-digit", month: "2-digit", year: "numeric" }, "—");
 }
 
 // ---------------------------------------------------------------------
@@ -51,6 +52,7 @@ function formatDate(iso: string | null): string {
 // ---------------------------------------------------------------------
 
 function CreateLoteModal({ isOpen, onClose, plans }: { isOpen: boolean; onClose: () => void; plans: InsurancePlan[] }) {
+  const unsaved = useDirtyOnEdit("o lote", isOpen);
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
   const [insurancePlanId, setInsurancePlanId] = useState("");
@@ -80,7 +82,7 @@ function CreateLoteModal({ isOpen, onClose, plans }: { isOpen: boolean; onClose:
 
   return (
     <Modal title="Novo lote de faturamento" isOpen={isOpen} onClose={resetAndClose}>
-      <form onSubmit={handleSubmit}>
+      <form onChange={unsaved.onChange} onSubmitCapture={unsaved.onSubmit} onSubmit={handleSubmit}>
         <p className="mb-4 text-xs text-ink-faint">
           Um lote agrupa guias do MESMO convênio e do MESMO tipo — só guias compatíveis podem ser atribuídas a ele
           depois (a mesma regra que 3 ERPs de mercado já seguem).
@@ -302,7 +304,7 @@ function LoteDetailModal({ lote, planName, onClose }: { lote: Lote | null; planN
 
 /**
  * Achado do Parecer Técnico "Boletim Insighta" (revisão 2): o insight
- * "Tem lote de faturamento aberto há muito tempo" (smart_insights_engine.py
+ * "Tem lote de faturamento aberto há muito tempo" (app/services/insights (backend)
  * / _stale_open_lotes_insight) SEMPRE existiu mas nunca tinha uma tela
  * de destino — o botão de ação ficava propositalmente escondido. Esta
  * tela fecha essa lacuna: gestão completa do endpoint /lotes, que antes
@@ -353,7 +355,7 @@ export function LotesPage() {
       <PageHeader
         icon={Layers}
         title="Lotes de faturamento"
-        subtitle="Agrupe guias do mesmo convênio e tipo, feche o lote e gere a fatura em Faturas — o mesmo fluxo de 'lote' que um ERP de faturamento médico já usa."
+        subtitle="Junte as guias do mesmo convênio e tipo num lote, feche o lote e gere a fatura em Faturas."
         action={
           canWrite ? (
             <Button onClick={() => setIsCreateModalOpen(true)} className="flex items-center gap-1.5">

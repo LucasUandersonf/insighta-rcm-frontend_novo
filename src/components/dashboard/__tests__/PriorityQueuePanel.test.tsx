@@ -60,7 +60,7 @@ describe("PriorityQueuePanel — épico F1.1 do Plano Diretor", () => {
     renderWithProviders(<PriorityQueuePanel dateFrom="2026-09-01" dateTo="2026-09-07" />);
 
     await waitFor(() => expect(screen.getByText("Maior perda concentrada no convênio Unimed Nacional")).toBeInTheDocument());
-    expect(screen.getByText("Raio-X")).toBeInTheDocument();
+    expect(screen.getByText("Painel de receita")).toBeInTheDocument();
     expect(screen.getByText("Queda de ocupação da agenda")).toBeInTheDocument();
     expect(screen.getByText("Mostrando 2 de 5 ações abertas nesta janela.")).toBeInTheDocument();
   });

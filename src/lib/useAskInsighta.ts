@@ -26,9 +26,19 @@ export function useAiUsage(enabled = true) {
 
 /** "Restam 12 de 100 perguntas à IA este mês" — null quando não há cota. */
 export function askQuotaNote(summary: AiUsageSummary | undefined): string | null {
+  if (summary?.ai_enabled === false) return null;
   const ask = Array.isArray(summary?.items) ? summary.items.find((item) => item.kind === "ask") : undefined;
   if (!ask || ask.limit <= 0) return null;
   const left = Math.max(ask.limit - ask.used, 0);
   if (left === 0) return `A cota de ${ask.limit} perguntas à IA deste mês acabou.`;
   return `Restam ${left} de ${ask.limit} perguntas à IA este mês.`;
+}
+
+/**
+ * UX3-05: o exemplo do campo precisa ser uma pergunta que o Insighta responde
+ * agora. "Por que a glosa subiu?" pede a IA; sem ela, o exemplo é uma pergunta
+ * que o roteador responde na hora.
+ */
+export function askExample(aiEnabled: boolean | undefined): string {
+  return aiEnabled ? "por que a glosa subiu este mês?" : "qual convênio mais glosa?";
 }

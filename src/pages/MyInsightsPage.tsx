@@ -17,6 +17,7 @@ import type {
   PaginatedResponse,
 } from "@/lib/types";
 import { plural } from "@/lib/plural";
+import { formatDateBR } from "@/lib/dates";
 
 const STATUS_LABELS: Record<InsightOutcomeStatus, string> = {
   pendente: "Pendente",
@@ -37,7 +38,7 @@ function formatCurrency(value: number): string {
 }
 
 function formatDate(iso: string): string {
-  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(iso));
+  return formatDateBR(iso, { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
 /**

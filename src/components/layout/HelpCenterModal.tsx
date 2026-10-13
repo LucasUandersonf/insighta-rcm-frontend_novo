@@ -13,6 +13,7 @@ import { useToast } from "@/context/ToastContext";
 import { cn } from "@/lib/cn";
 import type { SupportRequest, SupportRequestCreateRequest } from "@/lib/types";
 import { SupportContactLinks } from "./SupportContactLinks";
+import { useDirtyOnEdit } from "@/lib/unsavedChanges";
 
 // Perguntas frequentes — conteúdo estático de propósito nesta primeira
 // versão (sem CMS de FAQ ainda): cobre as dúvidas mais prováveis sobre
@@ -21,49 +22,67 @@ import { SupportContactLinks } from "./SupportContactLinks";
 // cá.
 const FAQ_ITEMS: { question: string; answer: string }[] = [
   {
+    question: "Como importo minha primeira planilha?",
+    answer:
+      "Em Importar dados (barra de cima), escolha o tipo da planilha (Faturamento, Agenda, Atendimento, Estoque ou Prontuário), selecione o arquivo como ele sai do seu sistema (.xlsx ou .csv) e clique em Enviar arquivo. Convênios novos são cadastrados sozinhos. O resultado aparece na mesma tela e você pode sair enquanto processa.",
+  },
+  {
+    question: "Minha planilha teve linhas que não entraram — o que fazer?",
+    answer:
+      "Abra Importar dados › Linhas para corrigir. Convênio desconhecido se resolve ali mesmo, com um clique. Linha com data, valor ou campo obrigatório inválido mostra o número da linha (como no Excel), o valor que foi lido e o que corrigir; baixe a lista, corrija na planilha e envie o arquivo de novo — só as linhas que faltavam entram.",
+  },
+  {
+    question: "Onde mudo a meta anual de faturamento?",
+    answer: "No menu da sua foto › Minha clínica › Meta de faturamento anual. Digite no formato brasileiro (ex.: 2.400.000,00); o campo mostra o valor que vai ser salvo antes de você confirmar.",
+  },
+  {
+    question: "Como cadastro a tabela de preço de um convênio?",
+    answer:
+      "Em Importar dados › Contratos de convênio (PDF), escolha o convênio, a vigência e o PDF do contrato. O Insighta lê a tabela de preços e abre a conferência: revise os itens e clique em Aprovar tabela. Só depois disso a tabela passa a valer para a conferência de glosa. Para poucos itens, use Convênios › Contratos e tabelas › Cadastro manual.",
+  },
+  {
+    question: "Como convido alguém da equipe?",
+    answer:
+      "No menu da sua foto › Usuários › Novo usuário. Escolha o papel da pessoa (cada papel mostra o que ela pode ver), crie o acesso e copie o convite com o link e a senha temporária. No primeiro acesso ela cria a própria senha.",
+  },
+  {
+    question: "Onde vejo quanto cada convênio glosa e quanto demora para pagar?",
+    answer: "Em Convênios: a aba Glosas mostra o valor e a taxa por convênio, e a aba Prazos de pagamento mostra os dias médios. Você também pode perguntar no campo do topo, por exemplo “quanto a Unimed glosou?”.",
+  },
+  {
     question: "Por que um faturamento aparece com risco de glosa alto?",
     answer:
-      "O sistema aplica regras determinísticas antes do envio ao convênio: CID ausente, procedimento não informado, convênio sem tabela de preço homologada, ou valor cobrado acima do contratado. O motivo específico aparece no próprio registro — não é uma estimativa, é uma regra concreta que bateu.",
+      "O sistema aplica regras antes do envio ao convênio: CID ausente, procedimento não informado, convênio sem tabela de preço aprovada ou valor cobrado acima do contratado. O motivo específico aparece no próprio registro — é uma regra concreta que bateu, não uma estimativa.",
   },
   {
-    question: "Como funciona o cálculo de risco de falta (no-show) do paciente?",
+    question: "Como funciona o cálculo de risco de falta do paciente?",
     answer:
-      "Calculado a partir do histórico real do próprio paciente — taxa geral de falta e, quando há amostra suficiente, o padrão específico do mesmo dia da semana e período. Paciente sem histórico nenhum recebe risco 'indeterminado', nunca 'baixo': ausência de dado não é a mesma coisa que baixo risco.",
+      "Pelo histórico real do próprio paciente: taxa geral de falta e, quando há amostra suficiente, o padrão do mesmo dia da semana e período. Paciente sem histórico recebe risco “indeterminado”, nunca “baixo”: falta de dado não é baixo risco.",
   },
   {
-    question: "Como habilito o relatório semanal e o alerta de risco por WhatsApp?",
+    question: "Como recebo o resumo semanal?",
     answer:
-      "Em Setup > Destinatários de Relatório, cadastre o WhatsApp de quem deve receber — cada destinatário escolhe quais tipos de relatório recebe (resumo semanal, alerta de risco de falta, ou ambos). Também dá para disparar os dois sob demanda, sem esperar o próximo ciclo automático.",
+      "No menu da sua foto › Destinatários de relatórios, cadastre o e-mail de quem deve receber e escolha os tipos (resumo semanal, alerta de risco de falta). O envio por WhatsApp ainda não está disponível. Dá para mandar o resumo na hora pelo botão Enviar relatório agora.",
   },
   {
     question: "O que acontece depois que abro um recurso de glosa?",
     answer:
-      "O recurso percorre aberto → protocolado → deferido/indeferido, com prazo calculado automaticamente a partir do contrato com a operadora. É possível gerar o documento do recurso em PDF já com os dados do caso preenchidos — só falta revisar a justificativa e protocolar pelo canal da operadora.",
+      "O recurso percorre aberto → protocolado → deferido/indeferido, com prazo calculado a partir do contrato com a operadora. Você gera o documento do recurso em PDF com os dados do caso preenchidos; falta só revisar a justificativa e protocolar pelo canal da operadora.",
   },
   {
-    question: "Minha planilha foi rejeitada — o que fazer?",
+    question: "Quem pode ver os Logs de auditoria e o que fica registrado?",
     answer:
-      "Se o cabeçalho das colunas não bate exatamente com o esperado, Importar dados sugere automaticamente a correspondência certa e lembra da decisão para os próximos envios — não precisa reformatar a planilha toda vez.",
-  },
-  {
-    question: "Como funciona a leitura automática de contrato por IA?",
-    answer:
-      "Você sobe o PDF do contrato com o convênio; a IA extrai uma sugestão de tabela de preços, mas nada é gravado até você revisar e confirmar na Tela de Conferência. Só depois da homologação a tabela passa a valer para o motor de glosa.",
-  },
-  {
-    question: "Quem pode ver o Log de Auditoria e o que fica registrado?",
-    answer:
-      "Owner, admin e auditor. Toda criação de paciente, faturamento, homologação de contrato, mudança de papel/status de usuário e cada etapa do recurso de glosa fica registrada — quem fez, o quê, quando. O log nunca guarda uma segunda cópia do dado sensível em si (CPF, valores, senha).",
+      "Proprietário(a), administrador(a) e auditor(a). Ficam registradas a criação de paciente e de faturamento, a aprovação de contrato, mudanças de papel de usuário e cada etapa do recurso de glosa — quem fez, o quê e quando. O log não guarda cópia de dado sensível (CPF, valores, senha).",
   },
   {
     question: "Um paciente pediu para remover seus dados — como faço?",
     answer:
-      "Um admin ou owner pode anonimizar o cadastro do paciente (substitui nome/CPF/data de nascimento por um placeholder). O histórico de agendamento e faturamento vinculado é preservado, porque a clínica é obrigada a mantê-lo por obrigação legal — a LGPD permite isso. A ação é irreversível.",
+      "Proprietário(a) ou administrador(a) pode anonimizar o cadastro do paciente (troca nome, CPF e data de nascimento por um código). O histórico de agenda e faturamento fica, porque a clínica é obrigada a guardá-lo — a LGPD permite. A ação não pode ser desfeita.",
   },
   {
     question: "Como registro um atendimento particular, sem convênio?",
     answer:
-      "Em Convênios e contratos, cadastre um plano com o tipo 'Particular (sem operadora)' — não precisa de operadora nenhuma vinculada. A partir daí, use esse plano normalmente ao criar o faturamento do atendimento: ele aparece separado do restante nos indicadores da Sala de Comando e do Painel. Se quiser, cadastre também uma tabela de preços para esse plano (Convênios e contratos > tabela de preços) para o sistema avisar quando um valor particular fugir do que você cobra normalmente — o mesmo mecanismo que já usa para glosa de convênio.",
+      "Em Convênios › Novo convênio, marque “É particular”. Use esse convênio no faturamento do atendimento: ele aparece separado nos indicadores. Se quiser, cadastre também uma tabela de preços para ele em Convênios › Contratos.",
   },
 ];
 
@@ -71,12 +90,36 @@ async function _createSupportRequest(payload: SupportRequestCreateRequest): Prom
   return apiClient.post<SupportRequest>("/api/v1/support-requests", payload);
 }
 
+function normalizeText(text: string): string {
+  return text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+
 function FaqAccordion() {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
+  const [search, setSearch] = useState("");
+  // UX2-26: busca nas perguntas e respostas (sem acento, sem maiúscula).
+  const terms = normalizeText(search).split(/\s+/).filter(Boolean);
+  const items = FAQ_ITEMS.filter((item) => {
+    const hay = normalizeText(`${item.question} ${item.answer}`);
+    return terms.every((t) => hay.includes(t));
+  });
   return (
     <div className="space-y-2">
-      {FAQ_ITEMS.map((item, i) => {
-        const isOpen = openIndex === i;
+      <TextField
+        id="faq-search"
+        label="Buscar na ajuda"
+        placeholder="Ex.: meta, agenda, convidar, contrato"
+        value={search}
+        onChange={(e) => {
+          setSearch(e.target.value);
+          setOpenIndex(null);
+        }}
+      />
+      {items.length === 0 && (
+        <p className="text-xs text-ink-muted">Nada encontrado. Envie sua pergunta na aba ao lado — a equipe responde por e-mail.</p>
+      )}
+      {items.map((item, i) => {
+        const isOpen = openIndex === i || (terms.length > 0 && items.length === 1);
         return (
           <div key={item.question} className="overflow-hidden rounded-md border border-border-subtle">
             <button
@@ -102,6 +145,7 @@ const SUPPORT_STATUS_LABELS: Record<SupportRequest["status"], string> = {
 };
 
 function AskQuestionPanel() {
+  const unsaved = useDirtyOnEdit("a mensagem para o suporte");
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
   const [subject, setSubject] = useState("");
@@ -130,7 +174,7 @@ function AskQuestionPanel() {
 
   return (
     <div>
-      <form onSubmit={handleSubmit}>
+      <form onChange={unsaved.onChange} onSubmitCapture={unsaved.onSubmit} onSubmit={handleSubmit}>
         <TextField label="Assunto" required value={subject} onChange={(e) => setSubject(e.target.value)} maxLength={200} />
         <TextareaField
           label="Sua dúvida"

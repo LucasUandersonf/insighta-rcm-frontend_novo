@@ -137,7 +137,7 @@ export function EmptyState({ message, icon, action }: EmptyStateProps) {
 function SkeletonBar({ className }: { className?: string }) {
   return (
     <div className={cn("relative overflow-hidden rounded-sm bg-canvas-raised", className)}>
-      <div className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-canvas-surface/60 to-transparent" />
+      <div className="absolute inset-0 -translate-x-full animate-shimmer bg-linear-to-r from-transparent via-canvas-surface/60 to-transparent" />
     </div>
   );
 }

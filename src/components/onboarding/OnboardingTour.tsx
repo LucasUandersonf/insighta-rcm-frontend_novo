@@ -127,7 +127,7 @@ export function OnboardingTour({ isOpen, steps, onFinish }: { isOpen: boolean; s
   const descriptionId = `onboarding-tour-description-${index}`;
 
   const content = (
-    <div className="pointer-events-none fixed inset-0 z-[70]">
+    <div className="pointer-events-none fixed inset-0 z-70">
       {rect && (
         <motion.div
           aria-hidden

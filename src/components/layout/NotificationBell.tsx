@@ -98,13 +98,13 @@ export function NotificationBell() {
         onClick={() => setIsOpen((v) => !v)}
         aria-label={unreadCount > 0 ? `Notificações — ${plural(unreadCount, "não lida", "não lidas")}` : "Notificações"}
         aria-expanded={isOpen}
-        className="relative flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[11px] border border-border-hairline text-ink transition-colors hover:bg-canvas-raised/70"
+        className="relative flex h-[38px] w-[38px] max-sm:h-11 max-sm:w-11 shrink-0 items-center justify-center rounded-[11px] border border-border-hairline text-ink transition-colors hover:bg-canvas-raised/70"
       >
         <Bell aria-hidden size={15} strokeWidth={2} />
         {unreadCount > 0 && (
           <span
             aria-hidden
-            className="absolute -right-[5px] -top-[5px] flex h-[18px] min-w-[18px] items-center justify-center rounded-full border-2 border-canvas bg-brand px-1 text-[10px] font-semibold leading-none text-white"
+            className="absolute right-[-5px] top-[-5px] flex h-[18px] min-w-[18px] items-center justify-center rounded-full border-2 border-canvas bg-brand px-1 text-[10px] font-semibold leading-none text-white"
           >
             {unreadCount > 9 ? "9+" : unreadCount}
           </span>

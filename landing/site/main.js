@@ -1,4 +1,4 @@
-// Insighta landing v4 — interações. A página funciona sem JS (conteúdo todo no HTML).
+// Insighta landing v8 — interações. A página funciona sem JS (conteúdo todo no HTML).
 (function () {
   var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -63,19 +63,42 @@
     }
   }
 
-  // Abas fixas: acompanham a rolagem e rolam até a história ao clicar
-  var tabs = document.querySelectorAll(".stabs button");
-  tabs.forEach(function (b) {
-    b.addEventListener("click", function () { document.getElementById(b.getAttribute("data-go")).scrollIntoView({ behavior: reduce ? "auto" : "smooth" }); });
-  });
-  if (io) {
-    var storyObs = new IntersectionObserver(function (es) {
-      es.forEach(function (e) {
-        if (!e.isIntersecting) return;
-        tabs.forEach(function (b) { b.classList.toggle("is-on", b.getAttribute("data-go") === e.target.id); });
+  // Ato 6: abas por área. Sem JS, todos os painéis ficam visíveis.
+  var tabBtns = [].slice.call(document.querySelectorAll('.tabs [role="tab"]'));
+  if (tabBtns.length) {
+    document.documentElement.classList.add("js");
+    var openTab = function (id, focus) {
+      tabBtns.forEach(function (b) {
+        var on = b.getAttribute("aria-controls") === id;
+        b.classList.toggle("is-on", on);
+        b.setAttribute("aria-selected", String(on));
+        b.tabIndex = on ? 0 : -1;
+        document.getElementById(b.getAttribute("aria-controls")).hidden = !on;
+        if (on && focus) b.focus();
       });
-    }, { rootMargin: "-45% 0px -45% 0px" });
-    document.querySelectorAll(".story").forEach(function (s) { storyObs.observe(s); });
+    };
+    tabBtns.forEach(function (b, k) {
+      b.addEventListener("click", function () { openTab(b.getAttribute("aria-controls")); });
+      b.addEventListener("keydown", function (e) {
+        var d = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
+        if (!d) return;
+        e.preventDefault();
+        openTab(tabBtns[(k + d + tabBtns.length) % tabBtns.length].getAttribute("aria-controls"), true);
+      });
+    });
+    // Link para algo dentro de um painel (rodapé, #agenda, #p-glosa…) abre o painel antes de rolar.
+    var reveal = function (hash) {
+      var el = hash && hash.length > 1 && document.getElementById(hash.slice(1));
+      var panel = el && el.closest(".tpanel");
+      if (panel && panel.hidden) openTab(panel.id);
+    };
+    document.addEventListener("click", function (e) {
+      var a = e.target.closest('a[href^="#"]');
+      if (a) reveal(a.getAttribute("href"));
+    });
+    openTab(tabBtns[0].getAttribute("aria-controls"));
+    reveal(location.hash);
+    if (location.hash) { var t = document.getElementById(location.hash.slice(1)); if (t) t.scrollIntoView(); }
   }
 
   // Sanfona da equipe de IA: abre ao passar o mouse/clicar; gira sozinha até o usuário interagir
@@ -89,6 +112,27 @@
       it.addEventListener("click", function () { touched = true; open(k); });
     });
     if (!reduce) setInterval(function () { if (!touched) open((idx + 1) % items.length); }, 4200);
+  }
+
+  // Calculadora de perda: conta feita no navegador, nada é enviado.
+  var calcForm = document.querySelector("[data-calc]");
+  if (calcForm) {
+    var brl = function (v) { return "R$ " + Math.round(v).toLocaleString("pt-BR"); };
+    var num = function (name) { var v = parseFloat(calcForm.elements[name].value); return isFinite(v) && v > 0 ? v : 0; };
+    var outs = {};
+    document.querySelectorAll("[data-out]").forEach(function (el) { outs[el.getAttribute("data-out")] = el; });
+    var recalc = function () {
+      var fat = num("fat"), glosaPct = Math.min(num("glosa"), 50) / 100, cons = num("cons"), faltaPct = Math.min(num("falta"), 60) / 100, ticket = num("ticket");
+      var glosa = fat * glosaPct * 0.5, repasse = fat * 0.015, recurso = fat * glosaPct * 0.1, faltas = cons * faltaPct * 0.2 * ticket;
+      var total = glosa + repasse + recurso + faltas, dez = total * 0.1;
+      outs.glosa.textContent = brl(glosa); outs.repasse.textContent = brl(repasse); outs.recurso.textContent = brl(recurso);
+      outs.faltas.textContent = brl(faltas); outs.total.textContent = brl(total); outs.dez.textContent = brl(dez);
+      if (outs.tri) outs.tri.textContent = brl(total * 3);
+      outs.mult.textContent = (dez / 800).toLocaleString("pt-BR", { maximumFractionDigits: 1, minimumFractionDigits: 1 }) + "×";
+    };
+    calcForm.addEventListener("input", recalc);
+    calcForm.addEventListener("submit", function (e) { e.preventDefault(); });
+    recalc();
   }
 
   // Menu no celular
@@ -145,6 +189,22 @@
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (d) {
         if (!d) return;
+        // UX2-03/14: sem cobrança automática ligada, os textos de pagamento
+        // dão lugar ao modelo real (acesso liberado no cadastro).
+        if (d.billing_required === false) {
+          document.querySelectorAll("[data-billing-free]").forEach(function (el) {
+            el.textContent = el.getAttribute("data-billing-free");
+          });
+          document.querySelectorAll("[data-billing-free-html]").forEach(function (el) {
+            el.innerHTML = el.getAttribute("data-billing-free-html");
+          });
+        }
+        // Âncora: preço regular depois das vagas Founders, quando definido.
+        var regEl = document.querySelector("[data-regular-price]");
+        if (regEl && typeof d.regular_price_cents === "number" && d.regular_price_cents > 0) {
+          regEl.textContent = " · depois das vagas: R$ " + (d.regular_price_cents / 100).toLocaleString("pt-BR") + "/mês";
+          regEl.hidden = false;
+        }
         var totalEl = document.querySelector("[data-founders-total]");
         remainingEl.textContent = String(d.slots_remaining);
         if (totalEl) totalEl.textContent = String(d.slots_total);
@@ -152,6 +212,32 @@
           var tag = document.querySelector("[data-founders-tag]");
           if (tag) tag.textContent = "Vagas Founders esgotadas";
         }
+      })
+      .catch(function () {});
+  })();
+
+  // UX3-08: contato sem destino configurado (CONTACT_URL vazio) não vira
+  // link para o cadastro; o botão some.
+  document.querySelectorAll("[data-contact]").forEach(function (el) {
+    var href = (el.getAttribute("href") || "").trim();
+    if (!href || href.indexOf("__") === 0 || href === "#") el.hidden = true;
+  });
+  // Sem contato configurado, o segundo botão do topo vira "Ver tudo o que ele faz".
+  var heroDemo = document.querySelector('.hero [data-contact]');
+  var heroAlt = document.querySelector('[data-contact-alt]');
+  if (heroDemo && heroAlt && heroDemo.hidden) heroAlt.hidden = false;
+
+  // UX3-08: o que depende do e-mail começa escondido e só aparece quando a
+  // API confirma que o e-mail está ligado (sem resposta, não promete).
+  (function () {
+    var meta = document.querySelector('meta[name="insighta-api"]');
+    var api = meta && meta.getAttribute("content");
+    var items = document.querySelectorAll("[data-needs-email]");
+    if (!api || api.indexOf("__") === 0 || !items.length || !window.fetch) return;
+    fetch(api.replace(/\/$/, "") + "/api/v1/auth/capabilities", { credentials: "omit" })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        if (d && d.email_enabled === true) items.forEach(function (el) { el.hidden = false; });
       })
       .catch(function () {});
   })();

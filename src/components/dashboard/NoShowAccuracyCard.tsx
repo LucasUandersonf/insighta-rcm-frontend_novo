@@ -3,6 +3,7 @@ import { BentoCard } from "@/components/ui/BentoGrid";
 import { apiClient } from "@/lib/api-client";
 import { cn } from "@/lib/cn";
 import type { NoShowAccuracy } from "@/lib/types";
+import { formatDateBR } from "@/lib/dates";
 
 const LEVEL_LABELS: Record<string, string> = { baixo: "Risco baixo", medio: "Risco médio", alto: "Risco alto" };
 const LEVEL_BAR: Record<string, string> = { baixo: "bg-revenue", medio: "bg-pending", alto: "bg-denied" };
@@ -12,7 +13,7 @@ function pct(value: number, digits = 0): string {
 }
 
 function shortDate(iso: string): string {
-  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit" }).format(new Date(iso));
+  return formatDateBR(iso, { day: "2-digit", month: "2-digit" });
 }
 
 /** Uma linha dizendo de onde vêm os cortes de risco em vigor. */

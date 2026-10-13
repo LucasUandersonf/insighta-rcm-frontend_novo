@@ -28,7 +28,12 @@ export function ExecutiveNarrativeBanner({ topPriorityTitle }: { topPriorityTitl
 
   const recentlyResolved = data?.recently_resolved ?? [];
   const hasHealth = health?.score !== null && health?.score !== undefined;
-  if (!data?.narrative && recentlyResolved.length === 0 && !hasHealth) return null;
+  // UX2-01: sem 2 das 3 áreas com dados não há nota — a tela diz o que falta
+  // em vez de exibir um 100 que só mede a glosa.
+  const missing = Array.isArray(health?.missing_components) ? health.missing_components : [];
+  const components = Array.isArray(health?.components) ? health.components : [];
+  const healthPending = !!health && !hasHealth && (components.length > 0 || missing.length > 0);
+  if (!data?.narrative && recentlyResolved.length === 0 && !hasHealth && !healthPending) return null;
 
   const updatedAt = data?.generated_at
     ? new Date(data.generated_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
@@ -76,8 +81,25 @@ export function ExecutiveNarrativeBanner({ topPriorityTitle }: { topPriorityTitl
             {health!.trend
               ? `${health!.trend.delta >= 0 ? "Subiu" : "Caiu"} ${Math.abs(Math.round(health!.trend.delta))} pontos desde ${new Date(health!.trend.reference_month).toLocaleDateString("pt-BR", { month: "long" })}.`
               : "Nota combinando glosa, faltas e recursos de glosa."}
-            {priorityTitle && ` Resolver “${priorityTitle}” é o que mais ajuda a subir a nota.`}
+            {missing.length > 0 &&
+              ` Nota parcial: ${3 - missing.length} de 3 áreas (fora: ${missing.map((m) => m.label.toLowerCase()).join(", ")}).`}
+            {health!.capped_by_alert
+              ? ` Limitada a ${Math.round(health!.score!)} enquanto o alerta crítico “${health!.capped_by_alert}” estiver aberto.`
+              : priorityTitle && ` Ainda há alerta aberto: “${priorityTitle}”.`}
           </p>
+        </div>
+      )}
+      {healthPending && (
+        <div className="flex flex-col gap-2 lg:border-l lg:border-border-hairline lg:pl-8" data-testid="health-pending">
+          <span className="text-xs font-medium uppercase tracking-[0.06em] text-ink-faint">Saúde do faturamento</span>
+          <p className="text-sm font-medium text-ink">A nota aparece quando houver dados de pelo menos 2 das 3 áreas.</p>
+          <ul className="space-y-1 text-[13px] leading-normal text-ink-muted">
+            {missing.map((m) => (
+              <li key={m.key}>
+                Falta {m.label.toLowerCase()}: {m.reason}.
+              </li>
+            ))}
+          </ul>
         </div>
       )}
     </section>

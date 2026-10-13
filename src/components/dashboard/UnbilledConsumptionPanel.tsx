@@ -5,13 +5,14 @@ import { LoadingState, ErrorState, EmptyState } from "@/components/ui/Panel";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import type { UnbilledConsumption } from "@/lib/types";
+import { formatDateBR } from "@/lib/dates";
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
 }
 
 function formatDate(iso: string): string {
-  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit" }).format(new Date(iso));
+  return formatDateBR(iso, { day: "2-digit", month: "2-digit" });
 }
 
 /**

@@ -5,11 +5,12 @@ import { LoadingState, ErrorState, EmptyState } from "@/components/ui/Panel";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import type { EarlyChurnRisk } from "@/lib/types";
+import { formatDateBR } from "@/lib/dates";
 
 /**
  * Raio-X da Receita, frente "Prevendo movimentos" — a lista real por
  * trás do botão "Ver quem está sumindo" do insight de churn antecipado
- * (ver DECISÃO em smart_insights_engine.py::_early_churn_insight).
+ * (ver DECISÃO em app/services/insights (backend)::_early_churn_insight).
  * Diferente de InactivePatientsPanel (piso fixo de 1 ano, igual pra
  * todo mundo), aqui o critério é o PRÓPRIO ritmo de cada paciente —
  * "já está bem além do que costuma esperar entre consultas", mesmo sem
@@ -19,7 +20,7 @@ import type { EarlyChurnRisk } from "@/lib/types";
  */
 
 function formatDate(iso: string): string {
-  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(iso));
+  return formatDateBR(iso, { day: "2-digit", month: "short", year: "numeric" });
 }
 
 function formatRhythm(item: { avg_interval_days: number; days_since_last: number }): string {

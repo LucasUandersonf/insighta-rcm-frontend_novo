@@ -73,7 +73,7 @@ export function Pagination({ total, limit, offset, onOffsetChange, label = "Pagi
             onClick={() => goToPage(page)}
             aria-current={page === currentPage ? "page" : undefined}
             className={cn(
-              "min-w-[1.75rem] rounded-md border px-2 py-1 text-2xs transition-colors",
+              "min-w-7 rounded-md border px-2 py-1 text-2xs transition-colors",
               page === currentPage
                 ? "border-accent/40 bg-accent-bg text-accent"
                 : "border-border-subtle text-ink-muted hover:border-accent/40 hover:text-ink"

@@ -14,6 +14,7 @@ import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { cn } from "@/lib/cn";
 import type { AgendaFocus, InsightCategory, InsightSeverity, PriorityQueue } from "@/lib/types";
+import { NO_DATA_TEXT, useNoBillingData } from "@/lib/useDataReadiness";
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
@@ -67,6 +68,7 @@ export function PriorityQueuePanel({
   onNavigateTab?: (tabId: string) => void;
   onFocusAgenda?: (focus: AgendaFocus) => void;
 }) {
+  const noBilling = useNoBillingData();
   const { canManage, assigningItem, setAssigningItem, actionedKeys, setActionedKeys, resolveMutation } = useInsightWorkflow();
 
   const { data, isLoading, error, refetch, dataUpdatedAt } = useQuery({
@@ -86,7 +88,7 @@ export function PriorityQueuePanel({
       {!isLoading && !error && data && data.items.length === 0 && (
         <EmptyState
           icon={<CheckCircle2 size={17} strokeWidth={1.5} />}
-          message="Nenhuma ação prioritária agora — os alertas abertos estão sob controle nesta janela."
+          message={noBilling ? NO_DATA_TEXT : "Nenhuma ação prioritária agora — os alertas abertos estão sob controle nesta janela."}
         />
       )}
       {!isLoading && data && data.items.length > 0 && (
@@ -104,9 +106,9 @@ export function PriorityQueuePanel({
                     {item.source === "raiox" && (
                       <span
                         className="rounded-full border border-border-subtle px-2 py-0.5 text-2xs text-ink-faint"
-                        title="Extraído de um painel do Raio-X da Receita, não do feed de insights"
+                        title="Veio de um painel de receita, não da lista de alertas"
                       >
-                        Raio-X
+                        Painel de receita
                       </span>
                     )}
                     <ActionedBadge actioned={actioned} />

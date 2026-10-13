@@ -21,7 +21,7 @@ import type { NegotiationArgument, PayerOverview, PayerOverviewRow, PayerVerdict
 const brl = (value: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(value);
 
 const VERDICT_STYLE: Record<PayerVerdict["kind"], { box: string; label: string }> = {
-  best: { box: "border-revenue/20 bg-revenue/[0.06]", label: "text-revenue" },
+  best: { box: "border-revenue/20 bg-revenue/6", label: "text-revenue" },
   denials: { box: "border-denied/25 bg-denied/[0.07]", label: "text-denied" },
   slowest: { box: "border-pending/25 bg-pending/[0.07]", label: "text-pending" },
 };
