@@ -1408,3 +1408,37 @@ export interface ApiErrorBody {
   /** 409 que se resolve confirmando (rodada 5): reenviar com este campo = true. */
   confirm_field?: string;
 }
+
+// GET /analytics/result-statement (Extrato de Resultado): quanto o
+// Insighta rendeu para a clínica no mês. Só valores medidos.
+export interface ResultComponent {
+  key: "saved_before_submission" | "appeals_won" | "realized_outcomes";
+  label: string;
+  value: number;
+  count: number;
+  how: string;
+}
+
+export interface ResultItem {
+  kind: "appeal" | "outcome" | "payer";
+  title: string;
+  detail: string | null;
+  value: number;
+  at: string | null;
+}
+
+export interface ResultStatement {
+  month: string; // AAAA-MM
+  period_start: string;
+  period_end: string;
+  is_partial: boolean;
+  total_value: number;
+  previous_month_total: number;
+  components: ResultComponent[];
+  items: ResultItem[];
+  plan_price: number | null;
+  plan_price_source: "assinatura" | "referencia" | null;
+  return_multiple: number | null;
+  cumulative_total: number;
+  tracking_since: string | null;
+}

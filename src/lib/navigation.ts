@@ -4,6 +4,7 @@ import {
   Clock,
   CalendarCheck,
   Gauge,
+  TrendingUp,
   Home,
   Inbox,
   ListOrdered,
@@ -69,6 +70,8 @@ const ADMINS: UserRole[] = ["owner", "admin"];
 export const NAV_ITEMS: NavItem[] = [
   { to: "/", label: "Início", icon: Home, placement: "primary" },
   { to: "/decisao", label: "Sala de Comando", icon: Gauge, roles: LEADERSHIP, placement: "primary" },
+  // Extrato de Resultado: quanto o Insighta rendeu no mês (prova de valor).
+  { to: "/resultado", label: "Resultado", icon: TrendingUp, roles: LEADERSHIP, placement: "primary" },
   // Equipe (Redesign 2026): o gestor acompanha o que atribuiu aos
   // coordenadores. "Meus insights" saiu da barra — virou "Minhas
   // demandas", a Home do coordenador (ver COORDINATOR_NAV abaixo).

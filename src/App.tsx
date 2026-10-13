@@ -44,6 +44,7 @@ const SatisfactionRatingPage = lazy(() =>
 );
 const BillingRiskQueuePage = lazy(() => import("@/pages/BillingRiskQueuePage").then((m) => ({ default: m.BillingRiskQueuePage })));
 const AgendaRiscoPage = lazy(() => import("@/pages/AgendaRiscoPage").then((m) => ({ default: m.AgendaRiscoPage })));
+const ResultStatementPage = lazy(() => import("@/pages/ResultStatementPage").then((m) => ({ default: m.ResultStatementPage })));
 const PatientFichaPage = lazy(() => import("@/pages/PatientFichaPage").then((m) => ({ default: m.PatientFichaPage })));
 const ExecutiveOverviewPage = lazy(() => import("@/pages/ExecutiveOverviewPage").then((m) => ({ default: m.ExecutiveOverviewPage })));
 const OrganizationSummaryPage = lazy(() => import("@/pages/OrganizationSummaryPage").then((m) => ({ default: m.OrganizationSummaryPage })));
@@ -209,6 +210,8 @@ function AppRoutes() {
           {/* Roadmap "Rumo à Nota 9" (Fase 2) — mesmo RBAC de /decisao
               (o endpoint que alimenta esta tela usa o mesmo _CAN_VIEW). */}
           <Route path="/agenda-risco" element={<AgendaRiscoPage />} />
+          {/* Extrato de Resultado: mesmo RBAC de result_statement.py (_CAN_VIEW). */}
+          <Route path="/resultado" element={<ResultStatementPage />} />
           <Route path="/convenios" element={<ContractsPage />} />
           <Route path="/recursos-de-glosa" element={<DenialAppealsPage />} />
           {/* Mesmo RBAC do backend em lotes.py/_CAN_READ (owner/admin/

@@ -35,6 +35,7 @@ import type {
   PayerOverview,
   PeriodKpi,
   RecoveredValue,
+  ResultStatement,
   SmartInsight,
   Tenant,
   TodayAgenda,
@@ -423,10 +424,34 @@ function Panorama({ rows, windowLabel }: { rows: PanoramaRow[]; windowLabel: str
           <span className="text-[13px] leading-[1.45] text-ink-soft">{row.read}</span>
         </div>
       ))}
+      <MonthResultRow />
       <Link to="/decisao" className="mt-3 text-[13px] font-medium text-accent-muted hover:underline">
         Todos os números na Sala de Comando →
       </Link>
     </aside>
+  );
+}
+
+/** Extrato de Resultado do mês corrente, em uma linha (some sem permissão ou sem dado). */
+function MonthResultRow() {
+  const { data } = useQuery({
+    queryKey: ["analytics", "result-statement", "current"],
+    queryFn: () => apiClient.get<ResultStatement>("/api/v1/analytics/result-statement"),
+    retry: false,
+  });
+  if (!data) return null;
+  return (
+    <div className="flex flex-col gap-1.5 border-b border-border-hairline py-3.5">
+      <div className="flex items-baseline gap-2.5">
+        <span className="text-[13px] text-ink-muted">Gerado pelo Insighta no mês</span>
+        <span className="tabular ml-auto text-xl font-semibold tracking-[-0.01em] text-revenue">
+          {data.total_value.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 })}
+        </span>
+      </div>
+      <Link to="/resultado" className="text-[13px] leading-[1.45] text-accent-muted hover:underline">
+        {data.return_multiple !== null ? `${data.return_multiple.toLocaleString("pt-BR")}× o valor do plano · ` : ""}Ver o Extrato de Resultado →
+      </Link>
+    </div>
   );
 }
 

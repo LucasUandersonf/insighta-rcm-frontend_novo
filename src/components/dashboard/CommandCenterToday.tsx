@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
 import { ArrowDownRight, ArrowUpRight, Check, Minus } from "lucide-react";
 import { HeroInsight, SecondaryInsightCard, formatCurrency } from "@/components/dashboard/SmartInsightsFeed";
 import { AssignModal, insightItemKey, useInsightWorkflow } from "@/components/dashboard/InsightWorkflowActions";
@@ -409,6 +410,9 @@ export function CommandCenterToday({
               <div className="mt-auto flex flex-col gap-1 rounded-[14px] border border-revenue/20 bg-revenue/[0.07] p-4">
                 <span className="text-xs text-ink-muted">Recuperado com o Insighta este mês</span>
                 <span className="tabular text-[26px] font-semibold tracking-[-0.02em] text-revenue">{formatCurrency(recovered.total)}</span>
+                <Link to="/resultado" className="text-xs font-medium text-accent-muted hover:underline">
+                  Ver o Extrato de Resultado do mês →
+                </Link>
               </div>
             </section>
           )}
