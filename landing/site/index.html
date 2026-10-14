@@ -46,7 +46,19 @@
    "offers": [
     {
      "@type": "Offer",
-     "name": "Founders",
+     "name": "Basic",
+     "price": "490",
+     "priceCurrency": "BRL"
+    },
+    {
+     "@type": "Offer",
+     "name": "Pro",
+     "price": "1290",
+     "priceCurrency": "BRL"
+    },
+    {
+     "@type": "Offer",
+     "name": "Pro Founders",
      "price": "800",
      "priceCurrency": "BRL"
     }
@@ -84,7 +96,7 @@
      "name": "Vocês são novos. Por que confiar?",
      "acceptedAnswer": {
       "@type": "Answer",
-      "text": "Por isso existe a oferta de fundador: preço travado por 24 meses, todas as funcionalidades novas incluídas e cancelamento sem multa. Cada número mostra a fonte e a regra de cálculo, e o Extrato mede o resultado todo mês."
+      "text": "Por isso existe o Founders Club: 7 vagas com o Pro por R$ 800/mês, travado enquanto você for cliente, só com o IPCA, e garantia de 90 dias pelo Extrato de Resultado. Cada número mostra a fonte e a regra de cálculo, e o cancelamento é sem multa."
      }
     },
     {
@@ -145,10 +157,26 @@
     },
     {
      "@type": "Question",
-     "name": "O que acontece depois dos 24 meses de Founders?",
+     "name": "Qual a diferença entre o Basic e o Pro?",
      "acceptedAnswer": {
       "@type": "Answer",
-      "text": "Você decide. Continua com o Insighta pelo preço da tabela vigente, avisado por e-mail com 30 dias de antecedência, ou cancela sem multa. Nos 24 meses, todas as funcionalidades novas entram no seu plano sem custo extra."
+      "text": "O Basic detecta e mostra o resultado: Sala de Comando, 20 análises essenciais, as 6 conferências antes do envio, o pagamento conferido contra o contrato, o Extrato e o relatório por e-mail, para até 1.500 atendimentos por mês e 3 usuários. O Pro prevê e age: as 47 análises, risco de falta por paciente, Equipe de IA, modelo de glosa, margem e estoque, WhatsApp, API e usuários ilimitados, para até 8.000 atendimentos por mês."
+     }
+    },
+    {
+     "@type": "Question",
+     "name": "Como funciona o teste de 14 dias?",
+     "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "Você cria a conta e usa o Pro completo por 14 dias, sem cartão. Antes do fim, escolhe o plano. Se não escolher, o sistema fica em modo leitura: você continua vendo e exportando seus dados, e volta a importar quando assinar."
+     }
+    },
+    {
+     "@type": "Question",
+     "name": "Como funciona a garantia de 90 dias do Founders?",
+     "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "Se o Extrato de Resultado acumulado nos primeiros 90 dias não somar pelo menos três mensalidades (R$ 2.400) em valor medido, você cancela e recebe de volta o último mês pago. Em troca da vaga, a clínica importa os dados em 14 dias e participa de uma conversa a cada 15 dias nos primeiros 90 dias."
      }
     },
     {
@@ -206,7 +234,7 @@
           <a href="__CONTACT_URL__" class="btn btn--ghost btn--lg" data-cta="hero-demo" data-contact>Ver uma demonstração de 20 minutos</a>
           <a href="#recursos" class="btn btn--ghost btn--lg" data-contact-alt hidden>Ver tudo o que ele faz</a>
         </div>
-        <p class="hero__trust"><span data-billing-free="✓ Acesso liberado no cadastro">✓ Pix, boleto ou cartão</span><span>✓ Sem trocar de sistema</span><span>✓ Extrato de Resultado todo mês</span><span>✓ Dados protegidos pela LGPD</span></p>
+        <p class="hero__trust"><span>✓ 14 dias grátis do Pro, sem cartão</span><span>✓ Sem trocar de sistema</span><span>✓ Extrato de Resultado todo mês</span><span>✓ Dados protegidos pela LGPD</span></p>
       </div>
 
       <!-- palco: 4 etapas que se revezam (Hostinger: Launch → Grow) -->
@@ -871,34 +899,47 @@
       </div>
     </section>
 
-    <!-- ================= PLANOS: oferta Founders ================= -->
+    <!-- ================= PLANOS: Basic, Pro, Founders Club e Redes ================= -->
     <section class="section plans-s" id="planos">
       <div class="wrap">
         <div class="head reveal">
-          <h2>Seja uma das 20 clínicas <span class="grad">fundadoras do Insighta.</span></h2>
-          <p class="plans-new">Somos novos, e é por isso que esta oferta existe: você entra antes, paga menos, leva tudo o que lançarmos e mede o resultado todo mês. O risco de testar é o tempo de importar uma planilha.</p>
-          <p data-billing-free="R$ 800/mês travados por 24 meses. Todas as funcionalidades novas lançadas nesse período entram no seu plano, sem custo extra. Depois dos 24 meses, você decide se continua. Nesta fase o acesso é liberado logo depois do cadastro, sem cobrança.">R$ 800/mês travados por 24 meses. Todas as funcionalidades novas lançadas nesse período entram no seu plano, sem custo extra. Depois dos 24 meses, você decide: continua com o Insighta ou cancela, sem multa.</p>
+          <h2>Um plano para cada tamanho de clínica. <span class="grad">E 7 vagas de fundador.</span></h2>
+          <p class="plans-new">Teste o Pro por 14 dias com os dados da sua clínica, sem cartão. Depois, escolha o plano. O Extrato de Resultado mostra todo mês se está valendo.</p>
         </div>
         <div class="why reveal">
-          <div><b>Preço de fundador</b><p>R$ 800/mês congelados por 2 anos, sem reajuste.</p></div>
-          <div><b>Tudo o que vier, incluído</b><p>Cada módulo e funcionalidade nova entra no seu plano sem custo extra.</p></div>
-          <div><b>Sem amarra</b><p>Cancele quando quiser, sem multa. Se o Extrato não mostrar que vale a pena, você sai.</p></div>
+          <div><b>Founders: preço travado</b><p>O Pro por R$ 800/mês enquanto você for cliente, só com o reajuste anual do IPCA.</p></div>
+          <div><b>Garantia de 90 dias</b><p>Se o Extrato não mostrar 3 mensalidades em valor medido, você sai e recebe o último mês de volta.</p></div>
+          <div><b>Sem amarra</b><p>Cancele quando quiser, sem multa. No anual, 2 meses grátis.</p></div>
         </div>
         <ul class="perks reveal"><li>✓ Pix, boleto ou cartão</li><li>✓ Nota fiscal todo mês</li><li>✓ Sem custo de implantação</li></ul>
-        <div class="plans">
-          <article class="plan plan--pop reveal">
-            <span class="plan__tag" data-founders-tag>Restam <b data-founders-remaining>20</b> de <b data-founders-total>20</b> vagas</span>
-            <h3>Founders</h3><p class="plan__d">Para as 20 primeiras clínicas que entrarem.</p>
-            <p class="plan__price">R$ 800<span>/mês</span></p>
-            <p class="plan__lock">Travado por 24 meses<span data-regular-price hidden></span></p>
-            <a href="__APP_URL__/signup" class="btn btn--primary btn--block" data-cta="plano-founders">Garantir minha vaga</a>
-            <ul class="ticks"><li>Preço congelado por 2 anos, sem reajuste</li><li><b>Todas as funcionalidades novas incluídas</b></li><li>Todos os módulos: agenda, pacientes, financeiro, estoque e equipe</li><li>47 análises, Sala de Comando e Equipe de IA</li><li>Relatório semanal no WhatsApp</li><li>Usuários ilimitados</li><li>Cancele quando quiser, sem multa</li></ul>
+        <div class="plans plans--4">
+          <article class="plan reveal">
+            <h3>Basic</h3><p class="plan__d">Para clínica pequena, até 1.500 atendimentos por mês.</p>
+            <p class="plan__price">R$ 490<span>/mês</span></p>
+            <p class="plan__lock">ou R$ 408/mês no anual</p>
+            <a href="__APP_URL__/signup" class="btn btn--outline btn--block" data-cta="plano-basic">Testar 14 dias grátis</a>
+            <ul class="ticks"><li>Sala de Comando com até 5 prioridades por dia</li><li>20 análises essenciais de agenda, faturamento e glosa</li><li>6 conferências antes do envio</li><li>Pagamento conferido contra o contrato</li><li>Extrato de Resultado e Health Score</li><li>Relatório semanal por e-mail</li><li>3 usuários e 12 meses de histórico</li></ul>
           </article>
-          <article class="plan reveal" style="--d:.08s">
-            <h3>Redes e grupos</h3><p class="plan__d">Para mais de uma unidade.</p>
+          <article class="plan reveal" style="--d:.06s">
+            <h3>Pro</h3><p class="plan__d">Para clínica média, até 8.000 atendimentos por mês.</p>
+            <p class="plan__price">R$ 1.290<span>/mês</span></p>
+            <p class="plan__lock">ou R$ 1.075/mês no anual</p>
+            <a href="__APP_URL__/signup" class="btn btn--primary btn--block" data-cta="plano-pro">Testar o Pro 14 dias</a>
+            <ul class="ticks"><li>Tudo do Basic, com as 47 análises</li><li>Risco de falta por paciente e lista de espera</li><li>Equipe de IA: jornal, perguntas, contrato e recurso</li><li>Modelo preditivo de glosa</li><li>Margem, estoque, pacientes e marketing</li><li>Relatório no WhatsApp e integração por API</li><li>Usuários ilimitados e 36 meses de histórico</li></ul>
+          </article>
+          <article class="plan plan--pop reveal" style="--d:.12s">
+            <span class="plan__tag" data-founders-tag>Restam <b data-founders-remaining>7</b> de <b data-founders-total>7</b> vagas</span>
+            <h3>Pro Founders</h3><p class="plan__d">O Pro completo para as 7 clínicas fundadoras.</p>
+            <p class="plan__price">R$ 800<span>/mês</span></p>
+            <p class="plan__lock"><s>R$ 1.290</s> · travado enquanto for cliente</p>
+            <a href="__APP_URL__/signup" class="btn btn--white btn--block" data-cta="plano-founders">Garantir minha vaga</a>
+            <ul class="ticks"><li><b>Tudo do Pro</b>, com as funcionalidades novas incluídas</li><li>Preço travado, só com o reajuste anual do IPCA</li><li>Garantia de 90 dias pelo Extrato de Resultado</li><li>Onboarding guiado e grupo direto com o fundador</li><li>Voto no roadmap e acesso antecipado</li><li>Em troca: estudo de caso e uma conversa a cada 15 dias por 90 dias</li></ul>
+          </article>
+          <article class="plan reveal" style="--d:.18s">
+            <h3>Redes</h3><p class="plan__d">Para grupos com mais de uma unidade.</p>
             <p class="plan__price plan__price--sm">Sob consulta</p>
             <a href="__CONTACT_URL__" class="btn btn--outline btn--block" data-cta="plano-rede" data-contact>Falar com o time</a>
-            <ul class="ticks"><li>Tudo do Founders</li><li>Consolidado de várias unidades</li><li>Comparativo anônimo com a rede</li><li>Integração por API em todas as unidades</li></ul>
+            <ul class="ticks"><li>Tudo do Pro em cada unidade</li><li>Consolidado de todas as unidades</li><li>Comparativo anônimo com a rede</li><li>Integração por API em todas as unidades</li></ul>
           </article>
         </div>
       </div>
@@ -909,7 +950,7 @@
       <div class="wrap diag__in reveal">
         <div>
           <h2>Comece hoje, com uma planilha só.</h2>
-          <ol class="diag__steps"><li><b>Crie a conta</b> com o CNPJ da clínica.</li><li data-billing-free-html="&lt;b&gt;Acesso liberado&lt;/b&gt; logo depois do cadastro, sem cobrança nesta fase."><b>Pague por Pix, boleto ou cartão</b> na página segura do Asaas. Pix e cartão liberam em minutos.</li><li><b>Importe o faturamento</b> que o seu sistema já exporta, em CSV ou Excel. O Insighta reconhece as colunas e mostra o que ajustar. O primeiro diagnóstico sai em minutos.</li><li><b>Depois, o seu ERP integra sozinho</b> pela nossa API documentada, e agenda, contratos e estoque entram quando você quiser.</li></ol>
+          <ol class="diag__steps"><li><b>Crie a conta</b> com o CNPJ da clínica.</li><li><b>Use o Pro por 14 dias</b>, sem cartão. Depois, escolha o Basic, o Pro ou uma vaga Founders e pague por Pix, boleto ou cartão.</li><li><b>Importe o faturamento</b> que o seu sistema já exporta, em CSV ou Excel. O Insighta reconhece as colunas e mostra o que ajustar. O primeiro diagnóstico sai em minutos.</li><li><b>Depois, o seu ERP integra sozinho</b> pela nossa API documentada, e agenda, contratos e estoque entram quando você quiser.</li></ol>
         </div>
         <div class="diag__cta">
           <a href="__APP_URL__/signup" class="btn btn--primary btn--lg btn--block" data-cta="diagnostico">Ver o diagnóstico da minha clínica</a>
@@ -927,7 +968,7 @@
           <details open><summary>O Insighta é só para faturamento?</summary><p>Não. O Insighta é a inteligência da clínica inteira: agenda e faltas, pacientes e satisfação, financeiro e convênios, estoque, prontuário e equipe. São 47 análises em cinco áreas.</p></details>
           <details><summary>Já tenho ERP com relatórios e um BI. Por que preciso do Insighta?</summary><p>O Insighta usa os dados que você já tem. A diferença é que o relatório e o BI mostram o passado e esperam alguém interpretar. O Insighta interpreta: aponta o que mudou e por quê, mostra no máximo 5 prioridades por dia em ordem de impacto, manda cada uma ao coordenador do setor e confere todo dia se foi resolvido.</p></details>
           <details><summary>Como sei se está valendo o que eu pago?</summary><p>Todo dia 1 você recebe o Extrato de Resultado: quanto foi salvo antes do envio, quanto foi recuperado em recurso e quanto voltou com os problemas resolvidos, comparado com o valor do plano. Só entra o que foi medido. Se não valer, você cancela sem multa.</p></details>
-          <details><summary>Vocês são novos. Por que confiar?</summary><p>Por isso existe a oferta de fundador: preço travado por 24 meses, todas as funcionalidades novas incluídas e cancelamento sem multa. Cada número mostra a fonte e a regra de cálculo, e o Extrato mede o resultado todo mês.</p></details>
+          <details><summary>Vocês são novos. Por que confiar?</summary><p>Por isso existe o Founders Club: 7 vagas com o Pro por R$ 800/mês, travado enquanto você for cliente, só com o IPCA, e garantia de 90 dias pelo Extrato de Resultado. Cada número mostra a fonte e a regra de cálculo, e o cancelamento é sem multa.</p></details>
           <details><summary>Como acompanho se a equipe resolveu o que foi combinado?</summary><p>Cada insight pode virar uma demanda para o coordenador do setor, com tela própria para cada um. Todo dia, às 5h, o Insighta reavalia o problema e mostra se foi resolvido e quanto voltou. A reunião passa a começar pelo que já foi feito.</p></details>
           <details><summary>Ele pega erro de cadastro e de tabela?</summary><p>Sim. Antes do envio, seis conferências apontam CID ausente, código faltando, cobrança sem contrato, cobrança duplicada, valor fora da tabela e procedimento incompatível com o paciente. Depois do pagamento, o Insighta compara o que o convênio pagou com a tabela do contrato e avisa quando a clínica cobrou ou recebeu abaixo dela.</p></details>
           <details><summary>Já uso uma consultoria de faturamento.</summary><p>Ela vai trabalhar melhor com o Insighta: recebe as guias de risco antes do envio, os prazos de recurso e as divergências de repasse prontas. E você passa a medir o resultado dela também.</p></details>
@@ -935,7 +976,9 @@
           <details><summary>A inteligência artificial pode inventar um número?</summary><p>Não. No Insighta o sistema calcula e a IA só redige. Todo número escrito pela IA é conferido contra os dados calculados; se não bater, o texto é descartado.</p></details>
           <details><summary>Funciona no celular?</summary><p>Sim. O Insighta abre no navegador do celular: Sala de Comando, demandas da equipe e Extrato. O relatório semanal e os alertas chegam no WhatsApp.</p></details>
           <details><summary>Minha equipe vai ter mais trabalho?</summary><p>Menos. A análise que hoje é feita à mão passa a ser automática, e cada setor recebe só o que precisa resolver, já com o motivo.</p></details>
-          <details><summary>O que acontece depois dos 24 meses de Founders?</summary><p>Você decide. Continua com o Insighta pelo preço da tabela vigente, avisado por e-mail com 30 dias de antecedência, ou cancela sem multa. Nos 24 meses, todas as funcionalidades novas entram no seu plano sem custo extra.</p></details>
+          <details><summary>Qual a diferença entre o Basic e o Pro?</summary><p>O Basic detecta e mostra o resultado: Sala de Comando, 20 análises essenciais, as 6 conferências antes do envio, o pagamento conferido contra o contrato, o Extrato e o relatório por e-mail, para até 1.500 atendimentos por mês e 3 usuários. O Pro prevê e age: as 47 análises, risco de falta por paciente, Equipe de IA, modelo de glosa, margem e estoque, WhatsApp, API e usuários ilimitados, para até 8.000 atendimentos por mês.</p></details>
+          <details><summary>Como funciona o teste de 14 dias?</summary><p>Você cria a conta e usa o Pro completo por 14 dias, sem cartão. Antes do fim, escolhe o plano. Se não escolher, o sistema fica em modo leitura: você continua vendo e exportando seus dados, e volta a importar quando assinar.</p></details>
+          <details><summary>Como funciona a garantia de 90 dias do Founders?</summary><p>Se o Extrato de Resultado acumulado nos primeiros 90 dias não somar pelo menos três mensalidades (R$ 2.400) em valor medido, você cancela e recebe de volta o último mês pago. Em troca da vaga, a clínica importa os dados em 14 dias e participa de uma conversa a cada 15 dias nos primeiros 90 dias.</p></details>
           <details><summary>Os dados dos pacientes vão para a IA?</summary><p>Os nomes são mascarados antes de qualquer uso de IA e voltam ao nome real só na tela da clínica. Cada clínica é isolada no banco de dados.</p></details>
           <details><summary>Funciona para rede com várias unidades?</summary><p>Sim. Cada unidade tem seus números, e a diretoria vê o consolidado da rede em uma tela.</p></details>
         </div>
@@ -951,7 +994,7 @@
           <a href="__APP_URL__/signup" class="btn btn--white btn--lg" data-cta="final">Ver o diagnóstico da minha clínica</a>
           <a href="__CONTACT_URL__" class="btn btn--ghost btn--lg" data-cta="final-demo" data-contact>Agendar demonstração</a>
         </div>
-        <p data-billing-free="Acesso liberado no cadastro · Sem trocar de sistema · Seus dados exportáveis a qualquer momento">Pix, boleto ou cartão · Sem trocar de sistema · Seus dados exportáveis a qualquer momento</p>
+        <p>14 dias grátis do Pro · Sem trocar de sistema · Seus dados exportáveis a qualquer momento</p>
       </div>
     </section>
   </main>

@@ -7,6 +7,8 @@ import { Badge, type BadgeTone } from "@/components/ui/Badge";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import type { ProcedureProfitabilityItem, Profitability, ProfessionalProfitabilityItem } from "@/lib/types";
+import { withPlanGate } from "@/components/billing/PlanGate";
+import { FEATURES } from "@/lib/plan";
 
 /**
  * Raio-X da Receita, frente "Gestão eficiente" — até esta rodada, o
@@ -136,7 +138,7 @@ function ProcedureRow({ item, rank }: { item: ProcedureProfitabilityItem; rank: 
   );
 }
 
-export function ProfitabilityPanel({ dateFrom, dateTo }: { dateFrom: string; dateTo: string }) {
+function ProfitabilityPanelInner({ dateFrom, dateTo }: { dateFrom: string; dateTo: string }) {
   const { data, isLoading, error } = useQuery({
     queryKey: ["analytics", "profitability", dateFrom, dateTo],
     queryFn: () =>
@@ -239,3 +241,6 @@ export function ProfitabilityPanel({ dateFrom, dateTo }: { dateFrom: string; dat
     </div>
   );
 }
+
+// Plano Pro (src/lib/plan.ts): no Basic, vira a prévia com o convite.
+export const ProfitabilityPanel = withPlanGate(ProfitabilityPanelInner, FEATURES.marginInventory);

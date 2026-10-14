@@ -32,7 +32,11 @@ export interface TokenResponse {
 // --- Cadastro público (self-signup) / recuperação de senha
 // (app/schemas/token.py::RegisterRequest/PasswordResetRequestRequest/
 // PasswordResetConfirmRequest) ---
-export type PlanTier = "starter" | "professional" | "enterprise" | "founders";
+/** Planos (app/services/plans.py no backend). "founders" = Pro com o preço
+ * Founders (só no checkout). Os valores antigos podem aparecer em dado antigo. */
+export type PlanTier = "basic" | "pro" | "redes" | "founders" | "starter" | "professional" | "enterprise";
+export type PlanKey = "basic" | "pro" | "redes";
+export type BillingCycle = "monthly" | "yearly";
 
 // owner_name/email/password OU google_credential — nunca os dois juntos
 // (ver DECISÃO em RegisterRequest.validate_auth_method no backend).

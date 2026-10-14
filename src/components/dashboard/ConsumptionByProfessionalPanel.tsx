@@ -5,6 +5,8 @@ import { LoadingState, ErrorState, EmptyState } from "@/components/ui/Panel";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import type { ConsumptionByProfessional } from "@/lib/types";
+import { withPlanGate } from "@/components/billing/PlanGate";
+import { FEATURES } from "@/lib/plan";
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
@@ -20,7 +22,7 @@ function formatCurrency(value: number): string {
  * padrão de consumo, não o custo total (que só reflete volume de
  * atendimentos).
  */
-export function ConsumptionByProfessionalPanel({ dateFrom, dateTo }: { dateFrom: string; dateTo: string }) {
+function ConsumptionByProfessionalPanelInner({ dateFrom, dateTo }: { dateFrom: string; dateTo: string }) {
   const { data, isLoading, error } = useQuery({
     queryKey: ["analytics", "estoque-consumo-por-medico", dateFrom, dateTo],
     queryFn: () =>
@@ -79,3 +81,6 @@ export function ConsumptionByProfessionalPanel({ dateFrom, dateTo }: { dateFrom:
     </BentoCard>
   );
 }
+
+// Plano Pro (src/lib/plan.ts): no Basic, vira a prévia com o convite.
+export const ConsumptionByProfessionalPanel = withPlanGate(ConsumptionByProfessionalPanelInner, FEATURES.marginInventory);

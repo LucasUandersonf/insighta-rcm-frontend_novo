@@ -30,6 +30,7 @@ import {
 import type { ModuleAlert, NavigationSummary, OrganizationSummary, Tenant } from "@/lib/types";
 import { NotificationBell } from "./NotificationBell";
 import { HelpCenterModal } from "./HelpCenterModal";
+import { usePlan } from "@/lib/plan";
 
 /**
  * DECISÃO — Redesign 2026 ("sem sidebar"), ver canvas de design
@@ -482,6 +483,7 @@ function ModulesPanel({
   alerts: ModuleAlert[];
   panelRef: RefObject<HTMLDivElement>;
 }) {
+  const { has } = usePlan();
   const alertByRoute = new Map(alerts.map((alert) => [alert.route, alert]));
   // Um módulo que junta rotas (ex.: Importar dados = /upload + /setup)
   // mostra o alerta de qualquer uma delas.
@@ -511,7 +513,12 @@ function ModulesPanel({
                 cn("flex flex-col gap-0.5 rounded-[10px] p-2.5 transition-colors hover:bg-canvas-raised/70", isActive && "bg-brand/15")
               }
             >
-              <span className="text-[13px] font-medium text-ink">{item.label}</span>
+              <span className="flex items-center gap-1.5 text-[13px] font-medium text-ink">
+                {item.label}
+                {item.feature && !has(item.feature) && (
+                  <span className="rounded-full bg-accent px-1.5 py-px text-[10px] font-semibold uppercase text-white">Pro</span>
+                )}
+              </span>
               {alertFor(item) ? (
                 <span className={cn("text-xs leading-snug", ALERT_TONE[alertFor(item)!.tone])}>{alertFor(item)!.text}</span>
               ) : (

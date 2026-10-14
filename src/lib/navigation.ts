@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import type { CurrentUser } from "@/lib/types";
 import type { TeamSector } from "@/lib/team";
+import type { PlanFeature } from "@/lib/plan";
 
 /**
  * DECISÃO — Redesign 2026 ("sem sidebar"): a navegação deixou de ser uma
@@ -61,6 +62,8 @@ export interface NavItem {
   matches?: string[];
   /** Só faz sentido para grupo com mais de uma unidade. */
   requiresNetwork?: boolean;
+  /** Funcionalidade do plano Pro (src/lib/plan.ts): no Basic, aparece com o selo "Pro". */
+  feature?: PlanFeature;
 }
 
 const LEADERSHIP: UserRole[] = ["owner", "admin", "financeiro", "auditor"];
@@ -91,13 +94,13 @@ export const NAV_ITEMS: NavItem[] = [
   { to: "/convenios", label: "Convênios e contratos", description: "Tabelas de repasse e vigências", roles: LEADERSHIP, placement: "modules", group: "faturamento" },
 
   // Agenda & operação
-  { to: "/lista-de-espera", label: "Lista de espera", description: "Encaixar pacientes nos horários vagos", placement: "modules", group: "operacao" },
+  { to: "/lista-de-espera", label: "Lista de espera", description: "Encaixar pacientes nos horários vagos", placement: "modules", group: "operacao", feature: "no_show_risk" },
   // Só aparece para grupo com mais de uma unidade (ver TopBar).
   { to: "/consolidado", label: "Consolidado da rede", description: "Visão multiunidade do grupo", roles: LEADERSHIP, placement: "modules", group: "operacao", requiresNetwork: true },
 
   // Custos & crescimento
-  { to: "/custos", label: "Custos", description: "Margem real por procedimento", roles: LEADERSHIP, placement: "modules", group: "custos" },
-  { to: "/marketing", label: "Gasto de marketing", description: "Quanto cada canal traz de volta", roles: LEADERSHIP, placement: "modules", group: "custos" },
+  { to: "/custos", label: "Custos", description: "Margem real por procedimento", roles: LEADERSHIP, placement: "modules", group: "custos", feature: "margin_inventory" },
+  { to: "/marketing", label: "Gasto de marketing", description: "Quanto cada canal traz de volta", roles: LEADERSHIP, placement: "modules", group: "custos", feature: "patients_advanced" },
 
   // Dados
   // Upload + Setup eram dois módulos para uma tarefa só.
@@ -120,7 +123,7 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
   // Profissionais chegam pela importação; o que falta é só a grade
   // semanal (nenhum arquivo traz), que alimenta ocupação e horários vagos.
   { to: "/profissionais", label: "Horários de atendimento", icon: Clock, roles: ADMINS, placement: "modules" },
-  { to: "/admin/integracoes", label: "Integrações e webhooks", icon: Plug, roles: ADMINS, placement: "modules" },
+  { to: "/admin/integracoes", label: "Integrações e webhooks", icon: Plug, roles: ADMINS, placement: "modules", feature: "api_access" },
   { to: "/admin/destinatarios", label: "Destinatários de relatórios", icon: Send, roles: ADMINS, placement: "modules" },
   // Auditor também precisa ver a trilha de auditoria — papel de
   // leitura/compliance (mesmo critério de analytics.py).
