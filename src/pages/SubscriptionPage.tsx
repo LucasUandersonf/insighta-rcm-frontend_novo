@@ -303,11 +303,11 @@ export function SubscriptionPage() {
               </li>
               <li className="flex gap-2">
                 <Sparkles aria-hidden size={14} className="mt-0.5 shrink-0 text-accent" />
-                Onboarding guiado, grupo direto com o fundador e voto no roadmap
+                Suporte por e-mail com prioridade e novidades do produto por e-mail
               </li>
               <li className="flex gap-2">
                 <Check aria-hidden size={14} className="mt-0.5 shrink-0 text-accent" />
-                Em troca: dados importados em 14 dias, conversa a cada 15 dias por 90 dias e estudo de caso
+                Sem contrapartida: nada de reuniões nem estudo de caso, é só usar o sistema
               </li>
             </ul>
             {isOwner && (

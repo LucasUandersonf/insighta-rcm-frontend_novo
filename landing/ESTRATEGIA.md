@@ -277,6 +277,6 @@ Regra mantida: nenhum depoimento, logo ou número de resultado inventado. As lin
 
 - **Planos:** Basic R$ 490 (até 1.500 atendimentos/mês, 20 análises, 3 usuários), Pro R$ 1.290 (47 análises, IA, WhatsApp, API, até 8.000 atendimentos/mês) e Redes sob consulta. Anual com 2 meses grátis.
 - **Teste:** 14 dias do Pro sem cartão, em todos os botões de cadastro.
-- **Founders Club:** 7 vagas, Pro por R$ 800/mês travado enquanto for cliente (só IPCA), garantia de 90 dias pelo Extrato, contrapartidas (dados em 14 dias, conversa quinzenal por 90 dias, estudo de caso). O preço cheio do Pro riscado ancora o desconto.
+- **Founders Club:** 7 vagas, Pro por R$ 800/mês travado enquanto for cliente (só IPCA), garantia de 90 dias pelo Extrato, sem contrapartida: nada de reuniões, estudo de caso ou depoimento obrigatório; a relação é por e-mail (suporte e novidades). O preço cheio do Pro riscado ancora o desconto.
 - **Perguntas:** entraram "Basic × Pro", "Como funciona o teste" e "Garantia de 90 dias"; saiu "depois dos 24 meses".
 - Os números e regras são os mesmos do app (tela Plano e assinatura) e dos Termos de Uso, seção 4.

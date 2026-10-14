@@ -88,11 +88,10 @@ export function TermsOfServicePage() {
           plano sem custo adicional.
         </li>
         <li>
-          <strong>Contrapartidas Founders:</strong> importar faturamento e agenda nos primeiros 14 dias; participar de uma
-          conversa de 30 minutos a cada 15 dias nos primeiros 90 dias; autorizar um estudo de caso com os números do Extrato
-          de Resultado aos 90 dias (identificado ou anônimo, à escolha da Clínica); conceder depoimento e uso do nome ou
-          logo; até 2 conversas de referência por ano; e o uso de dados anonimizados no comparativo entre clínicas. Sem a
-          importação em 14 dias, a Insighta pode liberar a vaga, e a Clínica passa ao preço do Pro.
+          <strong>Sem contrapartida:</strong> a vaga Founders não obriga a Clínica a reuniões, estudo de caso, depoimento ou
+          qualquer serviço para a Insighta. Basta usar a Plataforma normalmente. A comunicação é por e-mail: suporte pelo
+          e-mail de atendimento e novidades e pedidos de opinião enviados ao e-mail cadastrado, que a Clínica responde se
+          quiser.
         </li>
         <li>
           <strong>Garantia Founders de 90 dias:</strong> se o Extrato de Resultado acumulado em 90 dias não somar pelo menos
