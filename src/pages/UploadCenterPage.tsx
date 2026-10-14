@@ -41,6 +41,7 @@ import type {
 } from "@/lib/types";
 import { word } from "@/lib/plural";
 import { useDirtyOnEdit } from "@/lib/unsavedChanges";
+import { countCsvRows, importVolumeWarning, usePlan } from "@/lib/plan";
 
 // Rótulo em português por campo canônico — espelha
 // app/services/column_mapping_service.py::CANONICAL_FIELD_LABELS no
@@ -548,12 +549,29 @@ function BatchUploadTab() {
   const [fileProblem, setFileProblem] = useState<string | null>(null);
   const [detected, setDetected] = useState<string | null>(null);
   const [savedMappingWarning, setSavedMappingWarning] = useState<string | null>(null);
+  // Limite de atendimentos do plano: aviso antes de enviar uma agenda grande.
+  const { usage: planUsage } = usePlan();
+  const [volumeWarning, setVolumeWarning] = useState<string | null>(null);
+
+  async function checkPlanVolume(selected: File, ext: string, type: DataType) {
+    if (type !== "agenda") return;
+    let rows: number | null = null;
+    if (ext === "csv" && selected.size <= 20 * 1024 * 1024) {
+      try {
+        rows = countCsvRows(await selected.text());
+      } catch {
+        rows = null;
+      }
+    }
+    setVolumeWarning(importVolumeWarning(planUsage?.appointments, rows));
+  }
 
   async function handleFileSelected(selected: File | null) {
     setFile(selected);
     setFileProblem(null);
     setDetected(null);
     setSavedMappingWarning(null);
+    setVolumeWarning(null);
     setSendError(null);
     if (!selected) return;
     const ext = selected.name.toLowerCase().split(".").pop() ?? "";
@@ -569,6 +587,7 @@ function BatchUploadTab() {
       setFileProblem(`Arquivo .${ext} não é aceito. Use ${ACCEPTED_FORMATS_BY_DATA_TYPE[dataType].join(", ")}.`);
       return;
     }
+    void checkPlanVolume(selected, ext, dataType);
     // Lê só o começo (cabeçalho + algumas linhas): CSV inteiro não precisa subir duas vezes.
     if (ext !== "csv" && !(ext === "xlsx" && selected.size <= 3 * 1024 * 1024)) return;
     try {
@@ -744,6 +763,14 @@ function BatchUploadTab() {
               >
                 Enviar como {DATA_TYPE_LABELS[detected] ?? detected}
               </Button>
+            </div>
+          )}
+          {volumeWarning && (
+            <div role="status" className="mt-3 rounded-md border border-pending/30 bg-pending/6 px-3 py-2 text-xs text-ink">
+              {volumeWarning}{" "}
+              <Link to="/assinatura" className="font-medium text-accent underline-offset-2 hover:underline">
+                Ver planos
+              </Link>
             </div>
           )}
           {savedMappingWarning && (

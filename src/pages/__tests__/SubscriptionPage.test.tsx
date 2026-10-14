@@ -7,7 +7,7 @@ import { BillingGate } from "@/components/billing/BillingGate";
 import { apiClient } from "@/lib/api-client";
 import { useAuth } from "@/context/AuthContext";
 import { renderWithProviders } from "@/test/utils";
-import type { PlanCatalogEntry, SubscriptionOffer, SubscriptionStatus } from "@/lib/types";
+import type { PlanCatalogEntry, PlanUsage, SubscriptionOffer, SubscriptionStatus } from "@/lib/types";
 
 vi.mock("@/lib/api-client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api-client")>();
@@ -52,12 +52,29 @@ const PLANS: PlanCatalogEntry[] = [
   { tier: "redes", label: "Redes", monthly_price_cents: 0, self_service: false, yearly_price_cents: null, limits: null, features: [] },
 ];
 
-function mockGet(status: SubscriptionStatus, offer: SubscriptionOffer = OFFER) {
+function mockGet(status: SubscriptionStatus, offer: SubscriptionOffer = OFFER, usage: PlanUsage | undefined = undefined) {
   vi.mocked(apiClient.get).mockImplementation(((path: string) =>
     Promise.resolve(
-      path.endsWith("/offer") ? offer : path.endsWith("/plans") ? PLANS : path.endsWith("/usage") ? undefined : status,
+      path.endsWith("/offer") ? offer : path.endsWith("/plans") ? PLANS : path.endsWith("/usage") ? usage : status,
     )) as never);
 }
+
+const USAGE: PlanUsage = {
+  plan: "basic",
+  plan_label: "Basic",
+  in_trial: false,
+  trial_ends_at: null,
+  features: [],
+  history_months: 12,
+  appointments: { used: 1350, limit: 1500, state: "warn" },
+  users: { used: 2, limit: 3, state: "ok" },
+  contract_payers: { used: 1, limit: 3, state: "ok" },
+  coordinator_sectors: { used: 0, limit: 2, state: "ok" },
+  ai_ask: { used: 0, limit: 0, state: "ok" },
+  ai_appeal_draft: { used: 0, limit: 0, state: "ok" },
+  ai_contract_extraction: { used: 0, limit: 0, state: "ok" },
+  ai_renews_on: "2026-11-01",
+};
 
 describe("SubscriptionPage", () => {
   beforeEach(() => {
@@ -92,15 +109,48 @@ describe("SubscriptionPage", () => {
     );
   });
 
-  it("quem já assina o Basic troca para o Pro na hora", async () => {
-    mockGet({ ...PENDING, billing_status: "active", access_allowed: true, current_price_cents: 49000 });
+  it("quem já assina o Basic pede a troca para o Pro e vê o uso do plano", async () => {
+    mockGet({ ...PENDING, billing_status: "active", access_allowed: true, current_price_cents: 49000 }, OFFER, USAGE);
+    const open = vi.spyOn(window, "open").mockImplementation(() => null);
     vi.mocked(apiClient.post).mockResolvedValue({
-      plan: "pro", pending_plan: null, effective_at: "now", proration_cents: 0, proration_invoice_url: null, message: "Pronto: a clínica está no Pro.",
+      plan: "basic", pending_plan: "pro", effective_at: "after_payment", proration_cents: 40000,
+      proration_invoice_url: "https://sandbox.asaas.com/i/pro", message: "Falta só o pagamento da diferença.",
     } as never);
     renderWithProviders(<SubscriptionPage />);
     expect(await screen.findByText("Seu plano")).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "Mudar para o Pro agora" }));
+    expect(await screen.findByText("Uso do plano Basic")).toBeInTheDocument();
+    expect(screen.getByText("Perto do limite do plano.")).toBeInTheDocument();
+    expect(screen.getByText(/A Equipe de IA .* está no plano Pro/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Mudar para o Pro" }));
     await waitFor(() => expect(apiClient.post).toHaveBeenCalledWith("/api/v1/subscription/change-plan", { plan_tier: "pro" }));
+    await waitFor(() => expect(open).toHaveBeenCalledWith("https://sandbox.asaas.com/i/pro", "_blank", "noopener"));
+    open.mockRestore();
+  });
+
+  it("troca para o Pro esperando o pagamento: pagar ou desistir", async () => {
+    mockGet({
+      ...PENDING, billing_status: "active", access_allowed: true, current_price_cents: 129000,
+      pending_plan: "pro", pending_upgrade_invoice_url: "https://sandbox.asaas.com/i/pro",
+    });
+    vi.mocked(apiClient.post).mockResolvedValue({
+      plan: "basic", pending_plan: null, effective_at: "now", proration_cents: 0, proration_invoice_url: null, message: "Troca cancelada.",
+    } as never);
+    renderWithProviders(<SubscriptionPage />);
+    expect(await screen.findByText(/Troca para o Pro pedida/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Pagar a diferença/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Aguardando o pagamento" })).toBeDisabled();
+    await userEvent.click(screen.getByRole("button", { name: "Desistir da troca" }));
+    await waitFor(() => expect(apiClient.post).toHaveBeenCalledWith("/api/v1/subscription/change-plan", { plan_tier: "basic" }));
+  });
+
+  it("avisa o reajuste anual agendado", async () => {
+    mockGet({
+      ...PENDING, plan: "pro", contracted_plan: "pro", billing_status: "active", access_allowed: true, founders_member: true,
+      current_price_cents: 80000, locked_price_cents: 80000, scheduled_price_cents: 83600, scheduled_price_on: "2026-12-01",
+    });
+    renderWithProviders(<SubscriptionPage />);
+    expect(await screen.findByText(/Reajuste anual pelo IPCA/)).toBeInTheDocument();
+    expect(screen.getByText("R$ 836")).toBeInTheDocument();
   });
 
   it("mostra o teste do Pro com os dias que faltam", async () => {

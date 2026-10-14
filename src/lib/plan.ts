@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
-import type { PlanUsage } from "@/lib/types";
+import type { PlanUsage, UsageItem } from "@/lib/types";
 
 /**
  * Planos Basic, Pro e Redes (app/services/plans.py no backend). As chaves
@@ -64,4 +64,39 @@ export function daysUntil(iso: string | null | undefined, now: Date = new Date()
   if (!iso) return null;
   const ms = new Date(iso).getTime() - now.getTime();
   return Math.max(0, Math.ceil(ms / 86_400_000));
+}
+
+/** Linhas de dados de um CSV (sem o cabeçalho e sem linhas vazias). */
+export function countCsvRows(content: string): number {
+  let rows = 0;
+  for (const line of content.split(/\r?\n/)) if (line.trim()) rows += 1;
+  return Math.max(0, rows - 1);
+}
+
+/**
+ * Aviso ANTES de importar uma agenda que pode passar do limite do plano
+ * (mesmas faixas do backend: acima de 100% avisa, acima de 120% as
+ * importações seguintes param). `rows` = linhas do arquivo, quando dá para
+ * contar no navegador (CSV); a conta é pessimista, porque só os
+ * atendimentos dos últimos 30 dias contam para o limite.
+ */
+export function importVolumeWarning(item: UsageItem | undefined, rows: number | null): string | null {
+  if (!item || !item.limit) return null;
+  const limit = item.limit;
+  const fmt = (n: number) => n.toLocaleString("pt-BR");
+  const blockAt = Math.floor(limit * 1.2);
+  if (item.state === "blocked") {
+    return `Importação pausada: ${fmt(item.used)} atendimentos nos últimos 30 dias, acima de 120% do limite do plano (${fmt(limit)}). Mude para o Pro para importar.`;
+  }
+  if (rows === null) {
+    if (item.state === "ok") return null;
+    return `A clínica já tem ${fmt(item.used)} de ${fmt(limit)} atendimentos do plano nos últimos 30 dias. Se esta agenda passar de ${fmt(blockAt)}, as próximas importações ficam pausadas até a troca de plano.`;
+  }
+  const projected = item.used + rows;
+  if (projected <= limit) return null;
+  const tail =
+    projected > blockAt
+      ? `Passando de ${fmt(blockAt)} (120%), esta importação entra, mas as próximas ficam pausadas até a troca para o Pro.`
+      : `Até ${fmt(blockAt)} (120%) as importações continuam; acima disso, ficam pausadas até a troca para o Pro.`;
+  return `Este arquivo tem ${fmt(rows)} linhas. Com os ${fmt(item.used)} atendimentos dos últimos 30 dias, a clínica pode passar do limite do plano (${fmt(limit)}). A conta é pelo total de linhas; para o limite, só contam os atendimentos dos últimos 30 dias. ${tail}`;
 }

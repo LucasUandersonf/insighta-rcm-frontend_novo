@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/Button";
 import { CancelSubscriptionPanel } from "@/components/billing/CancelSubscriptionPanel";
 import { DataExportPanel } from "@/pages/admin/TenantPage";
 import { PLAN_QUERY_KEY, daysUntil } from "@/lib/plan";
+import { PlanUsagePanel } from "@/components/billing/PlanUsagePanel";
 import type {
   BillingCycle,
   ChangePlanResponse,
@@ -165,7 +166,7 @@ export function SubscriptionPage() {
         : trialDays !== null
           ? "Tudo do Pro está liberado no teste. Escolha o plano antes do fim para não ficar em modo leitura."
           : hasPaidSubscription
-            ? "Troque de plano quando quiser. Subir vale na hora; descer vale no próximo pagamento."
+            ? "Troque de plano quando quiser. Subir vale assim que a diferença for paga; descer vale no próximo pagamento."
             : "Teste, compare e escolha. Pix, boleto ou cartão, com nota fiscal todo mês.";
 
   function selectPlan(plan: "basic" | "pro" | "founders") {
@@ -184,13 +185,44 @@ export function SubscriptionPage() {
         <h1 className="font-serif text-3xl font-medium tracking-tightest text-ink">{headline}</h1>
         <p className="mx-auto max-w-2xl text-sm text-ink-muted">{subheadline}</p>
         <StatusPill status={status} />
-        {status.pending_plan && (
+        {status.pending_plan === "basic" && (
           <p className="text-sm text-ink-muted">
-            Troca agendada para o plano <strong className="text-ink">{status.pending_plan === "basic" ? "Basic" : "Pro"}</strong> no próximo
-            pagamento.
+            Troca agendada para o plano <strong className="text-ink">Basic</strong> no próximo pagamento.
           </p>
         )}
+        {status.scheduled_price_cents && status.scheduled_price_on ? (
+          <p className="text-sm text-ink-muted">
+            Reajuste anual pelo IPCA: a partir de <strong className="text-ink">{dateBr(status.scheduled_price_on)}</strong>, a
+            assinatura passa a <strong className="text-ink">{brl(status.scheduled_price_cents)}</strong>.
+          </p>
+        ) : null}
       </header>
+
+      {status.pending_plan === "pro" && (
+        <div
+          role="status"
+          className="flex flex-col items-center gap-3 rounded-xl border border-accent/40 bg-accent-bg p-4 text-center"
+        >
+          <p className="text-sm text-ink">
+            <strong>Troca para o Pro pedida.</strong> O Pro é liberado assim que o pagamento da diferença for confirmado. Pix e
+            cartão liberam em minutos. Se a diferença não for paga, o Pro passa a valer no próximo pagamento da assinatura.
+          </p>
+          {isOwner && (
+            <div className="flex flex-wrap justify-center gap-2">
+              {status.pending_upgrade_invoice_url && (
+                <Button onClick={() => window.open(status.pending_upgrade_invoice_url ?? "", "_blank", "noopener")}>
+                  <CreditCard aria-hidden size={16} /> Pagar a diferença
+                </Button>
+              )}
+              <Button variant="secondary" disabled={busy} onClick={() => changePlan.mutate(currentPlan)}>
+                Desistir da troca
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {subscribed || trialDays !== null ? <PlanUsagePanel /> : null}
 
       {status.billing_status === "past_due" && isOwner && (
         <div className="flex flex-col items-center gap-2 rounded-xl border border-denied/30 bg-denied-bg p-4 text-center">
@@ -262,14 +294,22 @@ export function SubscriptionPage() {
               {isOwner ? (
                 <Button
                   variant={key === "pro" ? "primary" : "secondary"}
-                  disabled={busy || isCurrent || canceling || status.billing_status === "canceled" && hasPaidSubscription}
+                  disabled={
+                    busy ||
+                    isCurrent ||
+                    canceling ||
+                    (status.billing_status === "canceled" && hasPaidSubscription) ||
+                    (key === "pro" && status.pending_plan === "pro")
+                  }
                   onClick={() => selectPlan(key)}
                 >
                   {isCurrent
                     ? "Plano atual"
                     : hasPaidSubscription
                       ? key === "pro"
-                        ? "Mudar para o Pro agora"
+                        ? status.pending_plan === "pro"
+                          ? "Aguardando o pagamento"
+                          : "Mudar para o Pro"
                         : "Mudar para o Basic"
                       : `Assinar o ${key === "pro" ? "Pro" : "Basic"}`}
                 </Button>
@@ -323,6 +363,7 @@ export function SubscriptionPage() {
         <p className="text-center text-sm text-ink-muted">
           <CheckCircle2 aria-hidden size={14} className="mr-1 inline text-revenue" />
           Clínica Founders: preço travado
+          {status.locked_price_cents ? <> em <strong className="text-ink">{brl(status.locked_price_cents)}</strong></> : null}
           {status.price_locked_until ? (
             <>
               {" "}

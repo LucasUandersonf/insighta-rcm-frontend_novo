@@ -71,9 +71,11 @@ export function TermsOfServicePage() {
           limite.
         </li>
         <li>
-          <strong>Troca de plano:</strong> subir para o Pro vale na hora, com cobrança avulsa da diferença proporcional aos
-          dias que faltam do período pago (abaixo de R$ 5,00, não é cobrada). Descer para o Basic vale a partir do próximo
-          pagamento.
+          <strong>Troca de plano:</strong> subir para o Pro gera uma cobrança avulsa da diferença proporcional aos dias que
+          faltam do período pago, e o Pro é liberado quando esse pagamento é confirmado (se a diferença não for paga, o Pro
+          passa a valer no próximo pagamento da assinatura, já no valor do Pro; abaixo de R$ 5,00, a diferença não é cobrada
+          e o Pro vale na hora). Até o pagamento, a Clínica pode desistir da troca na tela de assinatura. Descer para o Basic
+          vale a partir do próximo pagamento.
         </li>
         <li>
           O pagamento é feito por Pix, boleto ou cartão na fatura do Asaas, empresa de pagamentos contratada pela Insighta.
@@ -85,7 +87,9 @@ export function TermsOfServicePage() {
           Founders (só mensal) pagam <strong>R$ 800,00 por mês</strong> pelo Pro completo, com o preço{" "}
           <strong>travado enquanto forem clientes</strong>, reajustado apenas uma vez por ano pelo IPCA, com aviso de 30
           dias. A vaga é reservada por 48 horas depois de gerada a primeira fatura. Funcionalidades novas do Pro entram no
-          plano sem custo adicional.
+          plano sem custo adicional. Encerrada a assinatura (cancelamento pela Clínica, pelo meio de pagamento ou pela
+          Insighta), a vaga Founders e o preço travado deixam de valer; se a Clínica voltar a assinar, paga o preço do plano
+          escolhido naquele momento.
         </li>
         <li>
           <strong>Sem contrapartida:</strong> a vaga Founders não obriga a Clínica a reuniões, estudo de caso, depoimento ou
@@ -101,6 +105,11 @@ export function TermsOfServicePage() {
         <li>
           Fora do Founders Club, vale o preço do plano na contratação, reajustado uma vez por ano pelo IPCA, com aviso de 30
           dias.
+        </li>
+        <li>
+          <strong>Reajuste anual:</strong> depois de 12 meses no mesmo preço, o valor é corrigido pelo IPCA acumulado em 12
+          meses. A Clínica recebe o aviso por e-mail com pelo menos 30 dias de antecedência, com o valor atual, o valor novo e
+          a data da primeira cobrança reajustada.
         </li>
       </ul>
 

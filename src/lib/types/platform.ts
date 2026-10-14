@@ -97,12 +97,17 @@ export interface PlanUsage {
   users: UsageItem;
   contract_payers: UsageItem;
   coordinator_sectors: UsageItem;
+  /** Cotas mensais de IA do plano (limite 0 = o plano não tem IA). */
+  ai_ask?: UsageItem;
+  ai_appeal_draft?: UsageItem;
+  ai_contract_extraction?: UsageItem;
+  ai_renews_on?: string;
 }
 
 export interface ChangePlanResponse {
   plan: PlanKey;
   pending_plan: PlanKey | null;
-  effective_at: "now" | "next_payment";
+  effective_at: "now" | "next_payment" | "after_payment";
   proration_cents: number;
   proration_invoice_url: string | null;
   message: string;
@@ -138,6 +143,12 @@ export interface SubscriptionStatus {
   trial_ends_at?: string | null;
   billing_cycle?: BillingCycle;
   pending_plan?: PlanKey | null;
+  /** Subida para o Pro esperando o pagamento da diferença. */
+  pending_upgrade_invoice_url?: string | null;
+  /** Founders: preço travado (só IPCA). Reajuste anual agendado. */
+  locked_price_cents?: number | null;
+  scheduled_price_cents?: number | null;
+  scheduled_price_on?: string | null;
   /** Teste acabou ou assinatura não paga: consultas sim, gravações não. */
   read_only?: boolean;
 }
