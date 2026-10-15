@@ -6,6 +6,8 @@ import { Badge, type BadgeTone } from "@/components/ui/Badge";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import type { AbcCurve, AbcCurveItem } from "@/lib/types";
+import { withPlanGate } from "@/components/billing/PlanGate";
+import { FEATURES } from "@/lib/plan";
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
@@ -26,7 +28,7 @@ const CLASSE_TONE: Record<AbcCurveItem["classe"], BadgeTone> = {
  * poucos itens que respondem pela maior fatia do gasto — é neles que
  * negociar preço com fornecedor ou apertar controle de perda rende mais.
  */
-export function AbcCurvePanel({ dateFrom, dateTo }: { dateFrom: string; dateTo: string }) {
+function AbcCurvePanelInner({ dateFrom, dateTo }: { dateFrom: string; dateTo: string }) {
   const { data, isLoading, error } = useQuery({
     queryKey: ["analytics", "estoque-abc-curve", dateFrom, dateTo],
     queryFn: () => apiClient.get<AbcCurve>(`/api/v1/analytics/estoque-abc-curve?date_from=${dateFrom}&date_to=${dateTo}`),
@@ -84,3 +86,6 @@ export function AbcCurvePanel({ dateFrom, dateTo }: { dateFrom: string; dateTo: 
     </BentoCard>
   );
 }
+
+// Plano Pro (src/lib/plan.ts): no Basic, vira a prévia com o convite.
+export const AbcCurvePanel = withPlanGate(AbcCurvePanelInner, FEATURES.marginInventory);

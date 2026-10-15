@@ -95,6 +95,12 @@ export const platformApiClient = {
       "/api/v1/platform/tenants-usage",
       { auth: true },
     ),
+  // Pedidos da Central de Ajuda de todas as clínicas (abertos por padrão):
+  // funcionam mesmo sem SMTP, que só manda um aviso a mais.
+  getSupportRequests: () =>
+    platformRequest<import("./types").PlatformSupportRequest[]>("/api/v1/platform/support-requests", { auth: true }),
+  markSupportAnswered: (id: string) =>
+    platformRequest<void>(`/api/v1/platform/support-requests/${id}/answered`, { method: "POST", auth: true }),
   getPilotMetrics: () =>
     platformRequest<import("./types").PilotMetrics[]>(
       "/api/v1/platform/pilot-metrics",

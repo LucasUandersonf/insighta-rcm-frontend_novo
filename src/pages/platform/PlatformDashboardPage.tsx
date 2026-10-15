@@ -252,6 +252,20 @@ export function PlatformDashboardPage() {
     queryFn: () => platformApiClient.getPilotMetrics(),
   });
 
+  const { data: supportRequests, refetch: refetchSupport } = useQuery({
+    queryKey: ["platform", "support-requests"],
+    queryFn: () => platformApiClient.getSupportRequests(),
+    retry: false,
+  });
+  const markAnswered = useMutation({
+    mutationFn: (id: string) => platformApiClient.markSupportAnswered(id),
+    onSuccess: () => {
+      showSuccess("Pedido marcado como respondido.");
+      void refetchSupport();
+    },
+    onError: (err) => showError(getApiErrorMessage(err)),
+  });
+
   const { data: auditLog, refetch: refetchAuditLog } = useQuery({
     queryKey: ["platform", "audit-log"],
     queryFn: () => platformApiClient.getAuditLog(),
@@ -357,6 +371,32 @@ export function PlatformDashboardPage() {
             </ul>
           </Panel>
         )}
+
+        <Panel
+          title="Pedidos de ajuda"
+          subtitle="Perguntas enviadas pela Central de Ajuda das clínicas, ainda sem resposta. Responda pelo e-mail de quem pediu e marque aqui."
+        >
+          {(supportRequests ?? []).length === 0 ? (
+            <p className="text-sm text-ink-muted">Nenhum pedido aberto.</p>
+          ) : (
+            <ul className="divide-y divide-border-hairline">
+              {(supportRequests ?? []).map((r) => (
+                <li key={r.id} className="flex flex-wrap items-start gap-3 py-3">
+                  <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                    <span className="text-sm font-medium text-ink">{r.subject}</span>
+                    <span className="text-xs text-ink-muted">
+                      {r.trade_name} · {r.user_email ?? "usuário removido"} · {formatDateTime(r.created_at)}
+                    </span>
+                    <p className="mt-1 whitespace-pre-line text-xs text-ink">{r.message}</p>
+                  </div>
+                  <Button size="xs" variant="secondary" disabled={markAnswered.isPending} onClick={() => markAnswered.mutate(r.id)}>
+                    Marcar como respondido
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Panel>
 
         <Panel
           title="Clínicas"

@@ -6,6 +6,8 @@ import { cn } from "@/lib/cn";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import type { ContributionMargin } from "@/lib/types";
+import { withPlanGate } from "@/components/billing/PlanGate";
+import { FEATURES } from "@/lib/plan";
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
@@ -24,7 +26,7 @@ function formatCurrency(value: number): string {
  * material. `sample_count` mostra o tamanho real da amostra por trás de
  * cada linha — números com amostra baixa merecem menos confiança.
  */
-export function ContributionMarginPanel({ dateFrom, dateTo }: { dateFrom: string; dateTo: string }) {
+function ContributionMarginPanelInner({ dateFrom, dateTo }: { dateFrom: string; dateTo: string }) {
   const { data, isLoading, error } = useQuery({
     queryKey: ["analytics", "margem-contribuicao-por-procedimento", dateFrom, dateTo],
     queryFn: () =>
@@ -92,3 +94,6 @@ export function ContributionMarginPanel({ dateFrom, dateTo }: { dateFrom: string
     </BentoCard>
   );
 }
+
+// Plano Pro (src/lib/plan.ts): no Basic, vira a prévia com o convite.
+export const ContributionMarginPanel = withPlanGate(ContributionMarginPanelInner, FEATURES.marginInventory);

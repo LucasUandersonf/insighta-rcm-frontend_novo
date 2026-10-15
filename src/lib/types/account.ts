@@ -32,7 +32,11 @@ export interface TokenResponse {
 // --- Cadastro público (self-signup) / recuperação de senha
 // (app/schemas/token.py::RegisterRequest/PasswordResetRequestRequest/
 // PasswordResetConfirmRequest) ---
-export type PlanTier = "starter" | "professional" | "enterprise" | "founders";
+/** Planos (app/services/plans.py no backend). "founders" = Pro com o preço
+ * Founders (só no checkout). Os valores antigos podem aparecer em dado antigo. */
+export type PlanTier = "basic" | "pro" | "redes" | "founders" | "starter" | "professional" | "enterprise";
+export type PlanKey = "basic" | "pro" | "redes";
+export type BillingCycle = "monthly" | "yearly";
 
 // owner_name/email/password OU google_credential — nunca os dois juntos
 // (ver DECISÃO em RegisterRequest.validate_auth_method no backend).
@@ -440,4 +444,19 @@ export interface WebhookDeliveryEntry {
   last_error: string | null;
   created_at: string;
   updated_at: string;
+}
+
+/** POST /api/v1/ingestion/check — "Conferir antes de importar" (nada é gravado). */
+export interface IngestionCheckResult {
+  ok: boolean;
+  error_code: string | null;
+  message: string | null;
+  total_rows: number;
+  valid_rows: number;
+  invalid_rows: number;
+  truncated: boolean;
+  problems: { problem: string; count: number; examples: { row_number: number; detail: string }[] }[];
+  ignored_columns: string[];
+  missing_columns: string[];
+  detected_data_type: string | null;
 }

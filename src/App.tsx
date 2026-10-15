@@ -5,6 +5,8 @@ import { ToastProvider } from "@/context/ToastContext";
 import { ModalStackProvider } from "@/context/ModalStackContext";
 import { ProtectedRoute } from "@/routes/ProtectedRoute";
 import { BillingGate } from "@/components/billing/BillingGate";
+import { PlanGatePage } from "@/components/billing/PlanGate";
+import { FEATURES } from "@/lib/plan";
 import { AppShell } from "@/components/layout/AppShell";
 import { RoleProtectedRoute } from "@/routes/ProtectedRoute";
 import { PlatformProtectedRoute } from "@/routes/PlatformProtectedRoute";
@@ -175,7 +177,7 @@ function AppRoutes() {
             (atendimento/admin/owner/financeiro/auditor = todo papel),
             por isso sem RoleProtectedRoute. */}
         <Route path="/pacientes" element={<PatientFichaPage />} />
-        <Route path="/lista-de-espera" element={<WaitlistPage />} />
+        <Route path="/lista-de-espera" element={<PlanGatePage feature={FEATURES.noShowRisk}><WaitlistPage /></PlanGatePage>} />
         {/* Épico F1.3 do Plano Diretor: "Meus pendentes" é aberto a
             QUALQUER papel autenticado (mesmo RBAC de
             GET /insight-outcomes/mine — quem executa não é sempre
@@ -209,7 +211,7 @@ function AppRoutes() {
           </Route>
           {/* Roadmap "Rumo à Nota 9" (Fase 2) — mesmo RBAC de /decisao
               (o endpoint que alimenta esta tela usa o mesmo _CAN_VIEW). */}
-          <Route path="/agenda-risco" element={<AgendaRiscoPage />} />
+          <Route path="/agenda-risco" element={<PlanGatePage feature={FEATURES.noShowRisk}><AgendaRiscoPage /></PlanGatePage>} />
           {/* Extrato de Resultado: mesmo RBAC de result_statement.py (_CAN_VIEW). */}
           <Route path="/resultado" element={<ResultStatementPage />} />
           <Route path="/convenios" element={<ContractsPage />} />
@@ -226,12 +228,12 @@ function AppRoutes() {
               acima (lotes.py/_CAN_READ: owner/admin/financeiro/
               auditor; escrita via cost_entries.py/_CAN_WRITE,
               sem auditor, barrado pelo próprio backend). */}
-          <Route path="/custos" element={<CostEntriesPage />} />
+          <Route path="/custos" element={<PlanGatePage feature={FEATURES.marginInventory}><CostEntriesPage /></PlanGatePage>} />
           {/* Achado do Dossiê Insighta RCM — Onda 2 do Plano de
               Ação: mesmo RBAC de /custos acima (leitura via
               marketing_spend.py/_CAN_READ, escrita via
               _CAN_WRITE, sem auditor, barrado pelo backend). */}
-          <Route path="/marketing" element={<MarketingSpendPage />} />
+          <Route path="/marketing" element={<PlanGatePage feature={FEATURES.patientsAdvanced}><MarketingSpendPage /></PlanGatePage>} />
         </Route>
         {/* Upload é ação de escrita — mesmo RBAC do backend em
             ingestion.py/_CAN_MANAGE e contracts.py/_CAN_WRITE
@@ -257,7 +259,7 @@ function AppRoutes() {
         <Route path="/conta/seguranca" element={<AccountSecurityPage />} />
         <Route element={<RoleProtectedRoute allowedRoles={["owner", "admin"]} />}>
           <Route path="/admin/usuarios" element={<UsersPage />} />
-          <Route path="/admin/integracoes" element={<IntegrationsPage />} />
+          <Route path="/admin/integracoes" element={<PlanGatePage feature={FEATURES.apiAccess}><IntegrationsPage /></PlanGatePage>} />
           <Route path="/admin/clinica" element={<TenantPage />} />
           <Route path="/admin/saude-da-conta" element={<AccountHealthPage />} />
           <Route path="/admin/destinatarios" element={<ReportRecipientsPage />} />

@@ -1,4 +1,4 @@
-import type { PlanTier } from "./account";
+import type { BillingCycle, PlanKey, PlanTier } from "./account";
 
 // --- Painel interno de Customer Success (/plataforma) — nunca acessível
 // por um usuário de clínica, só pela equipe que opera a Insighta (ver
@@ -58,11 +58,59 @@ export interface PlatformAuditLogEntry {
 // Achado CRÍTICO da Auditoria de Prontidão v1 ("produto não se cobra
 // sozinho") — fluxo self-service de upgrade de plano, ver DECISÃO
 // completa em app/services/payment_provider.py (backend).
+export interface PlanLimits {
+  max_monthly_appointments: number | null;
+  history_months: number;
+  max_users: number | null;
+  max_contract_payers: number | null;
+  max_coordinator_sectors: number | null;
+}
+
 export interface PlanCatalogEntry {
-  tier: PlanTier;
+  tier: PlanKey;
   label: string;
   monthly_price_cents: number;
   self_service: boolean;
+  /** Anual: 12 meses pelo preço de 10, cobrado de uma vez. null = sob consulta. */
+  yearly_price_cents: number | null;
+  limits: PlanLimits | null;
+  features: string[];
+}
+
+export type UsageState = "ok" | "warn" | "over" | "blocked";
+
+export interface UsageItem {
+  used: number;
+  limit: number | null;
+  state: UsageState;
+}
+
+/** GET /api/v1/subscription/usage — plano efetivo, funcionalidades e uso. */
+export interface PlanUsage {
+  plan: PlanKey;
+  plan_label: string;
+  in_trial: boolean;
+  trial_ends_at: string | null;
+  features: string[];
+  history_months: number;
+  appointments: UsageItem;
+  users: UsageItem;
+  contract_payers: UsageItem;
+  coordinator_sectors: UsageItem;
+  /** Cotas mensais de IA do plano (limite 0 = o plano não tem IA). */
+  ai_ask?: UsageItem;
+  ai_appeal_draft?: UsageItem;
+  ai_contract_extraction?: UsageItem;
+  ai_renews_on?: string;
+}
+
+export interface ChangePlanResponse {
+  plan: PlanKey;
+  pending_plan: PlanKey | null;
+  effective_at: "now" | "next_payment" | "after_payment";
+  proration_cents: number;
+  proration_invoice_url: string | null;
+  message: string;
 }
 
 export type BillingStatus =
@@ -88,6 +136,21 @@ export interface SubscriptionStatus {
   /** Cancelamento pelo cliente: pedido em / acesso até (fim do período pago). */
   cancel_requested_at?: string | null;
   access_until?: string | null;
+  /** Planos: efetivo (Pro durante o teste), contratado, teste e ciclo. */
+  plan?: PlanKey;
+  contracted_plan?: PlanKey;
+  in_trial?: boolean;
+  trial_ends_at?: string | null;
+  billing_cycle?: BillingCycle;
+  pending_plan?: PlanKey | null;
+  /** Subida para o Pro esperando o pagamento da diferença. */
+  pending_upgrade_invoice_url?: string | null;
+  /** Founders: preço travado (só IPCA). Reajuste anual agendado. */
+  locked_price_cents?: number | null;
+  scheduled_price_cents?: number | null;
+  scheduled_price_on?: string | null;
+  /** Teste acabou ou assinatura não paga: consultas sim, gravações não. */
+  read_only?: boolean;
 }
 
 export interface SubscriptionCancelResponse {
@@ -106,6 +169,8 @@ export interface SubscriptionOffer {
   founders_slots_total: number;
   founders_slots_remaining: number;
   founders_lock_months: number;
+  pro_price_cents?: number | null;
+  basic_price_cents?: number | null;
 }
 
 export interface CheckoutSession {
@@ -458,4 +523,16 @@ export interface TenantExportDownload {
 export interface WebhookEventType {
   event_type: string;
   description: string;
+}
+
+/** Pedido da Central de Ajuda, no painel interno (GET /platform/support-requests). */
+export interface PlatformSupportRequest {
+  id: string;
+  tenant_id: string;
+  trade_name: string;
+  user_email: string | null;
+  subject: string;
+  message: string;
+  status: "aberto" | "respondido";
+  created_at: string;
 }

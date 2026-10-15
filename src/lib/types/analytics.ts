@@ -1407,6 +1407,8 @@ export interface ApiErrorBody {
   campos?: { campo: string; problema: string }[];
   /** 409 que se resolve confirmando (rodada 5): reenviar com este campo = true. */
   confirm_field?: string;
+  /** Dados para a tela oferecer o botão que resolve (ex.: colunas que faltam). */
+  extra?: Record<string, unknown>;
 }
 
 // GET /analytics/result-statement (Extrato de Resultado): quanto o

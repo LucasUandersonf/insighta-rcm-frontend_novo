@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ChevronDown, Compass, LifeBuoy } from "lucide-react";
+import { useLocation } from "react-router-dom";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -20,14 +21,48 @@ import { useDirtyOnEdit } from "@/lib/unsavedChanges";
 // os módulos já em produção. Quando um padrão recorrente aparecer nas
 // perguntas reais enviadas pelo formulário abaixo, vale promovê-lo para
 // cá.
-const FAQ_ITEMS: { question: string; answer: string }[] = [
+// `routes`: telas onde a pergunta aparece primeiro, já aberta (Central
+// contextual: quem pede ajuda em Importar dados vê antes as dúvidas de lá).
+const FAQ_ITEMS: { question: string; answer: string; routes?: string[] }[] = [
+  {
+    question: "A planilha foi recusada por coluna faltando. E agora?",
+    routes: ["/importar"],
+    answer:
+      "A mensagem diz quais colunas faltam pelo nome do modelo. Se o seu sistema usa outro nome (ex.: “Dt Atend” em vez de data do atendimento), clique em Mapear colunas e diga qual é qual: o Insighta lembra para os próximos arquivos. Se faltar a coluna mesmo, baixe o modelo na própria tela e copie os dados para ele. Para conferir sem importar nada, use Conferir antes de importar.",
+  },
+  {
+    question: "O que é o limite de atendimentos do plano?",
+    routes: ["/assinatura", "/importar"],
+    answer:
+      "O Basic acompanha até 1.500 atendimentos por mês e o Pro até 8.000 (contam os atendimentos dos últimos 30 dias). Aos 80% aparece um aviso; acima de 100% as importações continuam até 120%; acima disso, novas importações ficam pausadas até a troca de plano. Nada do que já foi importado é apagado. O consumo está em Plano e assinatura › Uso do plano.",
+  },
+  {
+    question: "Por que o sistema está em modo leitura?",
+    routes: ["/assinatura"],
+    answer:
+      "O teste de 14 dias terminou ou há uma fatura da assinatura em aberto. Você continua vendo e exportando tudo; para importar e editar, escolha um plano ou pague a fatura em Plano e assinatura. Pix e cartão liberam em minutos; boleto, em até 3 dias úteis.",
+  },
+  {
+    question: "Pedi o Pro e ele ainda não liberou.",
+    routes: ["/assinatura"],
+    answer:
+      "A troca para o Pro gera uma cobrança da diferença proporcional e o Pro é liberado quando ela é paga. Pix e cartão liberam em minutos; boleto compensa em até 3 dias úteis. Depois de pagar, use Já paguei, conferir agora em Plano e assinatura. Se não quiser mais, clique em Desistir da troca.",
+  },
+  {
+    question: "Por que o Extrato de Resultado está zerado?",
+    routes: ["/resultado", "/"],
+    answer:
+      "No primeiro mês é normal: o Extrato precisa do faturamento importado e do primeiro retorno do convênio (pagamento ou glosa) para medir o que voltou ao caixa. Ele fecha no dia 1 de cada mês. Cada linha tem Como calculamos, com a fonte do número.",
+  },
   {
     question: "Como importo minha primeira planilha?",
+    routes: ["/importar", "/"],
     answer:
       "Em Importar dados (barra de cima), escolha o tipo da planilha (Faturamento, Agenda, Atendimento, Estoque ou Prontuário), selecione o arquivo como ele sai do seu sistema (.xlsx ou .csv) e clique em Enviar arquivo. Convênios novos são cadastrados sozinhos. O resultado aparece na mesma tela e você pode sair enquanto processa.",
   },
   {
     question: "Minha planilha teve linhas que não entraram — o que fazer?",
+    routes: ["/importar"],
     answer:
       "Abra Importar dados › Linhas para corrigir. Convênio desconhecido se resolve ali mesmo, com um clique. Linha com data, valor ou campo obrigatório inválido mostra o número da linha (como no Excel), o valor que foi lido e o que corrigir; baixe a lista, corrija na planilha e envie o arquivo de novo — só as linhas que faltavam entram.",
   },
@@ -42,6 +77,7 @@ const FAQ_ITEMS: { question: string; answer: string }[] = [
   },
   {
     question: "Como convido alguém da equipe?",
+    routes: ["/admin/usuarios"],
     answer:
       "No menu da sua foto › Usuários › Novo usuário. Escolha o papel da pessoa (cada papel mostra o que ela pode ver), crie o acesso e copie o convite com o link e a senha temporária. No primeiro acesso ela cria a própria senha.",
   },
@@ -51,6 +87,7 @@ const FAQ_ITEMS: { question: string; answer: string }[] = [
   },
   {
     question: "Por que um faturamento aparece com risco de glosa alto?",
+    routes: ["/faturamento", "/fila-correcao"],
     answer:
       "O sistema aplica regras antes do envio ao convênio: CID ausente, procedimento não informado, convênio sem tabela de preço aprovada ou valor cobrado acima do contratado. O motivo específico aparece no próprio registro — é uma regra concreta que bateu, não uma estimativa.",
   },
@@ -94,12 +131,20 @@ function normalizeText(text: string): string {
   return text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 }
 
+function matchesRoute(routes: string[] | undefined, pathname: string): boolean {
+  return !!routes?.some((r) => (r === "/" ? pathname === "/" : pathname === r || pathname.startsWith(`${r}/`)));
+}
+
 function FaqAccordion() {
-  const [openIndex, setOpenIndex] = useState<number | null>(null);
+  const { pathname } = useLocation();
+  // Suporte zero: as perguntas da tela atual vêm primeiro e a primeira já abre.
+  const ordered = [...FAQ_ITEMS.filter((i) => matchesRoute(i.routes, pathname)), ...FAQ_ITEMS.filter((i) => !matchesRoute(i.routes, pathname))];
+  const hasContext = matchesRoute(ordered[0]?.routes, pathname);
+  const [openIndex, setOpenIndex] = useState<number | null>(hasContext ? 0 : null);
   const [search, setSearch] = useState("");
   // UX2-26: busca nas perguntas e respostas (sem acento, sem maiúscula).
   const terms = normalizeText(search).split(/\s+/).filter(Boolean);
-  const items = FAQ_ITEMS.filter((item) => {
+  const items = ordered.filter((item) => {
     const hay = normalizeText(`${item.question} ${item.answer}`);
     return terms.every((t) => hay.includes(t));
   });

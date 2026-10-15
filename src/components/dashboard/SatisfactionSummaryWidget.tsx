@@ -7,6 +7,8 @@ import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { cn } from "@/lib/cn";
 import type { SatisfactionSummary } from "@/lib/types";
+import { withPlanGate } from "@/components/billing/PlanGate";
+import { FEATURES } from "@/lib/plan";
 
 /**
  * "Equilíbrio Insighta" (Balanced Scorecard, perna Cliente, mecanismo 2)
@@ -19,7 +21,7 @@ import type { SatisfactionSummary } from "@/lib/types";
 
 const SCORES = [1, 2, 3, 4, 5] as const;
 
-export function SatisfactionSummaryWidget() {
+function SatisfactionSummaryWidgetInner() {
   const { data, isLoading, error } = useQuery({
     queryKey: ["analytics", "satisfaction-summary"],
     queryFn: () => apiClient.get<SatisfactionSummary>("/api/v1/analytics/satisfaction-summary"),
@@ -118,3 +120,6 @@ export function SatisfactionSummaryWidget() {
     </BentoCard>
   );
 }
+
+// Plano Pro (src/lib/plan.ts): no Basic, vira a prévia com o convite.
+export const SatisfactionSummaryWidget = withPlanGate(SatisfactionSummaryWidgetInner, FEATURES.patientsAdvanced);
