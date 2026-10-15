@@ -12,7 +12,7 @@ import { Pagination } from "@/components/ui/Pagination";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ImportDataNav } from "@/components/layout/ImportDataNav";
 import { Tabs, TabPanel } from "@/components/ui/Tabs";
-import { apiClient } from "@/lib/api-client";
+import { ApiError, apiClient } from "@/lib/api-client";
 import {
   ACTIVE_STATES,
   LARGE_FILE_UNAVAILABLE_MESSAGE,
@@ -32,11 +32,13 @@ import type {
   IngestionValidationReport,
   ColumnAlias,
   ColumnMappingPreview,
+  IngestionCheckResult,
   Contract,
   IngestionFileEntry,
   IngestionUndoResponse,
   InsurancePlan,
   PaginatedResponse,
+  SubscriptionStatus,
   UploadIngestionFileResponse,
 } from "@/lib/types";
 import { word } from "@/lib/plural";
@@ -551,6 +553,15 @@ function BatchUploadTab() {
   const [savedMappingWarning, setSavedMappingWarning] = useState<string | null>(null);
   // Limite de atendimentos do plano: aviso antes de enviar uma agenda grande.
   const { usage: planUsage } = usePlan();
+  // Modo leitura (teste acabou ou fatura em aberto): o envio fica travado com
+  // o motivo à vista, em vez de deixar clicar e recusar depois.
+  const { data: subscription } = useQuery({
+    queryKey: ["subscription", "status"],
+    queryFn: () => apiClient.get<SubscriptionStatus>("/api/v1/subscription"),
+    staleTime: 60_000,
+    retry: false,
+  });
+  const billingReadOnly = !!subscription?.read_only;
   const [volumeWarning, setVolumeWarning] = useState<string | null>(null);
 
   async function checkPlanVolume(selected: File, ext: string, type: DataType) {
@@ -572,6 +583,8 @@ function BatchUploadTab() {
     setDetected(null);
     setSavedMappingWarning(null);
     setVolumeWarning(null);
+    setCheck(null);
+    setSendErrorExtra(null);
     setSendError(null);
     if (!selected) return;
     const ext = selected.name.toLowerCase().split(".").pop() ?? "";
@@ -589,7 +602,8 @@ function BatchUploadTab() {
     }
     void checkPlanVolume(selected, ext, dataType);
     // Lê só o começo (cabeçalho + algumas linhas): CSV inteiro não precisa subir duas vezes.
-    if (ext !== "csv" && !(ext === "xlsx" && selected.size <= 3 * 1024 * 1024)) return;
+    // A planilha inteira sobe, mas o servidor lê só o cabeçalho e as primeiras linhas.
+    if (ext !== "csv" && !(ext === "xlsx" && selected.size <= 20 * 1024 * 1024)) return;
     try {
       const head = ext === "csv" ? new File([selected.slice(0, 64 * 1024)], selected.name, { type: "text/csv" }) : selected;
       const formData = new FormData();
@@ -610,10 +624,25 @@ function BatchUploadTab() {
   // UX2-10: falha no envio (ex.: armazenamento fora) fica na tela, junto do
   // arquivo ainda selecionado, com "Tentar de novo" — não só num aviso que some.
   const [sendError, setSendError] = useState<string | null>(null);
+  // Suporte zero: quando o servidor diz QUAL coluna falta ou que a planilha é
+  // de outro tipo, a faixa de erro oferece o botão que resolve.
+  const [sendErrorExtra, setSendErrorExtra] = useState<{ code: string; missing: string[]; detected: string | null } | null>(null);
+  const [check, setCheck] = useState<IngestionCheckResult | null>(null);
+  const checkMutation = useMutation({
+    mutationFn: async ({ f, type }: { f: File; type: DataType }) => {
+      const formData = new FormData();
+      formData.append("file", f);
+      formData.append("data_type", type);
+      return apiClient.upload<IngestionCheckResult>("/api/v1/ingestion/check", formData);
+    },
+    onSuccess: (result) => setCheck(result),
+    onError: (err) => setSendError(getApiErrorMessage(err)),
+  });
   const mutation = useMutation({
     mutationFn: async ({ f, type }: { f: File; type: DataType }): Promise<{ queued: DirectUploadStatus } | { result: UploadIngestionFileResponse }> => {
       const dataType = type;
       setSendError(null);
+      setSendErrorExtra(null);
       setSendPercent(0);
       // Direto ao armazenamento quando o servidor permite: o arquivo é
       // processado em segundo plano e a tela fica livre (painel "Em
@@ -666,7 +695,17 @@ function BatchUploadTab() {
       // Colunas fora do modelo não entram — avisar em vez de calar.
       if (!result.already_processed && result.ignored_columns?.length && result.message) showError(result.message);
     },
-    onError: (err) => setSendError(getApiErrorMessage(err)),
+    onError: (err) => {
+      setSendError(getApiErrorMessage(err));
+      if (err instanceof ApiError && (err.errorCode === "colunas_faltando" || err.errorCode === "tipo_de_planilha_errado")) {
+        const extra = err.extra ?? {};
+        setSendErrorExtra({
+          code: err.errorCode,
+          missing: Array.isArray(extra.missing_columns) ? (extra.missing_columns as string[]) : [],
+          detected: typeof extra.detected_data_type === "string" ? extra.detected_data_type : null,
+        });
+      }
+    },
   });
   const send = (type: DataType = dataType) => {
     if (!file) return;
@@ -788,9 +827,26 @@ function BatchUploadTab() {
                 Mapear colunas
               </Button>
             )}
+            {billingReadOnly && (
+              <span className="mr-auto self-center text-xs text-pending">
+                Modo leitura: para importar,{" "}
+                <Link to="/assinatura" className="font-medium text-accent underline-offset-2 hover:underline">
+                  escolha um plano
+                </Link>
+                .
+              </span>
+            )}
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={billingReadOnly || !file || !!fileProblem || mutation.isPending || checkMutation.isPending}
+              onClick={() => file && checkMutation.mutate({ f: file, type: dataType })}
+            >
+              {checkMutation.isPending ? "Conferindo..." : "Conferir antes de importar"}
+            </Button>
             <Button
               variant={detected && detected !== dataType ? "secondary" : "primary"}
-              disabled={!file || !!fileProblem || mutation.isPending}
+              disabled={billingReadOnly || !file || !!fileProblem || mutation.isPending}
               onClick={() => send()}
             >
               {mutation.isPending
@@ -807,13 +863,29 @@ function BatchUploadTab() {
               <span className="min-w-0 flex-1">
                 <strong>Não enviado{file ? `: ${file.name}` : ""}.</strong> {sendError}
               </span>
-              {file && (
+              {sendErrorExtra?.code === "tipo_de_planilha_errado" && sendErrorExtra.detected && DATA_TYPES.includes(sendErrorExtra.detected as DataType) ? (
+                <Button type="button" size="xs" onClick={() => send(sendErrorExtra.detected as DataType)}>
+                  Enviar como {DATA_TYPE_LABELS[sendErrorExtra.detected] ?? sendErrorExtra.detected}
+                </Button>
+              ) : null}
+              {sendErrorExtra?.code === "colunas_faltando" && (
+                <>
+                  {/\.(csv|xlsx)$/.test(file?.name.toLowerCase() ?? "") && (
+                    <Button type="button" size="xs" onClick={() => setIsMappingModalOpen(true)}>
+                      Mapear colunas
+                    </Button>
+                  )}
+                  <TemplateDownloadButton dataType={dataType} />
+                </>
+              )}
+              {file && !sendErrorExtra && (
                 <Button type="button" size="xs" onClick={() => send()}>
                   Tentar de novo
                 </Button>
               )}
             </div>
           )}
+          {check && <CheckResultPanel check={check} dataType={dataType} onMap={() => setIsMappingModalOpen(true)} />}
           <p className="mt-2 text-2xs text-ink-faint">
             O seu sistema usa outros nomes de coluna? Clique em “Mapear colunas” antes de enviar e diga qual é qual.
           </p>
@@ -1323,6 +1395,90 @@ export function UploadCenterPage() {
         <TabPanel id="contratos" groupId={TABS_GROUP}>
           <ContractUploadTab />
         </TabPanel>
+      )}
+    </div>
+  );
+}
+
+
+/** Baixa o modelo .xlsx do tipo escolhido (mesmo arquivo do bloco "O que o modelo pede"). */
+function TemplateDownloadButton({ dataType }: { dataType: string }) {
+  const { showError } = useToast();
+  return (
+    <Button
+      type="button"
+      size="xs"
+      variant="secondary"
+      onClick={() =>
+        saveBlob(`/api/v1/ingestion/templates/${dataType}.xlsx`, `modelo-${dataType}-insighta.xlsx`).catch((err) => showError(getApiErrorMessage(err)))
+      }
+    >
+      <Download aria-hidden size={12} /> Baixar modelo
+    </Button>
+  );
+}
+
+/** Suporte zero: resultado de "Conferir antes de importar" (nada foi gravado). */
+function CheckResultPanel({ check, dataType, onMap }: { check: IngestionCheckResult; dataType: string; onMap: () => void }) {
+  if (!check.ok) {
+    return (
+      <div role="alert" className="mt-3 flex flex-col gap-2 rounded-md border border-denied/30 bg-denied-bg px-3 py-2 text-xs text-ink">
+        <span>
+          <strong>A conferência encontrou um problema no arquivo.</strong> {check.message}
+        </span>
+        {check.missing_columns.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-ink-muted">Faltam:</span>
+            {check.missing_columns.map((c) => (
+              <Badge key={c} tone="denied">
+                {c}
+              </Badge>
+            ))}
+            <Button type="button" size="xs" onClick={onMap}>
+              Mapear colunas
+            </Button>
+            <TemplateDownloadButton dataType={dataType} />
+          </div>
+        )}
+      </div>
+    );
+  }
+  const allGood = check.invalid_rows === 0;
+  return (
+    <div
+      role="status"
+      className={
+        "mt-3 flex flex-col gap-2 rounded-md border px-3 py-2 text-xs text-ink " +
+        (allGood ? "border-revenue/30 bg-revenue/6" : "border-pending/30 bg-pending/6")
+      }
+    >
+      <span>
+        <strong>
+          {allGood
+            ? `Tudo certo: as ${formatCount(check.total_rows)} linhas podem entrar.`
+            : `${formatCount(check.valid_rows)} de ${formatCount(check.total_rows)} linhas podem entrar; ${formatCount(check.invalid_rows)} ficariam para corrigir.`}
+        </strong>{" "}
+        Nada foi gravado ainda.{check.truncated ? " Conferimos as primeiras 50 mil linhas." : ""}
+      </span>
+      {check.problems.length > 0 && (
+        <ul className="flex flex-col gap-1.5">
+          {check.problems.map((p) => (
+            <li key={p.problem}>
+              <span className="font-medium">{p.problem}</span> <span className="text-ink-muted">({formatCount(p.count)})</span>
+              <span className="block text-ink-muted">
+                Exemplos: {p.examples.map((e) => `linha ${e.row_number}`).join(", ")}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {!allGood && (
+        <span className="text-ink-muted">
+          Corrija na planilha e confira de novo, ou envie assim mesmo: as linhas com problema vão para Linhas para corrigir.
+        </span>
+      )}
+      {check.ignored_columns.length > 0 && (
+        <span className="text-ink-muted">Colunas que não fazem parte do modelo (não entram): {check.ignored_columns.join(", ")}</span>
       )}
     </div>
   );

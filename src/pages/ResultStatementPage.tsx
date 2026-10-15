@@ -159,7 +159,7 @@ export function ResultStatementPage() {
             {data.items.length === 0 ? (
               <EmptyState
                 icon={<TrendingUp size={17} strokeWidth={1.5} />}
-                message="Nenhum resultado medido neste mês ainda. Corrija as guias retidas na Fila de correção e resolva os insights da Sala de Comando: o ganho aparece aqui depois da reavaliação."
+                message="Nenhum resultado medido neste mês ainda. No primeiro mês isso é normal: o Extrato precisa do faturamento importado e do primeiro retorno do convênio (pagamento ou glosa) para medir. Enquanto isso, corrija as guias retidas na Fila de correção e resolva os insights da Sala de Comando: o ganho aparece aqui depois da reavaliação."
               />
             ) : (
               <ul className="divide-y divide-border-hairline px-6">

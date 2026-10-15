@@ -524,3 +524,15 @@ export interface WebhookEventType {
   event_type: string;
   description: string;
 }
+
+/** Pedido da Central de Ajuda, no painel interno (GET /platform/support-requests). */
+export interface PlatformSupportRequest {
+  id: string;
+  tenant_id: string;
+  trade_name: string;
+  user_email: string | null;
+  subject: string;
+  message: string;
+  status: "aberto" | "respondido";
+  created_at: string;
+}

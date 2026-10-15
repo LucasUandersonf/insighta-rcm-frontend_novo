@@ -205,7 +205,8 @@ export function SubscriptionPage() {
         >
           <p className="text-sm text-ink">
             <strong>Troca para o Pro pedida.</strong> O Pro é liberado assim que o pagamento da diferença for confirmado. Pix e
-            cartão liberam em minutos. Se a diferença não for paga, o Pro passa a valer no próximo pagamento da assinatura.
+            cartão liberam em minutos; boleto compensa em até 3 dias úteis. Se a diferença não for paga, o Pro passa a valer no
+            próximo pagamento da assinatura.
           </p>
           {isOwner && (
             <div className="flex flex-wrap justify-center gap-2">
@@ -214,7 +215,17 @@ export function SubscriptionPage() {
                   <CreditCard aria-hidden size={16} /> Pagar a diferença
                 </Button>
               )}
-              <Button variant="secondary" disabled={busy} onClick={() => changePlan.mutate(currentPlan)}>
+              <Button
+                variant="secondary"
+                disabled={statusQuery.isFetching}
+                onClick={() => {
+                  statusQuery.refetch();
+                  queryClient.invalidateQueries({ queryKey: PLAN_QUERY_KEY });
+                }}
+              >
+                {statusQuery.isFetching ? "Conferindo..." : "Já paguei, conferir agora"}
+              </Button>
+              <Button variant="ghost" disabled={busy} onClick={() => changePlan.mutate(currentPlan)}>
                 Desistir da troca
               </Button>
             </div>

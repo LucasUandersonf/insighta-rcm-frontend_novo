@@ -445,3 +445,18 @@ export interface WebhookDeliveryEntry {
   created_at: string;
   updated_at: string;
 }
+
+/** POST /api/v1/ingestion/check — "Conferir antes de importar" (nada é gravado). */
+export interface IngestionCheckResult {
+  ok: boolean;
+  error_code: string | null;
+  message: string | null;
+  total_rows: number;
+  valid_rows: number;
+  invalid_rows: number;
+  truncated: boolean;
+  problems: { problem: string; count: number; examples: { row_number: number; detail: string }[] }[];
+  ignored_columns: string[];
+  missing_columns: string[];
+  detected_data_type: string | null;
+}

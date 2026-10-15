@@ -45,7 +45,11 @@ describe("DenialRiskDistributionPanel", () => {
 
     renderWithProviders(<DenialRiskDistributionPanel dateFrom="2026-09-01" dateTo="2026-09-07" />);
 
-    await waitFor(() => expect(screen.getByText(/Nenhum faturamento revisado nesta janela/)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/Nenhuma guia revisada nesta janela/)).toBeInTheDocument());
+    // Suporte zero: o estado vazio leva direto para a importação.
+    expect(screen.getByRole("link", { name: /enviar a planilha de faturamento/ })).toHaveAttribute("href", "/importar");
+    // E o título tem o "i" com o cálculo.
+    expect(screen.getByRole("button", { name: /Como calculamos: Distribuição de risco de glosa/ })).toBeInTheDocument();
   });
 
   it("não tem violações de acessibilidade", async () => {
