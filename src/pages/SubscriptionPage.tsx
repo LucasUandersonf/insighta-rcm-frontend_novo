@@ -49,6 +49,7 @@ const PLAN_COPY: Record<"basic" | "pro", { who: string; items: string[] }> = {
       "6 conferências antes do envio e pagamento conferido contra o contrato",
       "Extrato de Resultado e Health Score todo mês",
       "Relatório semanal por e-mail",
+      "Integração noturna com o ERP: os dados chegam sozinhos",
       "3 usuários, 3 convênios com contrato, 12 meses de histórico",
     ],
   },
@@ -60,7 +61,7 @@ const PLAN_COPY: Record<"basic" | "pro", { who: string; items: string[] }> = {
       "Equipe de IA: Jornal da manhã, perguntas livres, leitura de contrato e minuta de recurso",
       "Modelo preditivo de glosa e comparativo entre clínicas",
       "Margem, custos, estoque, pacientes e marketing",
-      "Relatório no WhatsApp, integração por API e usuários ilimitados",
+      "Relatório no WhatsApp, webhooks e usuários ilimitados",
     ],
   },
 };

@@ -390,6 +390,72 @@ export interface RiskAlertSendResponse {
 }
 
 // --- Central de Integrações & Webhooks (app/schemas/integration.py) ---
+export type IntegrationDataType = "faturamento" | "agenda" | "atendimento" | "estoque" | "pep";
+export type IntegrationFeedState =
+  | "ok"
+  | "aguardando"
+  | "nao_chegou"
+  | "volume_baixo"
+  | "muitas_recusas"
+  | "conector_erro"
+  | "nao_esperada";
+
+export interface IntegrationFeedStatus {
+  data_type: IntegrationDataType;
+  label: string;
+  expected: boolean;
+  state: IntegrationFeedState;
+  state_label: string;
+  detail: string;
+  alarm: boolean;
+  rows_today: number;
+  rejected_today: number;
+  files_today: number;
+  last_automatic_at: string | null;
+  last_automatic_rows: number | null;
+  last_automatic_rejected: number | null;
+  last_any_at: string | null;
+  typical_rows: number | null;
+}
+
+export interface ConnectorFeedResult {
+  data_type: IntegrationDataType;
+  status: "ok" | "erro" | "ignorado";
+  view?: string | null;
+  rows_read: number;
+  rows_accepted: number;
+  rows_rejected: number;
+  files_sent: number;
+  message?: string | null;
+}
+
+export interface ConnectorRun {
+  connector_version: string | null;
+  host: string | null;
+  started_at: string | null;
+  finished_at: string | null;
+  ok: boolean;
+  results: ConnectorFeedResult[];
+  received_at: string;
+}
+
+export interface IntegrationAlertEntry {
+  data_type: string;
+  kind: string;
+  alert_date: string;
+  detail: string;
+  created_at: string;
+}
+
+export interface IntegrationStatus {
+  expected_types: IntegrationDataType[];
+  alert_hour: number;
+  feeds: IntegrationFeedStatus[];
+  last_connector_run: ConnectorRun | null;
+  recent_alerts: IntegrationAlertEntry[];
+  active_api_keys: number;
+}
+
 export interface ApiKey {
   id: string;
   name: string;

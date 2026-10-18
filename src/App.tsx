@@ -259,7 +259,7 @@ function AppRoutes() {
         <Route path="/conta/seguranca" element={<AccountSecurityPage />} />
         <Route element={<RoleProtectedRoute allowedRoles={["owner", "admin"]} />}>
           <Route path="/admin/usuarios" element={<UsersPage />} />
-          <Route path="/admin/integracoes" element={<PlanGatePage feature={FEATURES.apiAccess}><IntegrationsPage /></PlanGatePage>} />
+          <Route path="/admin/integracoes" element={<IntegrationsPage />} />
           <Route path="/admin/clinica" element={<TenantPage />} />
           <Route path="/admin/saude-da-conta" element={<AccountHealthPage />} />
           <Route path="/admin/destinatarios" element={<ReportRecipientsPage />} />

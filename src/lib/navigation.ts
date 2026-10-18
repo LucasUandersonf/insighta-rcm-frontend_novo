@@ -123,7 +123,7 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
   // Profissionais chegam pela importação; o que falta é só a grade
   // semanal (nenhum arquivo traz), que alimenta ocupação e horários vagos.
   { to: "/profissionais", label: "Horários de atendimento", icon: Clock, roles: ADMINS, placement: "modules" },
-  { to: "/admin/integracoes", label: "Integrações e webhooks", icon: Plug, roles: ADMINS, placement: "modules", feature: "api_access" },
+  { to: "/admin/integracoes", label: "Integrações", icon: Plug, roles: ADMINS, placement: "modules" },
   { to: "/admin/destinatarios", label: "Destinatários de relatórios", icon: Send, roles: ADMINS, placement: "modules" },
   // Auditor também precisa ver a trilha de auditoria — papel de
   // leitura/compliance (mesmo critério de analytics.py).

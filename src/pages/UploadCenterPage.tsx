@@ -13,6 +13,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { ImportDataNav } from "@/components/layout/ImportDataNav";
 import { Tabs, TabPanel } from "@/components/ui/Tabs";
 import { ApiError, apiClient } from "@/lib/api-client";
+import { saveBlob } from "@/lib/download";
 import {
   ACTIVE_STATES,
   LARGE_FILE_UNAVAILABLE_MESSAGE,
@@ -372,16 +373,6 @@ function SavedMappings({ dataType, template }: { dataType: string; template: Ing
       </ul>
     </details>
   );
-}
-
-async function saveBlob(path: string, filename: string): Promise<void> {
-  const blob = await apiClient.getBlob(path);
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  link.click();
-  setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
 /**

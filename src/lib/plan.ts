@@ -36,7 +36,7 @@ export const FEATURE_PITCH: Record<PlanFeature, { title: string; text: string }>
   ask_ai: { title: "Pergunte à IA", text: "Perguntas livres em português, respondidas com os números da clínica." },
   morning_news_ai: { title: "Jornal da manhã", text: "A IA escreve a manchete do dia antes de você chegar." },
   whatsapp_reports: { title: "Relatório no WhatsApp", text: "O PDF de segunda e o Extrato do dia 1 no WhatsApp de cada sócio." },
-  api_access: { title: "Integração por API", text: "A equipe do seu ERP envia os dados sozinha, com chave de API e webhooks." },
+  api_access: { title: "Webhooks", text: "O Insighta avisa os outros sistemas da clínica sozinho: arquivo processado, risco de falta, glosa." },
   benchmark: { title: "Comparativo entre clínicas", text: "Sua glosa e seus preços de contrato contra a média de clínicas parecidas." },
 };
 
