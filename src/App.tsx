@@ -44,6 +44,9 @@ const TeamPage = lazy(() => import("@/pages/TeamPage").then((m) => ({ default: m
 const SatisfactionRatingPage = lazy(() =>
   import("@/pages/SatisfactionRatingPage").then((m) => ({ default: m.SatisfactionRatingPage }))
 );
+const GuardianAlertPage = lazy(() =>
+  import("@/pages/GuardianAlertPage").then((m) => ({ default: m.GuardianAlertPage }))
+);
 const BillingRiskQueuePage = lazy(() => import("@/pages/BillingRiskQueuePage").then((m) => ({ default: m.BillingRiskQueuePage })));
 const AgendaRiscoPage = lazy(() => import("@/pages/AgendaRiscoPage").then((m) => ({ default: m.AgendaRiscoPage })));
 const ResultStatementPage = lazy(() => import("@/pages/ResultStatementPage").then((m) => ({ default: m.ResultStatementPage })));
@@ -131,6 +134,7 @@ function AppRoutes() {
           (o paciente abre no próprio celular) — ver DECISÃO em
           052_appointment_satisfaction.sql (backend). */}
       <Route path="/satisfacao/:token" element={<SatisfactionRatingPage />} />
+      <Route path="/alerta/:token" element={<GuardianAlertPage />} />
       {/* Painel interno de Customer Success — NUNCA linkado de
           dentro do produto, fora do AuthContext/RBAC de clínica
           de propósito (ver DECISÃO em src/routes/PlatformProtectedRoute.tsx

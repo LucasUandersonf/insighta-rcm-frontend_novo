@@ -596,3 +596,34 @@ export async function submitSatisfactionScore(
     { skipAuth: true },
   );
 }
+
+// --- Guardian: link público de decisão do alerta ---------------------------
+export interface GuardianAlertView {
+  title: string;
+  message: string;
+  financial_impact: number | null;
+  action_url: string | null;
+  sent_at: string;
+  action: "resolver" | "delegar" | "ignorar" | null;
+  action_label: string | null;
+  acted_at: string | null;
+  acted_by: string | null;
+  team: { id: string; name: string; role: string }[];
+}
+
+export interface GuardianActionResult {
+  action: string;
+  action_label: string;
+  outcome_id: string;
+}
+
+export async function getGuardianAlert(token: string): Promise<GuardianAlertView> {
+  return apiClient.get<GuardianAlertView>(`/api/v1/public/guardian/${encodeURIComponent(token)}`, { skipAuth: true });
+}
+
+export async function actOnGuardianAlert(
+  token: string,
+  body: { action: "resolver" | "delegar" | "ignorar"; assigned_to?: string | null; note?: string | null },
+): Promise<GuardianActionResult> {
+  return apiClient.post<GuardianActionResult>(`/api/v1/public/guardian/${encodeURIComponent(token)}`, body, { skipAuth: true });
+}
