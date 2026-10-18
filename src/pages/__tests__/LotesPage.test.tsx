@@ -4,7 +4,7 @@ import { LotesPage } from "@/pages/LotesPage";
 import { apiClient } from "@/lib/api-client";
 import { renderWithProviders } from "@/test/utils";
 import { expectNoA11yViolations } from "@/test/a11y";
-import type { Guia, InsurancePlan, Lote, PaginatedResponse } from "@/lib/types";
+import type { Guia, InsurancePlan, Lote, PaginatedResponse, PreSubmissionGroup } from "@/lib/types";
 
 let mockRole = "financeiro";
 vi.mock("@/context/AuthContext", () => ({
@@ -153,6 +153,55 @@ describe("LotesPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Adicionar" }));
 
     await waitFor(() => expect(apiClient.post).toHaveBeenCalledWith(`/api/v1/lotes/${lote.id}/guias/${"guia-1"}`));
+  });
+
+  it("no detalhe do lote aberto, mostra a conferência antes do envio e avisa ao fechar", async () => {
+    const lote = makeLote();
+    const lotesPage: PaginatedResponse<Lote> = { items: [lote], total: 1, limit: 20, offset: 0 };
+    const check: PreSubmissionGroup = {
+      key: `plan-1|lote|${lote.id}`,
+      plan_id: "plan-1",
+      plan_name: "Unimed Nacional",
+      lote_label: "Lote de 01/09/2026",
+      lote_kind: "lote",
+      verdict: "revisar",
+      items: 1,
+      total_value: 150,
+      blocking_items: 1,
+      blocking_value: 150,
+      gain_value: 0,
+      expected_denial: null,
+      denial_rate: null,
+      oldest_service_date: "2026-09-01",
+      issues: [
+        {
+          code: "autorizacao_vencida",
+          label: "Senha de autorização vencida na data do atendimento",
+          what_to_do: "Peça nova senha ao convênio.",
+          blocking: true,
+          kind: "perda",
+          count: 1,
+          value: 150,
+          items: [],
+        },
+      ],
+    };
+    mockGetByPath({
+      "/api/v1/insurance-companies/plans?include_inactive=true": [makePlan()],
+      "/api/v1/insurance-companies/plans": [makePlan()],
+      [`/api/v1/lotes/${lote.id}/conferencia`]: check,
+      [`/api/v1/lotes/${lote.id}/guias-candidatas`]: [],
+      [`/api/v1/lotes/${lote.id}/guias`]: [makeGuia({ lote_id: lote.id })],
+      "/api/v1/lotes": lotesPage,
+    });
+
+    renderWithProviders(<LotesPage />);
+    await waitFor(() => expect(screen.getByText("Unimed Nacional")).toBeInTheDocument());
+    fireEvent.click(screen.getByRole("button", { name: "Ver guias" }));
+
+    expect(await screen.findByText("Senha de autorização vencida na data do atendimento")).toBeInTheDocument();
+    expect(screen.getByText("Revisar antes")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Fechar mesmo assim" })).toBeInTheDocument();
   });
 
   it("não tem violações de acessibilidade", async () => {

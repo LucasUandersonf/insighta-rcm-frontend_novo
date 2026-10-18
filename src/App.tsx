@@ -50,6 +50,9 @@ const GuardianAlertPage = lazy(() =>
 const BillingRiskQueuePage = lazy(() => import("@/pages/BillingRiskQueuePage").then((m) => ({ default: m.BillingRiskQueuePage })));
 const AgendaRiscoPage = lazy(() => import("@/pages/AgendaRiscoPage").then((m) => ({ default: m.AgendaRiscoPage })));
 const ResultStatementPage = lazy(() => import("@/pages/ResultStatementPage").then((m) => ({ default: m.ResultStatementPage })));
+const PreSubmissionCheckPage = lazy(() => import("@/pages/PreSubmissionCheckPage").then((m) => ({ default: m.PreSubmissionCheckPage })));
+const CashForecastPage = lazy(() => import("@/pages/CashForecastPage").then((m) => ({ default: m.CashForecastPage })));
+const RecoveryCenterPage = lazy(() => import("@/pages/RecoveryCenterPage").then((m) => ({ default: m.RecoveryCenterPage })));
 const PatientFichaPage = lazy(() => import("@/pages/PatientFichaPage").then((m) => ({ default: m.PatientFichaPage })));
 const ExecutiveOverviewPage = lazy(() => import("@/pages/ExecutiveOverviewPage").then((m) => ({ default: m.ExecutiveOverviewPage })));
 const OrganizationSummaryPage = lazy(() => import("@/pages/OrganizationSummaryPage").then((m) => ({ default: m.OrganizationSummaryPage })));
@@ -218,6 +221,10 @@ function AppRoutes() {
           <Route path="/agenda-risco" element={<PlanGatePage feature={FEATURES.noShowRisk}><AgendaRiscoPage /></PlanGatePage>} />
           {/* Extrato de Resultado: mesmo RBAC de result_statement.py (_CAN_VIEW). */}
           <Route path="/resultado" element={<ResultStatementPage />} />
+          {/* Caminho do dinheiro: mesmo RBAC de money_path.py (_CAN_VIEW). */}
+          <Route path="/conferencia-envio" element={<PreSubmissionCheckPage />} />
+          <Route path="/caixa" element={<CashForecastPage />} />
+          <Route path="/recuperacao" element={<RecoveryCenterPage />} />
           <Route path="/convenios" element={<ContractsPage />} />
           <Route path="/recursos-de-glosa" element={<DenialAppealsPage />} />
           {/* Mesmo RBAC do backend em lotes.py/_CAN_READ (owner/admin/

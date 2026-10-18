@@ -3,6 +3,8 @@ import {
   HeartPulse,
   Clock,
   CalendarCheck,
+  ClipboardCheck,
+  HandCoins,
   Gauge,
   TrendingUp,
   Home,
@@ -88,7 +90,10 @@ export const NAV_ITEMS: NavItem[] = [
   // "Faturamento & guias" (lançamento manual) ficou só na barra do
   // coordenador de Faturamento, como exceção à importação.
   { to: "/fila-correcao", label: "Fila de correção", description: "Guias com risco de glosa, antes do envio", roles: FINANCE_WRITE, placement: "modules", group: "faturamento" },
+  { to: "/conferencia-envio", label: "Conferência antes do envio", description: "O que vai voltar glosado, antes de mandar o lote", roles: LEADERSHIP, placement: "modules", group: "faturamento" },
   { to: "/lotes", label: "Lotes de faturamento", description: "Agrupar guias antes de virar fatura", roles: LEADERSHIP, placement: "modules", group: "faturamento" },
+  { to: "/recuperacao", label: "Central de Recuperação", description: "Todo dinheiro que ainda dá para trazer de volta", roles: LEADERSHIP, placement: "modules", group: "faturamento" },
+  { to: "/caixa", label: "Caixa 13 semanas", description: "Quanto deve entrar em cada semana", roles: LEADERSHIP, placement: "modules", group: "faturamento" },
   { to: "/faturas", label: "Faturas", description: "Gerar a fatura dos lotes e dar baixa no pagamento", roles: LEADERSHIP, placement: "modules", group: "faturamento" },
   { to: "/recursos-de-glosa", label: "Recurso de glosa", description: "Contestar recusas dentro do prazo", roles: LEADERSHIP, placement: "modules", group: "faturamento" },
   { to: "/convenios", label: "Convênios e contratos", description: "Tabelas de repasse e vigências", roles: LEADERSHIP, placement: "modules", group: "faturamento" },
@@ -147,7 +152,9 @@ const SECTOR_NAV: Record<TeamSector, NavItem[]> = {
   faturamento: [
     { to: "/faturamento", label: "Faturamento", icon: Receipt, roles: LEADERSHIP, placement: "primary" },
     { to: "/fila-correcao", label: "Fila de correção", icon: ShieldAlert, roles: FINANCE_WRITE, placement: "primary" },
+    { to: "/conferencia-envio", label: "Conferência", icon: ClipboardCheck, roles: LEADERSHIP, placement: "primary" },
     { to: "/lotes", label: "Lotes", icon: Layers, roles: LEADERSHIP, placement: "primary" },
+    { to: "/recuperacao", label: "Recuperação", icon: HandCoins, roles: LEADERSHIP, placement: "primary" },
     { to: "/faturas", label: "Faturas", icon: FileText, roles: LEADERSHIP, placement: "primary" },
     { to: "/recursos-de-glosa", label: "Recursos de glosa", icon: FileWarning, roles: LEADERSHIP, placement: "primary" },
     { to: "/convenios", label: "Convênios", icon: Handshake, roles: LEADERSHIP, placement: "primary" },
