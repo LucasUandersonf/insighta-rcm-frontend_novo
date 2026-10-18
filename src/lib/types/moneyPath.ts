@@ -93,6 +93,7 @@ export interface RecoveryItem {
   appeal_id: string | null;
   status: string | null;
   denied_at: string | null;
+  charged_at?: string | null;
 }
 
 export type RecoveryAction = "abrir_recurso" | "ver_recurso" | "cobrar_convenio" | "cobrar_paciente";

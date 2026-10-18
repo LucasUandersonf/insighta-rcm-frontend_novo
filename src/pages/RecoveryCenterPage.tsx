@@ -53,7 +53,32 @@ function ItemAction({ front, item }: { front: RecoveryFront; item: RecoveryItem 
     },
     onError: (err) => showError(getApiErrorMessage(err)),
   });
+  // Cobrar o convênio ou o paciente: o que entrar depois disso vai para o
+  // "Recuperado pela Central" do Extrato de Resultado.
+  const charge = useMutation({
+    mutationFn: () =>
+      apiClient.post("/api/v1/financeiro/recuperacao/cobrado", {
+        billing_id: item.billing_id,
+        front: front.action === "cobrar_convenio" ? "sem_retorno" : "coparticipacao",
+      }),
+    onSuccess: () => {
+      showSuccess("Marcado como cobrado. Quando o pagamento entrar, ele aparece no Extrato de Resultado.");
+      void queryClient.invalidateQueries({ queryKey: RECOVERY_KEY });
+    },
+    onError: (err) => showError(getApiErrorMessage(err)),
+  });
 
+  if (front.action === "cobrar_convenio" || front.action === "cobrar_paciente") {
+    if (item.charged_at) {
+      return <span className="text-xs text-ink-muted">Cobrado em {formatDateBR(item.charged_at, { day: "2-digit", month: "2-digit" })}</span>;
+    }
+    if (!user || !CAN_APPEAL.includes(user.role)) return null;
+    return (
+      <Button size="xs" variant="secondary" disabled={charge.isPending} onClick={() => charge.mutate()}>
+        {charge.isPending ? "Salvando…" : "Marcar como cobrado"}
+      </Button>
+    );
+  }
   if (front.action === "abrir_recurso") {
     if (!user || !CAN_APPEAL.includes(user.role) || !item.denied_at) return null;
     return (

@@ -197,6 +197,39 @@ describe("RecoveryCenterPage", () => {
     );
   });
 
+  it("marca como cobrado nas frentes de cobrança e mostra a data depois", async () => {
+    mockRole = "financeiro";
+    const center: RecoveryCenter = {
+      ...RECOVERY,
+      fronts: [
+        {
+          code: "sem_retorno",
+          label: "Sem retorno do convênio",
+          what_to_do: "Cobre o convênio.",
+          action: "cobrar_convenio",
+          count: 2,
+          value: 790,
+          items: [
+            { ...RECOVERY.fronts[0].items[0], billing_id: "b1", reason: "Enviada em 01/07/2026", charged_at: null },
+            { ...RECOVERY.fronts[0].items[0], billing_id: "b2", reason: "Enviada em 02/07/2026", charged_at: "2026-10-10T12:00:00Z" },
+          ],
+        },
+      ],
+    };
+    vi.mocked(apiClient.get).mockResolvedValue(center as never);
+    vi.mocked(apiClient.post).mockResolvedValue({} as never);
+    renderWithProviders(<RecoveryCenterPage />);
+
+    expect(await screen.findByText(/Cobrado em 10\/10/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Marcar como cobrado" }));
+    await waitFor(() =>
+      expect(vi.mocked(apiClient.post)).toHaveBeenCalledWith("/api/v1/financeiro/recuperacao/cobrado", {
+        billing_id: "b1",
+        front: "sem_retorno",
+      }),
+    );
+  });
+
   it("auditor vê a central mas não abre recurso", async () => {
     mockRole = "auditor";
     vi.mocked(apiClient.get).mockResolvedValue(RECOVERY as never);
