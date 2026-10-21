@@ -14,6 +14,7 @@ import { PayerOverviewPanel } from "@/components/payers/PayerOverviewPanel";
 import { PlanLossRankingPanel } from "@/components/dashboard/PlanLossRankingPanel";
 import { DenialRiskDistributionPanel } from "@/components/dashboard/DenialRiskDistributionPanel";
 import { WithholdingPanel } from "@/components/money/WithholdingPanel";
+import { DossierButton } from "@/components/money/DossierButton";
 import { PaymentLagPanel } from "@/components/dashboard/PaymentLagPanel";
 import { useDateWindow } from "@/lib/useDateWindow";
 import { apiClient } from "@/lib/api-client";
@@ -324,6 +325,7 @@ export function ContractsPage() {
                           <Badge tone="accent">Particular</Badge>
                         )}
                         {!p.is_active && <Badge tone="neutral">Desativado</Badge>}
+                        {p.plan_type !== "particular" && <DossierButton planId={p.id} planName={p.display_name} />}
                       </div>
                     </li>
                   ))}
