@@ -901,6 +901,8 @@ export interface ProfessionalProfitabilityItem {
   // todos null quando Profitability.has_cost_data é false (nenhum
   // custo lançado ainda), nunca 0.
   allocated_cost: number | null;
+  /** Parte do custo estimada (repasse pelo % + material do estoque). */
+  estimated_cost?: number | null;
   net_margin: number | null;
   margin_per_hour: number | null;
 }
@@ -921,6 +923,8 @@ export interface Profitability {
   by_procedure: ProcedureProfitabilityItem[]; // ordenado por receita, maior primeiro
   has_cost_data: boolean;
   total_costs: number | null;
+  /** "lancado" (tela Custos), "estimado" (repasse + material inferidos) ou "misto". */
+  cost_source?: "lancado" | "estimado" | "misto" | null;
   net_margin: number | null;
   // "Junta Técnica Insighta" — 2 referências externas de mercado (ver
   // DECISÃO em AnalyticsService.get_profitability, backend): margem
