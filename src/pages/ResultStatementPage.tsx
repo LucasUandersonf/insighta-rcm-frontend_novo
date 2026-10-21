@@ -29,12 +29,12 @@ export function recentMonths(today = new Date(), count = 12): string[] {
   return out;
 }
 
-async function downloadPdf(month: string) {
-  const blob = await apiClient.getBlob(`/api/v1/analytics/result-statement/pdf?month=${month}`);
+async function downloadPdf(path: string, fileName: string) {
+  const blob = await apiClient.getBlob(path);
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `extrato_resultado_${month}.pdf`;
+  link.download = fileName;
   link.click();
   URL.revokeObjectURL(url);
 }
@@ -57,11 +57,16 @@ export function ResultStatementPage() {
     queryFn: () => apiClient.get<ResultStatement>(`/api/v1/analytics/result-statement?month=${month}`),
   });
 
-  async function handleDownload() {
+  // Extrato (o que o Insighta rendeu) ou Board Pack (o mês da clínica para os sócios).
+  async function handleDownload(kind: "extrato" | "board") {
     setDownloading(true);
     setDownloadError(null);
     try {
-      await downloadPdf(month);
+      if (kind === "extrato") {
+        await downloadPdf(`/api/v1/analytics/result-statement/pdf?month=${month}`, `extrato_resultado_${month}.pdf`);
+      } else {
+        await downloadPdf(`/api/v1/analytics/board-pack/pdf?month=${month}`, `board_pack_${month}.pdf`);
+      }
     } catch (err) {
       setDownloadError(getApiErrorMessage(err));
     } finally {
@@ -96,12 +101,22 @@ export function ResultStatementPage() {
             </select>
             <button
               type="button"
-              onClick={handleDownload}
+              onClick={() => void handleDownload("extrato")}
               disabled={downloading || !data}
               className="flex h-[38px] items-center gap-2 rounded-[11px] border border-border-hairline bg-canvas-raised/40 px-3 text-sm text-ink transition-colors hover:bg-canvas-raised/70 disabled:opacity-50"
             >
               <Download aria-hidden size={15} />
               {downloading ? "Gerando PDF…" : "Baixar PDF"}
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleDownload("board")}
+              disabled={downloading}
+              title="O mês da clínica para a reunião de sócios: números, 3 riscos, 3 oportunidades, decisões e caixa."
+              className="flex h-[38px] items-center gap-2 rounded-[11px] border border-border-hairline bg-canvas-raised/40 px-3 text-sm text-ink transition-colors hover:bg-canvas-raised/70 disabled:opacity-50"
+            >
+              <Download aria-hidden size={15} />
+              Board Pack
             </button>
           </div>
         }

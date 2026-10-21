@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ResultStatementPage, recentMonths } from "@/pages/ResultStatementPage";
 import { apiClient } from "@/lib/api-client";
@@ -65,6 +65,19 @@ describe("ResultStatementPage", () => {
     renderWithProviders(<ResultStatementPage />);
     expect(await screen.findByText(/Nenhum resultado medido neste mês ainda/)).toBeInTheDocument();
     expect(screen.queryByText(/o preço Founders/)).not.toBeInTheDocument();
+  });
+
+  it("baixa o Board Pack do mês para a reunião de sócios", async () => {
+    vi.mocked(apiClient.get).mockResolvedValue(statement() as never);
+    vi.mocked(apiClient.getBlob).mockResolvedValue(new Blob(["%PDF"]) as never);
+    Object.assign(URL, { createObjectURL: vi.fn(() => "blob:x"), revokeObjectURL: vi.fn() });
+    const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+    renderWithProviders(<ResultStatementPage />);
+
+    await userEvent.click(await screen.findByRole("button", { name: "Board Pack" }));
+    await waitFor(() => expect(click).toHaveBeenCalled());
+    expect(vi.mocked(apiClient.getBlob).mock.calls[0][0]).toMatch(/^\/api\/v1\/analytics\/board-pack\/pdf\?month=\d{4}-\d{2}$/);
+    expect((click.mock.contexts[0] as HTMLAnchorElement).download).toMatch(/^board_pack_\d{4}-\d{2}\.pdf$/);
   });
 
   it("recentMonths devolve 12 meses do atual para trás", () => {
