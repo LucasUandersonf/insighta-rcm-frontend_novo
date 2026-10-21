@@ -64,9 +64,15 @@ function makeGuia(overrides: Partial<Guia> = {}): Guia {
 
 function mockGetByPath(routes: Record<string, unknown>) {
   vi.mocked(apiClient.get).mockImplementation((path: string) => {
-    for (const [prefix, value] of Object.entries(routes)) {
-      if (path.startsWith(prefix)) return Promise.resolve(value as never);
+    // O prefixo mais longo vence: "/api/v1/lotes" não pode responder pela
+    // conferência de um lote ("/api/v1/lotes/{id}/conferencia").
+    const match = Object.keys(routes)
+      .filter((prefix) => path.startsWith(prefix))
+      .sort((a, b) => b.length - a.length)[0];
+    if (match !== undefined && !(path.endsWith("/conferencia") && !match.endsWith("/conferencia"))) {
+      return Promise.resolve(routes[match] as never);
     }
+    if (path.endsWith("/conferencia")) return Promise.resolve(null as never);
     return Promise.reject(new Error(`Sem mock para ${path}`));
   });
 }

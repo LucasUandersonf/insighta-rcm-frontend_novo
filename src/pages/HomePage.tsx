@@ -20,6 +20,7 @@ import { useToast } from "@/context/ToastContext";
 import { cn } from "@/lib/cn";
 import { useTeamOverview } from "@/lib/team";
 import { TeamUpdatesStrip } from "@/components/team/TeamUpdatesStrip";
+import { MoneyPathPanoramaRows } from "@/components/money/MoneyPathSummary";
 import type {
   AccountHealth,
   BriefingEmailResult,
@@ -424,6 +425,7 @@ function Panorama({ rows, windowLabel }: { rows: PanoramaRow[]; windowLabel: str
           <span className="text-[13px] leading-[1.45] text-ink-soft">{row.read}</span>
         </div>
       ))}
+      <MoneyPathPanoramaRows />
       <MonthResultRow />
       <Link to="/decisao" className="mt-3 text-[13px] font-medium text-accent-muted hover:underline">
         Todos os números na Sala de Comando →
