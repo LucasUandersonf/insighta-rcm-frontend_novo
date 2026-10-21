@@ -51,7 +51,10 @@ export function CashForecastPage() {
             <div className="rounded-lg border border-border-hairline bg-glass px-4 py-3">
               <dt className="text-xs text-ink-faint">Deve entrar em 13 semanas</dt>
               <dd className="text-lg font-semibold tabular text-revenue">{brl(data.expected_net)}</dd>
-              <dd className="text-2xs text-ink-faint">já descontados {brl(data.expected_denial)} de glosa esperada</dd>
+              <dd className="text-2xs text-ink-faint">
+                já descontados {brl(data.expected_denial)} de glosa esperada
+                {data.expected_withholding ? ` e ${brl(data.expected_withholding)} de impostos retidos` : ""}
+              </dd>
             </div>
             <div className="rounded-lg border border-border-hairline bg-glass px-4 py-3">
               <dt className="text-xs text-ink-faint">Atrasado no convênio</dt>

@@ -83,7 +83,7 @@ const FAQ_ITEMS: { question: string; answer: string; routes?: string[] }[] = [
   },
   {
     question: "Onde vejo quanto cada convênio glosa e quanto demora para pagar?",
-    answer: "Em Convênios: a aba Glosas mostra o valor e a taxa por convênio, e a aba Prazos de pagamento mostra os dias médios. Você também pode perguntar no campo do topo, por exemplo “quanto a Unimed glosou?”.",
+    answer: "Em Convênios: a aba Glosas mostra o valor e a taxa por convênio, e a aba Prazos e retenções mostra os dias médios e o imposto que cada convênio retém. Você também pode perguntar no campo do topo, por exemplo “quanto a Unimed glosou?”.",
   },
   {
     question: "Por que um faturamento aparece com risco de glosa alto?",

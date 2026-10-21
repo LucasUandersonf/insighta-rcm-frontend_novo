@@ -29,6 +29,7 @@ import { PatientRfmPanel } from "@/components/dashboard/PatientRfmPanel";
 import { ProfitabilityPanel } from "@/components/dashboard/ProfitabilityPanel";
 import { AgendaPlanPriorityPanel } from "@/components/dashboard/AgendaPlanPriorityPanel";
 import { MoneyPathBlock } from "@/components/money/MoneyPathSummary";
+import { BillingBridge } from "@/components/money/BillingBridge";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useDateWindow } from "@/lib/useDateWindow";
@@ -252,6 +253,7 @@ export function ExecutiveOverviewPage() {
                 "porquê"), os números logo abaixo, para conferência. */}
             <SmartInsightsFeed dateFrom={dateFrom} dateTo={dateTo} categories={["faturamento", "estrategia"]} onNavigateTab={navigateTab} onFocusAgenda={setAgendaFocus} />
             <MoneyPathBlock />
+            <BillingBridge />
             <HealthScoreWidget />
 
             {isLoading && <LoadingState variant="cards" rows={6} />}

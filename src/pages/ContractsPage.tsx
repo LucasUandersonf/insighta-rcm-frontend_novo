@@ -13,6 +13,7 @@ import { Tabs, TabPanel } from "@/components/ui/Tabs";
 import { PayerOverviewPanel } from "@/components/payers/PayerOverviewPanel";
 import { PlanLossRankingPanel } from "@/components/dashboard/PlanLossRankingPanel";
 import { DenialRiskDistributionPanel } from "@/components/dashboard/DenialRiskDistributionPanel";
+import { WithholdingPanel } from "@/components/money/WithholdingPanel";
 import { PaymentLagPanel } from "@/components/dashboard/PaymentLagPanel";
 import { useDateWindow } from "@/lib/useDateWindow";
 import { apiClient } from "@/lib/api-client";
@@ -52,7 +53,7 @@ const PAYER_WINDOW_OPTIONS = [
 /**
  * Convênios (canvas "Insighta RCM — Redesign 2026", artboard "Convênios")
  * — "Visão geral" (veredictos, desempenho por convênio com leitura,
- * simulação de prazo), "Glosas", "Prazos de pagamento" e "Contratos e
+ * simulação de prazo), "Glosas", "Prazos e retenções" e "Contratos e
  * tabelas" (o cadastro de operadoras/planos/contratos de sempre).
  * `?tab=` na URL abre direto numa aba.
  */
@@ -258,7 +259,7 @@ export function ContractsPage() {
         items={[
           { id: "visao-geral", label: "Visão geral" },
           { id: "glosas", label: "Glosas" },
-          { id: "prazos", label: "Prazos de pagamento" },
+          { id: "prazos", label: "Prazos e retenções" },
           { id: "contratos", label: "Contratos e tabelas" },
         ]}
       />
@@ -279,7 +280,10 @@ export function ContractsPage() {
       )}
       {activeTab === "prazos" && (
         <TabPanel id="prazos" groupId={PAYER_TABS_GROUP}>
-          <PaymentLagPanel dateFrom={dateFrom} dateTo={dateTo} />
+          <div className="space-y-6">
+            <PaymentLagPanel dateFrom={dateFrom} dateTo={dateTo} />
+            <WithholdingPanel />
+          </div>
         </TabPanel>
       )}
 

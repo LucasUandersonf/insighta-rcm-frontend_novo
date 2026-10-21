@@ -63,6 +63,8 @@ export interface CashPlan {
   lag_days: number;
   lag_source: "historico" | "clinica" | "padrao";
   denial_rate: number;
+  /** Retenção na fonte confirmada do convênio (fração), 0 sem confirmação. */
+  withholding_rate?: number;
   open_gross: number;
   overdue: number;
 }
@@ -73,6 +75,8 @@ export interface CashForecast {
   weeks: CashWeek[];
   expected_net: number;
   expected_denial: number;
+  /** Retenção na fonte descontada do esperado (só convênios confirmados). */
+  expected_withholding?: number;
   overdue_submitted: number;
   overdue_unsent: number;
   later: number;
@@ -123,4 +127,44 @@ export interface RecoveryCenter {
     lost_deadline_count: number;
     success_rate: number | null;
   };
+}
+
+export interface WithholdingRates {
+  irrf: number;
+  pis: number;
+  cofins: number;
+  csll: number;
+  iss: number;
+}
+
+export interface PlanWithholding {
+  plan_id: string;
+  plan_name: string;
+  billed_90d: number;
+  confirmed: WithholdingRates | null;
+  confirmed_at: string | null;
+  total_pct: number | null;
+  /** Quanto o convênio de fato reteve nas contas pagas (%), quando há histórico. */
+  observed_pct: number | null;
+  observed_count: number;
+  suggested: WithholdingRates;
+  suggestion_source: "historico" | "padrao";
+}
+
+export interface WithholdingOverview {
+  plans: PlanWithholding[];
+  legal_default: WithholdingRates;
+}
+
+export interface BillingBridge {
+  date_from: string;
+  date_to: string;
+  billed: number;
+  denied: number;
+  open: number;
+  withholding: number;
+  received: number;
+  unexplained: number;
+  confirmed_plans: number;
+  plans_with_billing: number;
 }
