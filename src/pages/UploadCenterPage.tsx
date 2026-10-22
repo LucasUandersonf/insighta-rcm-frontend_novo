@@ -33,6 +33,7 @@ import type {
   IngestionValidationReport,
   ColumnAlias,
   ColumnMappingPreview,
+  SourceSystems,
   IngestionCheckResult,
   Contract,
   IngestionFileEntry,
@@ -245,6 +246,12 @@ function ColumnMappingModal({
       {previewQuery.error && <p className="text-xs text-denied">{getApiErrorMessage(previewQuery.error)}</p>}
       {preview && (
         <div>
+          {preview.source_profile && (
+            <p role="status" className="mb-3 rounded-md border border-revenue/25 bg-revenue-bg px-3 py-2 text-xs text-revenue">
+              Reconhecemos este arquivo: <strong>{preview.source_profile.report_name}</strong> do {preview.source_profile.vendor}. As
+              colunas já vêm escolhidas — confira e salve.
+            </p>
+          )}
           <p className="mb-4 text-xs leading-relaxed text-ink-muted">
             Diga qual coluna do seu arquivo corresponde a cada campo. Sugerimos as colunas abaixo — confira os exemplos de cada uma
             antes de salvar. Depois de salvar, os próximos arquivos deste tipo já usam essas colunas.
@@ -1367,6 +1374,8 @@ export function UploadCenterPage() {
 
       <ImportDataNav />
 
+      <SourceSystemCard />
+
       <Tabs
         groupId={TABS_GROUP}
         variant="segmented"
@@ -1391,6 +1400,75 @@ export function UploadCenterPage() {
   );
 }
 
+
+/** v1.1: "qual sistema você usa" — guarda o sistema de origem da clínica e
+ * mostra o passo a passo de exportação dos relatórios que o Insighta já
+ * reconhece. Sem sistema com relatório validado, só guarda o nome. */
+function SourceSystemCard() {
+  const queryClient = useQueryClient();
+  const { showSuccess, showError } = useToast();
+  const { user } = useAuth();
+  const canEdit = user?.role === "owner" || user?.role === "admin";
+  const { data } = useQuery({
+    queryKey: ["ingestion", "source-systems"],
+    queryFn: () => apiClient.get<SourceSystems>("/api/v1/ingestion/source-systems"),
+  });
+  const [draft, setDraft] = useState<string | null>(null);
+  const save = useMutation({
+    mutationFn: (value: string) => apiClient.put<SourceSystems>("/api/v1/ingestion/source-system", { source_system: value }),
+    onSuccess: (res) => {
+      queryClient.setQueryData(["ingestion", "source-systems"], res);
+      setDraft(null);
+      showSuccess("Sistema salvo.");
+    },
+    onError: (err) => showError(getApiErrorMessage(err)),
+  });
+  if (!data || !Array.isArray(data.systems)) return null;
+  const current = data.current;
+  const known = data.systems.find((s) => s.vendor === current);
+  const value = draft ?? current ?? "";
+  return (
+    <section aria-label="Sistema da clínica" className="rounded-lg border border-border-hairline bg-canvas-raised p-4">
+      <div className="flex flex-wrap items-end gap-3">
+        <label className="flex min-w-[220px] flex-1 flex-col gap-1 text-xs text-ink-muted">
+          Qual sistema a clínica usa?
+          <input
+            list="source-systems"
+            className="rounded-md border border-border-default bg-canvas px-2.5 py-1.5 text-sm text-ink"
+            value={value}
+            placeholder="Ex.: o nome do sistema de gestão da clínica"
+            disabled={!canEdit}
+            onChange={(e) => setDraft(e.target.value)}
+          />
+          <datalist id="source-systems">
+            {data.systems.map((s) => (
+              <option key={s.vendor} value={s.vendor} />
+            ))}
+          </datalist>
+        </label>
+        {canEdit && draft !== null && draft.trim() !== (current ?? "") && (
+          <Button size="sm" onClick={() => save.mutate(draft)} disabled={save.isPending}>
+            {save.isPending ? "Salvando…" : "Salvar"}
+          </Button>
+        )}
+      </div>
+      {known ? (
+        <ul className="mt-3 space-y-1.5 text-xs text-ink-muted">
+          {known.reports.map((r) => (
+            <li key={`${r.data_type}-${r.report_name}`}>
+              <strong className="text-ink">{DATA_TYPE_LABELS[r.data_type] ?? r.data_type}:</strong> {r.report_name}
+              {r.export_steps ? ` — ${r.export_steps}` : ""}
+            </li>
+          ))}
+        </ul>
+      ) : current ? (
+        <p className="mt-2 text-xs text-ink-faint">
+          Ainda não temos o passo a passo do {current}. Envie a planilha e mapeie as colunas uma vez: os próximos arquivos já entram sozinhos.
+        </p>
+      ) : null}
+    </section>
+  );
+}
 
 /** Baixa o modelo .xlsx do tipo escolhido (mesmo arquivo do bloco "O que o modelo pede"). */
 function TemplateDownloadButton({ dataType }: { dataType: string }) {

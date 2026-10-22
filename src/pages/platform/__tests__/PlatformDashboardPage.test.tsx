@@ -19,6 +19,11 @@ vi.mock("@/lib/platform-api-client", async (importOriginal) => {
       markSupportAnswered: vi.fn(),
       getPartners: vi.fn().mockResolvedValue([]),
       createPartner: vi.fn(),
+      getRetention: vi.fn().mockResolvedValue([]),
+      getSourceProfiles: vi.fn().mockResolvedValue([]),
+      createSourceProfile: vi.fn(),
+      addSourceProfileSample: vi.fn(),
+      validateSourceProfile: vi.fn(),
     },
     clearStoredPlatformToken: vi.fn(),
   };

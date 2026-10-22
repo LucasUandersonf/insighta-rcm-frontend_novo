@@ -351,6 +351,14 @@ export interface ColumnMappingPreview {
   saved_mapping?: Record<string, string>;
   /** UX-21: modelo que o cabeçalho completa, quando não é o escolhido. */
   detected_data_type?: string | null;
+  /** v1.1: relatório reconhecido pelo cabeçalho (perfil validado do sistema de origem). */
+  source_profile?: { id: string; vendor: string; report_name: string; score: number } | null;
+}
+
+/** v1.1: "qual sistema você usa" (GET /ingestion/source-systems). */
+export interface SourceSystems {
+  current: string | null;
+  systems: { vendor: string; reports: { report_name: string; data_type: string; export_steps: string | null }[] }[];
 }
 
 export interface ColumnAlias {

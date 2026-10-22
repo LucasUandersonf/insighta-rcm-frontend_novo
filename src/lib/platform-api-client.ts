@@ -94,6 +94,44 @@ export interface PlatformPartnerCreate {
   admin_name: string;
 }
 
+export interface RetentionRow {
+  tenant_id: string;
+  trade_name: string;
+  plan_tier: string | null;
+  billing_status: string | null;
+  tenant_age_days: number;
+  snapshot_date: string | null;
+  oldest_load_days: number | null;
+  stale_level: number | null;
+  manager_active_days_7d: number | null;
+  stalled_demands: number | null;
+  open_demands: number | null;
+  roi_multiple: number | null;
+  recovered_cumulative: number | null;
+  risks: string[];
+}
+
+export interface SourceProfile {
+  id: string;
+  vendor: string;
+  report_name: string;
+  data_type: string;
+  status: "rascunho" | "validado" | "aposentado";
+  samples: number;
+  columns: number;
+  created_at: string;
+  validated_at: string | null;
+}
+
+export interface SourceProfileCreate {
+  vendor: string;
+  report_name: string;
+  data_type: string;
+  headers: string[];
+  column_map: Record<string, string>;
+  export_steps: string | null;
+}
+
 export const platformApiClient = {
   login: (email: string, password: string) =>
     platformRequest<PlatformLoginResponse>("/api/v1/platform/login", {
@@ -144,6 +182,15 @@ export const platformApiClient = {
       auth: true,
       body,
     }),
+  // v1.1: painel de retenção e perfis de relatório de origem.
+  getRetention: () => platformRequest<RetentionRow[]>("/api/v1/platform/retention", { auth: true }),
+  getSourceProfiles: () => platformRequest<SourceProfile[]>("/api/v1/platform/source-profiles", { auth: true }),
+  createSourceProfile: (body: SourceProfileCreate) =>
+    platformRequest<SourceProfile[]>("/api/v1/platform/source-profiles", { method: "POST", auth: true, body }),
+  addSourceProfileSample: (id: string, headers: string[]) =>
+    platformRequest<SourceProfile[]>(`/api/v1/platform/source-profiles/${id}/samples`, { method: "POST", auth: true, body: { headers } }),
+  validateSourceProfile: (id: string) =>
+    platformRequest<SourceProfile[]>(`/api/v1/platform/source-profiles/${id}/validate`, { method: "POST", auth: true }),
   // "Histórico de quem fez o quê" (ver GET /platform/audit-log no backend).
   getAuditLog: () =>
     platformRequest<import("./types").PlatformAuditLogEntry[]>(

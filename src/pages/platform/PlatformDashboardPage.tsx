@@ -28,11 +28,15 @@ import type {
 import { plural } from "@/lib/plural";
 import { formatDateBR } from "@/lib/dates";
 import { PlatformPartnersPanel } from "./PlatformPartnersPanel";
+import { PlatformRetentionPanel } from "./PlatformRetentionPanel";
+import { PlatformSourceProfilesPanel } from "./PlatformSourceProfilesPanel";
 
 const ACTION_LABEL: Record<string, string> = {
   login: "Entrou no painel",
   alerts_run: "Verificou alertas manualmente",
   partner_created: "Cadastrou um parceiro",
+  source_profile_created: "Criou um perfil de relatório",
+  source_profile_validated: "Validou um perfil de relatório",
 };
 
 function formatDateTime(iso: string): string {
@@ -486,7 +490,11 @@ export function PlatformDashboardPage() {
 
         <PilotMetricsPanel rows={pilotMetrics ?? []} />
 
+        <PlatformRetentionPanel />
+
         <PlatformPartnersPanel />
+
+        <PlatformSourceProfilesPanel />
 
         {auditRows.length > 0 && (
           <Panel
