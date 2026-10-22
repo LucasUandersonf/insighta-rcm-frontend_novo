@@ -21,6 +21,7 @@ import { cn } from "@/lib/cn";
 import { useTeamOverview } from "@/lib/team";
 import { TeamUpdatesStrip } from "@/components/team/TeamUpdatesStrip";
 import { MoneyPathPanoramaRows } from "@/components/money/MoneyPathSummary";
+import { ApprovalsStrip } from "@/components/actions/ApprovalsStrip";
 import type {
   AccountHealth,
   BriefingEmailResult,
@@ -909,6 +910,8 @@ export function HomePage() {
           </div>
 
           <Rule strong />
+
+          <ApprovalsStrip />
 
           {/* Também hoje + a agenda de hoje */}
           {(secondary.length > 0 || agenda) && (

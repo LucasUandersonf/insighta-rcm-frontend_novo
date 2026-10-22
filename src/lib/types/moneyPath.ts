@@ -273,3 +273,21 @@ export interface Scoreboard {
   cash_weeks: { week_start: string; predicted: number; actual: number }[];
   cash_accuracy: number | null;
 }
+
+// --- Ações para aprovar ------------------------------------------------
+export interface RiskySlot {
+  appointment_id: string;
+  at: string;
+  patient: string;
+  professional: string | null;
+  procedure: string | null;
+  candidates: { waitlist_id: string; patient: string; waiting_since: string }[];
+}
+
+export interface ApprovalPlan {
+  day: string;
+  slots: RiskySlot[];
+  appeals: { billing_id: string; plan_name: string; patient: string | null; value: number; reason: string | null; deadline: string; days_left: number }[];
+  appeals_value: number;
+  confirm_demand_id: string | null;
+}
