@@ -242,6 +242,8 @@ export interface PlatformUser {
   mfa_enabled_at?: string | null;
   /** E-mail confirmado pelo link do cadastro (null = ainda não). */
   email_verified_at?: string | null;
+  /** v1.1: celular (E.164) para avisos operacionais (dado parado, demanda). */
+  phone_whatsapp?: string | null;
 }
 
 export interface UserCreateRequest {

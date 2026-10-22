@@ -606,6 +606,10 @@ export interface SatisfactionSummary {
 export interface DataFreshnessItem {
   data_type: string;
   last_ingested_at: string;
+  // v1.1 (dado parado): prazo aprendido da fonte e degrau atual
+  // (1 lembrete à equipe, 2 escalada ao dono, 3 faixa na Sala; null = em dia).
+  limit_days?: number | null;
+  stale_level?: number | null;
 }
 
 export interface DataFreshness {
