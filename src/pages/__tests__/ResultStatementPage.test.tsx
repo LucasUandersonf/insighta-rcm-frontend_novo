@@ -12,6 +12,8 @@ vi.mock("@/lib/api-client", async (importOriginal) => {
   return { ...actual, apiClient: { ...actual.apiClient, get: vi.fn(), getBlob: vi.fn() } };
 });
 
+vi.mock("@/context/AuthContext", () => ({ useAuth: () => ({ user: { role: "owner" } }) }));
+
 function statement(overrides: Partial<ResultStatement> = {}): ResultStatement {
   return {
     month: "2026-10",
@@ -85,5 +87,21 @@ describe("ResultStatementPage", () => {
     expect(months).toHaveLength(12);
     expect(months[0]).toBe("2026-01");
     expect(months[1]).toBe("2025-12");
+  });
+
+  it("v1.1: mostra o múltiplo do acumulado e o progresso da meta de retorno", async () => {
+    vi.mocked(apiClient.get).mockResolvedValue(
+      statement({
+        cumulative_multiple: 2.7,
+        paid_total: 510,
+        roi_goal: { value: 3870, due: "2026-12-20", progress: 0.357, is_default: true },
+      }) as never
+    );
+    const { container } = renderWithProviders(<ResultStatementPage />);
+    expect(await screen.findByText(/2,7× o que vocês pagaram/)).toBeInTheDocument();
+    expect(screen.getByText(/padrão: 3× a mensalidade em 90 dias/)).toBeInTheDocument();
+    expect(screen.getByRole("meter", { name: "Progresso da meta de retorno" })).toHaveAttribute("aria-valuenow", "36");
+    expect(screen.getByText(/até 20\/12\/2026/)).toBeInTheDocument();
+    await expectNoA11yViolations(container);
   });
 });

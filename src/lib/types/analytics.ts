@@ -1451,4 +1451,15 @@ export interface ResultStatement {
   return_multiple: number | null;
   cumulative_total: number;
   tracking_since: string | null;
+  // v1.1: mensalidades quitadas, múltiplo do acumulado e meta de ROI.
+  paid_total?: number | null;
+  cumulative_multiple?: number | null;
+  roi_goal?: RoiGoal | null;
+}
+
+export interface RoiGoal {
+  value: number;
+  due: string;
+  progress: number; // acumulado ÷ meta
+  is_default: boolean;
 }
