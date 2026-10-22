@@ -79,9 +79,6 @@ const PlatformLoginPage = lazy(() => import("@/pages/platform/PlatformLoginPage"
 const PlatformDashboardPage = lazy(() => import("@/pages/platform/PlatformDashboardPage").then((m) => ({ default: m.PlatformDashboardPage })));
 const SubscriptionPage = lazy(() => import("@/pages/SubscriptionPage").then((m) => ({ default: m.SubscriptionPage })));
 const MockCheckoutPage = lazy(() => import("@/pages/MockCheckoutPage").then((m) => ({ default: m.MockCheckoutPage })));
-const StripeCheckoutReturnPage = lazy(() =>
-  import("@/pages/StripeCheckoutReturnPage").then((m) => ({ default: m.StripeCheckoutReturnPage }))
-);
 
 /**
  * Tela de erro REAL, visível, em vez de deixar a aplicação simplesmente
@@ -288,14 +285,9 @@ function AppRoutes() {
           checkout real, dentro do ProtectedRoute porque só um
           owner autenticado pode chegar aqui (ver RBAC no backend,
           subscription.py). */}
+      {/* Só em desenvolvimento e homologação: em produção o backend recusa o
+          checkout simulado (homologação v1.0.0). */}
       <Route path="/checkout/mock/:checkoutId" element={<MockCheckoutPage />} />
-      {/* Irmã da rota acima — ativa quando o backend usa
-          StripePaymentProvider em vez do mock (ver DECISÃO em
-          app/services/stripe_payment_provider.py). O Stripe
-          redireciona pra cá depois de cobrar de verdade na
-          própria tela dele; esta página só confirma e mostra
-          o resultado, nunca coleta cartão. */}
-      <Route path="/checkout/stripe/:checkoutId" element={<StripeCheckoutReturnPage />} />
     </Route>
     </Routes>
     </Suspense>
