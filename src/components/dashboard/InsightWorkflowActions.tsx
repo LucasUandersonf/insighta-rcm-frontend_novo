@@ -36,7 +36,7 @@ export const INSIGHT_MANAGER_ROLES = new Set(["owner", "admin"]);
 export function insightItemKey(item: { category: string; title: string; fact_key?: string | null }): string {
   return (item.fact_key || `${item.category}:${item.title}`)
     .normalize("NFKD")
-    .replace(/[^\x00-\x7F]/g, "")
+    .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .trim()
     .replace(/[^a-z0-9]+/g, "_")
