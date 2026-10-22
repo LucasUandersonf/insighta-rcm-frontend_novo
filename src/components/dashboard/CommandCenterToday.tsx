@@ -311,6 +311,14 @@ export function CommandCenterToday({
     queryFn: () => apiClient.get<WeeklyTrend>("/api/v1/analytics/billed-vs-denied-weekly?weeks=8"),
     retry: false,
   });
+  // Homologação v1.0.0: o total vem do Extrato (valor conferido na
+  // reavaliação), o mesmo número do Início e do Resultado — antes somava o
+  // valor estimado no momento em que se marcava "resolvido".
+  const { data: statement } = useQuery({
+    queryKey: ["analytics", "result-statement", "current"],
+    queryFn: () => apiClient.get<{ total_value: number }>("/api/v1/analytics/result-statement"),
+    retry: false,
+  });
   const { data: recovered } = useQuery({
     queryKey: ["analytics", "recovered-value"],
     queryFn: () => apiClient.get<RecoveredValue>("/api/v1/analytics/recovered-value"),
@@ -401,15 +409,17 @@ export function CommandCenterToday({
                       </span>
                       <div className="flex flex-col gap-0.5">
                         <span className="text-[13px] font-medium text-ink">{item.title}</span>
-                        {item.value !== null && <span className="text-xs text-revenue">{formatCurrency(item.value)} em jogo resolvidos</span>}
+                        {item.value !== null && (
+                          <span className="text-xs text-ink-muted">{formatCurrency(item.value)} em jogo · o ganho é conferido em 14 dias</span>
+                        )}
                       </div>
                     </div>
                   ))}
                 </div>
               )}
               <div className="mt-auto flex flex-col gap-1 rounded-[14px] border border-revenue/20 bg-revenue/[0.07] p-4">
-                <span className="text-xs text-ink-muted">Recuperado com o Insighta este mês</span>
-                <span className="tabular text-[26px] font-semibold tracking-[-0.02em] text-revenue">{formatCurrency(recovered.total)}</span>
+                <span className="text-xs text-ink-muted">Gerado pelo Insighta no mês (conferido)</span>
+                <span className="tabular text-[26px] font-semibold tracking-[-0.02em] text-revenue">{formatCurrency(statement?.total_value ?? 0)}</span>
                 <Link to="/resultado" className="text-xs font-medium text-accent-muted hover:underline">
                   Ver o Extrato de Resultado do mês →
                 </Link>

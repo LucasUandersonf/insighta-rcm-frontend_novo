@@ -27,6 +27,15 @@ function Cell({ title, value, detail }: { title: string; value: string; detail: 
 }
 
 function eventCell(title: string, noun: string, verb: string, ratio: string, e: EventScore, min: number) {
+  if (e.scored === false) {
+    return (
+      <Cell
+        title={title}
+        value="Aprendendo"
+        detail={`Nenhuma ${noun.replace(/s$/, "")} foi marcada como risco ainda; o acerto aparece quando o Insighta começar a marcar.`}
+      />
+    );
+  }
   if (!e.ready || e.hit_rate === null) {
     return (
       <Cell

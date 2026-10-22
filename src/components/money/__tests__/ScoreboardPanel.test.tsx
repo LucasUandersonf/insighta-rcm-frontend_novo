@@ -34,4 +34,14 @@ describe("ScoreboardPanel", () => {
     expect(screen.getByText("90%")).toBeInTheDocument();
     expect(screen.getByText(/previsto R\$\s?1\.000,00, entrou R\$\s?900,00/)).toBeInTheDocument();
   });
+
+  it("glosa sem nenhuma conta marcada como risco fica em 'Aprendendo'", async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({
+      ...BOARD,
+      denial: { ...BOARD.denial, scored: false, ready: false, hit_rate: 0, flagged: 0 },
+    } as never);
+    renderWithProviders(<ScoreboardPanel />);
+    expect(await screen.findByText(/Nenhuma glosa foi marcada como risco ainda/)).toBeInTheDocument();
+    expect(screen.queryByText("0%")).not.toBeInTheDocument();
+  });
 });

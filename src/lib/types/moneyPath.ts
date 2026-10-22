@@ -258,6 +258,8 @@ export interface VarianceDiagnosis {
 // --- Placar de acerto ----------------------------------------------------
 export interface EventScore {
   ready: boolean;
+  /** Alguma previsão marcou risco; sem isso, a taxa não mede acerto. */
+  scored?: boolean;
   events: number;
   flagged: number;
   hit_rate: number | null;

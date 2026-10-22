@@ -238,3 +238,20 @@ describe("RecoveryCenterPage", () => {
     expect(screen.queryByRole("button", { name: "Abrir recurso" })).not.toBeInTheDocument();
   });
 });
+
+describe("RecoveryCenterPage — homologação v1.0.0", () => {
+  it("mostra as 10 mais urgentes e o resto atrás de 'Ver todas'", async () => {
+    mockRole = "financeiro";
+    const base = RECOVERY.fronts[0].items[0];
+    const items = Array.from({ length: 12 }, (_, i) => ({ ...base, billing_id: `b${i}`, reason: `Motivo ${i}` }));
+    vi.mocked(apiClient.get).mockResolvedValue({
+      ...RECOVERY,
+      fronts: [{ ...RECOVERY.fronts[0], count: 12, items }, RECOVERY.fronts[1]],
+    } as never);
+    renderWithProviders(<RecoveryCenterPage />);
+    expect(await screen.findByText("Motivo 9")).toBeInTheDocument();
+    expect(screen.queryByText("Motivo 10")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Ver todas as 12 contas" }));
+    expect(screen.getByText("Motivo 11")).toBeInTheDocument();
+  });
+});

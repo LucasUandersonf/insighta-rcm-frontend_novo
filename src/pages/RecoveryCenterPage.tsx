@@ -102,8 +102,13 @@ function ItemAction({ front, item }: { front: RecoveryFront; item: RecoveryItem 
  * volta, por frente, do mais urgente para o menos, e o que já voltou nos
  * últimos 90 dias.
  */
+const VISIBLE_ITEMS = 10;
+
 export function RecoveryCenterPage() {
   const [active, setActive] = useState("glosa_sem_recurso");
+  // Homologação v1.0.0: 190 contas de uma vez pesavam a tela; o gestor lê o
+  // total e as mais urgentes, o resto fica a um clique.
+  const [showAll, setShowAll] = useState(false);
   const { data, isLoading, error } = useQuery({
     queryKey: RECOVERY_KEY,
     queryFn: () => apiClient.get<RecoveryCenter>("/api/v1/financeiro/recuperacao"),
@@ -149,18 +154,23 @@ export function RecoveryCenterPage() {
           )}
 
           <Panel>
-            <Tabs
-              groupId="recuperacao"
-              active={front?.code ?? active}
-              onChange={setActive}
-              items={data.fronts.map((f) => ({
-                id: f.code,
-                label: `${f.label} · ${brl(f.value)}`,
-              }))}
-            />
+            <div className="px-6 pt-4">
+              <Tabs
+                groupId="recuperacao"
+                active={front?.code ?? active}
+                onChange={(id) => {
+                  setActive(id);
+                  setShowAll(false);
+                }}
+                items={data.fronts.map((f) => ({
+                  id: f.code,
+                  label: `${f.label} · ${brl(f.value)}`,
+                }))}
+              />
+            </div>
             {front && (
               <TabPanel id={front.code} groupId="recuperacao">
-                <div className="mt-4 space-y-3">
+                <div className="space-y-3 px-6 py-5">
                   <p className="text-sm text-ink-muted">
                     {front.count} {front.count === 1 ? "conta" : "contas"}. {front.what_to_do}
                   </p>
@@ -183,7 +193,7 @@ export function RecoveryCenterPage() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-border-hairline">
-                          {front.items.map((item) => (
+                          {(showAll ? front.items : front.items.slice(0, VISIBLE_ITEMS)).map((item) => (
                             <tr key={`${item.billing_id}-${item.appeal_id ?? ""}`}>
                               <td className="py-1.5 pr-3">{item.plan_name}</td>
                               <td className="py-1.5 pr-3">{item.patient ?? "—"}</td>
@@ -200,10 +210,16 @@ export function RecoveryCenterPage() {
                           ))}
                         </tbody>
                       </table>
-                      {front.items.length < front.count && (
-                        <p className="mt-1 text-2xs text-ink-faint">
-                          Mostrando {front.items.length} de {front.count}, as mais urgentes primeiro.
-                        </p>
+                      {!showAll && front.items.length > VISIBLE_ITEMS ? (
+                        <button type="button" className="mt-2 text-xs font-medium text-accent hover:underline" onClick={() => setShowAll(true)}>
+                          Ver todas as {front.count} contas
+                        </button>
+                      ) : (
+                        front.items.length < front.count && (
+                          <p className="mt-1 text-2xs text-ink-faint">
+                            Mostrando {front.items.length} de {front.count}, as mais urgentes primeiro.
+                          </p>
+                        )
                       )}
                     </div>
                   )}

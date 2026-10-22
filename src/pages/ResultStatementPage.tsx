@@ -83,7 +83,7 @@ export function ResultStatementPage() {
         title="Extrato de Resultado"
         subtitle="Quanto o Insighta rendeu para a clínica no mês. Só entram valores medidos."
         action={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <label htmlFor="extrato-mes" className="sr-only">
               Mês
             </label>
@@ -103,7 +103,7 @@ export function ResultStatementPage() {
               type="button"
               onClick={() => void handleDownload("extrato")}
               disabled={downloading || !data}
-              className="flex h-[38px] items-center gap-2 rounded-[11px] border border-border-hairline bg-canvas-raised/40 px-3 text-sm text-ink transition-colors hover:bg-canvas-raised/70 disabled:opacity-50"
+              className="flex h-[38px] items-center gap-2 whitespace-nowrap rounded-[11px] border border-border-hairline bg-canvas-raised/40 px-3 text-sm text-ink transition-colors hover:bg-canvas-raised/70 disabled:opacity-50"
             >
               <Download aria-hidden size={15} />
               {downloading ? "Gerando PDF…" : "Baixar PDF"}
@@ -113,7 +113,7 @@ export function ResultStatementPage() {
               onClick={() => void handleDownload("board")}
               disabled={downloading}
               title="O mês da clínica para a reunião de sócios: números, 3 riscos, 3 oportunidades, decisões e caixa."
-              className="flex h-[38px] items-center gap-2 rounded-[11px] border border-border-hairline bg-canvas-raised/40 px-3 text-sm text-ink transition-colors hover:bg-canvas-raised/70 disabled:opacity-50"
+              className="flex h-[38px] items-center gap-2 whitespace-nowrap rounded-[11px] border border-border-hairline bg-canvas-raised/40 px-3 text-sm text-ink transition-colors hover:bg-canvas-raised/70 disabled:opacity-50"
             >
               <Download aria-hidden size={15} />
               Board Pack
