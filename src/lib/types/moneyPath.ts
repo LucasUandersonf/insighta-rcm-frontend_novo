@@ -168,3 +168,55 @@ export interface BillingBridge {
   confirmed_plans: number;
   plans_with_billing: number;
 }
+
+// --- Simulador de convênio ---------------------------------------------
+export interface SimulatorPlan {
+  plan_id: string;
+  plan_name: string;
+  billed_12m: number;
+  accounts_12m: number;
+}
+
+export interface SimulatorProcedure {
+  tuss_code: string;
+  procedure_name: string | null;
+  volume: number;
+  your_price: number | null;
+  your_median_paid: number | null;
+  network_contract_median: number | null;
+  network_paid_median: number | null;
+  network_cohort: number | null;
+  paid_gap_per_unit: number | null;
+}
+
+export type SimulatorVerdict =
+  | "prejuizo"
+  | "abaixo_da_clinica"
+  | "abaixo_da_clinica_e_rede"
+  | "abaixo_da_rede"
+  | "saudavel";
+
+export interface PayerSimulation {
+  plan_id: string;
+  plan_name: string;
+  date_from: string;
+  date_to: string;
+  accounts: number;
+  billed: number;
+  received: number;
+  denial_rate: number | null;
+  lag_days: number | null;
+  withholding_pct: number | null;
+  direct_cost: number;
+  contribution: number;
+  hours: number | null;
+  contribution_per_hour: number | null;
+  clinic_contribution_per_hour: number | null;
+  readjust_pct: number;
+  readjust_gain: number;
+  leave_contribution_lost: number;
+  leave_breakeven_share: number | null;
+  network_gap: number | null;
+  verdict: SimulatorVerdict;
+  procedures: SimulatorProcedure[];
+}

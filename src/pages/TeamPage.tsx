@@ -344,7 +344,15 @@ export function TeamPage() {
     action.mutate(
       { kind: "nudge", id: d.id },
       {
-        onSuccess: () => showSuccess(`${d.coordinator?.full_name ?? "A coordenação"} foi cobrada — a demanda sobe para o topo da Home.`),
+        onSuccess: (res) => {
+          const who = d.coordinator?.full_name ?? "A coordenação";
+          const sent = (res as Demand | undefined)?.nudge_sent;
+          showSuccess(
+            sent
+              ? `${who} foi cobrada por e-mail — a demanda sobe para o topo da Home.`
+              : `${who} foi cobrada — a demanda sobe para o topo da Home. O e-mail não saiu porque o envio ainda não está ligado.`
+          );
+        },
         onError: (err) => showError(getApiErrorMessage(err)),
       }
     );

@@ -15,6 +15,7 @@ import { PlanLossRankingPanel } from "@/components/dashboard/PlanLossRankingPane
 import { DenialRiskDistributionPanel } from "@/components/dashboard/DenialRiskDistributionPanel";
 import { WithholdingPanel } from "@/components/money/WithholdingPanel";
 import { DossierButton } from "@/components/money/DossierButton";
+import { PayerSimulatorPanel } from "@/components/money/PayerSimulatorPanel";
 import { PaymentLagPanel } from "@/components/dashboard/PaymentLagPanel";
 import { useDateWindow } from "@/lib/useDateWindow";
 import { apiClient } from "@/lib/api-client";
@@ -38,11 +39,12 @@ export { extractionPagesNote } from "@/components/contracts/ContractModals";
 const CONTRACTS_PAGE_SIZE = 20;
 
 const PAYER_TABS_GROUP = "convenios";
-type PayerTabId = "visao-geral" | "glosas" | "prazos" | "contratos";
+type PayerTabId = "visao-geral" | "glosas" | "prazos" | "simulador" | "contratos";
 const PAYER_TAB_IDS: PayerTabId[] = [
   "visao-geral",
   "glosas",
   "prazos",
+  "simulador",
   "contratos",
 ];
 const PAYER_WINDOW_OPTIONS = [
@@ -261,6 +263,7 @@ export function ContractsPage() {
           { id: "visao-geral", label: "Visão geral" },
           { id: "glosas", label: "Glosas" },
           { id: "prazos", label: "Prazos e retenções" },
+          { id: "simulador", label: "Simulador" },
           { id: "contratos", label: "Contratos e tabelas" },
         ]}
       />
@@ -285,6 +288,12 @@ export function ContractsPage() {
             <PaymentLagPanel dateFrom={dateFrom} dateTo={dateTo} />
             <WithholdingPanel />
           </div>
+        </TabPanel>
+      )}
+
+      {activeTab === "simulador" && (
+        <TabPanel id="simulador" groupId={PAYER_TABS_GROUP}>
+          <PayerSimulatorPanel />
         </TabPanel>
       )}
 
