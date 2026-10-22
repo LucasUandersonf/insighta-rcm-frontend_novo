@@ -336,6 +336,14 @@ export function CoordinatorHomePage() {
               {s.in_progress_count} em andamento
             </span>
           )}
+          {!!s?.queued_count && (
+            <span
+              className="flex h-[30px] items-center gap-2 rounded-lg border border-white/12 px-3 text-xs text-ink-muted"
+              title="Para não acumular, você vê no máximo 5 demandas abertas. As outras aparecem quando uma for fechada."
+            >
+              {s.queued_count} na fila
+            </span>
+          )}
           {!!s?.awaiting_confirmation_count && (
             <span className="flex h-[30px] items-center gap-2 rounded-lg border border-[rgba(61,214,140,0.2)] bg-[rgba(61,214,140,0.08)] px-3 text-xs text-[#3DD68C]">
               <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-[#3DD68C]" />

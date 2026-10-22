@@ -63,6 +63,9 @@ export interface Demand {
   confirmation: "aguardando" | "confirmado" | "voltou" | null;
   /** Só na resposta do Cobrar: o e-mail ao responsável saiu? */
   nudge_sent?: boolean;
+  /** v1.1: esperando na fila do responsável (ele ainda não vê) e a posição. */
+  queued?: boolean;
+  queue_position?: number | null;
 }
 
 export interface DemandCreate {
@@ -129,6 +132,8 @@ export interface CoordinatorSummary {
   awaiting_confirmation_count: number;
   score: CoordinatorScore | null;
   radar: RadarItem[];
+  /** v1.1: demandas esperando na fila (aparecem quando outra for fechada). */
+  queued_count?: number;
 }
 
 /** Área do insight -> setor dono (mesma tabela de CATEGORY_TO_SECTOR no backend). */
@@ -227,7 +232,8 @@ type DemandAction =
   | { kind: "return"; id: string; reason: ReturnReason; note: string }
   | { kind: "reassign"; id: string; sector?: TeamSector; due_date?: string | null; manager_note?: string | null }
   | { kind: "close"; id: string }
-  | { kind: "nudge"; id: string };
+  | { kind: "nudge"; id: string }
+  | { kind: "prioritize"; id: string };
 
 /** Todas as ações sobre uma demanda passam por aqui — e todas invalidam o
  * mesmo prefixo ["team"], então Home, Equipe e placar andam juntos. */
@@ -255,6 +261,8 @@ export function useDemandAction() {
           return apiClient.post<Demand>(`${base}/close`);
         case "nudge":
           return apiClient.post<Demand>(`${base}/nudge`);
+        case "prioritize":
+          return apiClient.post<Demand>(`${base}/prioritize`);
       }
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["team"] }),

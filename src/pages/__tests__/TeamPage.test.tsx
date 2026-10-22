@@ -143,6 +143,21 @@ describe("TeamPage (canvas Equipe)", () => {
     expect(apiClient.post).toHaveBeenCalledWith("/api/v1/team/demands/d3/close");
   });
 
+  it("v1.1: demanda na fila mostra a posição e o gestor fura a fila", async () => {
+    mockUser("owner");
+    const queued = demand({ id: "dq", title: "Glosa Bradesco parada", queued: true, queue_position: 2, is_overdue: false });
+    vi.mocked(apiClient.get).mockImplementation((url: string) => {
+      if (url.includes("/team/overview")) return Promise.resolve(OVERVIEW as never);
+      if (url.includes("/team/demands")) return Promise.resolve([...DEMANDS, queued] as never);
+      if (url.includes("/team/me")) return Promise.resolve({ profile: "gestor", sectors: [] } as never);
+      return Promise.reject(new Error(`sem mock para ${url}`));
+    });
+    renderWithProviders(<TeamPage />);
+    expect(await screen.findByText(/\(posição 2\): aparece quando outra for fechada/)).toBeInTheDocument();
+    await userEvent.setup().click(screen.getByRole("button", { name: "Prioridade máxima" }));
+    expect(apiClient.post).toHaveBeenCalledWith("/api/v1/team/demands/dq/prioritize");
+  });
+
   it("auditor vê tudo mas não tem botões de ação", async () => {
     mockUser("auditor");
     renderWithProviders(<TeamPage />);

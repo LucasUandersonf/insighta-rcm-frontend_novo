@@ -358,6 +358,16 @@ export function TeamPage() {
     );
   }
 
+  function prioritize(d: Demand) {
+    action.mutate(
+      { kind: "prioritize", id: d.id },
+      {
+        onSuccess: () => showSuccess(`“${d.title}” passou na frente da fila de ${d.coordinator?.full_name ?? "quem executa"}.`),
+        onError: (err) => showError(getApiErrorMessage(err)),
+      }
+    );
+  }
+
   function close(d: Demand) {
     action.mutate({ kind: "close", id: d.id }, { onSuccess: () => showSuccess("Demanda encerrada."), onError: (err) => showError(getApiErrorMessage(err)) });
   }
@@ -464,7 +474,9 @@ export function TeamPage() {
                     </span>
                     <div className="flex min-w-0 flex-col gap-1">
                       <span className="text-sm font-medium text-ink">{d.title}</span>
-                      <span className="text-xs text-ink-muted">{updateLine(d)}</span>
+                      <span className="text-xs text-ink-muted">
+                        {d.queued ? `Na fila de ${d.coordinator?.full_name ?? "quem executa"} (posição ${d.queue_position ?? "—"}): aparece quando outra for fechada.` : updateLine(d)}
+                      </span>
                     </div>
                     <span className="text-[13px] text-ink-soft">
                       {d.coordinator?.full_name ?? "—"} · {d.sector_label}
@@ -473,7 +485,16 @@ export function TeamPage() {
                       {tab === "resolvidas" && d.resolved_at ? shortDate(d.resolved_at) : dueLabel(d.due_date)}
                     </span>
                     <span className="md:justify-self-end">
-                      {d.is_overdue && canManage ? (
+                      {d.queued && canManage ? (
+                        <button
+                          type="button"
+                          disabled={action.isPending}
+                          onClick={() => prioritize(d)}
+                          className="h-[34px] rounded-[10px] border border-white/12 px-3.5 text-xs font-medium text-ink"
+                        >
+                          Prioridade máxima
+                        </button>
+                      ) : d.is_overdue && canManage ? (
                         <button
                           type="button"
                           disabled={action.isPending}
