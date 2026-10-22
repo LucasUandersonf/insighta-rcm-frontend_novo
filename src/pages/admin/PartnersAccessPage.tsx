@@ -146,7 +146,7 @@ export function PartnersAccessPage() {
                         </option>
                       ))}
                     </select>
-                    <Button variant="secondary" size="sm" onClick={() => setToRevoke(g)}>
+                    <Button variant="secondary" size="sm" aria-label={`Revogar acesso de ${g.partner_name}`} onClick={() => setToRevoke(g)}>
                       Revogar
                     </Button>
                   </div>

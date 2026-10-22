@@ -35,7 +35,7 @@ describe("PartnersAccessPage", () => {
     expect(apiClient.post).toHaveBeenCalledWith("/api/v1/partner-access", { cnpj: "11.222.333/0001-81", acting_role: "financeiro" });
     expect(await screen.findByText("Escritório Contábil")).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("button", { name: "Revogar" }));
+    await userEvent.click(screen.getByRole("button", { name: "Revogar acesso de Escritório Contábil" }));
     const dialog = await screen.findByRole("dialog");
     await userEvent.click(within(dialog).getByRole("button", { name: "Revogar" }));
     expect(apiClient.delete).toHaveBeenCalledWith("/api/v1/partner-access/g-1");
