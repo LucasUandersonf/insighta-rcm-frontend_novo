@@ -205,7 +205,8 @@ function TodayQueue({ dateFrom, dateTo, workflow }: { dateFrom: string; dateTo: 
               <span className={cn("text-[13px] font-medium leading-snug", actioned ? "text-ink-faint line-through" : "text-ink")}>{item.title}</span>
               <span className="text-xs text-ink-faint">
                 {CATEGORY_LABEL[item.category] ?? "Geral"} · {item.source === "raiox" ? "Painel de receita" : "Alerta"}
-                {actioned === "atribuido" && " · atribuído"}
+                {actioned === "atribuido" &&
+                  (workflow.assignees[insightItemKey(item)] ? ` · com ${workflow.assignees[insightItemKey(item)]}` : " · atribuído")}
               </span>
             </div>
             {item.financial_impact !== null && (

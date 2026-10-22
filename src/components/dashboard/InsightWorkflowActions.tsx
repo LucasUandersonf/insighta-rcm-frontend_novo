@@ -68,7 +68,8 @@ export function useInsightWorkflow() {
   // não só da memória da página — recarregar não oferece "Atribuir" de novo.
   const { data: openDemands } = useQuery({
     queryKey: OPEN_DEMANDS_KEY,
-    queryFn: () => apiClient.get<{ insight_key: string }[]>("/api/v1/team/open-demands"),
+    queryFn: () =>
+      apiClient.get<{ insight_key: string; assignee: { full_name: string } | null }[]>("/api/v1/team/open-demands"),
     enabled: Boolean(user && OPEN_DEMAND_VIEWERS.has(user.role)),
     retry: false,
     staleTime: 60 * 1000,
@@ -78,6 +79,13 @@ export function useInsightWorkflow() {
     for (const d of Array.isArray(openDemands) ? openDemands : []) if (d?.insight_key) fromServer[d.insight_key] = "atribuido";
     return { ...fromServer, ...localKeys };
   }, [openDemands, localKeys]);
+  // "Com Carla": primeiro nome de quem está com a demanda aberta.
+  const assignees = useMemo(() => {
+    const names: Record<string, string> = {};
+    for (const d of Array.isArray(openDemands) ? openDemands : [])
+      if (d?.insight_key && d.assignee?.full_name) names[d.insight_key] = d.assignee.full_name.split(" ")[0];
+    return names;
+  }, [openDemands]);
 
   const resolveMutation = useMutation({
     mutationFn: async (item: PriorityQueueItem) => {
@@ -102,7 +110,7 @@ export function useInsightWorkflow() {
     onError: (err) => showError(getApiErrorMessage(err)),
   });
 
-  return { canManage, assigningItem, setAssigningItem, actionedKeys, setActionedKeys, resolveMutation };
+  return { canManage, assigningItem, setAssigningItem, actionedKeys, assignees, setActionedKeys, resolveMutation };
 }
 
 /**
@@ -148,7 +156,8 @@ export function InsightWorkflowButtons({
   );
 }
 
-export function ActionedBadge({ actioned }: { actioned: "resolvido" | "atribuido" | undefined }) {
+export function ActionedBadge({ actioned, who }: { actioned: "resolvido" | "atribuido" | undefined; who?: string }) {
   if (!actioned) return null;
-  return <Badge tone={actioned === "resolvido" ? "revenue" : "accent"}>{actioned === "resolvido" ? "Marcado como resolvido" : "Atribuído"}</Badge>;
+  const label = actioned === "resolvido" ? "Marcado como resolvido" : who ? `Com ${who}` : "Atribuído";
+  return <Badge tone={actioned === "resolvido" ? "revenue" : "accent"}>{label}</Badge>;
 }

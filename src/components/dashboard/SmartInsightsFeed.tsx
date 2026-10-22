@@ -84,7 +84,7 @@ export function formatCurrency(value: number): string {
  * (estado + mutation), não o item já resolvido. */
 export type InsightWorkflowSlice = Pick<
   ReturnType<typeof useInsightWorkflow>,
-  "canManage" | "actionedKeys" | "resolveMutation" | "setAssigningItem"
+  "canManage" | "actionedKeys" | "assignees" | "resolveMutation" | "setAssigningItem"
 >;
 
 // Fundo do card manchete — degradê diagonal na cor da severidade, igual
@@ -255,7 +255,7 @@ export function HeroInsight({
         <div className="flex flex-wrap items-center gap-2.5">
           <Badge tone={cfg.badgeTone}>{cfg.label}</Badge>
           {insight.is_new && <Badge tone="novo">Novo</Badge>}
-          <ActionedBadge actioned={actioned} />
+          <ActionedBadge actioned={actioned} who={workflow.assignees[insightItemKey(insight)]} />
           <span className="ml-auto flex items-center gap-1.5 text-xs text-ink-faint">
             <Icon aria-hidden size={13} className={cfg.text} />
             {CATEGORY_LABEL_SHORT[insight.category] ?? "Destaque"}
@@ -373,7 +373,7 @@ export function SecondaryInsightCard({
           )}
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <InsightActionButton insight={insight} onNavigateTab={onNavigateTab} onFocusAgenda={onFocusAgenda} toneClass={cfg.text} />
-            <ActionedBadge actioned={actioned} />
+            <ActionedBadge actioned={actioned} who={workflow.assignees[insightItemKey(insight)]} />
             <InsightWorkflowButtons
               item={queueItem}
               canManage={workflow.canManage}
