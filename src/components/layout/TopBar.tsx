@@ -27,7 +27,7 @@ import {
   visibleItems,
   type NavItem,
 } from "@/lib/navigation";
-import type { ModuleAlert, NavigationSummary, OrganizationSummary, Tenant } from "@/lib/types";
+import type { ModuleAlert, NavigationSummary, OrganizationSummary, PaginatedResponse, Tenant } from "@/lib/types";
 import { NotificationBell } from "./NotificationBell";
 import { HelpCenterModal } from "./HelpCenterModal";
 import { usePlan } from "@/lib/plan";
@@ -596,7 +596,20 @@ export function TopBar() {
     setIsMobileNavOpen(false);
   }, [location.pathname]);
 
-  const primaryItems = isCoordinatorView
+  // Homologação v1.0.0: Fila de correção vazia não ocupa o menu — volta
+  // sozinha quando o motor marcar a primeira guia com risco.
+  const canFixBilling = !!user && ["owner", "admin", "financeiro"].includes(user.role);
+  const { data: riskQueue } = useQuery({
+    queryKey: ["billing", "high-risk", "count"],
+    queryFn: () => apiClient.get<PaginatedResponse<unknown>>("/api/v1/billing/high-risk?limit=1&offset=0"),
+    enabled: canFixBilling,
+    staleTime: 5 * 60_000,
+  });
+  const hideEmptyQueue = (item: NavItem) =>
+    item.to !== "/fila-correcao" || riskQueue?.total !== 0 || isInside(item.to);
+  const isInside = (path: string) => location.pathname === path || location.pathname.startsWith(`${path}/`);
+
+  const primaryItems = (isCoordinatorView
     ? coordinatorNavItems(
         sectors.map((s) => s.sector),
         user?.role
@@ -604,7 +617,8 @@ export function TopBar() {
     : visibleItems(
         NAV_ITEMS.filter((item) => item.placement === "primary"),
         user?.role
-      );
+      )
+  ).filter(hideEmptyQueue);
   // "Consolidado da rede" só para grupo com mais de uma unidade.
   const { data: organization } = useQuery({
     queryKey: ["analytics", "organization-summary"],
@@ -618,7 +632,7 @@ export function TopBar() {
     : visibleItems(
         NAV_ITEMS.filter((item) => item.placement === "modules" && (!item.requiresNetwork || hasNetwork)),
         user?.role
-      );
+      ).filter(hideEmptyQueue);
   const jumpItems = isCoordinatorView
     ? primaryItems
     : [...visibleItems(NAV_ITEMS, user?.role), ...visibleItems(ADMIN_NAV_ITEMS, user?.role)];
@@ -627,7 +641,6 @@ export function TopBar() {
     if (to === "/" && isCoordinatorView) return coordinatorSummary?.open_count ?? 0;
     return 0;
   };
-  const isInside = (path: string) => location.pathname === path || location.pathname.startsWith(`${path}/`);
   const currentModule = moduleItems.find((item) => isInside(item.to) || (item.matches ?? []).some(isInside));
 
   return (

@@ -45,21 +45,30 @@ describe("ApprovalsStrip", () => {
     expect(screen.getByText(/Para uma delas já há quem da lista de espera/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Ver lista" }));
     expect(screen.getByText(/lista de espera: Eva Espera/)).toBeInTheDocument();
-    expect(screen.getByText("Abrir 1 recurso de glosa com prazo em até 7 dias")).toBeInTheDocument();
+    expect(screen.getByText("Protocolar 1 recurso de glosa com prazo em até 7 dias")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Aprovar e enviar" }));
     await waitFor(() => expect(apiClient.post).toHaveBeenCalledWith("/api/v1/acoes/confirmar-amanha"));
-    fireEvent.click(screen.getByRole("button", { name: "Abrir o recurso" }));
+    fireEvent.click(screen.getByRole("button", { name: "Enviar ao Faturamento" }));
     await waitFor(() => expect(apiClient.post).toHaveBeenCalledWith("/api/v1/acoes/recursos"));
   });
 
-  it("financeiro só aprova recurso; some quando não há nada", async () => {
+  it("financeiro vê, mas quem delega é o gestor", async () => {
     mockRole = "financeiro";
     vi.mocked(apiClient.get).mockResolvedValue(PLAN as never);
     renderWithProviders(<ApprovalsStrip />);
     expect(await screen.findByText(/Confirmar 2 consultas/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Aprovar e enviar" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Abrir o recurso" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Enviar ao Faturamento" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Ver na Central" })).toBeInTheDocument();
+  });
+
+  it("recursos já enviados hoje não pedem aprovação de novo", async () => {
+    mockRole = "owner";
+    vi.mocked(apiClient.get).mockResolvedValue({ ...PLAN, confirm_demand_id: "d1", appeals_demand_id: "d2" } as never);
+    renderWithProviders(<ApprovalsStrip />);
+    await new Promise((r) => setTimeout(r, 20));
+    expect(screen.queryByText("Para aprovar hoje")).not.toBeInTheDocument();
   });
 
   it("não aparece com a confirmação já enviada e sem recursos", async () => {

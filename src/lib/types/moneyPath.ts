@@ -292,4 +292,5 @@ export interface ApprovalPlan {
   appeals: { billing_id: string; plan_name: string; patient: string | null; value: number; reason: string | null; deadline: string; days_left: number }[];
   appeals_value: number;
   confirm_demand_id: string | null;
+  appeals_demand_id?: string | null;
 }

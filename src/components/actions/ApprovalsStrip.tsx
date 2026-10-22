@@ -12,7 +12,7 @@ import type { ApprovalPlan, RiskySlot } from "@/lib/types";
 const KEY = ["acoes"] as const;
 const CAN_VIEW = ["owner", "admin", "financeiro", "auditor"];
 const CAN_APPROVE_AGENDA = ["owner", "admin"];
-const CAN_APPROVE_APPEALS = ["owner", "admin", "financeiro"];
+const CAN_APPROVE_APPEALS = ["owner", "admin"];
 
 function hour(iso: string): string {
   return iso.slice(11, 16);
@@ -51,7 +51,9 @@ function Row({ text, detail, action, children }: { text: string; detail: string;
  * Para aprovar hoje: o que o Insighta já deixou pronto e só precisa do "sim"
  * do gestor — a confirmação das consultas de amanhã com risco alto (com quem
  * da lista de espera serve para a vaga), que vai para o Agendamento, e os
- * recursos das glosas cujo prazo acaba em 7 dias, abertos de uma vez.
+ * recursos das glosas cujo prazo acaba em 7 dias, que vão para o Faturamento
+ * protocolar. Nos dois casos o Insighta delega e acompanha; quem executa é
+ * a equipe.
  * Some quando não há nada para aprovar.
  */
 export function ApprovalsStrip() {
@@ -80,20 +82,24 @@ export function ApprovalsStrip() {
     onError: (err) => showError(getApiErrorMessage(err)),
   });
   const appeals = useMutation({
-    mutationFn: () => apiClient.post<{ appeal_ids: string[] }>("/api/v1/acoes/recursos"),
+    mutationFn: () => apiClient.post<{ demand_id: string; email_sent: boolean }>("/api/v1/acoes/recursos"),
     onSuccess: (res) => {
-      const n = res.appeal_ids.length;
-      showSuccess(`${n} ${n === 1 ? "recurso aberto" : "recursos abertos"}, com o prazo. Revise e protocole em Recursos de glosa.`);
+      showSuccess(
+        res.email_sent
+          ? "Enviado ao Faturamento, com aviso por e-mail. A demanda aparece em Equipe."
+          : "Enviado ao Faturamento. A demanda aparece em Equipe."
+      );
       void queryClient.invalidateQueries({ queryKey: KEY });
-      void queryClient.invalidateQueries({ queryKey: ["financeiro", "recuperacao"] });
+      void queryClient.invalidateQueries({ queryKey: ["team"] });
     },
     onError: (err) => showError(getApiErrorMessage(err)),
   });
 
   if (!data) return null;
   const pendingSlots = !data.confirm_demand_id && data.slots.length > 0;
+  const pendingAppeals = !data.appeals_demand_id && data.appeals.length > 0;
   const withWaitlist = data.slots.filter((s) => s.candidates.length > 0).length;
-  if (!pendingSlots && data.appeals.length === 0) return null;
+  if (!pendingSlots && !pendingAppeals) return null;
   const n = data.slots.length;
   const a = data.appeals.length;
 
@@ -127,14 +133,14 @@ export function ApprovalsStrip() {
             {showSlots && <SlotList slots={data.slots} />}
           </Row>
         )}
-        {a > 0 && (
+        {pendingAppeals && (
           <Row
-            text={`Abrir ${a} ${a === 1 ? "recurso" : "recursos"} de glosa com prazo em até 7 dias`}
-            detail={`${brl(data.appeals_value)} em jogo. Abre todos com o prazo da operadora; o faturamento revisa e protocola.`}
+            text={`Protocolar ${a} ${a === 1 ? "recurso" : "recursos"} de glosa com prazo em até 7 dias`}
+            detail={`${brl(data.appeals_value)} em jogo. Vai como demanda para o Faturamento, com cada conta e prazo por extenso.`}
             action={
               CAN_APPROVE_APPEALS.includes(role) ? (
                 <Button size="xs" disabled={appeals.isPending} onClick={() => appeals.mutate()}>
-                  {appeals.isPending ? "Abrindo…" : `Abrir ${a === 1 ? "o recurso" : `os ${a}`}`}
+                  {appeals.isPending ? "Enviando…" : "Enviar ao Faturamento"}
                 </Button>
               ) : (
                 <Link to="/recuperacao" className="text-xs text-accent underline">
