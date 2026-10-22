@@ -254,3 +254,22 @@ export interface VarianceDiagnosis {
   plan_movers: VarianceMover[];
   professional_movers: VarianceMover[];
 }
+
+// --- Placar de acerto ----------------------------------------------------
+export interface EventScore {
+  ready: boolean;
+  events: number;
+  flagged: number;
+  hit_rate: number | null;
+  high_rate: number | null;
+  low_rate: number | null;
+}
+
+export interface Scoreboard {
+  window_days: number;
+  min_events: number;
+  no_show: EventScore;
+  denial: EventScore;
+  cash_weeks: { week_start: string; predicted: number; actual: number }[];
+  cash_accuracy: number | null;
+}

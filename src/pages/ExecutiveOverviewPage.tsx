@@ -31,6 +31,7 @@ import { AgendaPlanPriorityPanel } from "@/components/dashboard/AgendaPlanPriori
 import { MoneyPathBlock } from "@/components/money/MoneyPathSummary";
 import { BillingBridge } from "@/components/money/BillingBridge";
 import { VarianceBlock } from "@/components/money/VarianceBlock";
+import { ScoreboardPanel } from "@/components/money/ScoreboardPanel";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useDateWindow } from "@/lib/useDateWindow";
@@ -243,6 +244,9 @@ export function ExecutiveOverviewPage() {
             onNavigateTab={navigateTab}
             onFocusAgenda={handleFocusAgendaFromQueue}
           />
+          <div className="mt-6">
+            <ScoreboardPanel />
+          </div>
         </TabPanel>
       )}
 
