@@ -132,24 +132,26 @@ export function WithholdingPanel() {
       title="Retenções na fonte"
       subtitle="O convênio desconta IRRF, PIS, COFINS, CSLL e, em alguns municípios, ISS antes de pagar. Confirme uma vez por convênio; confira com seu contador."
     >
-      {isLoading && <LoadingState />}
-      {error && <ErrorState message={getApiErrorMessage(error)} />}
-      {data && data.plans.length === 0 && <EmptyState message="Nenhum convênio com faturamento nos últimos 90 dias." />}
-      {data && data.plans.length > 0 && (
-        <>
-          {pending > 0 && (
-            <p className="mb-2 text-xs text-ink-muted">
-              {pending} {pending === 1 ? "convênio ainda sem retenção confirmada" : "convênios ainda sem retenção confirmada"}: até lá,
-              o Caixa mostra o valor bruto.
-            </p>
-          )}
-          <ul className="divide-y divide-border-hairline">
-            {data.plans.map((plan) => (
-              <PlanRow key={plan.plan_id} plan={plan} canWrite={canWrite} />
-            ))}
-          </ul>
-        </>
-      )}
+      <div className="px-6 py-5">
+        {isLoading && <LoadingState />}
+        {error && <ErrorState message={getApiErrorMessage(error)} />}
+        {data && data.plans.length === 0 && <EmptyState message="Nenhum convênio com faturamento nos últimos 90 dias." />}
+        {data && data.plans.length > 0 && (
+          <>
+            {pending > 0 && (
+              <p className="mb-2 text-xs text-ink-muted">
+                {pending} {pending === 1 ? "convênio ainda sem retenção confirmada" : "convênios ainda sem retenção confirmada"}: até lá,
+                o Caixa mostra o valor bruto.
+              </p>
+            )}
+            <ul className="divide-y divide-border-hairline">
+              {data.plans.map((plan) => (
+                <PlanRow key={plan.plan_id} plan={plan} canWrite={canWrite} />
+              ))}
+            </ul>
+          </>
+        )}
+      </div>
     </Panel>
   );
 }
