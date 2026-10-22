@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Badge, type BadgeTone } from "@/components/ui/Badge";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
+import { UsageBandMeter } from "@/components/billing/UsageBandMeter";
 import type { AccountHealth, AccountHealthCheck } from "@/lib/types";
 
 const GROUPS: { id: AccountHealthCheck["group"]; title: string; subtitle: string }[] = [
@@ -46,6 +47,7 @@ export function AccountHealthPage() {
       />
       {isLoading && <LoadingState rows={6} />}
       {error && <ErrorState message={getApiErrorMessage(error)} onRetry={() => refetch()} />}
+      <UsageBandMeter />
       {data &&
         Array.isArray(data.checks) &&
         GROUPS.map((group) => {

@@ -14,6 +14,7 @@ import { CancelSubscriptionPanel } from "@/components/billing/CancelSubscription
 import { DataExportPanel } from "@/pages/admin/TenantPage";
 import { PLAN_QUERY_KEY, daysUntil } from "@/lib/plan";
 import { PlanUsagePanel } from "@/components/billing/PlanUsagePanel";
+import { UsageBandMeter } from "@/components/billing/UsageBandMeter";
 import type {
   BillingCycle,
   ChangePlanResponse,
@@ -234,6 +235,7 @@ export function SubscriptionPage() {
         </div>
       )}
 
+      {subscribed ? <UsageBandMeter /> : null}
       {subscribed || trialDays !== null ? <PlanUsagePanel /> : null}
 
       {status.billing_status === "past_due" && isOwner && (
