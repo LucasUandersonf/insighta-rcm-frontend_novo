@@ -220,3 +220,37 @@ export interface PayerSimulation {
   verdict: SimulatorVerdict;
   procedures: SimulatorProcedure[];
 }
+
+// --- Diagnóstico de variação -------------------------------------------
+export interface VarianceMover {
+  name: string;
+  before: number;
+  after: number;
+  delta: number;
+}
+
+export interface VarianceDiagnosis {
+  date_from: string;
+  date_to: string;
+  prev_from: string;
+  prev_to: string;
+  billed_before: number;
+  billed_after: number;
+  delta: number;
+  delta_pct: number | null;
+  accounts_before: number;
+  accounts_after: number;
+  volume_effect: number;
+  mix_effect: number;
+  price_effect: number;
+  no_shows_before: number;
+  no_shows_after: number;
+  no_show_cost: number;
+  denied_before: number;
+  denied_after: number;
+  received_before: number;
+  received_after: number;
+  headline: string | null;
+  plan_movers: VarianceMover[];
+  professional_movers: VarianceMover[];
+}
