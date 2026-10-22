@@ -1,4 +1,5 @@
 import {
+  Briefcase,
   Building2,
   HeartPulse,
   Clock,
@@ -126,6 +127,8 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
   { to: "/profissionais", label: "Horários de atendimento", icon: Clock, roles: ADMINS, placement: "modules" },
   { to: "/admin/integracoes", label: "Integrações", icon: Plug, roles: ADMINS, placement: "modules" },
   { to: "/admin/destinatarios", label: "Destinatários de relatórios", icon: Send, roles: ADMINS, placement: "modules" },
+  // Insighta Partner (v1.1): contador ou consultoria com acesso autorizado.
+  { to: "/admin/parceiros", label: "Parceiros", icon: Briefcase, roles: ADMINS, placement: "modules" },
   // Auditor também precisa ver a trilha de auditoria — papel de
   // leitura/compliance (mesmo critério de analytics.py).
   { to: "/admin/auditoria", label: "Logs de auditoria", icon: ScrollText, roles: ["owner", "admin", "auditor"], placement: "modules" },

@@ -73,6 +73,27 @@ export interface PlatformLoginResponse {
   mfa_secret: string | null;
 }
 
+export interface PlatformPartner {
+  id: string;
+  legal_name: string;
+  cnpj: string;
+  kind: string;
+  commission_pct: number;
+  is_active: boolean;
+  active_clinics: number;
+  users: number;
+  created_at: string;
+}
+
+export interface PlatformPartnerCreate {
+  legal_name: string;
+  cnpj: string;
+  kind: "contabilidade" | "consultoria" | "outro";
+  commission_pct: number;
+  admin_email: string;
+  admin_name: string;
+}
+
 export const platformApiClient = {
   login: (email: string, password: string) =>
     platformRequest<PlatformLoginResponse>("/api/v1/platform/login", {
@@ -115,6 +136,14 @@ export const platformApiClient = {
       "/api/v1/platform/alerts/run",
       { method: "POST", auth: true },
     ),
+  // Insighta Partner (v1.1): escritórios parceiros e o primeiro acesso de cada um.
+  getPartners: () => platformRequest<PlatformPartner[]>("/api/v1/platform/partners", { auth: true }),
+  createPartner: (body: PlatformPartnerCreate) =>
+    platformRequest<{ partner_id: string; admin_email: string; temporary_password: string }>("/api/v1/platform/partners", {
+      method: "POST",
+      auth: true,
+      body,
+    }),
   // "Histórico de quem fez o quê" (ver GET /platform/audit-log no backend).
   getAuditLog: () =>
     platformRequest<import("./types").PlatformAuditLogEntry[]>(

@@ -27,10 +27,12 @@ import type {
 } from "@/lib/types";
 import { plural } from "@/lib/plural";
 import { formatDateBR } from "@/lib/dates";
+import { PlatformPartnersPanel } from "./PlatformPartnersPanel";
 
 const ACTION_LABEL: Record<string, string> = {
   login: "Entrou no painel",
   alerts_run: "Verificou alertas manualmente",
+  partner_created: "Cadastrou um parceiro",
 };
 
 function formatDateTime(iso: string): string {
@@ -483,6 +485,8 @@ export function PlatformDashboardPage() {
         </Panel>
 
         <PilotMetricsPanel rows={pilotMetrics ?? []} />
+
+        <PlatformPartnersPanel />
 
         {auditRows.length > 0 && (
           <Panel

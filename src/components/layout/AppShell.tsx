@@ -3,6 +3,7 @@ import { Outlet, useLocation } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { EmailVerificationBanner } from "./EmailVerificationBanner";
 import { OfflineBanner } from "./OfflineBanner";
+import { PartnerClinicBanner } from "./PartnerClinicBanner";
 import { UnsavedChangesGuard } from "./UnsavedChangesGuard";
 import { ImportProgressIndicator } from "./ImportProgressIndicator";
 import { TopBar } from "./TopBar";
@@ -47,6 +48,7 @@ export function AppShell() {
       </a>
       <OnboardingTourProvider>
         <div className={cn("transition-[filter] duration-200", isModalOpen && "blur-[1.5px] saturate-[0.85]")}>
+          <PartnerClinicBanner />
           <TopBar />
           <OfflineBanner />
           <EmailVerificationBanner />

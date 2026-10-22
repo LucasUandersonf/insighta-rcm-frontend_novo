@@ -10,6 +10,7 @@ import { FEATURES } from "@/lib/plan";
 import { AppShell } from "@/components/layout/AppShell";
 import { RoleProtectedRoute } from "@/routes/ProtectedRoute";
 import { PlatformProtectedRoute } from "@/routes/PlatformProtectedRoute";
+import { PartnerProtectedRoute } from "@/routes/PartnerProtectedRoute";
 import { isApiConfigured } from "@/lib/api-client";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { RouteLoadingFallback } from "@/components/RouteLoadingFallback";
@@ -76,6 +77,9 @@ const AccountHealthPage = lazy(() => import("@/pages/admin/AccountHealthPage").t
 const ReportRecipientsPage = lazy(() => import("@/pages/admin/ReportRecipientsPage").then((m) => ({ default: m.ReportRecipientsPage })));
 const AuditLogPage = lazy(() => import("@/pages/admin/AuditLogPage").then((m) => ({ default: m.AuditLogPage })));
 const PlatformLoginPage = lazy(() => import("@/pages/platform/PlatformLoginPage").then((m) => ({ default: m.PlatformLoginPage })));
+const PartnerLoginPage = lazy(() => import("@/pages/partner/PartnerLoginPage").then((m) => ({ default: m.PartnerLoginPage })));
+const PortfolioPage = lazy(() => import("@/pages/partner/PortfolioPage").then((m) => ({ default: m.PortfolioPage })));
+const PartnersAccessPage = lazy(() => import("@/pages/admin/PartnersAccessPage").then((m) => ({ default: m.PartnersAccessPage })));
 const PlatformDashboardPage = lazy(() => import("@/pages/platform/PlatformDashboardPage").then((m) => ({ default: m.PlatformDashboardPage })));
 const SubscriptionPage = lazy(() => import("@/pages/SubscriptionPage").then((m) => ({ default: m.SubscriptionPage })));
 const MockCheckoutPage = lazy(() => import("@/pages/MockCheckoutPage").then((m) => ({ default: m.MockCheckoutPage })));
@@ -139,6 +143,12 @@ function AppRoutes() {
           dentro do produto, fora do AuthContext/RBAC de clínica
           de propósito (ver DECISÃO em src/routes/PlatformProtectedRoute.tsx
           e app/api/platform_admin_auth.py no backend). */}
+      {/* Insighta Partner (v1.1): login e carteira do escritório parceiro,
+          fora do AuthContext de clínica (token próprio, ver partner-api-client.ts). */}
+      <Route path="/parceiro/login" element={<PartnerLoginPage />} />
+      <Route element={<PartnerProtectedRoute />}>
+        <Route path="/parceiro" element={<PortfolioPage />} />
+      </Route>
       <Route path="/plataforma/login" element={<PlatformLoginPage />} />
       <Route element={<PlatformProtectedRoute />}>
         <Route path="/plataforma" element={<PlatformDashboardPage />} />
@@ -271,6 +281,7 @@ function AppRoutes() {
           <Route path="/admin/clinica" element={<TenantPage />} />
           <Route path="/admin/saude-da-conta" element={<AccountHealthPage />} />
           <Route path="/admin/destinatarios" element={<ReportRecipientsPage />} />
+          <Route path="/admin/parceiros" element={<PartnersAccessPage />} />
         </Route>
         {/* auditor também acessa a trilha de auditoria (RBAC igual ao backend em audit_log.py) */}
         <Route element={<RoleProtectedRoute allowedRoles={["owner", "admin", "auditor"]} />}>
