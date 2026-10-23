@@ -85,7 +85,7 @@ describe("TopBar", () => {
     const nav = screen.getByRole("navigation", { name: "Navegação principal" });
     expect(within(nav).getByRole("link", { name: /Sala de Comando/ })).toBeInTheDocument();
     // Configurações nunca soltas na barra — só depois de abrir o avatar.
-    expect(screen.queryByRole("link", { name: /Integrações e webhooks/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /^Integrações$/ })).not.toBeInTheDocument();
 
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: /Módulos/ }));
@@ -96,7 +96,7 @@ describe("TopBar", () => {
     await openAccountMenu();
     expect(screen.getByText("Administração")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /^Usuários$/ })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Integrações e webhooks/ })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /^Integrações$/ })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Minha clínica/ })).toBeInTheDocument();
   });
 

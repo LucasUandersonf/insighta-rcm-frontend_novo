@@ -15,9 +15,10 @@ import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useToast } from "@/context/ToastContext";
 import { useAuth } from "@/context/AuthContext";
-import type { Guia, GuiaTipo, InsurancePlan, Lote, LoteCreateRequest, LoteStatus, PaginatedResponse } from "@/lib/types";
+import type { Guia, GuiaTipo, InsurancePlan, Lote, LoteCreateRequest, LoteStatus, PaginatedResponse, PreSubmissionGroup } from "@/lib/types";
 import { formatDateBR } from "@/lib/dates";
 import { useDirtyOnEdit } from "@/lib/unsavedChanges";
+import { PreSubmissionIssues, VerdictBadge } from "@/components/money/PreSubmissionIssues";
 
 const LOTES_PAGE_SIZE = 20;
 
@@ -142,6 +143,14 @@ function LoteDetailModal({ lote, planName, onClose }: { lote: Lote | null; planN
     enabled: Boolean(lote) && isAberto,
   });
 
+  // Conferência antes do envio só deste lote: o que vai voltar glosado,
+  // antes de fechar e mandar ao convênio.
+  const checkQuery = useQuery({
+    queryKey: ["lotes", lote?.id, "conferencia"],
+    queryFn: () => apiClient.get<PreSubmissionGroup | null>(`/api/v1/lotes/${lote!.id}/conferencia`),
+    enabled: Boolean(lote) && lote?.status !== "faturado",
+  });
+
   function invalidateLote() {
     queryClient.invalidateQueries({ queryKey: ["lotes"] });
   }
@@ -244,6 +253,21 @@ function LoteDetailModal({ lote, planName, onClose }: { lote: Lote | null; planN
         </>
       )}
 
+      {lote.status !== "faturado" && guias.length > 0 && (
+        <section className="mb-4 rounded-lg border border-border-hairline px-4 py-3" aria-label="Conferência antes do envio">
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+            <h3 className="text-sm font-semibold text-ink">Conferência antes do envio</h3>
+            {checkQuery.data && <VerdictBadge verdict={checkQuery.data.verdict} />}
+          </div>
+          {checkQuery.isLoading && <LoadingState variant="table" rows={2} />}
+          {checkQuery.error && <ErrorState message={getApiErrorMessage(checkQuery.error)} />}
+          {checkQuery.data === null && (
+            <p className="text-xs text-ink-faint">As guias deste lote não têm cobrança esperando envio.</p>
+          )}
+          {checkQuery.data && <PreSubmissionIssues group={checkQuery.data} />}
+        </section>
+      )}
+
       {lote.status === "faturado" && (
         <p className="mb-2 text-xs text-ink-faint">
           Este lote já virou fatura. Para mexer nele, cancele a fatura em{" "}
@@ -277,7 +301,7 @@ function LoteDetailModal({ lote, planName, onClose }: { lote: Lote | null; planN
             disabled={fecharMutation.isPending || guias.length === 0}
             title={guias.length === 0 ? "Um lote sem nenhuma guia não pode ser fechado." : undefined}
           >
-            {fecharMutation.isPending ? "Fechando..." : "Fechar lote"}
+            {fecharMutation.isPending ? "Fechando..." : checkQuery.data?.verdict === "revisar" ? "Fechar mesmo assim" : "Fechar lote"}
           </Button>
         )}
       </div>

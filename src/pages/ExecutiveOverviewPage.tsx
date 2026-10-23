@@ -28,6 +28,10 @@ import { PatientRevenueParetoPanel } from "@/components/dashboard/PatientRevenue
 import { PatientRfmPanel } from "@/components/dashboard/PatientRfmPanel";
 import { ProfitabilityPanel } from "@/components/dashboard/ProfitabilityPanel";
 import { AgendaPlanPriorityPanel } from "@/components/dashboard/AgendaPlanPriorityPanel";
+import { MoneyPathBlock } from "@/components/money/MoneyPathSummary";
+import { BillingBridge } from "@/components/money/BillingBridge";
+import { VarianceBlock } from "@/components/money/VarianceBlock";
+import { ScoreboardPanel } from "@/components/money/ScoreboardPanel";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useDateWindow } from "@/lib/useDateWindow";
@@ -188,6 +192,7 @@ export function ExecutiveOverviewPage() {
     queryKey: ["analytics", "executive-summary", dateFrom, dateTo],
     queryFn: () => apiClient.get<ExecutiveSummary>(`/api/v1/analytics/executive-summary?date_from=${dateFrom}&date_to=${dateTo}`),
   });
+  const noBillingYet = !!summary && summary.total_billed.value === 0 && summary.total_billed.previous_value === 0;
 
   return (
     <div className="space-y-6">
@@ -240,6 +245,9 @@ export function ExecutiveOverviewPage() {
             onNavigateTab={navigateTab}
             onFocusAgenda={handleFocusAgendaFromQueue}
           />
+          <div className="mt-6">
+            <ScoreboardPanel />
+          </div>
         </TabPanel>
       )}
 
@@ -250,80 +258,90 @@ export function ExecutiveOverviewPage() {
                 oportunidades de preço. Os insights vêm primeiro (o
                 "porquê"), os números logo abaixo, para conferência. */}
             <SmartInsightsFeed dateFrom={dateFrom} dateTo={dateTo} categories={["faturamento", "estrategia"]} onNavigateTab={navigateTab} onFocusAgenda={setAgendaFocus} />
-            <HealthScoreWidget />
+            {/* Homologação v1.0.0: sem faturamento nesta janela nem na anterior,
+                o aviso "Ainda sem dados" acima basta — antes vinham mais 8
+                caixas vazias empilhadas. */}
+            {!noBillingYet && (
+              <>
+                <MoneyPathBlock />
+                <VarianceBlock />
+                <BillingBridge />
+                <HealthScoreWidget />
 
-            {isLoading && <LoadingState variant="cards" rows={6} />}
-            {error && <ErrorState message={getApiErrorMessage(error)} />}
-            {summary && (
-              <section>
-                <h2 className="mb-3 text-2xs font-medium uppercase tracking-wide text-ink-faint">Números do período — para conferência</h2>
-                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-12">
-                  <KpiCard size="compact" colSpan={2} label="Total faturado" value={formatCurrency(summary.total_billed.value)} numericValue={summary.total_billed.value} format={formatCurrency} tone="revenue" trend={trendFrom(summary.total_billed)} />
-                  {summary.margin_vs_contracted_pct !== null ? (
-                    <KpiCard size="compact" colSpan={2} label="Cobrado abaixo do contrato" value={formatCurrency(summary.financial_hole.value)} numericValue={summary.financial_hole.value} format={formatCurrency} tone="denied" gradient trend={trendFrom(summary.financial_hole, { invert: true })} />
-                  ) : (
-                    <KpiCard size="compact" colSpan={2} label="Cobrado abaixo do contrato" value="—" tone="neutral" narrative="Cadastre a tabela de preço dos convênios para medir." />
-                  )}
-                  {summary.total_value_saved.value > 0 || summary.total_value_saved.previous_value > 0 ? (
-                    <KpiCard size="compact" colSpan={2} label="Caixa protegido" value={formatCurrency(summary.total_value_saved.value)} numericValue={summary.total_value_saved.value} format={formatCurrency} tone="revenue" gradient trend={trendFrom(summary.total_value_saved)} />
-                  ) : (
-                    <KpiCard size="compact" colSpan={2} label="Caixa protegido" value="—" tone="neutral" narrative="Aparece quando as guias passam pela checagem de risco antes do envio." />
-                  )}
-                  <KpiCard
-                    size="compact"
-                    colSpan={2}
-                    label="Você faturou do que podia"
-                    value={summary.margin_vs_contracted_pct !== null ? `${summary.margin_vs_contracted_pct.toFixed(1)}%` : "—"}
-                    numericValue={summary.margin_vs_contracted_pct ?? undefined}
-                    format={summary.margin_vs_contracted_pct !== null ? (n) => `${n.toFixed(1)}%` : undefined}
-                    tone="neutral"
-                  />
-                  <KpiCard
-                    size="compact"
-                    colSpan={2}
-                    label="Faturamentos travados por risco"
-                    value={String(summary.high_risk_pending_count)}
-                    numericValue={summary.high_risk_pending_count}
-                    format={(n) => String(Math.round(n))}
-                    tone={summary.high_risk_pending_count > 0 ? "pending" : "neutral"}
-                  />
-                  <KpiCard
-                    size="compact"
-                    colSpan={2}
-                    label="Prazo médio de recebimento"
-                    value={summary.avg_days_to_receive ? `${summary.avg_days_to_receive.value.toFixed(0)} dias` : "—"}
-                    numericValue={summary.avg_days_to_receive ? summary.avg_days_to_receive.value : undefined}
-                    format={summary.avg_days_to_receive ? (n) => `${n.toFixed(0)} dias` : undefined}
-                    tone={summary.avg_days_to_receive && summary.avg_days_to_receive.value >= 60 ? "pending" : "neutral"}
-                    trend={summary.avg_days_to_receive ? trendFrom(summary.avg_days_to_receive, { invert: true }) : undefined}
-                  />
-                </div>
-              </section>
+                {isLoading && <LoadingState variant="cards" rows={6} />}
+                {error && <ErrorState message={getApiErrorMessage(error)} />}
+                {summary && (
+                  <section>
+                    <h2 className="mb-3 text-2xs font-medium uppercase tracking-wide text-ink-faint">Números do período — para conferência</h2>
+                    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-12">
+                      <KpiCard size="compact" colSpan={2} label="Total faturado" value={formatCurrency(summary.total_billed.value)} numericValue={summary.total_billed.value} format={formatCurrency} tone="revenue" trend={trendFrom(summary.total_billed)} />
+                      {summary.margin_vs_contracted_pct !== null ? (
+                        <KpiCard size="compact" colSpan={2} label="Cobrado abaixo do contrato" value={formatCurrency(summary.financial_hole.value)} numericValue={summary.financial_hole.value} format={formatCurrency} tone="denied" gradient trend={trendFrom(summary.financial_hole, { invert: true })} />
+                      ) : (
+                        <KpiCard size="compact" colSpan={2} label="Cobrado abaixo do contrato" value="—" tone="neutral" narrative="Cadastre a tabela de preço dos convênios para medir." />
+                      )}
+                      {summary.total_value_saved.value > 0 || summary.total_value_saved.previous_value > 0 ? (
+                        <KpiCard size="compact" colSpan={2} label="Caixa protegido" value={formatCurrency(summary.total_value_saved.value)} numericValue={summary.total_value_saved.value} format={formatCurrency} tone="revenue" gradient trend={trendFrom(summary.total_value_saved)} />
+                      ) : (
+                        <KpiCard size="compact" colSpan={2} label="Caixa protegido" value="—" tone="neutral" narrative="Aparece quando as guias passam pela checagem de risco antes do envio." />
+                      )}
+                      <KpiCard
+                        size="compact"
+                        colSpan={2}
+                        label="Você faturou do que podia"
+                        value={summary.margin_vs_contracted_pct !== null ? `${summary.margin_vs_contracted_pct.toFixed(1)}%` : "—"}
+                        numericValue={summary.margin_vs_contracted_pct ?? undefined}
+                        format={summary.margin_vs_contracted_pct !== null ? (n) => `${n.toFixed(1)}%` : undefined}
+                        tone="neutral"
+                      />
+                      <KpiCard
+                        size="compact"
+                        colSpan={2}
+                        label="Faturamentos travados por risco"
+                        value={String(summary.high_risk_pending_count)}
+                        numericValue={summary.high_risk_pending_count}
+                        format={(n) => String(Math.round(n))}
+                        tone={summary.high_risk_pending_count > 0 ? "pending" : "neutral"}
+                      />
+                      <KpiCard
+                        size="compact"
+                        colSpan={2}
+                        label="Prazo médio de recebimento"
+                        value={summary.avg_days_to_receive ? `${summary.avg_days_to_receive.value.toFixed(0)} dias` : "—"}
+                        numericValue={summary.avg_days_to_receive ? summary.avg_days_to_receive.value : undefined}
+                        format={summary.avg_days_to_receive ? (n) => `${n.toFixed(0)} dias` : undefined}
+                        tone={summary.avg_days_to_receive && summary.avg_days_to_receive.value >= 60 ? "pending" : "neutral"}
+                        trend={summary.avg_days_to_receive ? trendFrom(summary.avg_days_to_receive, { invert: true }) : undefined}
+                      />
+                    </div>
+                  </section>
+                )}
+
+                {/* Destino do action_href="#tab:faturamento" do insight de conta
+                    parada em auditoria. Sempre "estado agora". */}
+                <ContaStatusFunnelPanel />
+
+                {/* id="buraco-financeiro" — destino do botão "Ver contas abaixo do combinado". */}
+                <section id="buraco-financeiro">
+                  <h2 className="mb-3 text-sm font-medium text-ink">Contas abaixo do combinado</h2>
+                  <FinancialHoleBillingsPanel dateFrom={dateFrom} dateTo={dateTo} />
+                </section>
+
+                {/* Antiga aba Oportunidades: contratos com preço abaixo da
+                    mediana de clínicas parecidas — argumento de renegociação. */}
+                <section id="oportunidades">
+                  <h2 className="mb-3 text-sm font-medium text-ink">Contratos para renegociar</h2>
+                  <OportunidadesPanel />
+                </section>
+
+                <section id="origem-receita" className="space-y-4">
+                  <h2 className="text-sm font-medium text-ink">De onde vem a receita</h2>
+                  <AverageTicketPanel dateFrom={dateFrom} dateTo={dateTo} />
+                  <MarketingChannelsPanel dateFrom={dateFrom} dateTo={dateTo} />
+                  <PatientRevenueParetoPanel dateFrom={dateFrom} dateTo={dateTo} />
+                </section>
+              </>
             )}
-
-            {/* Destino do action_href="#tab:faturamento" do insight de conta
-                parada em auditoria. Sempre "estado agora". */}
-            <ContaStatusFunnelPanel />
-
-            {/* id="buraco-financeiro" — destino do botão "Ver contas abaixo do combinado". */}
-            <section id="buraco-financeiro">
-              <h2 className="mb-3 text-sm font-medium text-ink">Contas abaixo do combinado</h2>
-              <FinancialHoleBillingsPanel dateFrom={dateFrom} dateTo={dateTo} />
-            </section>
-
-            {/* Antiga aba Oportunidades: contratos com preço abaixo da
-                mediana de clínicas parecidas — argumento de renegociação. */}
-            <section id="oportunidades">
-              <h2 className="mb-3 text-sm font-medium text-ink">Contratos para renegociar</h2>
-              <OportunidadesPanel />
-            </section>
-
-            <section id="origem-receita" className="space-y-4">
-              <h2 className="text-sm font-medium text-ink">De onde vem a receita</h2>
-              <AverageTicketPanel dateFrom={dateFrom} dateTo={dateTo} />
-              <MarketingChannelsPanel dateFrom={dateFrom} dateTo={dateTo} />
-              <PatientRevenueParetoPanel dateFrom={dateFrom} dateTo={dateTo} />
-            </section>
           </div>
         </TabPanel>
       )}

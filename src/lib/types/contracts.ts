@@ -244,3 +244,26 @@ export interface SupportRequest {
   status: "aberto" | "respondido";
   created_at: string;
 }
+
+// Homologação fácil (app/services/contract_assist.py): itens vindos da
+// planilha da tabela ou do histórico de pagamentos do convênio.
+export interface AssistedContractItem {
+  tuss_code: string;
+  procedure_name: string | null;
+  agreed_price: number;
+  warning: string | null;
+  source: "pago" | "cobrado" | null;
+  count: number | null;
+}
+
+export interface PriceTableParse {
+  items: AssistedContractItem[];
+  warnings: string[];
+  rejected: number;
+}
+
+export interface ContractSuggestion {
+  items: AssistedContractItem[];
+  billed_codes: number;
+  without_price: number;
+}

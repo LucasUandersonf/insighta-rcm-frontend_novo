@@ -5,6 +5,8 @@ import { LoadingState, ErrorState, EmptyState } from "@/components/ui/Panel";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import type { MarketingChannelItem, MarketingChannels } from "@/lib/types";
+import { withPlanGate } from "@/components/billing/PlanGate";
+import { FEATURES } from "@/lib/plan";
 
 /**
  * Raio-X da Receita, frente "Gestão eficiente" — ROI de marketing
@@ -43,7 +45,7 @@ function ChannelRow({ item, rank }: { item: MarketingChannelItem; rank: number }
   );
 }
 
-export function MarketingChannelsPanel({ dateFrom, dateTo }: { dateFrom: string; dateTo: string }) {
+function MarketingChannelsPanelInner({ dateFrom, dateTo }: { dateFrom: string; dateTo: string }) {
   const { data, isLoading, error } = useQuery({
     queryKey: ["analytics", "marketing-channels", dateFrom, dateTo],
     queryFn: () =>
@@ -97,3 +99,6 @@ export function MarketingChannelsPanel({ dateFrom, dateTo }: { dateFrom: string;
     </BentoCard>
   );
 }
+
+// Plano Pro (src/lib/plan.ts): no Basic, vira a prévia com o convite.
+export const MarketingChannelsPanel = withPlanGate(MarketingChannelsPanelInner, FEATURES.patientsAdvanced);

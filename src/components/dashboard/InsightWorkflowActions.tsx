@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, UserPlus } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -31,9 +31,20 @@ import type { InsightOutcome, InsightOutcomeCreateRequest, PriorityQueueItem, Sm
 // resolve pelas próprias demandas (ver CoordinatorHomePage).
 export const INSIGHT_MANAGER_ROLES = new Set(["owner", "admin"]);
 
-export function insightItemKey(item: { category: string; title: string }): string {
-  return `${item.category}:${item.title}`;
+/** Mesma chave que o backend grava em insight_outcomes.insight_key
+ * (app/core/text_utils.slugify do fact_key, ou de "categoria:título"). */
+export function insightItemKey(item: { category: string; title: string; fact_key?: string | null }): string {
+  return (item.fact_key || `${item.category}:${item.title}`)
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
 }
+
+export const OPEN_DEMANDS_KEY = ["team", "open-demands"] as const;
+const OPEN_DEMAND_VIEWERS = new Set(["owner", "admin", "auditor"]);
 
 /** SmartInsight (Diagnóstico) nunca tem `source` (isso só existe na fila
  * "Hoje", que mistura insight normal com item sintético do Raio-X) —
@@ -52,7 +63,29 @@ export function useInsightWorkflow() {
   // recalcula no próximo carregamento (o problema-fonte ainda existe até
   // alguém de fato agir nele), então sem isso o botão continuaria
   // clicável pro mesmo item depois de já resolvido/atribuído.
-  const [actionedKeys, setActionedKeys] = useState<Record<string, "resolvido" | "atribuido">>({});
+  const [localKeys, setActionedKeys] = useState<Record<string, "resolvido" | "atribuido">>({});
+  // Homologação v1.0.0: o "já atribuído" vem do servidor (demanda aberta),
+  // não só da memória da página — recarregar não oferece "Atribuir" de novo.
+  const { data: openDemands } = useQuery({
+    queryKey: OPEN_DEMANDS_KEY,
+    queryFn: () =>
+      apiClient.get<{ insight_key: string; assignee: { full_name: string } | null }[]>("/api/v1/team/open-demands"),
+    enabled: Boolean(user && OPEN_DEMAND_VIEWERS.has(user.role)),
+    retry: false,
+    staleTime: 60 * 1000,
+  });
+  const actionedKeys = useMemo(() => {
+    const fromServer: Record<string, "resolvido" | "atribuido"> = {};
+    for (const d of Array.isArray(openDemands) ? openDemands : []) if (d?.insight_key) fromServer[d.insight_key] = "atribuido";
+    return { ...fromServer, ...localKeys };
+  }, [openDemands, localKeys]);
+  // "Com Carla": primeiro nome de quem está com a demanda aberta.
+  const assignees = useMemo(() => {
+    const names: Record<string, string> = {};
+    for (const d of Array.isArray(openDemands) ? openDemands : [])
+      if (d?.insight_key && d.assignee?.full_name) names[d.insight_key] = d.assignee.full_name.split(" ")[0];
+    return names;
+  }, [openDemands]);
 
   const resolveMutation = useMutation({
     mutationFn: async (item: PriorityQueueItem) => {
@@ -77,7 +110,7 @@ export function useInsightWorkflow() {
     onError: (err) => showError(getApiErrorMessage(err)),
   });
 
-  return { canManage, assigningItem, setAssigningItem, actionedKeys, setActionedKeys, resolveMutation };
+  return { canManage, assigningItem, setAssigningItem, actionedKeys, assignees, setActionedKeys, resolveMutation };
 }
 
 /**
@@ -123,7 +156,8 @@ export function InsightWorkflowButtons({
   );
 }
 
-export function ActionedBadge({ actioned }: { actioned: "resolvido" | "atribuido" | undefined }) {
+export function ActionedBadge({ actioned, who }: { actioned: "resolvido" | "atribuido" | undefined; who?: string }) {
   if (!actioned) return null;
-  return <Badge tone={actioned === "resolvido" ? "revenue" : "accent"}>{actioned === "resolvido" ? "Marcado como resolvido" : "Atribuído"}</Badge>;
+  const label = actioned === "resolvido" ? "Marcado como resolvido" : who ? `Com ${who}` : "Atribuído";
+  return <Badge tone={actioned === "resolvido" ? "revenue" : "accent"}>{label}</Badge>;
 }

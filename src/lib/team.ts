@@ -61,6 +61,8 @@ export interface Demand {
   last_update_at: string | null;
   nudged_at: string | null;
   confirmation: "aguardando" | "confirmado" | "voltou" | null;
+  /** Só na resposta do Cobrar: o e-mail ao responsável saiu? */
+  nudge_sent?: boolean;
 }
 
 export interface DemandCreate {

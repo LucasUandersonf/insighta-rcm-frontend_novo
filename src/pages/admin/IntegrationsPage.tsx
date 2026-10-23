@@ -26,6 +26,9 @@ import type {
   WebhookSubscriptionCreated,
 } from "@/lib/types";
 import { useDirtyOnEdit } from "@/lib/unsavedChanges";
+import { NightlyIntegrationPanel } from "@/components/integrations/NightlyIntegrationPanel";
+import { PlanGate } from "@/components/billing/PlanGate";
+import { FEATURES } from "@/lib/plan";
 
 const DELIVERY_STATUS_LABEL: Record<WebhookDeliveryStatus, string> = {
   pending: "Aguardando retentativa",
@@ -532,6 +535,7 @@ export function IntegrationsPage() {
       apiClient.delete<ApiKey>(`/api/v1/integrations/api-keys/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["api-keys"] });
+      queryClient.invalidateQueries({ queryKey: ["integration-status"] });
       showSuccess("Chave revogada.");
       setKeyToRevoke(null);
     },
@@ -542,13 +546,15 @@ export function IntegrationsPage() {
     <div className="space-y-6">
       <PageHeader
         icon={Plug}
-        title="Integrações e webhooks"
-        subtitle="Ligue o Insighta aos outros sistemas da clínica: uma chave para eles enviarem dados ao Insighta e avisos automáticos (webhooks) do Insighta para eles."
+        title="Integrações"
+        subtitle="Ligue o Insighta ao ERP da clínica: os dados chegam sozinhos toda madrugada. No plano Pro, o Insighta também avisa outros sistemas (webhooks)."
       />
+
+      <NightlyIntegrationPanel />
 
       <Panel
         title="Chaves de API"
-        subtitle="Cadastre a chave no sistema de gestão da clínica. Ela aparece por inteiro só uma vez, na criação: copie e guarde."
+        subtitle="A chave que o Conector Insighta (ou o ERP) usa para enviar os dados. Ela aparece por inteiro só uma vez, na criação: copie e guarde."
         action={
           <Button
             onClick={() => setIsModalOpen(true)}
@@ -643,8 +649,10 @@ export function IntegrationsPage() {
         isConfirming={revokeMutation.isPending}
       />
 
-      <WebhooksSection />
-      <WebhookDeliveriesSection />
+      <PlanGate feature={FEATURES.apiAccess} compact>
+        <WebhooksSection />
+        <WebhookDeliveriesSection />
+      </PlanGate>
     </div>
   );
 }

@@ -30,19 +30,21 @@ const STEPS = [
   { id: 2, label: "Plano e aceite" },
 ];
 
-// Autoatendimento: uma oferta só (Founders). O preço e as vagas restantes
-// aparecem na tela Assinatura, logo depois do cadastro.
+// Planos (app/services/plans.py): toda clínica nova começa com 14 dias do
+// Pro completo. A escolha entre Basic, Pro e Founders acontece na tela
+// Plano e assinatura, depois de ver o sistema com os próprios dados.
 const PLANS: { id: PlanTier; name: string; recommended?: boolean; description: string; features: string[] }[] = [
   {
-    id: "professional",
-    name: "Founders · R$ 800/mês",
+    id: "basic",
+    name: "14 dias do Pro, sem cartão",
     recommended: true,
-    description: "Preço garantido por 24 meses e todas as funcionalidades novas incluídas, para as 20 primeiras clínicas.",
+    description:
+      "Use tudo com os dados da sua clínica. Depois, escolha o Basic (R$ 490/mês), o Pro (R$ 1.290/mês) ou uma das 7 vagas Founders (Pro por R$ 800/mês, travado).",
     features: [
-      "Sala de Comando e painel completos",
-      "Motor anti-glosa e recurso de glosa",
-      "Faturamento, agenda, estoque e prontuário",
-      "Usuários ilimitados da equipe",
+      "Sala de Comando e as 47 análises",
+      "Anti-glosa, conferência de contrato e recurso de glosa",
+      "Equipe de IA, WhatsApp e Extrato de Resultado",
+      "Sem trocar de sistema: planilha ou API do seu ERP",
     ],
   },
 ];
@@ -99,7 +101,7 @@ export function SignUpPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
-  const [planTier, setPlanTier] = useState<PlanTier>("professional");
+  const [planTier, setPlanTier] = useState<PlanTier>("basic");
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [googleError, setGoogleError] = useState<string | null>(null);
@@ -428,7 +430,7 @@ export function SignUpPage() {
                           <span className="text-sm font-medium text-ink">{plan.name}</span>
                         </div>
                         {plan.recommended && (
-                          <span className="rounded-full bg-aura-line px-2 py-0.5 text-2xs font-medium text-white">Oferta de lançamento</span>
+                          <span className="rounded-full bg-aura-line px-2 py-0.5 text-2xs font-medium text-white">Teste grátis</span>
                         )}
                       </div>
                       <p className="mt-1.5 pl-6 text-xs text-ink-muted">{plan.description}</p>

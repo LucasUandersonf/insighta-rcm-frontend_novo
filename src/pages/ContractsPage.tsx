@@ -13,6 +13,9 @@ import { Tabs, TabPanel } from "@/components/ui/Tabs";
 import { PayerOverviewPanel } from "@/components/payers/PayerOverviewPanel";
 import { PlanLossRankingPanel } from "@/components/dashboard/PlanLossRankingPanel";
 import { DenialRiskDistributionPanel } from "@/components/dashboard/DenialRiskDistributionPanel";
+import { WithholdingPanel } from "@/components/money/WithholdingPanel";
+import { DossierButton } from "@/components/money/DossierButton";
+import { PayerSimulatorPanel } from "@/components/money/PayerSimulatorPanel";
 import { PaymentLagPanel } from "@/components/dashboard/PaymentLagPanel";
 import { useDateWindow } from "@/lib/useDateWindow";
 import { apiClient } from "@/lib/api-client";
@@ -36,11 +39,12 @@ export { extractionPagesNote } from "@/components/contracts/ContractModals";
 const CONTRACTS_PAGE_SIZE = 20;
 
 const PAYER_TABS_GROUP = "convenios";
-type PayerTabId = "visao-geral" | "glosas" | "prazos" | "contratos";
+type PayerTabId = "visao-geral" | "glosas" | "prazos" | "simulador" | "contratos";
 const PAYER_TAB_IDS: PayerTabId[] = [
   "visao-geral",
   "glosas",
   "prazos",
+  "simulador",
   "contratos",
 ];
 const PAYER_WINDOW_OPTIONS = [
@@ -52,7 +56,7 @@ const PAYER_WINDOW_OPTIONS = [
 /**
  * Convênios (canvas "Insighta RCM — Redesign 2026", artboard "Convênios")
  * — "Visão geral" (veredictos, desempenho por convênio com leitura,
- * simulação de prazo), "Glosas", "Prazos de pagamento" e "Contratos e
+ * simulação de prazo), "Glosas", "Prazos e retenções" e "Contratos e
  * tabelas" (o cadastro de operadoras/planos/contratos de sempre).
  * `?tab=` na URL abre direto numa aba.
  */
@@ -258,7 +262,8 @@ export function ContractsPage() {
         items={[
           { id: "visao-geral", label: "Visão geral" },
           { id: "glosas", label: "Glosas" },
-          { id: "prazos", label: "Prazos de pagamento" },
+          { id: "prazos", label: "Prazos e retenções" },
+          { id: "simulador", label: "Simulador" },
           { id: "contratos", label: "Contratos e tabelas" },
         ]}
       />
@@ -279,7 +284,16 @@ export function ContractsPage() {
       )}
       {activeTab === "prazos" && (
         <TabPanel id="prazos" groupId={PAYER_TABS_GROUP}>
-          <PaymentLagPanel dateFrom={dateFrom} dateTo={dateTo} />
+          <div className="space-y-6">
+            <PaymentLagPanel dateFrom={dateFrom} dateTo={dateTo} />
+            <WithholdingPanel />
+          </div>
+        </TabPanel>
+      )}
+
+      {activeTab === "simulador" && (
+        <TabPanel id="simulador" groupId={PAYER_TABS_GROUP}>
+          <PayerSimulatorPanel />
         </TabPanel>
       )}
 
@@ -320,6 +334,7 @@ export function ContractsPage() {
                           <Badge tone="accent">Particular</Badge>
                         )}
                         {!p.is_active && <Badge tone="neutral">Desativado</Badge>}
+                        {p.plan_type !== "particular" && <DossierButton planId={p.id} planName={p.display_name} />}
                       </div>
                     </li>
                   ))}
