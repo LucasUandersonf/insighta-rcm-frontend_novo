@@ -606,6 +606,10 @@ export interface SatisfactionSummary {
 export interface DataFreshnessItem {
   data_type: string;
   last_ingested_at: string;
+  // v1.1 (dado parado): prazo aprendido da fonte e degrau atual
+  // (1 lembrete à equipe, 2 escalada ao dono, 3 faixa na Sala; null = em dia).
+  limit_days?: number | null;
+  stale_level?: number | null;
 }
 
 export interface DataFreshness {
@@ -901,6 +905,8 @@ export interface ProfessionalProfitabilityItem {
   // todos null quando Profitability.has_cost_data é false (nenhum
   // custo lançado ainda), nunca 0.
   allocated_cost: number | null;
+  /** Parte do custo estimada (repasse pelo % + material do estoque). */
+  estimated_cost?: number | null;
   net_margin: number | null;
   margin_per_hour: number | null;
 }
@@ -921,6 +927,8 @@ export interface Profitability {
   by_procedure: ProcedureProfitabilityItem[]; // ordenado por receita, maior primeiro
   has_cost_data: boolean;
   total_costs: number | null;
+  /** "lancado" (tela Custos), "estimado" (repasse + material inferidos) ou "misto". */
+  cost_source?: "lancado" | "estimado" | "misto" | null;
   net_margin: number | null;
   // "Junta Técnica Insighta" — 2 referências externas de mercado (ver
   // DECISÃO em AnalyticsService.get_profitability, backend): margem
@@ -1407,6 +1415,8 @@ export interface ApiErrorBody {
   campos?: { campo: string; problema: string }[];
   /** 409 que se resolve confirmando (rodada 5): reenviar com este campo = true. */
   confirm_field?: string;
+  /** Dados para a tela oferecer o botão que resolve (ex.: colunas que faltam). */
+  extra?: Record<string, unknown>;
 }
 
 // GET /analytics/result-statement (Extrato de Resultado): quanto o
@@ -1441,4 +1451,15 @@ export interface ResultStatement {
   return_multiple: number | null;
   cumulative_total: number;
   tracking_since: string | null;
+  // v1.1: mensalidades quitadas, múltiplo do acumulado e meta de ROI.
+  paid_total?: number | null;
+  cumulative_multiple?: number | null;
+  roi_goal?: RoiGoal | null;
+}
+
+export interface RoiGoal {
+  value: number;
+  due: string;
+  progress: number; // acumulado ÷ meta
+  is_default: boolean;
 }

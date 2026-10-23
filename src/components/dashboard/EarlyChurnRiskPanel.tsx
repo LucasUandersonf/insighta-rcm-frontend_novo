@@ -6,6 +6,8 @@ import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import type { EarlyChurnRisk } from "@/lib/types";
 import { formatDateBR } from "@/lib/dates";
+import { withPlanGate } from "@/components/billing/PlanGate";
+import { FEATURES } from "@/lib/plan";
 
 /**
  * Raio-X da Receita, frente "Prevendo movimentos" — a lista real por
@@ -28,7 +30,7 @@ function formatRhythm(item: { avg_interval_days: number; days_since_last: number
   return `${Math.round(item.days_since_last)} dias sem voltar — costuma vir a cada ${Math.round(item.avg_interval_days)} (${ratio.toFixed(1)}x o próprio ritmo)`;
 }
 
-export function EarlyChurnRiskPanel() {
+function EarlyChurnRiskPanelInner() {
   const { data, isLoading, error } = useQuery({
     queryKey: ["analytics", "early-churn-risk"],
     queryFn: () => apiClient.get<EarlyChurnRisk>("/api/v1/analytics/early-churn-risk"),
@@ -91,3 +93,6 @@ export function EarlyChurnRiskPanel() {
     </BentoCard>
   );
 }
+
+// Plano Pro (src/lib/plan.ts): no Basic, vira a prévia com o convite.
+export const EarlyChurnRiskPanel = withPlanGate(EarlyChurnRiskPanelInner, FEATURES.patientsAdvanced);

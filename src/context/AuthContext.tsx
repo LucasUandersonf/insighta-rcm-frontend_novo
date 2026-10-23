@@ -16,6 +16,7 @@ import {
   ApiError,
 } from "@/lib/api-client";
 import { decodeJwtPayload, isTokenExpired } from "@/lib/jwt";
+import { getPartnerClinic, leaveClinic } from "@/lib/partner-api-client";
 import type { CurrentUser, RegisterRequest, TenantOption } from "@/lib/types";
 
 /** Resultado de loginWithGoogle — quem chama decide o que fazer com cada
@@ -298,6 +299,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     clearStoredToken();
     clearStoredRefreshToken();
     setUser(null);
+    // Parceiro dentro de uma clínica (v1.1): "Sair" volta para a carteira.
+    if (getPartnerClinic()) leaveClinic();
   }, []);
 
   const dismissSessionExpired = useCallback(() => setSessionExpired(false), []);
@@ -338,6 +341,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   userRef.current = user;
   useEffect(() => {
     const handleUnauthorized = () => {
+      // Sessão de parceiro na clínica (30 min, sem senha própria): acabou,
+      // volta para a carteira em vez de pedir uma senha que não existe.
+      if (getPartnerClinic()) {
+        leaveClinic();
+        return;
+      }
       if (userRef.current) {
         setReauthRequired(true);
         return;

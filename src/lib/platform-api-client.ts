@@ -73,6 +73,65 @@ export interface PlatformLoginResponse {
   mfa_secret: string | null;
 }
 
+export interface PlatformPartner {
+  id: string;
+  legal_name: string;
+  cnpj: string;
+  kind: string;
+  commission_pct: number;
+  is_active: boolean;
+  active_clinics: number;
+  users: number;
+  created_at: string;
+}
+
+export interface PlatformPartnerCreate {
+  legal_name: string;
+  cnpj: string;
+  kind: "contabilidade" | "consultoria" | "outro";
+  commission_pct: number;
+  admin_email: string;
+  admin_name: string;
+}
+
+export interface RetentionRow {
+  tenant_id: string;
+  trade_name: string;
+  plan_tier: string | null;
+  billing_status: string | null;
+  tenant_age_days: number;
+  snapshot_date: string | null;
+  oldest_load_days: number | null;
+  stale_level: number | null;
+  manager_active_days_7d: number | null;
+  stalled_demands: number | null;
+  open_demands: number | null;
+  roi_multiple: number | null;
+  recovered_cumulative: number | null;
+  risks: string[];
+}
+
+export interface SourceProfile {
+  id: string;
+  vendor: string;
+  report_name: string;
+  data_type: string;
+  status: "rascunho" | "validado" | "aposentado";
+  samples: number;
+  columns: number;
+  created_at: string;
+  validated_at: string | null;
+}
+
+export interface SourceProfileCreate {
+  vendor: string;
+  report_name: string;
+  data_type: string;
+  headers: string[];
+  column_map: Record<string, string>;
+  export_steps: string | null;
+}
+
 export const platformApiClient = {
   login: (email: string, password: string) =>
     platformRequest<PlatformLoginResponse>("/api/v1/platform/login", {
@@ -95,6 +154,12 @@ export const platformApiClient = {
       "/api/v1/platform/tenants-usage",
       { auth: true },
     ),
+  // Pedidos da Central de Ajuda de todas as clínicas (abertos por padrão):
+  // funcionam mesmo sem SMTP, que só manda um aviso a mais.
+  getSupportRequests: () =>
+    platformRequest<import("./types").PlatformSupportRequest[]>("/api/v1/platform/support-requests", { auth: true }),
+  markSupportAnswered: (id: string) =>
+    platformRequest<void>(`/api/v1/platform/support-requests/${id}/answered`, { method: "POST", auth: true }),
   getPilotMetrics: () =>
     platformRequest<import("./types").PilotMetrics[]>(
       "/api/v1/platform/pilot-metrics",
@@ -109,6 +174,23 @@ export const platformApiClient = {
       "/api/v1/platform/alerts/run",
       { method: "POST", auth: true },
     ),
+  // Insighta Partner (v1.1): escritórios parceiros e o primeiro acesso de cada um.
+  getPartners: () => platformRequest<PlatformPartner[]>("/api/v1/platform/partners", { auth: true }),
+  createPartner: (body: PlatformPartnerCreate) =>
+    platformRequest<{ partner_id: string; admin_email: string; temporary_password: string }>("/api/v1/platform/partners", {
+      method: "POST",
+      auth: true,
+      body,
+    }),
+  // v1.1: painel de retenção e perfis de relatório de origem.
+  getRetention: () => platformRequest<RetentionRow[]>("/api/v1/platform/retention", { auth: true }),
+  getSourceProfiles: () => platformRequest<SourceProfile[]>("/api/v1/platform/source-profiles", { auth: true }),
+  createSourceProfile: (body: SourceProfileCreate) =>
+    platformRequest<SourceProfile[]>("/api/v1/platform/source-profiles", { method: "POST", auth: true, body }),
+  addSourceProfileSample: (id: string, headers: string[]) =>
+    platformRequest<SourceProfile[]>(`/api/v1/platform/source-profiles/${id}/samples`, { method: "POST", auth: true, body: { headers } }),
+  validateSourceProfile: (id: string) =>
+    platformRequest<SourceProfile[]>(`/api/v1/platform/source-profiles/${id}/validate`, { method: "POST", auth: true }),
   // "Histórico de quem fez o quê" (ver GET /platform/audit-log no backend).
   getAuditLog: () =>
     platformRequest<import("./types").PlatformAuditLogEntry[]>(

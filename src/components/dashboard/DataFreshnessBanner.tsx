@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
 import { Clock } from "lucide-react";
 import { apiClient } from "@/lib/api-client";
 import { cn } from "@/lib/cn";
@@ -23,6 +24,9 @@ import type { DataFreshness } from "@/lib/types";
 const DATA_TYPE_LABELS: Record<string, string> = {
   faturamento: "Faturamento",
   agenda: "Agenda",
+  atendimento: "Atendimentos",
+  estoque: "Estoque",
+  pep: "Prontuário",
   glosa: "Glosa",
 };
 
@@ -59,9 +63,27 @@ export function DataFreshnessBanner() {
 
   if (!data || data.items.length === 0 || data.stalest_at === null) return null;
 
-  const isStale = now - new Date(data.stalest_at).getTime() > STALE_AFTER_MS;
+  // v1.1: com o prazo aprendido de cada fonte (backend), "atrasado" é o
+  // degrau calculado lá; sem ele (API antiga), vale o piso de 3 dias.
+  const hasLevels = data.items.some((i) => i.limit_days != null);
+  const isStale = hasLevels
+    ? data.items.some((i) => (i.stale_level ?? 0) >= 1)
+    : now - new Date(data.stalest_at).getTime() > STALE_AFTER_MS;
+  const critical = data.items.find((i) => (i.stale_level ?? 0) >= 3);
 
   return (
+    <>
+    {critical && (
+      <div role="alert" className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border border-denied/30 bg-denied-bg px-3.5 py-2.5 text-xs text-denied">
+        <span className="font-semibold">
+          Dado antigo: {DATA_TYPE_LABELS[critical.data_type] ?? critical.data_type} não é atualizado {formatRelative(critical.last_ingested_at, now)}.
+        </span>
+        <span>Os números e alertas que dependem dele estão desatualizados.</span>
+        <Link to={`/importar?tipo=${critical.data_type}`} className="font-semibold underline">
+          Enviar arquivo novo
+        </Link>
+      </div>
+    )}
     <div
       className={cn(
         "flex flex-wrap items-center gap-x-4 gap-y-1 rounded-md border px-3.5 py-2 text-2xs",
@@ -78,5 +100,6 @@ export function DataFreshnessBanner() {
         </span>
       ))}
     </div>
+    </>
   );
 }

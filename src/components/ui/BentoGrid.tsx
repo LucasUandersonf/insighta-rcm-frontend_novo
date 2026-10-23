@@ -90,9 +90,10 @@ export function BentoCard({
 }: BentoCardProps) {
   return (
     <motion.div
+      // Homologação v1.0.0: entra ao montar, não ao rolar — com whileInView
+      // o cartão ficava invisível em impressão, captura de tela e PDF.
       initial={{ opacity: 0, y: 8 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-40px" }}
+      animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, ease: "easeOut" }}
       className={cn(
         // "Vidro fosco" (Aura Glass, ver DECISÃO v3 em index.css):

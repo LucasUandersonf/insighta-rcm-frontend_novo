@@ -13,7 +13,11 @@ import { ApiError } from "./api-client";
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry: false,
+      // Homologação v1.0.0: 429 (muitas consultas seguidas) não é erro da
+      // pessoa — o painel ficava vazio. Espera e tenta de novo sozinho.
+      retry: (failureCount, err) =>
+        err instanceof ApiError && err.status === 429 && failureCount < 3,
+      retryDelay: (attempt) => 3_000 * (attempt + 1),
       staleTime: 30_000,
       refetchOnWindowFocus: false,
     },
@@ -28,6 +32,8 @@ export const queryClient = new QueryClient({
 });
 
 export function getApiErrorMessage(err: unknown): string {
+  if (err instanceof ApiError && err.status === 429)
+    return "Muitas consultas seguidas. Aguarde alguns segundos e tente de novo.";
   if (err instanceof ApiError) return err.message;
   // `new Error("...")` lançado pelo próprio app já vem em português para a
   // pessoa; TypeError/RangeError etc. são falhas internas e não aparecem.

@@ -10,7 +10,7 @@ import { cn } from "@/lib/cn";
 import { apiClient, ApiError } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useToast } from "@/context/ToastContext";
-import type { AiGenerationJob, AiGenerationJobEnqueuedResponse, Contract, ContractCreateRequest, ContractItemInput, ExtractedItem, ExtractionPreview, HomologateRequest, InsurancePlan } from "@/lib/types";
+import type { AiGenerationJob, AiGenerationJobEnqueuedResponse, AssistedContractItem, Contract, ContractSuggestion, PriceTableParse, ContractCreateRequest, ContractItemInput, ExtractedItem, ExtractionPreview, HomologateRequest, InsurancePlan } from "@/lib/types";
 import { MoneyInput } from "@/components/ui/MoneyField";
 import { useDirtyOnEdit } from "@/lib/unsavedChanges";
 
@@ -33,6 +33,61 @@ export function ManualContractModal({
     { tuss_code: "", procedure_name: "", agreed_price: 0 },
   ]);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  // Homologação fácil: a tabela vem da planilha da clínica ou do que o
+  // convênio já pagou, e o faturista só confere antes de salvar.
+  const [assistNote, setAssistNote] = useState<string | null>(null);
+  const [assistWarnings, setAssistWarnings] = useState<string[]>([]);
+  const [assisting, setAssisting] = useState(false);
+  const sheetInput = useRef<HTMLInputElement>(null);
+
+  function applyAssisted(found: AssistedContractItem[], note: string, warnings: string[] = []) {
+    setItems(found.map((i) => ({ tuss_code: i.tuss_code, procedure_name: i.procedure_name ?? "", agreed_price: i.agreed_price })));
+    setAssistNote(note);
+    setAssistWarnings([...warnings, ...found.filter((i) => i.warning).map((i) => `${i.tuss_code}: ${i.warning}`)].slice(0, 12));
+  }
+
+  async function importSheet(file: File) {
+    setAssisting(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const result = await apiClient.upload<PriceTableParse>("/api/v1/contracts/price-table/parse", formData);
+      applyAssisted(
+        result.items,
+        `${result.items.length} itens lidos da planilha${result.rejected ? `, ${result.rejected} linha(s) ignorada(s)` : ""}. Confira e salve.`,
+        result.warnings,
+      );
+    } catch (err) {
+      showError(getApiErrorMessage(err));
+    } finally {
+      setAssisting(false);
+      if (sheetInput.current) sheetInput.current.value = "";
+    }
+  }
+
+  async function suggestFromHistory() {
+    if (!planId) {
+      setFieldErrors({ insurance_plan_id: "Escolha o convênio para sugerir a tabela." });
+      return;
+    }
+    setAssisting(true);
+    try {
+      const result = await apiClient.get<ContractSuggestion>(`/api/v1/contracts/suggest-items?insurance_plan_id=${planId}`);
+      if (result.items.length === 0) {
+        showError("Ainda não há faturamento deste convênio para sugerir preços.");
+        return;
+      }
+      const paid = result.items.filter((i) => i.source === "pago").length;
+      applyAssisted(
+        result.items,
+        `${result.items.length} procedimentos faturados nos últimos 12 meses: ${paid} pelo que o convênio pagou, ${result.items.length - paid} pelo valor mais cobrado. Confira com o contrato antes de salvar.`,
+      );
+    } catch (err) {
+      showError(getApiErrorMessage(err));
+    } finally {
+      setAssisting(false);
+    }
+  }
 
   const mutation = useMutation({
     mutationFn: (payload: ContractCreateRequest) =>
@@ -59,6 +114,8 @@ export function ManualContractModal({
     setValidUntil("");
     setItems([{ tuss_code: "", procedure_name: "", agreed_price: 0 }]);
     setFieldErrors({});
+    setAssistNote(null);
+    setAssistWarnings([]);
     setConfirmDiscard(false);
     onClose();
   }
@@ -104,9 +161,9 @@ export function ManualContractModal({
     >
       <form onChange={unsaved.onChange} onSubmitCapture={unsaved.onSubmit} onSubmit={handleSubmit}>
         <p className="mb-4 text-xs text-ink-faint">
-          Para 1-2 procedimentos que você já sabe de cor. Se o contrato tem uma
-          tabela de preços extensa em PDF, use “Enviar contrato (PDF)” em vez
-          disso: o Insighta lê o documento para você.
+          Digite os itens, importe a planilha da tabela de preços (CSV ou
+          Excel com código, descrição e valor) ou peça a sugestão pelo que o
+          convênio já pagou. Em todos os casos você confere antes de salvar.
         </p>
         <SelectField
           label="Convênio"
@@ -139,6 +196,38 @@ export function ManualContractModal({
             error={fieldErrors["valid_until"]}
           />
         </div>
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          <input
+            ref={sheetInput}
+            type="file"
+            accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            className="hidden"
+            aria-label="Planilha da tabela de preços"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) void importSheet(file);
+            }}
+          />
+          <Button type="button" variant="secondary" size="xs" disabled={assisting} onClick={() => sheetInput.current?.click()}>
+            Importar planilha da tabela
+          </Button>
+          <Button type="button" variant="secondary" size="xs" disabled={assisting} onClick={() => void suggestFromHistory()}>
+            Sugerir pelo que o convênio pagou
+          </Button>
+        </div>
+        {assistNote && (
+          <div className="mt-2 rounded-md border border-border-hairline bg-canvas-raised/40 px-3 py-2 text-xs text-ink" role="status">
+            <p>{assistNote}</p>
+            {assistWarnings.length > 0 && (
+              <ul className="mt-1 list-disc pl-4 text-pending">
+                {assistWarnings.map((w) => (
+                  <li key={w}>{w}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
 
         <div className="mb-2 mt-4 flex items-center justify-between">
           <span className="text-xs font-medium text-ink-muted">

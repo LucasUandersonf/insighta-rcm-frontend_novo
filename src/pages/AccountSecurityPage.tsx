@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { KeyRound, LogOut, ShieldCheck } from "lucide-react";
+import { useCurrentUserProfile } from "@/lib/useCurrentUserProfile";
 import { Panel, LoadingState, ErrorState } from "@/components/ui/Panel";
 import { QrCode } from "@/components/ui/QrCode";
 import { Button } from "@/components/ui/Button";
@@ -9,7 +10,7 @@ import { Badge } from "@/components/ui/Badge";
 import { apiClient, logoutAllSessionsRequest } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useToast } from "@/context/ToastContext";
-import type { MfaStatus } from "@/lib/types";
+import type { MfaStatus, PlatformUser } from "@/lib/types";
 
 interface MfaSetup {
   secret: string;
@@ -187,6 +188,56 @@ function SessionsPanel() {
   );
 }
 
+/** v1.1: o celular que recebe avisos de dado parado e de demanda atribuída. */
+function ContactPanel() {
+  const queryClient = useQueryClient();
+  const { showSuccess, showError } = useToast();
+  const { data: me } = useCurrentUserProfile();
+  const [phone, setPhone] = useState<string | null>(null);
+  const value = phone ?? me?.phone_whatsapp ?? "";
+  const mutation = useMutation({
+    mutationFn: (v: string) => apiClient.patch<PlatformUser>("/api/v1/users/me/contact", { phone_whatsapp: v }),
+    onSuccess: (data) => {
+      queryClient.setQueryData(["users", "me"], data);
+      setPhone(null);
+      showSuccess(data.phone_whatsapp ? "Celular salvo. Os avisos chegam por WhatsApp e e-mail." : "Celular removido. Os avisos chegam só por e-mail.");
+    },
+    onError: (err) => showError(getApiErrorMessage(err)),
+  });
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    mutation.mutate(value.trim());
+  };
+  return (
+    <Panel title="Celular para avisos">
+      <form onSubmit={submit} className="space-y-3 p-4">
+        <p className="max-w-xl text-xs leading-relaxed text-ink-faint">
+          Quando um arquivo do seu setor deixa de chegar ou uma demanda é atribuída a você, o aviso também vai por
+          WhatsApp. Deixe em branco para receber só por e-mail.
+        </p>
+        <label htmlFor="contact-phone" className="block text-xs font-medium text-ink-muted">
+          WhatsApp com DDI e DDD
+        </label>
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            id="contact-phone"
+            type="tel"
+            inputMode="tel"
+            autoComplete="tel"
+            value={value}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="+55 11 91234-5678"
+            className="w-64 rounded-md border border-border-default bg-canvas-raised px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none"
+          />
+          <Button type="submit" variant="secondary" disabled={mutation.isPending}>
+            {mutation.isPending ? "Salvando..." : "Salvar"}
+          </Button>
+        </div>
+      </form>
+    </Panel>
+  );
+}
+
 /** Segurança da conta (qualquer papel): MFA e encerrar sessões. */
 export function AccountSecurityPage() {
   return (
@@ -194,6 +245,7 @@ export function AccountSecurityPage() {
       <PageHeader icon={KeyRound} title="Segurança da conta" subtitle="Proteja o seu acesso ao Insighta." />
       <div className="space-y-4">
         <MfaPanel />
+        <ContactPanel />
         <SessionsPanel />
       </div>
     </div>

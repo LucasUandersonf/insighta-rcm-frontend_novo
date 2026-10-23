@@ -5,6 +5,8 @@ import { LoadingState, ErrorState, EmptyState } from "@/components/ui/Panel";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import type { PatientRevenueItem, PatientRevenuePareto } from "@/lib/types";
+import { withPlanGate } from "@/components/billing/PlanGate";
+import { FEATURES } from "@/lib/plan";
 
 /**
  * Achado do Dossiê Insighta RCM — Pareto de receita por PACIENTE,
@@ -31,7 +33,7 @@ function ParetoRow({ item, rank }: { item: PatientRevenueItem; rank: number }) {
   );
 }
 
-export function PatientRevenueParetoPanel({ dateFrom, dateTo }: { dateFrom: string; dateTo: string }) {
+function PatientRevenueParetoPanelInner({ dateFrom, dateTo }: { dateFrom: string; dateTo: string }) {
   const { data, isLoading, error } = useQuery({
     queryKey: ["analytics", "patient-revenue-pareto", dateFrom, dateTo],
     queryFn: () =>
@@ -80,3 +82,6 @@ export function PatientRevenueParetoPanel({ dateFrom, dateTo }: { dateFrom: stri
     </BentoCard>
   );
 }
+
+// Plano Pro (src/lib/plan.ts): no Basic, vira a prévia com o convite.
+export const PatientRevenueParetoPanel = withPlanGate(PatientRevenueParetoPanelInner, FEATURES.patientsAdvanced);

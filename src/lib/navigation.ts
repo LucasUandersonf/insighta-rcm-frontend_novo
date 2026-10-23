@@ -1,8 +1,11 @@
 import {
+  Briefcase,
   Building2,
   HeartPulse,
   Clock,
   CalendarCheck,
+  ClipboardCheck,
+  HandCoins,
   Gauge,
   TrendingUp,
   Home,
@@ -16,15 +19,14 @@ import {
   Users,
   UsersRound,
   Receipt,
-  Layers,
   FileWarning,
-  FileText,
   Handshake,
   UploadCloud,
   type LucideIcon,
 } from "lucide-react";
 import type { CurrentUser } from "@/lib/types";
 import type { TeamSector } from "@/lib/team";
+import type { PlanFeature } from "@/lib/plan";
 
 /**
  * DECISÃO — Redesign 2026 ("sem sidebar"): a navegação deixou de ser uma
@@ -61,6 +63,8 @@ export interface NavItem {
   matches?: string[];
   /** Só faz sentido para grupo com mais de uma unidade. */
   requiresNetwork?: boolean;
+  /** Funcionalidade do plano Pro (src/lib/plan.ts): no Basic, aparece com o selo "Pro". */
+  feature?: PlanFeature;
 }
 
 const LEADERSHIP: UserRole[] = ["owner", "admin", "financeiro", "auditor"];
@@ -85,19 +89,20 @@ export const NAV_ITEMS: NavItem[] = [
   // "Faturamento & guias" (lançamento manual) ficou só na barra do
   // coordenador de Faturamento, como exceção à importação.
   { to: "/fila-correcao", label: "Fila de correção", description: "Guias com risco de glosa, antes do envio", roles: FINANCE_WRITE, placement: "modules", group: "faturamento" },
-  { to: "/lotes", label: "Lotes de faturamento", description: "Agrupar guias antes de virar fatura", roles: LEADERSHIP, placement: "modules", group: "faturamento" },
-  { to: "/faturas", label: "Faturas", description: "Gerar a fatura dos lotes e dar baixa no pagamento", roles: LEADERSHIP, placement: "modules", group: "faturamento" },
+  { to: "/conferencia-envio", label: "Conferência antes do envio", description: "O que vai voltar glosado, antes de mandar o lote", roles: LEADERSHIP, placement: "modules", group: "faturamento" },
+  { to: "/recuperacao", label: "Central de Recuperação", description: "Todo dinheiro que ainda dá para trazer de volta", roles: LEADERSHIP, placement: "modules", group: "faturamento" },
+  { to: "/caixa", label: "Caixa 13 semanas", description: "Quanto deve entrar em cada semana", roles: LEADERSHIP, placement: "modules", group: "faturamento" },
   { to: "/recursos-de-glosa", label: "Recurso de glosa", description: "Contestar recusas dentro do prazo", roles: LEADERSHIP, placement: "modules", group: "faturamento" },
   { to: "/convenios", label: "Convênios e contratos", description: "Tabelas de repasse e vigências", roles: LEADERSHIP, placement: "modules", group: "faturamento" },
 
   // Agenda & operação
-  { to: "/lista-de-espera", label: "Lista de espera", description: "Encaixar pacientes nos horários vagos", placement: "modules", group: "operacao" },
+  { to: "/lista-de-espera", label: "Lista de espera", description: "Encaixar pacientes nos horários vagos", placement: "modules", group: "operacao", feature: "no_show_risk" },
   // Só aparece para grupo com mais de uma unidade (ver TopBar).
   { to: "/consolidado", label: "Consolidado da rede", description: "Visão multiunidade do grupo", roles: LEADERSHIP, placement: "modules", group: "operacao", requiresNetwork: true },
 
   // Custos & crescimento
-  { to: "/custos", label: "Custos", description: "Margem real por procedimento", roles: LEADERSHIP, placement: "modules", group: "custos" },
-  { to: "/marketing", label: "Gasto de marketing", description: "Quanto cada canal traz de volta", roles: LEADERSHIP, placement: "modules", group: "custos" },
+  { to: "/custos", label: "Custos", description: "Margem real por procedimento", roles: LEADERSHIP, placement: "modules", group: "custos", feature: "margin_inventory" },
+  { to: "/marketing", label: "Gasto de marketing", description: "Quanto cada canal traz de volta", roles: LEADERSHIP, placement: "modules", group: "custos", feature: "patients_advanced" },
 
   // Dados
   // Upload + Setup eram dois módulos para uma tarefa só.
@@ -120,8 +125,10 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
   // Profissionais chegam pela importação; o que falta é só a grade
   // semanal (nenhum arquivo traz), que alimenta ocupação e horários vagos.
   { to: "/profissionais", label: "Horários de atendimento", icon: Clock, roles: ADMINS, placement: "modules" },
-  { to: "/admin/integracoes", label: "Integrações e webhooks", icon: Plug, roles: ADMINS, placement: "modules" },
+  { to: "/admin/integracoes", label: "Integrações", icon: Plug, roles: ADMINS, placement: "modules" },
   { to: "/admin/destinatarios", label: "Destinatários de relatórios", icon: Send, roles: ADMINS, placement: "modules" },
+  // Insighta Partner (v1.1): contador ou consultoria com acesso autorizado.
+  { to: "/admin/parceiros", label: "Parceiros", icon: Briefcase, roles: ADMINS, placement: "modules" },
   // Auditor também precisa ver a trilha de auditoria — papel de
   // leitura/compliance (mesmo critério de analytics.py).
   { to: "/admin/auditoria", label: "Logs de auditoria", icon: ScrollText, roles: ["owner", "admin", "auditor"], placement: "modules" },
@@ -144,8 +151,8 @@ const SECTOR_NAV: Record<TeamSector, NavItem[]> = {
   faturamento: [
     { to: "/faturamento", label: "Faturamento", icon: Receipt, roles: LEADERSHIP, placement: "primary" },
     { to: "/fila-correcao", label: "Fila de correção", icon: ShieldAlert, roles: FINANCE_WRITE, placement: "primary" },
-    { to: "/lotes", label: "Lotes", icon: Layers, roles: LEADERSHIP, placement: "primary" },
-    { to: "/faturas", label: "Faturas", icon: FileText, roles: LEADERSHIP, placement: "primary" },
+    { to: "/conferencia-envio", label: "Conferência", icon: ClipboardCheck, roles: LEADERSHIP, placement: "primary" },
+    { to: "/recuperacao", label: "Recuperação", icon: HandCoins, roles: LEADERSHIP, placement: "primary" },
     { to: "/recursos-de-glosa", label: "Recursos de glosa", icon: FileWarning, roles: LEADERSHIP, placement: "primary" },
     { to: "/convenios", label: "Convênios", icon: Handshake, roles: LEADERSHIP, placement: "primary" },
     { to: "/importar", label: "Importar dados", icon: UploadCloud, roles: LEADERSHIP, placement: "primary", matches: ["/importar/corrigir"] },

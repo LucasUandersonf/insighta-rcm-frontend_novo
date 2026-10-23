@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ResultStatementPage, recentMonths } from "@/pages/ResultStatementPage";
 import { apiClient } from "@/lib/api-client";
@@ -11,6 +11,8 @@ vi.mock("@/lib/api-client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api-client")>();
   return { ...actual, apiClient: { ...actual.apiClient, get: vi.fn(), getBlob: vi.fn() } };
 });
+
+vi.mock("@/context/AuthContext", () => ({ useAuth: () => ({ user: { role: "owner" } }) }));
 
 function statement(overrides: Partial<ResultStatement> = {}): ResultStatement {
   return {
@@ -67,10 +69,39 @@ describe("ResultStatementPage", () => {
     expect(screen.queryByText(/o preço Founders/)).not.toBeInTheDocument();
   });
 
+  it("baixa o Board Pack do mês para a reunião de sócios", async () => {
+    vi.mocked(apiClient.get).mockResolvedValue(statement() as never);
+    vi.mocked(apiClient.getBlob).mockResolvedValue(new Blob(["%PDF"]) as never);
+    Object.assign(URL, { createObjectURL: vi.fn(() => "blob:x"), revokeObjectURL: vi.fn() });
+    const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+    renderWithProviders(<ResultStatementPage />);
+
+    await userEvent.click(await screen.findByRole("button", { name: "Board Pack" }));
+    await waitFor(() => expect(click).toHaveBeenCalled());
+    expect(vi.mocked(apiClient.getBlob).mock.calls[0][0]).toMatch(/^\/api\/v1\/analytics\/board-pack\/pdf\?month=\d{4}-\d{2}$/);
+    expect((click.mock.contexts[0] as HTMLAnchorElement).download).toMatch(/^board_pack_\d{4}-\d{2}\.pdf$/);
+  });
+
   it("recentMonths devolve 12 meses do atual para trás", () => {
     const months = recentMonths(new Date(2026, 0, 15));
     expect(months).toHaveLength(12);
     expect(months[0]).toBe("2026-01");
     expect(months[1]).toBe("2025-12");
+  });
+
+  it("v1.1: mostra o múltiplo do acumulado e o progresso da meta de retorno", async () => {
+    vi.mocked(apiClient.get).mockResolvedValue(
+      statement({
+        cumulative_multiple: 2.7,
+        paid_total: 510,
+        roi_goal: { value: 3870, due: "2026-12-20", progress: 0.357, is_default: true },
+      }) as never
+    );
+    const { container } = renderWithProviders(<ResultStatementPage />);
+    expect(await screen.findByText(/2,7× o que vocês pagaram/)).toBeInTheDocument();
+    expect(screen.getByText(/padrão: 3× a mensalidade em 90 dias/)).toBeInTheDocument();
+    expect(screen.getByRole("meter", { name: "Progresso da meta de retorno" })).toHaveAttribute("aria-valuenow", "36");
+    expect(screen.getByText(/até 20\/12\/2026/)).toBeInTheDocument();
+    await expectNoA11yViolations(container);
   });
 });

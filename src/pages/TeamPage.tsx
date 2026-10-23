@@ -344,7 +344,25 @@ export function TeamPage() {
     action.mutate(
       { kind: "nudge", id: d.id },
       {
-        onSuccess: () => showSuccess(`${d.coordinator?.full_name ?? "A coordenação"} foi cobrada — a demanda sobe para o topo da Home.`),
+        onSuccess: (res) => {
+          const who = d.coordinator?.full_name ?? "A coordenação";
+          const sent = (res as Demand | undefined)?.nudge_sent;
+          showSuccess(
+            sent
+              ? `${who} foi cobrada por e-mail — a demanda sobe para o topo da Home.`
+              : `${who} foi cobrada — a demanda sobe para o topo da Home. O e-mail não saiu porque o envio ainda não está ligado.`
+          );
+        },
+        onError: (err) => showError(getApiErrorMessage(err)),
+      }
+    );
+  }
+
+  function prioritize(d: Demand) {
+    action.mutate(
+      { kind: "prioritize", id: d.id },
+      {
+        onSuccess: () => showSuccess(`“${d.title}” passou na frente da fila de ${d.coordinator?.full_name ?? "quem executa"}.`),
         onError: (err) => showError(getApiErrorMessage(err)),
       }
     );
@@ -456,7 +474,9 @@ export function TeamPage() {
                     </span>
                     <div className="flex min-w-0 flex-col gap-1">
                       <span className="text-sm font-medium text-ink">{d.title}</span>
-                      <span className="text-xs text-ink-muted">{updateLine(d)}</span>
+                      <span className="text-xs text-ink-muted">
+                        {d.queued ? `Na fila de ${d.coordinator?.full_name ?? "quem executa"} (posição ${d.queue_position ?? "—"}): aparece quando outra for fechada.` : updateLine(d)}
+                      </span>
                     </div>
                     <span className="text-[13px] text-ink-soft">
                       {d.coordinator?.full_name ?? "—"} · {d.sector_label}
@@ -465,7 +485,16 @@ export function TeamPage() {
                       {tab === "resolvidas" && d.resolved_at ? shortDate(d.resolved_at) : dueLabel(d.due_date)}
                     </span>
                     <span className="md:justify-self-end">
-                      {d.is_overdue && canManage ? (
+                      {d.queued && canManage ? (
+                        <button
+                          type="button"
+                          disabled={action.isPending}
+                          onClick={() => prioritize(d)}
+                          className="h-[34px] rounded-[10px] border border-white/12 px-3.5 text-xs font-medium text-ink"
+                        >
+                          Prioridade máxima
+                        </button>
+                      ) : d.is_overdue && canManage ? (
                         <button
                           type="button"
                           disabled={action.isPending}

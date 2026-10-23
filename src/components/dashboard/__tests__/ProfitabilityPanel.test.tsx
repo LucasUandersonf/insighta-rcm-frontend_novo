@@ -124,6 +124,18 @@ describe("ProfitabilityPanel", () => {
       expect(screen.getByText("Dentro da faixa")).toBeInTheDocument();
     });
 
+    it("diz quando a margem é de contribuição estimada, sem digitação", async () => {
+      vi.mocked(apiClient.get).mockResolvedValue(
+        baseData({ has_cost_data: true, total_costs: 480, net_margin: 520, cost_source: "estimado" })
+      );
+
+      renderWithProviders(<ProfitabilityPanel dateFrom="2026-09-01" dateTo="2026-09-07" />);
+
+      expect(await screen.findByText("Margem de contribuição estimada")).toBeInTheDocument();
+      expect(screen.getByText(/repasse pelo % cadastrado em cada profissional/)).toBeInTheDocument();
+      expect(screen.getByRole("link", { name: "Lançar custos fixos" })).toHaveAttribute("href", "/custos");
+    });
+
     it("mostra o custo fixo fora da faixa saudável", async () => {
       vi.mocked(apiClient.get).mockResolvedValue(baseData({ has_cost_data: true, fixed_cost_pct: 75 }));
 

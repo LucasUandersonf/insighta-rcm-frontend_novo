@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { UploadCenterPage } from "@/pages/UploadCenterPage";
 import { apiClient, ApiError } from "@/lib/api-client";
@@ -194,6 +194,55 @@ describe("UploadCenterPage — aba Planilhas", () => {
     expect(await screen.findByText("Arquivo maior que o limite de 20MB.")).toBeInTheDocument();
     // A tela continua utilizável — o botão de enviar ainda existe.
     expect(screen.getByRole("button", { name: "Enviar arquivo" })).toBeInTheDocument();
+  });
+
+  it("coluna faltando: a faixa de erro oferece mapear colunas e baixar o modelo", async () => {
+    vi.mocked(apiClient.get).mockResolvedValue(emptyHistory() as never);
+    vi.mocked(apiClient.upload).mockImplementation(((url: string) =>
+      url === "/api/v1/ingestion/upload"
+        ? Promise.reject(
+            new ApiError(422, {
+              error_code: "colunas_faltando",
+              message: "Faltam colunas obrigatórias de Faturamento: Convênio. Nada foi importado.",
+              request_id: "req-2",
+              extra: { missing_columns: ["Convênio"], data_type: "faturamento" },
+            }),
+          )
+        : Promise.reject(new Error("sem prévia"))) as never);
+
+    renderWithProviders(<UploadCenterPage />);
+    await screen.findByText(/Nenhum arquivo enviado ainda/);
+    const user = userEvent.setup();
+    await user.upload(fileInput(), csvFile());
+    fireEvent.click(screen.getByRole("button", { name: "Enviar arquivo" }));
+
+    expect(await screen.findByText(/Faltam colunas obrigatórias de Faturamento: Convênio/)).toBeInTheDocument();
+    const alert = screen.getByRole("alert");
+    expect(within(alert).getByRole("button", { name: "Mapear colunas" })).toBeInTheDocument();
+    expect(within(alert).getByRole("button", { name: /Baixar modelo/ })).toBeInTheDocument();
+    expect(within(alert).queryByRole("button", { name: "Tentar de novo" })).not.toBeInTheDocument();
+  });
+
+  it("conferir antes de importar mostra quantas linhas entram, sem gravar", async () => {
+    vi.mocked(apiClient.get).mockResolvedValue(emptyHistory() as never);
+    vi.mocked(apiClient.upload).mockImplementation(((url: string) =>
+      url === "/api/v1/ingestion/check"
+        ? Promise.resolve({
+            ok: true, error_code: null, message: null, total_rows: 10, valid_rows: 8, invalid_rows: 2, truncated: false,
+            problems: [{ problem: "Data em formato inválido: “…”. Use dd/mm/aaaa (ex.: 20/08/2026).", count: 2, examples: [{ row_number: 4, detail: "x" }, { row_number: 9, detail: "y" }] }],
+            ignored_columns: [], missing_columns: [], detected_data_type: null,
+          })
+        : Promise.reject(new Error("sem prévia"))) as never);
+
+    renderWithProviders(<UploadCenterPage />);
+    await screen.findByText(/Nenhum arquivo enviado ainda/);
+    const user = userEvent.setup();
+    await user.upload(fileInput(), csvFile());
+    fireEvent.click(screen.getByRole("button", { name: "Conferir antes de importar" }));
+
+    expect(await screen.findByText(/8 de 10 linhas podem entrar; 2 ficariam para corrigir/)).toBeInTheDocument();
+    expect(screen.getByText(/Exemplos: linha 4, linha 9/)).toBeInTheDocument();
+    expect(apiClient.upload).not.toHaveBeenCalledWith("/api/v1/ingestion/upload", expect.anything());
   });
 
   it("lista o histórico com status, linhas importadas/rejeitadas e template", async () => {

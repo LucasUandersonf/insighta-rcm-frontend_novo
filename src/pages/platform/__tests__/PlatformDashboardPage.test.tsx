@@ -10,7 +10,21 @@ vi.mock("@/lib/platform-api-client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/platform-api-client")>();
   return {
     ...actual,
-    platformApiClient: { getTenantsUsage: vi.fn(), getAuditLog: vi.fn(), runAlerts: vi.fn(), getPilotMetrics: vi.fn() },
+    platformApiClient: {
+      getTenantsUsage: vi.fn(),
+      getAuditLog: vi.fn(),
+      runAlerts: vi.fn(),
+      getPilotMetrics: vi.fn(),
+      getSupportRequests: vi.fn(),
+      markSupportAnswered: vi.fn(),
+      getPartners: vi.fn().mockResolvedValue([]),
+      createPartner: vi.fn(),
+      getRetention: vi.fn().mockResolvedValue([]),
+      getSourceProfiles: vi.fn().mockResolvedValue([]),
+      createSourceProfile: vi.fn(),
+      addSourceProfileSample: vi.fn(),
+      validateSourceProfile: vi.fn(),
+    },
     clearStoredPlatformToken: vi.fn(),
   };
 });
@@ -70,6 +84,13 @@ function mockEndpoints() {
   vi.mocked(platformApiClient.getPilotMetrics).mockResolvedValue(PILOT);
   vi.mocked(platformApiClient.getTenantsUsage).mockResolvedValue(TENANTS);
   vi.mocked(platformApiClient.getAuditLog).mockResolvedValue(AUDIT_LOG);
+  vi.mocked(platformApiClient.getSupportRequests).mockResolvedValue([
+    {
+      id: "s1", tenant_id: "t1", trade_name: "Clínica Teste", user_email: "dona@clinica.com", subject: "Planilha recusada",
+      message: "Falta coluna?", status: "aberto", created_at: "2026-10-15T12:00:00Z",
+    },
+  ]);
+  vi.mocked(platformApiClient.markSupportAnswered).mockResolvedValue(undefined);
 }
 
 describe("PlatformDashboardPage", () => {

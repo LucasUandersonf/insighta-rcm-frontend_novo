@@ -11,3 +11,4 @@ export type * from "./types/analytics";
 export type * from "./types/clinic";
 export type * from "./types/contracts";
 export type * from "./types/platform";
+export type * from "./types/moneyPath";

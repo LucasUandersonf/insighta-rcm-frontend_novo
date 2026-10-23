@@ -5,9 +5,12 @@ import { ToastProvider } from "@/context/ToastContext";
 import { ModalStackProvider } from "@/context/ModalStackContext";
 import { ProtectedRoute } from "@/routes/ProtectedRoute";
 import { BillingGate } from "@/components/billing/BillingGate";
+import { PlanGatePage } from "@/components/billing/PlanGate";
+import { FEATURES } from "@/lib/plan";
 import { AppShell } from "@/components/layout/AppShell";
 import { RoleProtectedRoute } from "@/routes/ProtectedRoute";
 import { PlatformProtectedRoute } from "@/routes/PlatformProtectedRoute";
+import { PartnerProtectedRoute } from "@/routes/PartnerProtectedRoute";
 import { isApiConfigured } from "@/lib/api-client";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { RouteLoadingFallback } from "@/components/RouteLoadingFallback";
@@ -42,9 +45,15 @@ const TeamPage = lazy(() => import("@/pages/TeamPage").then((m) => ({ default: m
 const SatisfactionRatingPage = lazy(() =>
   import("@/pages/SatisfactionRatingPage").then((m) => ({ default: m.SatisfactionRatingPage }))
 );
+const GuardianAlertPage = lazy(() =>
+  import("@/pages/GuardianAlertPage").then((m) => ({ default: m.GuardianAlertPage }))
+);
 const BillingRiskQueuePage = lazy(() => import("@/pages/BillingRiskQueuePage").then((m) => ({ default: m.BillingRiskQueuePage })));
 const AgendaRiscoPage = lazy(() => import("@/pages/AgendaRiscoPage").then((m) => ({ default: m.AgendaRiscoPage })));
 const ResultStatementPage = lazy(() => import("@/pages/ResultStatementPage").then((m) => ({ default: m.ResultStatementPage })));
+const PreSubmissionCheckPage = lazy(() => import("@/pages/PreSubmissionCheckPage").then((m) => ({ default: m.PreSubmissionCheckPage })));
+const CashForecastPage = lazy(() => import("@/pages/CashForecastPage").then((m) => ({ default: m.CashForecastPage })));
+const RecoveryCenterPage = lazy(() => import("@/pages/RecoveryCenterPage").then((m) => ({ default: m.RecoveryCenterPage })));
 const PatientFichaPage = lazy(() => import("@/pages/PatientFichaPage").then((m) => ({ default: m.PatientFichaPage })));
 const ExecutiveOverviewPage = lazy(() => import("@/pages/ExecutiveOverviewPage").then((m) => ({ default: m.ExecutiveOverviewPage })));
 const OrganizationSummaryPage = lazy(() => import("@/pages/OrganizationSummaryPage").then((m) => ({ default: m.OrganizationSummaryPage })));
@@ -68,12 +77,12 @@ const AccountHealthPage = lazy(() => import("@/pages/admin/AccountHealthPage").t
 const ReportRecipientsPage = lazy(() => import("@/pages/admin/ReportRecipientsPage").then((m) => ({ default: m.ReportRecipientsPage })));
 const AuditLogPage = lazy(() => import("@/pages/admin/AuditLogPage").then((m) => ({ default: m.AuditLogPage })));
 const PlatformLoginPage = lazy(() => import("@/pages/platform/PlatformLoginPage").then((m) => ({ default: m.PlatformLoginPage })));
+const PartnerLoginPage = lazy(() => import("@/pages/partner/PartnerLoginPage").then((m) => ({ default: m.PartnerLoginPage })));
+const PortfolioPage = lazy(() => import("@/pages/partner/PortfolioPage").then((m) => ({ default: m.PortfolioPage })));
+const PartnersAccessPage = lazy(() => import("@/pages/admin/PartnersAccessPage").then((m) => ({ default: m.PartnersAccessPage })));
 const PlatformDashboardPage = lazy(() => import("@/pages/platform/PlatformDashboardPage").then((m) => ({ default: m.PlatformDashboardPage })));
 const SubscriptionPage = lazy(() => import("@/pages/SubscriptionPage").then((m) => ({ default: m.SubscriptionPage })));
 const MockCheckoutPage = lazy(() => import("@/pages/MockCheckoutPage").then((m) => ({ default: m.MockCheckoutPage })));
-const StripeCheckoutReturnPage = lazy(() =>
-  import("@/pages/StripeCheckoutReturnPage").then((m) => ({ default: m.StripeCheckoutReturnPage }))
-);
 
 /**
  * Tela de erro REAL, visível, em vez de deixar a aplicação simplesmente
@@ -129,10 +138,17 @@ function AppRoutes() {
           (o paciente abre no próprio celular) — ver DECISÃO em
           052_appointment_satisfaction.sql (backend). */}
       <Route path="/satisfacao/:token" element={<SatisfactionRatingPage />} />
+      <Route path="/alerta/:token" element={<GuardianAlertPage />} />
       {/* Painel interno de Customer Success — NUNCA linkado de
           dentro do produto, fora do AuthContext/RBAC de clínica
           de propósito (ver DECISÃO em src/routes/PlatformProtectedRoute.tsx
           e app/api/platform_admin_auth.py no backend). */}
+      {/* Insighta Partner (v1.1): login e carteira do escritório parceiro,
+          fora do AuthContext de clínica (token próprio, ver partner-api-client.ts). */}
+      <Route path="/parceiro/login" element={<PartnerLoginPage />} />
+      <Route element={<PartnerProtectedRoute />}>
+        <Route path="/parceiro" element={<PortfolioPage />} />
+      </Route>
       <Route path="/plataforma/login" element={<PlatformLoginPage />} />
       <Route element={<PlatformProtectedRoute />}>
         <Route path="/plataforma" element={<PlatformDashboardPage />} />
@@ -175,7 +191,7 @@ function AppRoutes() {
             (atendimento/admin/owner/financeiro/auditor = todo papel),
             por isso sem RoleProtectedRoute. */}
         <Route path="/pacientes" element={<PatientFichaPage />} />
-        <Route path="/lista-de-espera" element={<WaitlistPage />} />
+        <Route path="/lista-de-espera" element={<PlanGatePage feature={FEATURES.noShowRisk}><WaitlistPage /></PlanGatePage>} />
         {/* Épico F1.3 do Plano Diretor: "Meus pendentes" é aberto a
             QUALQUER papel autenticado (mesmo RBAC de
             GET /insight-outcomes/mine — quem executa não é sempre
@@ -209,9 +225,13 @@ function AppRoutes() {
           </Route>
           {/* Roadmap "Rumo à Nota 9" (Fase 2) — mesmo RBAC de /decisao
               (o endpoint que alimenta esta tela usa o mesmo _CAN_VIEW). */}
-          <Route path="/agenda-risco" element={<AgendaRiscoPage />} />
+          <Route path="/agenda-risco" element={<PlanGatePage feature={FEATURES.noShowRisk}><AgendaRiscoPage /></PlanGatePage>} />
           {/* Extrato de Resultado: mesmo RBAC de result_statement.py (_CAN_VIEW). */}
           <Route path="/resultado" element={<ResultStatementPage />} />
+          {/* Caminho do dinheiro: mesmo RBAC de money_path.py (_CAN_VIEW). */}
+          <Route path="/conferencia-envio" element={<PreSubmissionCheckPage />} />
+          <Route path="/caixa" element={<CashForecastPage />} />
+          <Route path="/recuperacao" element={<RecoveryCenterPage />} />
           <Route path="/convenios" element={<ContractsPage />} />
           <Route path="/recursos-de-glosa" element={<DenialAppealsPage />} />
           {/* Mesmo RBAC do backend em lotes.py/_CAN_READ (owner/admin/
@@ -226,12 +246,12 @@ function AppRoutes() {
               acima (lotes.py/_CAN_READ: owner/admin/financeiro/
               auditor; escrita via cost_entries.py/_CAN_WRITE,
               sem auditor, barrado pelo próprio backend). */}
-          <Route path="/custos" element={<CostEntriesPage />} />
+          <Route path="/custos" element={<PlanGatePage feature={FEATURES.marginInventory}><CostEntriesPage /></PlanGatePage>} />
           {/* Achado do Dossiê Insighta RCM — Onda 2 do Plano de
               Ação: mesmo RBAC de /custos acima (leitura via
               marketing_spend.py/_CAN_READ, escrita via
               _CAN_WRITE, sem auditor, barrado pelo backend). */}
-          <Route path="/marketing" element={<MarketingSpendPage />} />
+          <Route path="/marketing" element={<PlanGatePage feature={FEATURES.patientsAdvanced}><MarketingSpendPage /></PlanGatePage>} />
         </Route>
         {/* Upload é ação de escrita — mesmo RBAC do backend em
             ingestion.py/_CAN_MANAGE e contracts.py/_CAN_WRITE
@@ -261,6 +281,7 @@ function AppRoutes() {
           <Route path="/admin/clinica" element={<TenantPage />} />
           <Route path="/admin/saude-da-conta" element={<AccountHealthPage />} />
           <Route path="/admin/destinatarios" element={<ReportRecipientsPage />} />
+          <Route path="/admin/parceiros" element={<PartnersAccessPage />} />
         </Route>
         {/* auditor também acessa a trilha de auditoria (RBAC igual ao backend em audit_log.py) */}
         <Route element={<RoleProtectedRoute allowedRoles={["owner", "admin", "auditor"]} />}>
@@ -275,14 +296,9 @@ function AppRoutes() {
           checkout real, dentro do ProtectedRoute porque só um
           owner autenticado pode chegar aqui (ver RBAC no backend,
           subscription.py). */}
+      {/* Só em desenvolvimento e homologação: em produção o backend recusa o
+          checkout simulado (homologação v1.0.0). */}
       <Route path="/checkout/mock/:checkoutId" element={<MockCheckoutPage />} />
-      {/* Irmã da rota acima — ativa quando o backend usa
-          StripePaymentProvider em vez do mock (ver DECISÃO em
-          app/services/stripe_payment_provider.py). O Stripe
-          redireciona pra cá depois de cobrar de verdade na
-          própria tela dele; esta página só confirma e mostra
-          o resultado, nunca coleta cartão. */}
-      <Route path="/checkout/stripe/:checkoutId" element={<StripeCheckoutReturnPage />} />
     </Route>
     </Routes>
     </Suspense>

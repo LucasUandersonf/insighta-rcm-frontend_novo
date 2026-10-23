@@ -36,8 +36,11 @@ function formatDateTime(iso: string): string {
 }
 
 const REPORT_TYPE_LABELS: Record<string, string> = {
+  morning_digest: "Jornal de Decisões (todo dia às 7h)",
+  guardian: "Guardian: dinheiro em risco, com decisão pelo link",
   weekly_summary: "Resumo semanal",
   daily_risk_alert: "Alerta de risco de falta (próximas 24h)",
+  board_pack: "Board Pack mensal (para os sócios)",
 };
 
 function reportTypesLabel(types: string[]): string {

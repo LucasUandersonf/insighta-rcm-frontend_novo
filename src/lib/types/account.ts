@@ -32,7 +32,11 @@ export interface TokenResponse {
 // --- Cadastro público (self-signup) / recuperação de senha
 // (app/schemas/token.py::RegisterRequest/PasswordResetRequestRequest/
 // PasswordResetConfirmRequest) ---
-export type PlanTier = "starter" | "professional" | "enterprise" | "founders";
+/** Planos (app/services/plans.py no backend). "founders" = Pro com o preço
+ * Founders (só no checkout). Os valores antigos podem aparecer em dado antigo. */
+export type PlanTier = "basic" | "pro" | "redes" | "founders" | "starter" | "professional" | "enterprise";
+export type PlanKey = "basic" | "pro" | "redes";
+export type BillingCycle = "monthly" | "yearly";
 
 // owner_name/email/password OU google_credential — nunca os dois juntos
 // (ver DECISÃO em RegisterRequest.validate_auth_method no backend).
@@ -238,6 +242,8 @@ export interface PlatformUser {
   mfa_enabled_at?: string | null;
   /** E-mail confirmado pelo link do cadastro (null = ainda não). */
   email_verified_at?: string | null;
+  /** v1.1: celular (E.164) para avisos operacionais (dado parado, demanda). */
+  phone_whatsapp?: string | null;
 }
 
 export interface UserCreateRequest {
@@ -345,6 +351,14 @@ export interface ColumnMappingPreview {
   saved_mapping?: Record<string, string>;
   /** UX-21: modelo que o cabeçalho completa, quando não é o escolhido. */
   detected_data_type?: string | null;
+  /** v1.1: relatório reconhecido pelo cabeçalho (perfil validado do sistema de origem). */
+  source_profile?: { id: string; vendor: string; report_name: string; score: number } | null;
+}
+
+/** v1.1: "qual sistema você usa" (GET /ingestion/source-systems). */
+export interface SourceSystems {
+  current: string | null;
+  systems: { vendor: string; reports: { report_name: string; data_type: string; export_steps: string | null }[] }[];
 }
 
 export interface ColumnAlias {
@@ -386,6 +400,72 @@ export interface RiskAlertSendResponse {
 }
 
 // --- Central de Integrações & Webhooks (app/schemas/integration.py) ---
+export type IntegrationDataType = "faturamento" | "agenda" | "atendimento" | "estoque" | "pep";
+export type IntegrationFeedState =
+  | "ok"
+  | "aguardando"
+  | "nao_chegou"
+  | "volume_baixo"
+  | "muitas_recusas"
+  | "conector_erro"
+  | "nao_esperada";
+
+export interface IntegrationFeedStatus {
+  data_type: IntegrationDataType;
+  label: string;
+  expected: boolean;
+  state: IntegrationFeedState;
+  state_label: string;
+  detail: string;
+  alarm: boolean;
+  rows_today: number;
+  rejected_today: number;
+  files_today: number;
+  last_automatic_at: string | null;
+  last_automatic_rows: number | null;
+  last_automatic_rejected: number | null;
+  last_any_at: string | null;
+  typical_rows: number | null;
+}
+
+export interface ConnectorFeedResult {
+  data_type: IntegrationDataType;
+  status: "ok" | "erro" | "ignorado";
+  view?: string | null;
+  rows_read: number;
+  rows_accepted: number;
+  rows_rejected: number;
+  files_sent: number;
+  message?: string | null;
+}
+
+export interface ConnectorRun {
+  connector_version: string | null;
+  host: string | null;
+  started_at: string | null;
+  finished_at: string | null;
+  ok: boolean;
+  results: ConnectorFeedResult[];
+  received_at: string;
+}
+
+export interface IntegrationAlertEntry {
+  data_type: string;
+  kind: string;
+  alert_date: string;
+  detail: string;
+  created_at: string;
+}
+
+export interface IntegrationStatus {
+  expected_types: IntegrationDataType[];
+  alert_hour: number;
+  feeds: IntegrationFeedStatus[];
+  last_connector_run: ConnectorRun | null;
+  recent_alerts: IntegrationAlertEntry[];
+  active_api_keys: number;
+}
+
 export interface ApiKey {
   id: string;
   name: string;
@@ -440,4 +520,19 @@ export interface WebhookDeliveryEntry {
   last_error: string | null;
   created_at: string;
   updated_at: string;
+}
+
+/** POST /api/v1/ingestion/check — "Conferir antes de importar" (nada é gravado). */
+export interface IngestionCheckResult {
+  ok: boolean;
+  error_code: string | null;
+  message: string | null;
+  total_rows: number;
+  valid_rows: number;
+  invalid_rows: number;
+  truncated: boolean;
+  problems: { problem: string; count: number; examples: { row_number: number; detail: string }[] }[];
+  ignored_columns: string[];
+  missing_columns: string[];
+  detected_data_type: string | null;
 }
