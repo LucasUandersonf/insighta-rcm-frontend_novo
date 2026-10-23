@@ -1,6 +1,23 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+
+/* Tailwind 4 lê a configuração JS legada (tokens HSL, fontes, sombras). */
+@config "../tailwind.config.ts";
+
+@utility tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+}
+
+/* Compatibilidade com o Tailwind 3: a borda padrão era a cor de borda do
+   tema (não currentColor), e botões usavam o cursor de mão. */
+@layer base {
+  *, ::after, ::before, ::backdrop, ::file-selector-button {
+    border-color: hsl(var(--border-subtle));
+  }
+  button:not(:disabled), [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+}
 
 /* ------------------------------------------------------------------
  * Tokens de tema — claro (:root, padrão) e escuro (.dark).
@@ -157,7 +174,7 @@
 
   /* Foco visível sempre — acessibilidade não é opcional */
   :focus-visible {
-    outline: 2px solid theme("colors.revenue.DEFAULT");
+    outline: 2px solid hsl(var(--revenue));
     outline-offset: 2px;
   }
 
@@ -169,13 +186,6 @@
       transition-duration: 0.01ms !important;
       scroll-behavior: auto !important;
     }
-  }
-}
-
-@layer utilities {
-  .tabular {
-    font-variant-numeric: tabular-nums;
-    font-feature-settings: "tnum";
   }
 }
 

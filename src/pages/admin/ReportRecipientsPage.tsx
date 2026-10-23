@@ -22,6 +22,7 @@ import type {
   RiskAlertSendResponse,
   WeeklyReportResponse,
 } from "@/lib/types";
+import { useDirtyOnEdit } from "@/lib/unsavedChanges";
 
 // Espelha app/schemas/report_recipient.py — "" (todos os tipos) é o
 // valor mais comum; os demais existem para restringir um contato a um
@@ -35,8 +36,11 @@ function formatDateTime(iso: string): string {
 }
 
 const REPORT_TYPE_LABELS: Record<string, string> = {
-  weekly_summary: "Resumo semanal (WhatsApp)",
+  morning_digest: "Jornal de Decisões (todo dia às 7h)",
+  guardian: "Guardian: dinheiro em risco, com decisão pelo link",
+  weekly_summary: "Resumo semanal",
   daily_risk_alert: "Alerta de risco de falta (próximas 24h)",
+  board_pack: "Board Pack mensal (para os sócios)",
 };
 
 function reportTypesLabel(types: string[]): string {
@@ -58,15 +62,30 @@ const EMPTY_FORM: RecipientFormValues = {
   report_types: [],
 };
 
+/** UX2-02: canais de envio de fato ligados neste ambiente. */
+function useReportChannels() {
+  return useQuery({
+    queryKey: ["reports", "channels"],
+    queryFn: () => apiClient.get<{ whatsapp: boolean; email: boolean }>("/api/v1/reports/channels"),
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  });
+}
+
 function RecipientModal({
   isOpen,
   onClose,
   editing,
+  whatsappEnabled,
+  emailEnabled = true,
 }: {
   isOpen: boolean;
   onClose: () => void;
   editing: ReportRecipient | null;
+  whatsappEnabled: boolean;
+  emailEnabled?: boolean;
 }) {
+  const unsaved = useDirtyOnEdit("o destinatário do relatório", isOpen);
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
   const [values, setValues] = useState<RecipientFormValues>(
@@ -95,7 +114,9 @@ function RecipientModal({
       // Rodada 8 (A2): e-mail de fora da equipe confirma pelo link antes de receber.
       showSuccess(
         saved?.email && !saved.email_confirmed_at
-          ? `${base} Enviamos um link para ${saved.email}: os relatórios por e-mail começam depois que a pessoa confirmar.`
+          ? emailEnabled
+            ? `${base} Enviamos um link para ${saved.email}: os relatórios por e-mail começam depois que a pessoa confirmar.`
+            : `${base} O link de confirmação sai quando o envio de e-mails for ativado.`
           : base,
       );
       resetAndClose();
@@ -134,7 +155,7 @@ function RecipientModal({
       isOpen={isOpen}
       onClose={resetAndClose}
     >
-      <form onSubmit={handleSubmit}>
+      <form onChange={unsaved.onChange} onSubmitCapture={unsaved.onSubmit} onSubmit={handleSubmit}>
         <TextField
           label="Nome"
           required
@@ -142,15 +163,17 @@ function RecipientModal({
           onChange={(e) => setValues((v) => ({ ...v, name: e.target.value }))}
           error={fieldErrors["name"]}
         />
-        <TextField
-          label="WhatsApp (com DDI/DDD)"
-          placeholder="+55 11 91234-5678"
-          value={values.phone_whatsapp}
-          onChange={(e) =>
-            setValues((v) => ({ ...v, phone_whatsapp: e.target.value }))
-          }
-          error={fieldErrors["phone_whatsapp"]}
-        />
+        {whatsappEnabled && (
+          <TextField
+            label="WhatsApp (com DDI/DDD)"
+            placeholder="+55 11 91234-5678"
+            value={values.phone_whatsapp}
+            onChange={(e) =>
+              setValues((v) => ({ ...v, phone_whatsapp: e.target.value }))
+            }
+            error={fieldErrors["phone_whatsapp"]}
+          />
+        )}
         <TextField
           label="E-mail"
           type="email"
@@ -159,7 +182,9 @@ function RecipientModal({
           error={fieldErrors["email"]}
         />
         <p className="-mt-2 mb-4 text-2xs text-ink-faint">
-          Informe pelo menos um canal de contato (WhatsApp ou e-mail).
+          {whatsappEnabled
+            ? "Informe pelo menos um canal de contato (WhatsApp ou e-mail)."
+            : "Os relatórios são enviados por e-mail. O envio por WhatsApp ainda não está disponível."}
         </p>
 
         <label className="mb-1 block text-xs font-medium text-ink-muted">
@@ -194,8 +219,7 @@ function RecipientModal({
           })}
         </div>
         <p className="-mt-2 mb-4 text-2xs text-ink-faint">
-          Nenhum selecionado = recebe todos os tipos de relatório disparados
-          para o tenant.
+          Sem nenhum marcado, a pessoa recebe todos os relatórios da clínica.
         </p>
 
         {fieldErrors["__root__"] && (
@@ -279,11 +303,17 @@ export function ReportRecipientsPage() {
   // um jeito de pedir agora. Sem `period_start`/`period_end` no payload,
   // o backend usa "desde segunda até hoje" por padrão (ver DECISÃO em
   // app/api/v1/endpoints/reports.py).
+  const { data: channels } = useReportChannels();
+  const whatsappEnabled = !!channels?.whatsapp;
+  // UX3-07: com nenhum canal ligado, o destinatário não recebe nada — a tela
+  // diz isso antes do cadastro, e o status não é "Ativo".
+  const noChannel = channels !== undefined && !channels.whatsapp && !channels.email;
   const sendNowMutation = useMutation({
     mutationFn: () =>
       apiClient.post<WeeklyReportResponse>("/api/v1/reports/weekly/send", {}),
     onSuccess: (data) => {
-      if (data.sent_via_whatsapp) showSuccess(data.detail);
+      // Enviado por qualquer canal (e-mail ou WhatsApp) é sucesso.
+      if (data.sent > 0) showSuccess(data.detail);
       else showError(data.detail);
     },
     onError: (err) => showError(getApiErrorMessage(err)),
@@ -300,7 +330,8 @@ export function ReportRecipientsPage() {
         {},
       ),
     onSuccess: (data) => {
-      if (data.sent_via_whatsapp) showSuccess(data.detail);
+      // Enviado por qualquer canal (e-mail ou WhatsApp) é sucesso.
+      if (data.sent > 0) showSuccess(data.detail);
       else showError(data.detail);
     },
     onError: (err) => showError(getApiErrorMessage(err)),
@@ -311,13 +342,14 @@ export function ReportRecipientsPage() {
       <PageHeader
         icon={Send}
         title="Destinatários de relatórios"
-        subtitle="Quem recebe o resumo semanal e o alerta de risco de falta por WhatsApp e e-mail. Até 20 destinatários; e-mails de fora da equipe confirmam pelo link antes de receber."
+        subtitle={`Quem recebe o resumo semanal e o alerta de risco de falta por ${whatsappEnabled ? "WhatsApp e e-mail" : "e-mail"}. Até 20 destinatários; e-mails de fora da equipe confirmam pelo link antes de receber.`}
         action={
           <div className="flex items-center gap-2">
             <Button
               variant="secondary"
               onClick={() => sendNowMutation.mutate()}
-              disabled={sendNowMutation.isPending}
+              disabled={sendNowMutation.isPending || noChannel}
+              title={noChannel ? "O envio de e-mails ainda não está ativo." : undefined}
               className="flex items-center gap-1.5"
             >
               <Zap size={14} />
@@ -328,7 +360,8 @@ export function ReportRecipientsPage() {
             <Button
               variant="secondary"
               onClick={() => sendRiskAlertNowMutation.mutate()}
-              disabled={sendRiskAlertNowMutation.isPending}
+              disabled={sendRiskAlertNowMutation.isPending || noChannel}
+              title={noChannel ? "O envio de e-mails ainda não está ativo." : undefined}
               className="flex items-center gap-1.5"
             >
               <AlertTriangle size={14} />
@@ -346,6 +379,13 @@ export function ReportRecipientsPage() {
           </div>
         }
       />
+
+      {noChannel && (
+        <div role="status" className="rounded-xl border border-pending/30 bg-pending-bg px-4 py-3 text-sm text-ink">
+          O envio de e-mails ainda não está ativo nesta instalação. Você pode cadastrar os destinatários agora; os
+          relatórios começam a sair quando o e-mail for ativado pelo suporte.
+        </div>
+      )}
 
       <Panel>
         {isLoading && <LoadingState variant="table" rows={3} />}
@@ -369,9 +409,9 @@ export function ReportRecipientsPage() {
         {!isLoading && (recipients ?? []).length > 0 && (
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-border-hairline text-2xs uppercase tracking-wide text-ink-faint">
+              <tr className="border-b border-border-hairline text-xs font-medium text-ink-muted">
                 <th className="px-4 py-2.5 font-medium">Nome</th>
-                <th className="px-4 py-2.5 font-medium">WhatsApp</th>
+                {whatsappEnabled && <th className="px-4 py-2.5 font-medium">WhatsApp</th>}
                 <th className="px-4 py-2.5 font-medium">E-mail</th>
                 <th className="px-4 py-2.5 font-medium">Recebe</th>
                 <th className="px-4 py-2.5 font-medium">Status</th>
@@ -386,9 +426,11 @@ export function ReportRecipientsPage() {
                   className="border-b border-border-hairline last:border-0 transition-colors hover:bg-canvas-raised/60"
                 >
                   <td className="px-4 py-2.5 text-ink">{r.name}</td>
-                  <td className="tabular px-4 py-2.5 font-mono text-ink-muted">
-                    {r.phone_whatsapp ?? "—"}
-                  </td>
+                  {whatsappEnabled && (
+                    <td className="tabular px-4 py-2.5 font-mono text-ink-muted">
+                      {r.phone_whatsapp ?? "—"}
+                    </td>
+                  )}
                   <td className="px-4 py-2.5 text-ink-muted">
                     {r.email ?? "—"}
                     {r.email && !r.email_confirmed_at ? (
@@ -409,9 +451,13 @@ export function ReportRecipientsPage() {
                     {reportTypesLabel(r.report_types)}
                   </td>
                   <td className="px-4 py-2.5">
-                    <Badge tone={r.active ? "revenue" : "neutral"}>
-                      {r.active ? "Ativo" : "Inativo"}
-                    </Badge>
+                    {r.active && noChannel ? (
+                      <Badge tone="pending">Aguardando o e-mail ser ativado</Badge>
+                    ) : (
+                      <Badge tone={r.active ? "revenue" : "neutral"}>
+                        {r.active ? "Ativo" : "Inativo"}
+                      </Badge>
+                    )}
                   </td>
                   <td className="px-4 py-2.5 text-xs">
                     {!r.last_delivery_at ? (
@@ -477,6 +523,8 @@ export function ReportRecipientsPage() {
           valores do registro editado anteriormente (mesmo bug já corrigido
           antes em DenialAppealsPage: estado de modal com referência velha). */}
       <RecipientModal
+        whatsappEnabled={whatsappEnabled}
+        emailEnabled={channels?.email !== false}
         key={editingId ?? "new"}
         isOpen={isModalOpen || editingId !== null}
         onClose={() => {

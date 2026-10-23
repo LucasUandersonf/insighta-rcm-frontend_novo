@@ -2,6 +2,8 @@ import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useCurrentUserProfile } from "@/lib/useCurrentUserProfile";
 import type { UserRole } from "@/lib/types";
+import { SessionExpiredDialog } from "@/components/session/SessionExpiredDialog";
+import { NoAccess } from "@/components/session/NoAccess";
 
 export const CHANGE_TEMPORARY_PASSWORD_PATH = "/trocar-senha";
 
@@ -12,13 +14,26 @@ export const CHANGE_TEMPORARY_PASSWORD_PATH = "/trocar-senha";
  */
 export function ProtectedRoute() {
   const { isAuthenticated } = useAuth();
-  if (!isAuthenticated) return <Navigate to="/login" replace />;
-  return <TemporaryPasswordGate />;
+  const { pathname, search } = useLocation();
+  if (!isAuthenticated) {
+    // UX-24: depois de entrar, volta para a tela em que estava.
+    const next = pathname === "/" ? "" : `?next=${encodeURIComponent(pathname + search)}`;
+    return <Navigate to={`/login${next}`} replace />;
+  }
+  return (
+    <>
+      <SessionExpiredDialog />
+      <TemporaryPasswordGate />
+    </>
+  );
 }
 
 function TemporaryPasswordGate() {
-  const { data } = useCurrentUserProfile();
+  const { data, isLoading } = useCurrentUserProfile();
   const { pathname } = useLocation();
+  // Enquanto o perfil não chega, não monta as telas: com senha temporária o
+  // backend responde 403 a tudo, e cada tela disparava suas chamadas à toa.
+  if (isLoading && pathname !== CHANGE_TEMPORARY_PASSWORD_PATH) return null;
   if (data?.must_change_password && pathname !== CHANGE_TEMPORARY_PASSWORD_PATH) {
     return <Navigate to={CHANGE_TEMPORARY_PASSWORD_PATH} replace />;
   }
@@ -34,6 +49,9 @@ function TemporaryPasswordGate() {
  */
 export function RoleProtectedRoute({ allowedRoles }: { allowedRoles: UserRole[] }) {
   const { user } = useAuth();
-  if (!user || !allowedRoles.includes(user.role)) return <Navigate to="/" replace />;
+  if (!user) return <Navigate to="/" replace />;
+  // UX-25: antes voltava para a Home sem explicar (link compartilhado,
+  // favorito antigo). Agora diz por quê e quem libera.
+  if (!allowedRoles.includes(user.role)) return <NoAccess role={user.role} />;
   return <Outlet />;
 }

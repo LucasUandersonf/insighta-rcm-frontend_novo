@@ -7,18 +7,25 @@ import { LoadingState } from "@/components/ui/Panel";
 import { Button } from "@/components/ui/Button";
 import { formatCurrency } from "@/components/dashboard/SmartInsightsFeed";
 import { AssignModal, insightItemKey, toQueueItem, useInsightWorkflow } from "@/components/dashboard/InsightWorkflowActions";
+import { addDaysIso, clinicIsoDate, formatDateBR } from "@/lib/dates";
+import { useDataAnchor } from "@/lib/useDataReadiness";
+import { useCapabilities } from "@/lib/capabilities";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { describeTrend } from "@/lib/narrative";
-import { askQuotaNote, useAiUsage, useAskInsighta } from "@/lib/useAskInsighta";
+import { askExample, askQuotaNote, useAiUsage, useAskInsighta } from "@/lib/useAskInsighta";
 import { firstNameFrom, useCurrentUserProfile } from "@/lib/useCurrentUserProfile";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
 import { cn } from "@/lib/cn";
 import { useTeamOverview } from "@/lib/team";
 import { TeamUpdatesStrip } from "@/components/team/TeamUpdatesStrip";
+import { MoneyPathPanoramaRows } from "@/components/money/MoneyPathSummary";
+import { ApprovalsStrip } from "@/components/actions/ApprovalsStrip";
 import type {
+  AccountHealth,
   BriefingEmailResult,
+  DataReadiness,
   ExecutiveNarrative,
   ExecutiveSummary,
   HealthScore,
@@ -30,10 +37,12 @@ import type {
   PayerOverview,
   PeriodKpi,
   RecoveredValue,
+  ResultStatement,
   SmartInsight,
   Tenant,
   TodayAgenda,
 } from "@/lib/types";
+import { onboardingStepsFor } from "@/lib/onboardingSteps";
 
 /**
  * Home — "Briefing do dia" (canvas "Insighta RCM — Redesign 2026",
@@ -94,16 +103,9 @@ function capitalize(text: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
-function toIsoDate(d: Date): string {
-  return d.toISOString().slice(0, 10);
-}
-
-function windowFor(days: number, offsetDays = 0): { from: string; to: string } {
-  const end = new Date();
-  end.setDate(end.getDate() - offsetDays);
-  const start = new Date(end);
-  start.setDate(start.getDate() - (days - 1));
-  return { from: toIsoDate(start), to: toIsoDate(end) };
+function windowFor(days: number, offsetDays = 0, anchor: string = clinicIsoDate()): { from: string; to: string } {
+  const end = addDaysIso(anchor, -offsetDays);
+  return { from: addDaysIso(end, -(days - 1)), to: end };
 }
 
 /**
@@ -139,13 +141,13 @@ function FirstRunWizard({ canUpload }: { canUpload: boolean }) {
         <p className="text-[15px] font-medium text-ink">Vamos começar? Sua clínica ainda não tem nenhum dado importado.</p>
         <p className="mt-1 text-sm leading-relaxed text-ink-muted">
           {canUpload
-            ? "Suba sua agenda, faturamento ou tabela de convênio na Central de Upload — é o primeiro passo para a Sala de Comando começar a gerar insights de verdade."
-            : "Peça para o owner, administrador(a) ou financeiro da clínica subir os primeiros dados na Central de Upload — depois disso, esta tela passa a mostrar as prioridades reais do dia."}
+            ? "Vamos importar sua primeira planilha: faturamento ou agenda, do jeito que sai do seu sistema. Com ela, esta tela passa a mostrar as prioridades reais do dia."
+            : "Peça para quem é proprietário(a), administrador(a) ou do financeiro da clínica importar os primeiros dados em Importar dados. Depois disso, esta tela passa a mostrar as prioridades reais do dia."}
         </p>
       </div>
       {canUpload && (
-        <Button type="button" onClick={() => navigate("/upload")} className="inline-flex items-center gap-1.5">
-          Ir para Central de Upload
+        <Button type="button" onClick={() => navigate("/importar")} className="inline-flex items-center gap-1.5">
+          Importar dados
           <ArrowRight aria-hidden size={13} />
         </Button>
       )}
@@ -159,30 +161,87 @@ function FirstRunWizard({ canUpload }: { canUpload: boolean }) {
  * suporte: dados, coordenadores (quem recebe cada alerta) e a checagem
  * completa em Saúde da conta.
  */
-const ONBOARDING_STEPS = [
-  { n: 1, title: "Importe os dados", text: "Baixe o modelo de cada área na Central de Upload, ou mapeie as colunas do seu sistema.", to: "/upload" },
-  {
-    n: 2,
-    title: "Defina os coordenadores",
-    text: "Quem cuida de Agendamento, Faturamento, Estoque e Assistencial recebe os alertas do setor. Convide por e-mail.",
-    to: "/admin/users",
-  },
-  { n: 3, title: "Confira a saúde da conta", text: "Contratos, meta, grade dos profissionais e o que mais faltar — com o atalho para resolver.", to: "/admin/saude-da-conta" },
-];
-
 function OnboardingSteps() {
+  const { user } = useAuth();
+  const steps = onboardingStepsFor(user?.role);
   return (
-    <ol className="mt-2 grid w-full gap-3 sm:grid-cols-3">
-      {ONBOARDING_STEPS.map((step) => (
-        <li key={step.n}>
+    <ol className={cn("mt-2 grid w-full gap-3", steps.length > 1 && "sm:grid-cols-3")}>
+      {steps.map((step, i) => (
+        <li key={step.to}>
           <Link to={step.to} className="flex h-full flex-col gap-1 rounded-[14px] border border-border-hairline bg-canvas-surface/60 p-3.5 hover:border-accent/40">
-            <span className="text-2xs font-semibold uppercase tracking-[0.08em] text-accent-muted">Passo {step.n}</span>
+            {steps.length > 1 && (
+              <span className="text-2xs font-semibold uppercase tracking-[0.08em] text-accent-muted">Passo {i + 1}</span>
+            )}
             <span className="text-sm font-medium text-ink">{step.title}</span>
             <span className="text-xs leading-relaxed text-ink-muted">{step.text}</span>
           </Link>
         </li>
       ))}
     </ol>
+  );
+}
+
+// UX-17: o roteiro não some na primeira importação — fica no topo da Home
+// até o essencial estar pronto. Proprietário(a)/administrador(a) veem a
+// Saúde da conta; os demais, só o que falta importar.
+const SOURCE_LABELS: Record<string, string> = {
+  faturamento: "Faturamento",
+  agenda: "Agenda",
+  atendimento: "Atendimentos",
+  estoque: "Estoque",
+  pep: "Prontuário",
+};
+
+export function missingSourcesText(missing: string[]): string | null {
+  const names = missing.filter((m) => m in SOURCE_LABELS).map((m) => SOURCE_LABELS[m].toLowerCase());
+  if (names.length === 0) return null;
+  if (names.length === 1) return names[0];
+  return `${names.slice(0, -1).join(", ")} e ${names[names.length - 1]}`;
+}
+
+function SetupChecklist({ health, readiness }: { health?: AccountHealth; readiness?: DataReadiness }) {
+  const items = health
+    ? health.checks.map((c) => ({ key: c.key, label: c.label, done: c.status === "ok", href: c.action_href, action: c.action_label }))
+    : readiness
+      ? ["faturamento", "agenda"].map((src) => ({
+          key: src,
+          label: `Importar ${SOURCE_LABELS[src].toLowerCase()}`,
+          done: readiness.sources.includes(src),
+          href: "/importar",
+          action: "Importar",
+        }))
+      : [];
+  if (items.length === 0) return null;
+  const done = items.filter((i) => i.done).length;
+  if (done === items.length) return null;
+  const pending = items.filter((i) => !i.done);
+  return (
+    <details open className="mt-6 rounded-[14px] border border-border-hairline bg-canvas-surface/60">
+      <summary className="flex cursor-pointer flex-wrap items-center gap-2 px-4 py-3 text-sm font-medium text-ink">
+        {/* UX3-21: mesma conta e mesma frase de Saúde da conta. */}
+        Configuração da clínica: {pending.length} {pending.length === 1 ? "item precisa" : "itens precisam"} de atenção
+        <span className="text-xs font-normal text-ink-muted">({done} de {items.length} prontos)</span>
+        <span className="text-xs font-normal text-ink-muted">— o que falta para os números ficarem completos</span>
+      </summary>
+      <ul className="divide-y divide-border-hairline border-t border-border-hairline">
+        {pending.slice(0, 5).map((item) => (
+          <li key={item.key} className="flex flex-wrap items-center gap-3 px-4 py-2.5 text-sm">
+            <span aria-hidden className="h-2 w-2 rounded-full bg-pending" />
+            <span className="text-ink-soft">{item.label}</span>
+            {item.href && (
+              <Link to={resolveHref(item.href)} className="ml-auto text-[13px] font-medium text-accent-muted hover:underline">
+                {item.action ?? "Resolver"} →
+              </Link>
+            )}
+          </li>
+        ))}
+      </ul>
+      {health && (
+        <Link to="/admin/saude-da-conta" className="block border-t border-border-hairline px-4 py-2.5 text-[13px] font-medium text-accent-muted hover:underline">
+          Ver tudo em Saúde da conta →
+        </Link>
+      )}
+    </details>
   );
 }
 
@@ -267,10 +326,28 @@ function impactSentence(insight: SmartInsight): string {
   return `São ${value} em jogo. `;
 }
 
-function CalmHeadline() {
+function CalmHeadline({ missingText }: { missingText?: string | null }) {
+  // UX-04: sem agenda ou faturamento importados, "dia tranquilo" é falta de
+  // dado — a manchete diz isso, em tom neutro, em vez de tranquilizar.
+  if (missingText) {
+    return (
+      <article className="flex flex-col gap-[18px] lg:pr-12">
+        <Kicker className="text-ink-muted">Manchete · Faltam dados</Kicker>
+        <h2 className="font-serif text-[30px] font-semibold leading-[1.12] tracking-[-0.02em] text-ink sm:text-[38px]">
+          Ainda não há dados suficientes para dizer como a clínica está.
+        </h2>
+        <p className="font-serif text-[19px] leading-[1.55] text-ink-soft">
+          Falta importar: {missingText}. Sem isso, os alertas que dependem desses dados ficam desligados.
+        </p>
+        <Link to="/importar" className="self-start text-[15px] font-medium text-accent-muted hover:underline">
+          Importar dados →
+        </Link>
+      </article>
+    );
+  }
   return (
     <article className="flex flex-col gap-[18px] lg:pr-12">
-      <Kicker className="text-revenue">Manchete · Dia tranquilo</Kicker>
+      <Kicker className="text-ink-muted">Manchete · Dia tranquilo</Kicker>
       <h2 className="font-serif text-[34px] font-semibold leading-[1.08] tracking-[-0.02em] text-ink sm:text-[44px] xl:text-[54px]">
         Nada pegando fogo hoje. Bom dia para adiantar o que costuma ficar para depois.
       </h2>
@@ -349,10 +426,35 @@ function Panorama({ rows, windowLabel }: { rows: PanoramaRow[]; windowLabel: str
           <span className="text-[13px] leading-[1.45] text-ink-soft">{row.read}</span>
         </div>
       ))}
+      <MoneyPathPanoramaRows />
+      <MonthResultRow />
       <Link to="/decisao" className="mt-3 text-[13px] font-medium text-accent-muted hover:underline">
         Todos os números na Sala de Comando →
       </Link>
     </aside>
+  );
+}
+
+/** Extrato de Resultado do mês corrente, em uma linha (some sem permissão ou sem dado). */
+function MonthResultRow() {
+  const { data } = useQuery({
+    queryKey: ["analytics", "result-statement", "current"],
+    queryFn: () => apiClient.get<ResultStatement>("/api/v1/analytics/result-statement"),
+    retry: false,
+  });
+  if (!data) return null;
+  return (
+    <div className="flex flex-col gap-1.5 border-b border-border-hairline py-3.5">
+      <div className="flex items-baseline gap-2.5">
+        <span className="text-[13px] text-ink-muted">Gerado pelo Insighta no mês</span>
+        <span className="tabular ml-auto text-xl font-semibold tracking-[-0.01em] text-revenue">
+          {data.total_value.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 })}
+        </span>
+      </div>
+      <Link to="/resultado" className="text-[13px] leading-[1.45] text-accent-muted hover:underline">
+        {data.return_multiple !== null ? `${data.return_multiple.toLocaleString("pt-BR")}× o valor do plano · ` : ""}Ver o Extrato de Resultado →
+      </Link>
+    </div>
   );
 }
 
@@ -399,8 +501,8 @@ function CompareSelect({ value, onChange }: { value: CompareId; onChange: (id: C
 function AskBox() {
   const [question, setQuestion] = useState("");
   const ask = useAskInsighta();
-  const { data: aiUsage } = useAiUsage(Boolean(ask.data));
-  const quotaNote = askQuotaNote(aiUsage);
+  const { data: aiUsage } = useAiUsage();
+  const quotaNote = ask.data ? askQuotaNote(aiUsage) : null;
   function submit(e: FormEvent) {
     e.preventDefault();
     if (question.trim().length >= 3) ask.mutate(question.trim());
@@ -415,10 +517,10 @@ function AskBox() {
         <input
           type="text"
           aria-label="Sua pergunta"
-          placeholder="Por que a glosa subiu este mês?"
+          placeholder={capitalize(askExample(aiUsage?.ai_enabled))}
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
-          className="min-w-0 flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-ink-faint"
+          className="min-w-0 flex-1 bg-transparent text-sm text-ink outline-hidden placeholder:text-ink-faint"
         />
         <button
           type="submit"
@@ -436,7 +538,7 @@ function AskBox() {
             <>
               {ask.data.understood && <p className="text-2xs text-ink-faint">{ask.data.understood}</p>}
               <p className="text-ink">{ask.data.answer}</p>
-              <p className="text-xs text-ink-faint">{ask.data.sources}</p>
+              <p className="text-xs font-medium text-ink-muted">{ask.data.sources}</p>
               {quotaNote && <p className="text-2xs text-ink-faint">{quotaNote}</p>}
             </>
           )}
@@ -459,8 +561,19 @@ export function HomePage() {
   const canUpload = !!user && _CAN_UPLOAD_ROLES.includes(user.role);
   const [compare, setCompare] = useState<CompareId>("mes");
   const compareOption = COMPARE_OPTIONS.find((o) => o.id === compare)!;
-  const current = windowFor(compareOption.days);
-  const previous = windowFor(compareOption.days, compareOption.days);
+  // UX3-02: a janela termina no último dia com faturamento quando ele já passou.
+  const { end: anchor, dataUntil } = useDataAnchor();
+  const current = windowFor(compareOption.days, 0, anchor);
+  const previous = windowFor(compareOption.days, compareOption.days, anchor);
+  const untilText = dataUntil ? formatDateBR(dataUntil, { day: "2-digit", month: "2-digit" }) : null;
+  const panoramaLabel = untilText
+    ? compareOption.days === 1
+      ? untilText
+      : `${compareOption.days} dias até ${untilText}`
+    : compareOption.panorama;
+  // "Nada glosado {inWindow}": "hoje", "em 01/10", "nos últimos 7 dias", "nos 30 dias até 01/10".
+  const inWindow = compareOption.days === 1 ? (untilText ? `em ${untilText}` : "hoje") : `nos ${panoramaLabel}`;
+  const ofWindow = compareOption.days === 1 ? (untilText ? `de ${untilText}` : "de hoje") : `dos ${panoramaLabel}`;
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["analytics", "executive-narrative"],
@@ -471,6 +584,19 @@ export function HomePage() {
   const { data: ingestionHistory, isLoading: isLoadingIngestion } = useQuery({
     queryKey: ["ingestion-files", "first-run-check"],
     queryFn: () => apiClient.get<PaginatedResponse<IngestionFileEntry>>("/api/v1/ingestion/files?limit=1&offset=0"),
+  });
+  const { data: readiness, isLoading: isLoadingReadiness } = useQuery({
+    queryKey: ["analytics", "data-readiness"],
+    queryFn: () => apiClient.get<DataReadiness>("/api/v1/analytics/data-readiness"),
+    enabled: canViewAnalytics,
+    retry: false,
+  });
+  const { data: accountHealth } = useQuery({
+    queryKey: ["tenant", "account-health"],
+    queryFn: () => apiClient.get<AccountHealth>("/api/v1/tenant/account-health"),
+    enabled: canManageTeam,
+    retry: false,
+    refetchOnMount: "always",
   });
   const { data: tenant } = useQuery({ queryKey: ["tenant"], queryFn: () => apiClient.get<Tenant>("/api/v1/tenant"), retry: false });
   const { data: nav } = useQuery({
@@ -496,6 +622,13 @@ export function HomePage() {
     enabled: canViewAnalytics,
     retry: false,
   });
+  const wideWindow = windowFor(90, 0, anchor);
+  const { data: payers90 } = useQuery({
+    queryKey: ["analytics", "payer-overview", wideWindow.from, wideWindow.to],
+    queryFn: () => apiClient.get<PayerOverview>(`/api/v1/analytics/payer-overview?date_from=${wideWindow.from}&date_to=${wideWindow.to}`),
+    enabled: canViewAnalytics && !!payers && payers.total_denied === 0 && compareOption.days < 90,
+    retry: false,
+  });
   const { data: health } = useQuery({
     queryKey: ["analytics", "health-score"],
     queryFn: () => apiClient.get<HealthScore>("/api/v1/analytics/health-score"),
@@ -515,6 +648,7 @@ export function HomePage() {
     enabled: canViewAnalytics,
     retry: false,
   });
+  const { data: capabilities } = useCapabilities();
   const emailBriefing = useMutation({
     mutationFn: () => apiClient.post<BriefingEmailResult>("/api/v1/analytics/briefing/email", {}),
     onSuccess: (result) =>
@@ -527,7 +661,14 @@ export function HomePage() {
   const priorities = data?.top_priorities ?? [];
   const recentlyResolved = data?.recently_resolved ?? [];
   const firstName = profile ? firstNameFrom(profile.full_name) : null;
-  const isFirstRun = !isLoadingIngestion && ingestionHistory?.total === 0;
+  // UX-03: "primeira vez" é não ter dado nenhum — não "nunca ter enviado
+  // arquivo" (um arquivo 100% rejeitado tirava o passo a passo da tela).
+  const hasNoData = readiness
+    ? !readiness.sources.some((s) => ["faturamento", "agenda", "atendimento"].includes(s))
+    : ingestionHistory?.total === 0;
+  const isFirstRun = !isLoadingIngestion && !(canViewAnalytics && isLoadingReadiness) && hasNoData;
+  const agendaMissing = Array.isArray(readiness?.missing) && readiness.missing.includes("agenda");
+  const missingText = readiness ? missingSourcesText(readiness.missing.filter((m) => m === "faturamento" || m === "agenda")) : null;
   const [headline, ...others] = priorities;
   const secondary = others.slice(0, 2);
 
@@ -552,7 +693,10 @@ export function HomePage() {
       value: compactCurrency.format(0),
       delta: "—",
       favorable: null,
-      read: "Os convênios ainda não devolveram o retorno das cobranças deste período.",
+      read:
+        payers90 && payers90.total_denied > 0
+          ? `Nada glosado ${inWindow}. Nos 90 dias até ${untilText ?? "hoje"} foram ${compactCurrency.format(payers90.total_denied)}.`
+          : `Os convênios ainda não devolveram o retorno das cobranças ${ofWindow}.`,
     });
   } else if (payers) {
     const prev = previousPayers?.total_denied ?? null;
@@ -565,7 +709,9 @@ export function HomePage() {
       ...kpiDelta({ value: payers.total_denied, previous_value: prev ?? 0, delta_pct: deltaPct }, false),
       read:
         payers.total_denied === 0
-          ? "Nenhuma recusa de convênio no período."
+          ? payers90 && payers90.total_denied > 0
+            ? `Nada glosado ${inWindow}. Nos 90 dias até ${untilText ?? "hoje"} foram ${compactCurrency.format(payers90.total_denied)}.`
+            : `Nenhuma glosa ${inWindow}.`
           : topShare >= 40
             ? `${Math.round(topShare)}% disso vem de um só convênio: ${topDenied.name}.`
             : describeTrend("o valor glosado", payers.total_denied, deltaPct, { shape: "currency" }),
@@ -646,12 +792,14 @@ export function HomePage() {
   const updatedAt = data?.generated_at ? new Date(data.generated_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : null;
   const nextUpdate = new Date(now.getTime() + REFRESH_MS).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
 
-  const countsSentence = `${plural(critical, "ponto crítico", "pontos críticos")}, ${warning} de atenção e ${plural(positive, "boa notícia", "boas notícias")} desde ontem.`;
+  const countsSentence = `${plural(critical, "ponto crítico", "pontos críticos")}, ${warning} de atenção e ${plural(positive, "boa notícia", "boas notícias")} nesta edição.`;
   const subtitle = isFirstRun
     ? "Sua clínica ainda não tem dado importado — vamos resolver isso."
     : error
       ? "Bem-vindo de volta. Os números de hoje já estão prontos na Sala de Comando."
-      : priorities.length === 0
+      : priorities.length === 0 && missingText
+        ? "Resumo parcial: alguns dados da clínica ainda não foram importados."
+        : priorities.length === 0
         ? "Tudo tranquilo por aqui — nada precisou da sua atenção nesta janela."
         : "Aqui está o resumo de hoje — confira as prioridades abaixo.";
 
@@ -665,13 +813,13 @@ export function HomePage() {
     <div className="flex flex-col">
       <div className="-mt-8 mb-2 flex flex-col">
       {urgentText && (
-        <div role="status" className="-mx-4 flex flex-wrap items-center gap-3.5 border-b border-denied/20 bg-denied/[0.09] px-4 py-2.5 sm:-mx-8 sm:px-8">
+        <div role="status" className="-mx-4 flex flex-wrap items-center gap-3.5 border-b border-denied/20 bg-denied/9 px-4 py-2.5 sm:-mx-8 sm:px-8">
           <span className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.12em] text-denied">
             <span aria-hidden className="h-[7px] w-[7px] rounded-full bg-denied" />
             Urgente
           </span>
           <span className="text-sm text-ink">{urgentText}</span>
-          <Link to={nav?.urgent?.action_href ?? "/denial-appeals"} className="ml-auto text-[13px] font-medium text-denied hover:underline">
+          <Link to={nav?.urgent?.action_href ?? "/recursos-de-glosa"} className="ml-auto text-[13px] font-medium text-denied hover:underline">
             {nav?.urgent?.action_label ?? "Abrir recurso"} →
           </Link>
         </div>
@@ -726,15 +874,20 @@ export function HomePage() {
             {canViewAnalytics && (
               <div className="flex flex-wrap gap-2.5">
                 <CompareSelect value={compare} onChange={setCompare} />
-                <Button type="button" variant="secondary" onClick={() => emailBriefing.mutate()} disabled={emailBriefing.isPending} className="inline-flex h-[38px] items-center gap-2">
-                  <ArrowUp aria-hidden size={14} className="rotate-45" />
-                  Enviar por e-mail
-                </Button>
+                {/* UX3-06: sem e-mail ligado, o botão prometia um envio que não acontece. */}
+                {capabilities?.email_enabled !== false && (
+                  <Button type="button" variant="secondary" onClick={() => emailBriefing.mutate()} disabled={emailBriefing.isPending} className="inline-flex h-[38px] items-center gap-2">
+                    <ArrowUp aria-hidden size={14} className="rotate-45" />
+                    Enviar por e-mail
+                  </Button>
+                )}
               </div>
             )}
           </div>
         )}
       </header>
+
+      {!isFirstRun && !isLoading && <SetupChecklist health={accountHealth} readiness={canManageTeam ? undefined : readiness} />}
 
       {isFirstRun ? (
         <div className="py-9">
@@ -751,12 +904,14 @@ export function HomePage() {
                 onAssign={() => workflow.setAssigningItem(toQueueItem(headline))}
               />
             ) : (
-              <CalmHeadline />
+              <CalmHeadline missingText={missingText} />
             )}
-            {rows.length > 0 && <Panorama rows={rows} windowLabel={compareOption.panorama} />}
+            {rows.length > 0 && <Panorama rows={rows} windowLabel={panoramaLabel} />}
           </div>
 
           <Rule strong />
+
+          <ApprovalsStrip />
 
           {/* Também hoje + a agenda de hoje */}
           {(secondary.length > 0 || agenda) && (
@@ -775,9 +930,19 @@ export function HomePage() {
                     <h3 id="agenda-de-hoje" className="text-[11px] font-bold uppercase tracking-[0.12em] text-ink-faint">
                       A agenda de hoje
                     </h3>
-                    <p className="font-serif text-[22px] leading-[1.35] text-ink">{agenda.headline}</p>
+                    {agendaMissing ? (
+                      // UX2-18: sem agenda importada, "nenhuma consulta hoje" lia como agenda vazia.
+                      <p className="font-serif text-[22px] leading-[1.35] text-ink">
+                        Importe a agenda para ver as consultas de hoje.{" "}
+                        <Link to="/importar" className="text-base text-accent hover:underline">
+                          Importar agenda →
+                        </Link>
+                      </p>
+                    ) : (
+                      <p className="font-serif text-[22px] leading-[1.35] text-ink">{agenda.headline}</p>
+                    )}
                     <div className="flex flex-col gap-2.5">
-                      {agenda.periods.map((period) => (
+                      {!agendaMissing && agenda.periods.map((period) => (
                         <div key={period.label} className="grid grid-cols-[72px_minmax(0,1fr)] gap-3 text-sm leading-normal">
                           <span className="tabular text-ink-faint">{period.label}</span>
                           <span className="text-ink-soft">
@@ -807,13 +972,22 @@ export function HomePage() {
               {goodItems.length > 0 ? (
                 <div className="grid grid-cols-1 gap-7 sm:grid-cols-3">
                   {goodItems.map((item) => (
-                    <div key={item.text} className="flex flex-col gap-2">
-                      <span className="flex items-center gap-2 font-serif text-[30px] font-semibold text-revenue">
-                        {item.value === "Resolvido" && <CheckCircle2 aria-hidden size={22} />}
-                        {item.value}
-                      </span>
-                      <span className="text-sm leading-[1.55] text-ink-soft">{item.text}</span>
-                    </div>
+                    item.value === "Resolvido" ? (
+                      // UX3-25: o título é o que melhorou; "Resolvido" vira selo
+                      // (três "Resolvido" grandes e iguais não diziam nada).
+                      <div key={item.text} className="flex flex-col gap-2">
+                        <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-revenue-bg px-2.5 py-0.5 text-xs font-semibold text-revenue">
+                          <CheckCircle2 aria-hidden size={13} />
+                          Resolvido
+                        </span>
+                        <span className="font-serif text-[19px] font-medium leading-snug text-ink">{item.text}</span>
+                      </div>
+                    ) : (
+                      <div key={item.text} className="flex flex-col gap-2">
+                        <span className="font-serif text-[30px] font-semibold text-revenue">{item.value}</span>
+                        <span className="text-sm leading-[1.55] text-ink-soft">{item.text}</span>
+                      </div>
+                    )
                   ))}
                 </div>
               ) : (

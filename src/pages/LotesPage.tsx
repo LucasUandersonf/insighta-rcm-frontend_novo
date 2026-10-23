@@ -15,7 +15,10 @@ import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useToast } from "@/context/ToastContext";
 import { useAuth } from "@/context/AuthContext";
-import type { Guia, GuiaTipo, InsurancePlan, Lote, LoteCreateRequest, LoteStatus, PaginatedResponse } from "@/lib/types";
+import type { Guia, GuiaTipo, InsurancePlan, Lote, LoteCreateRequest, LoteStatus, PaginatedResponse, PreSubmissionGroup } from "@/lib/types";
+import { formatDateBR } from "@/lib/dates";
+import { useDirtyOnEdit } from "@/lib/unsavedChanges";
+import { PreSubmissionIssues, VerdictBadge } from "@/components/money/PreSubmissionIssues";
 
 const LOTES_PAGE_SIZE = 20;
 
@@ -42,8 +45,7 @@ const STATUS_TONE: Record<LoteStatus, BadgeTone> = {
 };
 
 function formatDate(iso: string | null): string {
-  if (!iso) return "—";
-  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(iso));
+  return formatDateBR(iso, { day: "2-digit", month: "2-digit", year: "numeric" }, "—");
 }
 
 // ---------------------------------------------------------------------
@@ -51,6 +53,7 @@ function formatDate(iso: string | null): string {
 // ---------------------------------------------------------------------
 
 function CreateLoteModal({ isOpen, onClose, plans }: { isOpen: boolean; onClose: () => void; plans: InsurancePlan[] }) {
+  const unsaved = useDirtyOnEdit("o lote", isOpen);
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
   const [insurancePlanId, setInsurancePlanId] = useState("");
@@ -80,7 +83,7 @@ function CreateLoteModal({ isOpen, onClose, plans }: { isOpen: boolean; onClose:
 
   return (
     <Modal title="Novo lote de faturamento" isOpen={isOpen} onClose={resetAndClose}>
-      <form onSubmit={handleSubmit}>
+      <form onChange={unsaved.onChange} onSubmitCapture={unsaved.onSubmit} onSubmit={handleSubmit}>
         <p className="mb-4 text-xs text-ink-faint">
           Um lote agrupa guias do MESMO convênio e do MESMO tipo — só guias compatíveis podem ser atribuídas a ele
           depois (a mesma regra que 3 ERPs de mercado já seguem).
@@ -138,6 +141,14 @@ function LoteDetailModal({ lote, planName, onClose }: { lote: Lote | null; planN
     queryKey: ["lotes", lote?.id, "guias-candidatas"],
     queryFn: () => apiClient.get<Guia[]>(`/api/v1/lotes/${lote!.id}/guias-candidatas`),
     enabled: Boolean(lote) && isAberto,
+  });
+
+  // Conferência antes do envio só deste lote: o que vai voltar glosado,
+  // antes de fechar e mandar ao convênio.
+  const checkQuery = useQuery({
+    queryKey: ["lotes", lote?.id, "conferencia"],
+    queryFn: () => apiClient.get<PreSubmissionGroup | null>(`/api/v1/lotes/${lote!.id}/conferencia`),
+    enabled: Boolean(lote) && lote?.status !== "faturado",
   });
 
   function invalidateLote() {
@@ -242,6 +253,21 @@ function LoteDetailModal({ lote, planName, onClose }: { lote: Lote | null; planN
         </>
       )}
 
+      {lote.status !== "faturado" && guias.length > 0 && (
+        <section className="mb-4 rounded-lg border border-border-hairline px-4 py-3" aria-label="Conferência antes do envio">
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+            <h3 className="text-sm font-semibold text-ink">Conferência antes do envio</h3>
+            {checkQuery.data && <VerdictBadge verdict={checkQuery.data.verdict} />}
+          </div>
+          {checkQuery.isLoading && <LoadingState variant="table" rows={2} />}
+          {checkQuery.error && <ErrorState message={getApiErrorMessage(checkQuery.error)} />}
+          {checkQuery.data === null && (
+            <p className="text-xs text-ink-faint">As guias deste lote não têm cobrança esperando envio.</p>
+          )}
+          {checkQuery.data && <PreSubmissionIssues group={checkQuery.data} />}
+        </section>
+      )}
+
       {lote.status === "faturado" && (
         <p className="mb-2 text-xs text-ink-faint">
           Este lote já virou fatura. Para mexer nele, cancele a fatura em{" "}
@@ -275,7 +301,7 @@ function LoteDetailModal({ lote, planName, onClose }: { lote: Lote | null; planN
             disabled={fecharMutation.isPending || guias.length === 0}
             title={guias.length === 0 ? "Um lote sem nenhuma guia não pode ser fechado." : undefined}
           >
-            {fecharMutation.isPending ? "Fechando..." : "Fechar lote"}
+            {fecharMutation.isPending ? "Fechando..." : checkQuery.data?.verdict === "revisar" ? "Fechar mesmo assim" : "Fechar lote"}
           </Button>
         )}
       </div>
@@ -302,7 +328,7 @@ function LoteDetailModal({ lote, planName, onClose }: { lote: Lote | null; planN
 
 /**
  * Achado do Parecer Técnico "Boletim Insighta" (revisão 2): o insight
- * "Tem lote de faturamento aberto há muito tempo" (smart_insights_engine.py
+ * "Tem lote de faturamento aberto há muito tempo" (app/services/insights (backend)
  * / _stale_open_lotes_insight) SEMPRE existiu mas nunca tinha uma tela
  * de destino — o botão de ação ficava propositalmente escondido. Esta
  * tela fecha essa lacuna: gestão completa do endpoint /lotes, que antes
@@ -353,7 +379,7 @@ export function LotesPage() {
       <PageHeader
         icon={Layers}
         title="Lotes de faturamento"
-        subtitle="Agrupe guias do mesmo convênio e tipo, feche o lote e gere a fatura em Faturas — o mesmo fluxo de 'lote' que um ERP de faturamento médico já usa."
+        subtitle="Junte as guias do mesmo convênio e tipo num lote, feche o lote e gere a fatura em Faturas."
         action={
           canWrite ? (
             <Button onClick={() => setIsCreateModalOpen(true)} className="flex items-center gap-1.5">
@@ -395,7 +421,7 @@ export function LotesPage() {
         {!isLoading && lotes.length > 0 && (
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-border-hairline text-2xs uppercase tracking-wide text-ink-faint">
+              <tr className="border-b border-border-hairline text-xs font-medium text-ink-muted">
                 <th className="px-4 py-2.5 font-medium">Convênio</th>
                 <th className="px-4 py-2.5 font-medium">Tipo</th>
                 <th className="px-4 py-2.5 font-medium">Guias</th>

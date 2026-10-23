@@ -60,7 +60,7 @@ describe("MarketingSpendPage — achado do Dossiê Insighta RCM", () => {
     const dialog = (modalTitle.closest('[role="dialog"]') ?? modalTitle.parentElement!) as HTMLElement;
 
     fireEvent.change(within(dialog).getByLabelText(/Canal/), { target: { value: "google_ads" } });
-    fireEvent.change(within(dialog).getByLabelText(/Identificador da campanha/), { target: { value: "camp-google-1" } });
+    fireEvent.change(within(dialog).getByLabelText(/Código da campanha/), { target: { value: "camp-google-1" } });
     fireEvent.change(within(dialog).getByLabelText(/Valor gasto/), { target: { value: "750" } });
     fireEvent.click(within(dialog).getByRole("button", { name: "Lançar gasto" }));
 

@@ -49,7 +49,7 @@ export function ConfirmDialog({
         <Button
           variant="secondary"
           size="sm"
-          className="!border-denied/40 !text-denied hover:!bg-denied/10"
+          className="border-denied/40! text-denied! hover:bg-denied/10!"
           onClick={onConfirm}
           disabled={isConfirming}
         >

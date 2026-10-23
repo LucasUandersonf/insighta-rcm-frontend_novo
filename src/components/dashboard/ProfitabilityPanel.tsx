@@ -7,6 +7,8 @@ import { Badge, type BadgeTone } from "@/components/ui/Badge";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import type { ProcedureProfitabilityItem, Profitability, ProfessionalProfitabilityItem } from "@/lib/types";
+import { withPlanGate } from "@/components/billing/PlanGate";
+import { FEATURES } from "@/lib/plan";
 
 /**
  * Raio-X da Receita, frente "Gestão eficiente" — até esta rodada, o
@@ -136,7 +138,7 @@ function ProcedureRow({ item, rank }: { item: ProcedureProfitabilityItem; rank: 
   );
 }
 
-export function ProfitabilityPanel({ dateFrom, dateTo }: { dateFrom: string; dateTo: string }) {
+function ProfitabilityPanelInner({ dateFrom, dateTo }: { dateFrom: string; dateTo: string }) {
   const { data, isLoading, error } = useQuery({
     queryKey: ["analytics", "profitability", dateFrom, dateTo],
     queryFn: () =>
@@ -172,13 +174,25 @@ export function ProfitabilityPanel({ dateFrom, dateTo }: { dateFrom: string; dat
       )}
       {data.has_cost_data && data.net_margin !== null && (
         <div className="flex flex-wrap items-baseline gap-2 rounded-md border border-border-hairline bg-canvas-raised/40 px-4 py-3">
-          <span className="text-xs text-ink-faint">Margem líquida do período</span>
+          <span className="text-xs text-ink-faint">
+            {data.cost_source === "estimado" ? "Margem de contribuição estimada" : "Margem líquida do período"}
+          </span>
           <span className={`font-mono text-lg font-semibold ${data.net_margin >= 0 ? "text-revenue" : "text-denied"}`}>
             {formatCurrency(data.net_margin)}
           </span>
           <span className="text-2xs text-ink-faint">
             ({formatCurrency(data.total_billed)} faturado − {formatCurrency(data.total_costs ?? 0)} de custo)
           </span>
+          {(data.cost_source === "estimado" || data.cost_source === "misto") && (
+            <span className="basis-full text-2xs text-ink-muted">
+              {data.cost_source === "estimado"
+                ? "Custo estimado sem digitação: repasse pelo % cadastrado em cada profissional e material que saiu do estoque. Folha e aluguel ainda não entram. "
+                : "Parte do custo foi estimada: repasse pelo % de cada profissional e material do estoque, onde não há lançamento. "}
+              <Link to="/custos" className="font-medium text-accent hover:underline">
+                Lançar custos fixos
+              </Link>
+            </span>
+          )}
         </div>
       )}
 
@@ -239,3 +253,6 @@ export function ProfitabilityPanel({ dateFrom, dateTo }: { dateFrom: string; dat
     </div>
   );
 }
+
+// Plano Pro (src/lib/plan.ts): no Basic, vira a prévia com o convite.
+export const ProfitabilityPanel = withPlanGate(ProfitabilityPanelInner, FEATURES.marginInventory);

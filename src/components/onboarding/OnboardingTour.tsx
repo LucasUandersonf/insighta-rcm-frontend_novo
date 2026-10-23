@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
 
 export interface TourStep {
-  /** Seletor CSS do item a destacar (ex: `[data-tour-id="/upload"]`) —
+  /** Seletor CSS do item a destacar (ex: `[data-tour-id="/importar"]`) —
    * omitido = passo "centralizado", sem alvo (boas-vindas/despedida). */
   targetSelector?: string;
   title: string;
@@ -37,25 +37,37 @@ function useTargetRect(selector: string | undefined, active: boolean): Rect | nu
       setRect(null);
       return;
     }
-    const el = document.querySelector<HTMLElement>(selector);
-    if (!el) {
+    const first = document.querySelector<HTMLElement>(selector);
+    if (!first) {
       setRect(null);
       return;
     }
-    el.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    first.scrollIntoView({ block: "nearest", behavior: "smooth" });
 
+    // Homologação v1.0.0: o destaque ficava fora do lugar quando a barra
+    // mudava depois de medir (texto de status carregando, troca de tela que
+    // recria o item). Mede de novo buscando o elemento atual, também num
+    // intervalo curto, e só atualiza quando a posição muda.
+    let last = "";
     function measure() {
-      const r = el!.getBoundingClientRect();
+      const el = document.querySelector<HTMLElement>(selector!);
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      const key = `${r.top}|${r.left}|${r.width}|${r.height}`;
+      if (key === last) return;
+      last = key;
       setRect({ top: r.top, left: r.left, width: r.width, height: r.height });
     }
     measure();
 
     const observer = new ResizeObserver(measure);
-    observer.observe(el);
+    observer.observe(first);
+    const timer = window.setInterval(measure, 300);
     window.addEventListener("scroll", measure, true);
     window.addEventListener("resize", measure);
     return () => {
       observer.disconnect();
+      window.clearInterval(timer);
       window.removeEventListener("scroll", measure, true);
       window.removeEventListener("resize", measure);
     };
@@ -127,7 +139,7 @@ export function OnboardingTour({ isOpen, steps, onFinish }: { isOpen: boolean; s
   const descriptionId = `onboarding-tour-description-${index}`;
 
   const content = (
-    <div className="pointer-events-none fixed inset-0 z-[70]">
+    <div className="pointer-events-none fixed inset-0 z-70">
       {rect && (
         <motion.div
           aria-hidden

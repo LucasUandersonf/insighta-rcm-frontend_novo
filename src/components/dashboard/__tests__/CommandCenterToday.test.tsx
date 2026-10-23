@@ -71,13 +71,14 @@ describe("CommandCenterToday (Sala de Comando → Hoje)", () => {
           annotation_text: "Glosa sobe de R$ 4 mil para R$ 11 mil",
           summary: "O faturamento cresceu nas últimas 2 semanas, mas a glosa descolou em S2 (semana de 10/08).",
         } as never);
+      if (url.includes("result-statement")) return Promise.resolve({ total_value: 8400 } as never);
       if (url.includes("recovered-value")) return Promise.resolve({ month_start: "2026-09-01", total: 23200, resolved_count: 1, items: [{ title: "Lote 0412 reenviado", value: 12300 }] } as never);
       return Promise.reject(new Error(`sem mock: ${url}`));
     });
 
     renderWithProviders(<CommandCenterToday dateFrom="2026-08-25" dateTo="2026-09-23" summary={SUMMARY} onNavigateTab={vi.fn()} onFocusAgenda={vi.fn()} />);
 
-    expect(screen.getByText("Buraco financeiro")).toBeInTheDocument();
+    expect(screen.getByText("Cobrado abaixo do contrato")).toBeInTheDocument();
     expect(screen.getByText("Você faturou do que podia")).toBeInTheDocument();
     expect(await screen.findByText("A Unimed está recusando mais pagamentos que o normal")).toBeInTheDocument();
     expect(screen.getByText("Por que agora")).toBeInTheDocument();
@@ -86,7 +87,10 @@ describe("CommandCenterToday (Sala de Comando → Hoje)", () => {
     expect(await screen.findByText("Ligar para 9 pacientes com risco de falta")).toBeInTheDocument();
     expect(screen.getByText("0 de 1 feitas")).toBeInTheDocument();
     expect(await screen.findByText("Glosa sobe de R$ 4 mil para R$ 11 mil")).toBeInTheDocument();
-    expect(screen.getByText("Recuperado com o Insighta este mês")).toBeInTheDocument();
+    expect(screen.getByText("Gerado pelo Insighta no mês (conferido)")).toBeInTheDocument();
+    // o total é o do Extrato (conferido), não a soma do estimado ao resolver
+    expect(await screen.findByText(/R\$\s?8\.400/)).toBeInTheDocument();
+    expect(screen.getByText(/em jogo · o ganho é conferido em 14 dias/)).toBeInTheDocument();
   });
 });
 

@@ -24,6 +24,10 @@ import type {
   Lote,
   PaginatedResponse,
 } from "@/lib/types";
+import { plural } from "@/lib/plural";
+import { parseMoneyBR } from "@/lib/money";
+import { formatDateBR } from "@/lib/dates";
+import { useDirtyOnEdit } from "@/lib/unsavedChanges";
 
 const FATURAS_PAGE_SIZE = 20;
 
@@ -48,8 +52,7 @@ function money(value: number | null): string {
 }
 
 function formatDate(iso: string | null): string {
-  if (!iso) return "—";
-  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(iso));
+  return formatDateBR(iso, { day: "2-digit", month: "2-digit", year: "numeric" }, "—");
 }
 
 function faturaLabel(f: Pick<Fatura, "serie" | "numero">): string {
@@ -58,10 +61,10 @@ function faturaLabel(f: Pick<Fatura, "serie" | "numero">): string {
 }
 
 /** "1.234,56" ou "1234.56" → 1234.56; texto inválido → NaN. */
+/** Valor em reais ou NaN quando inválido (regras em src/lib/money.ts). */
 export function parseMoney(raw: string): number {
-  const cleaned = raw.trim().replace(/\s|R\$/g, "");
-  const normalized = cleaned.includes(",") ? cleaned.replace(/\./g, "").replace(",", ".") : cleaned;
-  return normalized === "" ? NaN : Number(normalized);
+  const parsed = parseMoneyBR(raw);
+  return parsed.ok ? parsed.value : NaN;
 }
 
 // ---------------------------------------------------------------------
@@ -77,6 +80,7 @@ function CreateFaturaModal({
   onClose: () => void;
   planNameById: Map<string, string>;
 }) {
+  const unsaved = useDirtyOnEdit("a fatura", isOpen);
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
   const [selected, setSelected] = useState<string[]>([]);
@@ -121,7 +125,7 @@ function CreateFaturaModal({
 
   return (
     <Modal title="Nova fatura" isOpen={isOpen} onClose={resetAndClose}>
-      <form onSubmit={handleSubmit}>
+      <form onChange={unsaved.onChange} onSubmitCapture={unsaved.onSubmit} onSubmit={handleSubmit}>
         <p className="mb-4 text-xs text-ink-faint">
           Escolha um ou mais lotes fechados do mesmo convênio. Lotes ainda abertos aparecem aqui depois de fechados em Lotes.
         </p>
@@ -145,7 +149,7 @@ function CreateFaturaModal({
                         disabled={otherPlan}
                         onChange={() => toggle(l.id)}
                       />
-                      {planNameById.get(l.insurance_plan_id) ?? "Convênio"} · {l.guias_count} guia(s) · fechado em {formatDate(l.closed_at)}
+                      {planNameById.get(l.insurance_plan_id) ?? "Convênio"} · {plural(l.guias_count, "guia", "guias")} · fechado em {formatDate(l.closed_at)}
                     </label>
                   </li>
                 );
@@ -175,6 +179,7 @@ function CreateFaturaModal({
 // ---------------------------------------------------------------------
 
 function SettleModal({ fatura, onClose }: { fatura: Fatura | null; onClose: () => void }) {
+  const unsaved = useDirtyOnEdit("a baixa da fatura", fatura !== null);
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
   const [valor, setValor] = useState("");
@@ -192,7 +197,7 @@ function SettleModal({ fatura, onClose }: { fatura: Fatura | null; onClose: () =
       queryClient.invalidateQueries({ queryKey: ["analytics"] });
       showSuccess(
         updated.status === "paga"
-          ? `Baixa registrada. As ${updated.cobrancas} cobrança(s) da fatura foram marcadas como pagas.`
+          ? updated.cobrancas === 1 ? "Baixa registrada. A cobrança da fatura foi marcada como paga." : `Baixa registrada. As ${updated.cobrancas} cobranças da fatura foram marcadas como pagas.`
           : "Baixa parcial registrada. As cobranças continuam em aberto até a baixa final."
       );
       resetAndClose();
@@ -224,7 +229,7 @@ function SettleModal({ fatura, onClose }: { fatura: Fatura | null; onClose: () =
   if (!fatura) return null;
   return (
     <Modal title={`${isCorrection ? "Corrigir baixa" : "Dar baixa"} — fatura ${faturaLabel(fatura)}`} isOpen onClose={resetAndClose}>
-      <form onSubmit={handleSubmit}>
+      <form onChange={unsaved.onChange} onSubmitCapture={unsaved.onSubmit} onSubmit={handleSubmit}>
         <p className="mb-4 text-xs text-ink-faint">
           Total cobrado nas guias: <strong className="text-ink">{money(fatura.valor_total)}</strong> em {fatura.cobrancas} cobrança(s).
           Na baixa total, o valor é dividido entre as cobranças em aberto na proporção do que se espera de cada uma, e elas
@@ -341,7 +346,7 @@ export function FaturasPage() {
             <div>
               <dt className="text-2xs uppercase tracking-wide text-ink-faint">Recebido em baixas parciais</dt>
               <dd className="tabular text-ink">
-                {money(summaryQuery.data.parciais_recebido)} em {summaryQuery.data.parciais} fatura(s)
+                {money(summaryQuery.data.parciais_recebido)} em {plural(summaryQuery.data.parciais, "fatura", "faturas")}
               </dd>
             </div>
             <div>
@@ -365,7 +370,7 @@ export function FaturasPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="border-b border-border-hairline text-2xs uppercase tracking-wide text-ink-faint">
+                <tr className="border-b border-border-hairline text-xs font-medium text-ink-muted">
                   <th className="px-4 py-2.5 font-medium">Fatura</th>
                   <th className="px-4 py-2.5 font-medium">Convênio</th>
                   <th className="px-4 py-2.5 font-medium">A receber</th>

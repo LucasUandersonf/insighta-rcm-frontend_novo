@@ -1,6 +1,85 @@
 # Landing Insighta: estratégia completa
 
-Status: **aprovada pelo Lucas em 25/09/2026** e publicada em `landing/site/`. Preços R$ 297 / R$ 697 (catálogo do sistema). Sem oferta de fundadores nem garantia nesta versão.
+Status: **v6 publicada em `landing/site/` em 13/10/2026** (v5 no mesmo dia), a partir da copy aprovada pelo Lucas (caderno de copy v2). A v4 (25/09/2026) foi a base visual. Preço em vigor: oferta Founders, R$ 800/mês com preço travado por 24 meses (20 vagas, contagem ao vivo pela API).
+
+## v7 (13/10/2026): o playbook comercial na landing
+
+Fonte: Playbook Comercial (Bloco 1 · PMM e Bloco 2 · Marca). A landing passa a abrir pelo caixa e a provar valor com o Extrato de Resultado.
+
+| Mudança | Onde |
+|---|---|
+| Headline "Sua clínica fatura muito. Quanto fica no caixa?"; subtítulo mantém "a inteligência da sua clínica" e promete o extrato todo dia 1 | Hero, título, descrição |
+| CTA principal leva à calculadora; secundário "Ver uma demonstração de 20 minutos" | Hero, Como começar |
+| Como funciona em 3 passos (conectar, receber o que fazer, ver o resultado em reais) | `#como-funciona` |
+| Calculadora de perda: faturamento, glosa, consultas, faltas e ticket; premissas abertas em cada linha (50% da glosa evitável, 1,5% de repasse abaixo da tabela, 10% de recurso fora do prazo, 20% das faltas recuperáveis); conta feita no navegador, nada é enviado | `#calculadora` |
+| Vitrine do Extrato de Resultado (exemplo marcado como fictício) e "Se não valer, cancele" | `#extrato` |
+| Comparativo ERP × planilhas × consultoria × Insighta (cartões no celular) | `#comparativo` |
+| Oferta Founders responde "vocês são novos" como redução de risco | Planos |
+| FAQ com 12 perguntas: valor do plano, empresa nova, ERP com relatório, consultoria, exportação do ERP | `#faq` |
+
+Nota: conversão 8,5 → **9,0** (página). O que ainda separa de 9,5+: depoimento real, vídeo do sistema e o preço regular como âncora.
+
+## v6.1 (13/10/2026): oferta Founders e integração pelo ERP
+
+Decisões do Lucas: os Founders levam **todas as funcionalidades novas** dos 24 meses sem custo extra e, depois, decidem se continuam; o preço regular aparece como âncora quando for definido; não há implantação acompanhada nem suporte de integração: a equipe do ERP da clínica integra pela documentação técnica da API (`docs/integracao/API_INTEGRACAO.md` no backend).
+
+| Mudança | Onde |
+|---|---|
+| "Seja uma das 20 clínicas fundadoras": preço travado, funcionalidades novas incluídas, decisão aos 24 meses, cancelamento sem multa | Planos |
+| Três razões para entrar agora (preço de fundador, tudo o que vier incluído, sem amarra) | Planos |
+| Preço regular ao lado do Founders, lido de `regular_price_cents` em `/public/founders` (escondido enquanto `REGULAR_PRICE_CENTS` estiver vazio) | Planos |
+| "Suporte prioritário" saiu do plano de redes; entrou "Integração por API em todas as unidades" | Planos |
+| Integração pelo ERP com API documentada; planilha pelo navegador enquanto isso | Como começar, módulo Integração, diagrama |
+| Perguntas novas: "Quem faz a integração?" e "O que acontece depois dos 24 meses?" | FAQ |
+| Termos de Uso, cadastro e versão dos documentos (2026-10-13) com a cláusula nova | App e backend |
+
+Nota de conversão: 7,8 → **8,5**. A oferta passa a responder ao medo de ser o primeiro cliente.
+
+## v6 (13/10/2026): de "RCM com IA" para "a inteligência da clínica"
+
+Feedback do Lucas sobre a v5: a página ainda lia como um sistema de faturamento médico (RCM). O Insighta é um sistema de inteligência para a clínica inteira; faturamento é um dos módulos.
+
+| Mudança | Onde |
+|---|---|
+| Tese: "Para onde a sua clínica está indo? O Insighta sabe, e diz o que fazer hoje." | Hero, título e descrição |
+| Palco atravessa as áreas: agenda ociosa, paciente que sumiu, risco de glosa, estoque vencendo; etapa 4 vira "Melhora" | Hero |
+| Manifesto com quatro frentes: agenda, pacientes, financeiro, equipe | `#dores` |
+| Ciclo da inteligência: Detecta, Explica, Prioriza, Age, Mede, Aprende | `#inteligencia` |
+| Histórias com exemplos de pacientes, insights de cinco áreas e demanda para a recepção | `#inteligencia` |
+| Seção própria da agenda: risco de falta, agenda de risco, alerta, lista de espera, grade ociosa, atraso e espera | `#agenda` |
+| Módulos agrupados em cinco áreas com o mesmo peso (Agenda e operação, Pacientes e crescimento, Financeiro e convênios, Margem e estoque, Gestão e equipe); entram os cartões Operação e qualidade, Marketing e Estoque e OPME | `#recursos` |
+| Equipe de IA abre pelo Jornalista da manhã e pelo Previsor de agenda | `#equipe-ia` |
+| Contraste "Painéis mostram o passado. O Insighta diz o que fazer." com dez áreas | `#comparativo` |
+| Pergunta frequente nova: "O Insighta é só para faturamento?" e "Como o Insighta ajuda na agenda?" | `#faq` |
+
+Nota: 8,5 (v5) → **8,6** (v6). O ganho vem de posicionamento e clareza; o que falta para 9+ continua sendo prova social real e IA/WhatsApp ligados antes do anúncio.
+
+## v5 (13/10/2026): o que mudou e por quê
+
+Nota da v4 no diagnóstico: **7,0/10**. Faltava a dor do gestor na abertura, metade do produto ficava de fora, o WhatsApp aparecia como "em breve", a demonstração citava "autorização prévia" (que o motor não confere) e o único caminho era a compra.
+
+| Mudança | Onde |
+|---|---|
+| Abertura pela dor: "Sua clínica atende muito. O Insighta mostra quanto fica e recupera o que está escapando." | Hero |
+| CTA duplo: "Ver quanto minha clínica perde" (cadastro) + "Agendar demonstração" (WhatsApp comercial; sem `CONTACT_URL`, vira "Ver tudo o que ele faz") | Hero, Como começar, Chamada final |
+| Manifesto "Para onde está indo a receita?" com os quatro vazamentos | `#dores` |
+| Dez pilares no formato dor → solução → "No bolso", cobrindo todo o produto | `#recursos` |
+| Rotina do gestor (5h15, segunda 7h, a cada 2h, demanda, reavaliação) | `#relatorios` |
+| Tabela de contraste com 10 linhas (cartões no celular) | `#comparativo` |
+| Segurança com 2FA/Google, auditoria de 5 anos, exportação e documentos LGPD | Confiança |
+| "Autorização prévia" trocada por "CID ausente" nas demonstrações | Palco, Pergunte, Detecta, Equipe de IA |
+| "Em breve" removido de WhatsApp, IA e relatório (decisão do Lucas) | Relatórios, diagrama, perguntas frequentes |
+| JSON-LD: oferta Founders R$ 800 no lugar de 297/697; FAQ com 9 perguntas | `<head>` |
+
+**Ativações antes de ligar o tráfego pago** (a página já vende estes recursos):
+
+| Recurso | Falta |
+|---|---|
+| Jornal da manhã, Pergunte (perguntas complexas), leitura de contrato escaneado, minuta redigida pela IA | Chave da API de IA na produção |
+| Relatório semanal e alertas no WhatsApp | Conta WhatsApp Business e modelo de mensagem aprovado na Meta (envio para números individuais) |
+| Briefing por e-mail | SMTP (a página já esconde este item enquanto o e-mail estiver desligado) |
+| Elegibilidade e autorização com as operadoras | Conector com cada operadora; marcado "em integração" na página |
+| ROI de marketing | Funciona; o investimento por campanha é lançado pela clínica |
 
 ## 0. Diagnóstico da v3 (feedback do Lucas + gravações da Hostinger)
 
@@ -33,6 +112,13 @@ Status: **aprovada pelo Lucas em 25/09/2026** e publicada em `landing/site/`. Pr
 | Comparativo com a rede (anonimizado) | `network_benchmark_service.py` |
 | Webhooks | `webhook_retry_job` + Central de integrações |
 | Backup diário testado | `app/scripts/ops/pg_backup.py`, com `BACKUP_OK` na produção em 25/09 |
+| Seis conferências anti-glosa (v5) | `denial_risk_engine.py`: CID ausente, código faltando, sem contrato, duplicada, valor fora da tabela, procedimento × paciente |
+| Rentabilidade, custos, Health Score (v5) | `analytics/rentabilidade.py`, `cost_entry_service.py`, `health_score_engine.py` |
+| Pacientes e marketing (v5) | `rfm_engine.py`, `public_satisfaction_service.py`, `marketing_spend_service.py`, `patient_outreach_log_service.py` |
+| Lista de espera (v5) | `waitlist_entry_service.py` (paciente, profissional e janela de horário) |
+| Consolidado de unidades (v5) | `organization_service.py` (convite com verificação) |
+| 2FA, login com Google, auditoria 5 anos, exportação (v5) | `mfa_service.py`, `google_oauth_client.py`, job de retenção da auditoria, `tenant_export_service.py` |
+| Elegibilidade com operadoras (v5, "em integração") | `payer_eligibility_service.py` com `NotConfiguredTissEligibilityClient` |
 | Preços R$ 297 / R$ 697 / sob consulta | `payment_provider.py`: `PLAN_CATALOG`, **marcado como PLACEHOLDER** |
 | Itens de cada plano | Mesma lista da tela de cadastro (`SignUpPage.tsx`) |
 
@@ -163,3 +249,34 @@ São 14 dias de teste (cerca de R$ 1.600). A verba vai para o canal com menor **
 2. Preços: manter R$ 297 / R$ 697 do catálogo atual ou definir outros.
 3. Oferta de fundadores e garantia: sim ou não, e em quais termos.
 4. WhatsApp comercial para o botão "Falar com especialista".
+
+## v8 — a história do mês do gestor (7 atos)
+
+A v7 vendia bem, mas o meio da página era um catálogo de recursos. A v8 conta o mês do gestor:
+
+1. **Hero**: a pergunta do caixa. O subtítulo agora fala de prioridades, tarefas para o coordenador e acompanhamento.
+2. **Dores (#dores) e "Um mês na sua clínica" (#um-mes)**:
+   - 8 dores na voz do gestor: BI sem resposta, mil relatórios, faturamento só verde ou vermelho, reunião sem acompanhamento, erro de cadastro e lançamento, tabela abaixo do contrato, oportunidade que vaza e equipe sem medição.
+   - Depois, uma linha do tempo do dia 2 ao dia 30, marcada como cenário ilustrativo.
+3. **Calculadora** com o custo de não agir: o total × 3, "mais um trimestre", em `data-out="tri"`.
+4. **"O mesmo mês, com o Insighta" (#com-insighta)**:
+   - Os mesmos dias, cada um resolvido por um recurso real: as seis conferências, o jornal das 5h15, a conferência contra o contrato, a demanda ao coordenador, a reavaliação às 5h, as 5 prioridades da Sala, o paciente de alto valor que sumiu, o Health Score, o relatório de segunda e o Extrato.
+   - Fecha com 4 ganhos: visão, tarefa, acompanhamento e a página do fim do mês.
+5. **Como funciona e Extrato**: o Extrato agora fala com o gestor e a equipe ("quem resolveu cada item").
+6. **Tudo o que ele faz (#recursos)**:
+   - Abas para Inteligência, Agenda, Pacientes, Financeiro, Estoque e margem, Equipe e IA, Relatórios e Integração.
+   - Juntam as antigas seções de inteligência, agenda, módulos, equipe de IA, relatórios, fluxo e letreiro.
+   - Sem JS, todos os painéis aparecem. Um link para algo dentro de um painel (rodapé, `#agenda`, `#p-glosa`) abre a aba antes de rolar.
+7. **Comparativo, confiança, Founders, FAQ e chamada final**:
+   - FAQ com 14 perguntas; as novas cobrem BI, acompanhamento da equipe, erro de cadastro e de tabela, e celular.
+   - A chamada final retoma o mês ("um dia 2, um dia 11 e uma reunião no dia 15").
+
+Regra mantida: nenhum depoimento, logo ou número de resultado inventado. As linhas do tempo são marcadas como cenário ilustrativo.
+
+## v9 — planos Basic, Pro e Redes; Founders Club com 7 vagas
+
+- **Planos:** Basic R$ 490 (até 1.500 atendimentos/mês, 20 análises, 3 usuários), Pro R$ 1.290 (47 análises, IA, WhatsApp, API, até 8.000 atendimentos/mês) e Redes sob consulta. Anual com 2 meses grátis.
+- **Teste:** 14 dias do Pro sem cartão, em todos os botões de cadastro.
+- **Founders Club:** 7 vagas, Pro por R$ 800/mês travado enquanto for cliente (só IPCA), garantia de 90 dias pelo Extrato, sem contrapartida: nada de reuniões, estudo de caso ou depoimento obrigatório; a relação é por e-mail (suporte e novidades). O preço cheio do Pro riscado ancora o desconto.
+- **Perguntas:** entraram "Basic × Pro", "Como funciona o teste" e "Garantia de 90 dias"; saiu "depois dos 24 meses".
+- Os números e regras são os mesmos do app (tela Plano e assinatura) e dos Termos de Uso, seção 4.

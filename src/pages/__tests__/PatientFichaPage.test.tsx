@@ -133,6 +133,38 @@ describe("PatientFichaPage", () => {
     expect(screen.getByText(/Bronquite aguda/)).toBeInTheDocument();
   });
 
+  it("papel sem acesso ao prontuário vê só que existe um registro clínico (rodada 17)", async () => {
+    vi.mocked(apiClient.get).mockImplementation((url: string) => {
+      if (url.includes("/patients/p1/ficha")) {
+        return Promise.resolve(
+          ficha({
+            clinical_access: "restrito",
+            appointments: [
+              {
+                id: "a1",
+                scheduled_at: "2026-01-05T10:00:00Z",
+                status: "completed",
+                professional_name: "Dra. Ana",
+                insurance_plan_name: "Unimed",
+                no_show_risk_level: "baixo",
+                billings: [],
+                stock_movements: [],
+                clinical_evolutions: [
+                  { id: "e1", tipo: "anamnese_inicial", professional_name: "Dra. Ana", hipotese_diagnostica_principal: null, conduta_terapeutica_plano: null, cid_principal: null, data_evolucao: "2026-01-05T10:20:00Z" },
+                ],
+              },
+            ],
+          }) as never
+        );
+      }
+      return Promise.reject(new Error(`unexpected url: ${url}`));
+    });
+
+    renderWithProviders(<PatientFichaPage />, { route: "/pacientes?patient_id=p1" });
+
+    expect(await screen.findByText(/conteúdo restrito ao dono e ao administrador/)).toBeInTheDocument();
+  });
+
   it("botão 'Buscar outro paciente' limpa a seleção e volta pra busca", async () => {
     vi.mocked(apiClient.get).mockImplementation((url: string) => {
       if (url.includes("/patients/p1/ficha")) return Promise.resolve(ficha() as never);

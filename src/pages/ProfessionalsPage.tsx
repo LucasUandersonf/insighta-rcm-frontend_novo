@@ -23,6 +23,9 @@ import type {
   ProfessionalCreateRequest,
   ProfessionalUpdateRequest,
 } from "@/lib/types";
+import { plural } from "@/lib/plural";
+import { formatDateBR } from "@/lib/dates";
+import { useDirtyOnEdit } from "@/lib/unsavedChanges";
 
 // "Mapa de Dados Insighta" — Domínio Profissional (Onda 2).
 const CONTRACT_TYPE_LABELS: Record<ContractType, string> = {
@@ -46,11 +49,6 @@ const CONTRACT_TYPE_LABELS: Record<ContractType, string> = {
 const WEEKDAY_LABELS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 const WEEKDAY_SHORT = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
-function formatDateBR(iso: string): string {
-  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "UTC" }).format(
-    new Date(`${iso}T00:00:00Z`)
-  );
-}
 
 function displayTime(apiTime: string): string {
   return apiTime.slice(0, 5); // "08:00:00" -> "08:00"
@@ -172,7 +170,7 @@ function PlannedAbsencesEditor({
       const affected = created.appointments_in_period ?? 0;
       if (affected > 0) {
         showError(
-          `Ausência registrada. ${affected} consulta(s) já marcada(s) com este profissional nesse período: remarque ou avise os pacientes na Agenda.`,
+          `Ausência registrada. ${plural(affected, "consulta já marcada", "consultas já marcadas")} com este profissional nesse período: remarque ou avise os pacientes na Agenda.`,
         );
       } else {
         showSuccess("Ausência registrada.");
@@ -287,6 +285,7 @@ function ProfessionalFormModal({
   /** null = criar; um Professional = editar (formulário pré-preenchido). */
   editing: Professional | null;
 }) {
+  const unsaved = useDirtyOnEdit("o cadastro do profissional", isOpen);
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
   const [form, setForm] = useState<FormState>(
@@ -348,7 +347,7 @@ function ProfessionalFormModal({
 
   return (
     <Modal title={editing ? "Editar profissional" : "Novo profissional"} isOpen={isOpen} onClose={onClose} size="2xl">
-      <form onSubmit={handleSubmit}>
+      <form onChange={unsaved.onChange} onSubmitCapture={unsaved.onSubmit} onSubmit={handleSubmit}>
         <div className="grid grid-cols-1 gap-x-3 sm:grid-cols-2">
           <TextField
             label="Nome completo"
@@ -426,7 +425,7 @@ export function ProfessionalsPage() {
   });
 
   // Deep-link do botão de ação do Radar de Profissional Fora do Padrão
-  // (ver DECISÃO em smart_insights_engine.py::_professional_outlier_insight,
+  // (ver DECISÃO em app/services/insights (backend)::_professional_outlier_insight,
   // backend): o insight já chega aqui sabendo QUAL profissional disparou
   // o card — a tela rola até a linha exata e a realça, em vez de deixar
   // o usuário procurar sozinho na lista.
@@ -491,13 +490,13 @@ export function ProfessionalsPage() {
         {!isLoading && !error && (professionals ?? []).length === 0 && (
           <EmptyState
             icon={<CalendarClock size={17} strokeWidth={1.5} />}
-            message="Nenhum profissional cadastrado ainda — clique em “Novo profissional” ou envie um lote de faturamento com o nome do profissional na linha."
+            message="Nenhum profissional cadastrado ainda — clique em “Novo profissional” ou importe a planilha de faturamento com o nome do profissional em cada linha."
           />
         )}
         {!isLoading && (professionals ?? []).length > 0 && (
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-border-hairline text-2xs uppercase tracking-wide text-ink-faint">
+              <tr className="border-b border-border-hairline text-xs font-medium text-ink-muted">
                 <th className="px-4 py-2.5 font-medium">Nome</th>
                 <th className="px-4 py-2.5 font-medium">Registro</th>
                 <th className="px-4 py-2.5 font-medium">Especialidade</th>

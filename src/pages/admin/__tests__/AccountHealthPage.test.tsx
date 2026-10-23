@@ -24,7 +24,7 @@ describe("AccountHealthPage", () => {
           status: "atencao",
           detail: "Sem coordenador: Estoque.",
           action_label: "Definir coordenadores",
-          action_href: "/admin/users",
+          action_href: "/admin/usuarios",
         },
       ],
     };
@@ -32,8 +32,8 @@ describe("AccountHealthPage", () => {
     renderWithProviders(<AccountHealthPage />);
 
     expect(await screen.findByText("Sem coordenador: Estoque.")).toBeInTheDocument();
-    expect(screen.getByText("1 item precisa de atenção para o Insighta funcionar por completo.")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Definir coordenadores" })).toHaveAttribute("href", "/admin/users");
+    expect(screen.getByText(/1 item precisa de atenção para o Insighta funcionar por completo/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Definir coordenadores" })).toHaveAttribute("href", "/admin/usuarios");
     expect(screen.queryByRole("link", { name: "Importar dados" })).not.toBeInTheDocument();
   });
 });

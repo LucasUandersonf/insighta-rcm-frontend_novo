@@ -21,7 +21,7 @@ const CARDS = [
       <>
         <p className="flex items-center gap-1.5 text-2xs font-medium uppercase tracking-wide text-ink-faint">
           <Sparkles aria-hidden size={11} className="text-accent" />
-          Pergunte ao Insighta
+          Exemplo de pergunta
         </p>
         <p className="mt-2 text-xs text-ink-muted">“Qual convênio mais glosa?”</p>
         <p className="mt-1.5 whitespace-nowrap text-sm font-semibold text-ink">
@@ -36,7 +36,7 @@ const CARDS = [
     className: "right-0 top-0 w-[176px]",
     body: (
       <>
-        <p className="text-2xs font-medium uppercase tracking-wide text-ink-faint">Insight de hoje</p>
+        <p className="text-2xs font-medium uppercase tracking-wide text-ink-faint">Exemplo de alerta</p>
         <p className="tabular mt-1.5 text-lg font-semibold tracking-tightest text-pending">+18%</p>
         <p className="mt-0.5 text-2xs leading-snug text-ink-muted">faltas às segundas de manhã</p>
       </>
@@ -48,16 +48,20 @@ const CARDS = [
     className: "right-2 top-[232px] w-[150px]",
     body: (
       <>
-        <p className="text-2xs font-medium uppercase tracking-wide text-ink-faint">Receita do mês</p>
+        <p className="text-2xs font-medium uppercase tracking-wide text-ink-faint">Exemplo de tendência</p>
         <p className="tabular mt-1.5 text-lg font-semibold tracking-tightest text-revenue">+6,2%</p>
       </>
     ),
   },
 ] as const;
 
+// UX (jornada, descoberta): os números são fictícios — cada cartão diz
+// "Exemplo" e a legenda abaixo explica, para não parecerem dados reais.
 export function AuraPreviewCards({ className }: { className?: string }) {
   return (
-    <div className={cn("relative h-[320px] w-[290px]", className)} aria-hidden>
+    <div className={cn("relative h-[340px] w-[290px]", className)}>
+      <p className="absolute bottom-0 left-0 text-2xs text-ink-faint">Exemplos ilustrativos — não são dados reais.</p>
+      <div aria-hidden>
       {CARDS.map((card, i) => (
         <motion.div
           key={card.key}
@@ -76,6 +80,7 @@ export function AuraPreviewCards({ className }: { className?: string }) {
           {card.body}
         </motion.div>
       ))}
+      </div>
     </div>
   );
 }

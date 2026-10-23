@@ -6,11 +6,12 @@ import { RegisterOutreachButton } from "@/components/dashboard/RegisterOutreachB
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import type { InactivePatients } from "@/lib/types";
+import { formatDateBR } from "@/lib/dates";
 
 /**
  * Carteira de pacientes inativos — a lista real por trás da
  * recomendação "reativar quem já foi cliente e não voltou" do insight
- * de meta anual (ver DECISÃO em smart_insights_engine.py::_annual_goal_insight).
+ * de meta anual (ver DECISÃO em app/services/insights (backend)::_annual_goal_insight).
  * Antes o insight só recomendava em texto, sem lugar nenhum pra levar o
  * clique — esta seção é o destino de `#carteira-inativa`.
  *
@@ -26,7 +27,7 @@ import type { InactivePatients } from "@/lib/types";
  */
 
 function formatDate(iso: string): string {
-  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(iso));
+  return formatDateBR(iso, { day: "2-digit", month: "short", year: "numeric" });
 }
 
 function formatDaysInactive(days: number): string {

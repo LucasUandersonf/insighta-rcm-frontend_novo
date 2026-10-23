@@ -25,6 +25,8 @@ import type {
   TenantEngagementStatus,
   TenantUsageSummary,
 } from "@/lib/types";
+import { plural } from "@/lib/plural";
+import { formatDateBR } from "@/lib/dates";
 
 const ACTION_LABEL: Record<string, string> = {
   login: "Entrou no painel",
@@ -49,15 +51,15 @@ function describeAlertRun(result: PlatformAlertRunResult): string {
   const parts: string[] = [];
   if (result.new_alerts.length > 0)
     parts.push(
-      `${result.new_alerts.length} nova(s) em risco: ${result.new_alerts.join(", ")}`,
+      `${plural(result.new_alerts.length, "nova", "novas")} em risco: ${result.new_alerts.join(", ")}`,
     );
   if (result.reminders_sent.length > 0)
     parts.push(
-      `${result.reminders_sent.length} lembrete(s) reenviado(s): ${result.reminders_sent.join(", ")}`,
+      `${plural(result.reminders_sent.length, "lembrete reenviado", "lembretes reenviados")}: ${result.reminders_sent.join(", ")}`,
     );
   if (result.recovered.length > 0)
     parts.push(
-      `${result.recovered.length} recuperada(s): ${result.recovered.join(", ")}`,
+      `${plural(result.recovered.length, "recuperada", "recuperadas")}: ${result.recovered.join(", ")}`,
     );
   return parts.join(" · ");
 }
@@ -79,10 +81,7 @@ const STATUS_TONE: Record<TenantEngagementStatus, BadgeTone> = {
 };
 
 function formatDate(iso: string | null): string {
-  if (!iso) return "nunca";
-  return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short" }).format(
-    new Date(iso),
-  );
+  return formatDateBR(iso, { dateStyle: "short" }, "nunca");
 }
 
 function formatDaysAgo(days: number | null): string {
@@ -168,7 +167,7 @@ function PilotMetricsPanel({ rows }: { rows: PilotMetrics[] }) {
       <div className="overflow-x-auto" tabIndex={0}>
         <table className="w-full text-left text-sm">
           <thead>
-            <tr className="border-b border-border-hairline text-2xs uppercase tracking-wide text-ink-faint">
+            <tr className="border-b border-border-hairline text-xs font-medium text-ink-muted">
               <th className="px-4 py-2.5 font-medium">Clínica</th>
               <th className="px-4 py-2.5 font-medium">Dias até 1º upload</th>
               <th className="px-4 py-2.5 font-medium">Dias com upload</th>
@@ -251,6 +250,20 @@ export function PlatformDashboardPage() {
   const { data: pilotMetrics } = useQuery({
     queryKey: ["platform", "pilot-metrics"],
     queryFn: () => platformApiClient.getPilotMetrics(),
+  });
+
+  const { data: supportRequests, refetch: refetchSupport } = useQuery({
+    queryKey: ["platform", "support-requests"],
+    queryFn: () => platformApiClient.getSupportRequests(),
+    retry: false,
+  });
+  const markAnswered = useMutation({
+    mutationFn: (id: string) => platformApiClient.markSupportAnswered(id),
+    onSuccess: () => {
+      showSuccess("Pedido marcado como respondido.");
+      void refetchSupport();
+    },
+    onError: (err) => showError(getApiErrorMessage(err)),
   });
 
   const { data: auditLog, refetch: refetchAuditLog } = useQuery({
@@ -360,6 +373,32 @@ export function PlatformDashboardPage() {
         )}
 
         <Panel
+          title="Pedidos de ajuda"
+          subtitle="Perguntas enviadas pela Central de Ajuda das clínicas, ainda sem resposta. Responda pelo e-mail de quem pediu e marque aqui."
+        >
+          {(supportRequests ?? []).length === 0 ? (
+            <p className="text-sm text-ink-muted">Nenhum pedido aberto.</p>
+          ) : (
+            <ul className="divide-y divide-border-hairline">
+              {(supportRequests ?? []).map((r) => (
+                <li key={r.id} className="flex flex-wrap items-start gap-3 py-3">
+                  <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                    <span className="text-sm font-medium text-ink">{r.subject}</span>
+                    <span className="text-xs text-ink-muted">
+                      {r.trade_name} · {r.user_email ?? "usuário removido"} · {formatDateTime(r.created_at)}
+                    </span>
+                    <p className="mt-1 whitespace-pre-line text-xs text-ink">{r.message}</p>
+                  </div>
+                  <Button size="xs" variant="secondary" disabled={markAnswered.isPending} onClick={() => markAnswered.mutate(r.id)}>
+                    Marcar como respondido
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Panel>
+
+        <Panel
           title="Clínicas"
           subtitle="Mais em risco primeiro — ver PlatformReportingService para a régua de classificação."
           action={
@@ -388,7 +427,7 @@ export function PlatformDashboardPage() {
             <div className="overflow-x-auto" tabIndex={0}>
               <table className="w-full text-left text-sm">
                 <thead>
-                  <tr className="border-b border-border-hairline text-2xs uppercase tracking-wide text-ink-faint">
+                  <tr className="border-b border-border-hairline text-xs font-medium text-ink-muted">
                     <th className="px-4 py-2.5 font-medium">Clínica</th>
                     <th className="px-4 py-2.5 font-medium">Plano</th>
                     <th className="px-4 py-2.5 font-medium">Cliente desde</th>
@@ -453,7 +492,7 @@ export function PlatformDashboardPage() {
             <div className="overflow-x-auto" tabIndex={0}>
               <table className="w-full text-left text-sm">
                 <thead>
-                  <tr className="border-b border-border-hairline text-2xs uppercase tracking-wide text-ink-faint">
+                  <tr className="border-b border-border-hairline text-xs font-medium text-ink-muted">
                     <th className="px-4 py-2.5 font-medium">Quem</th>
                     <th className="px-4 py-2.5 font-medium">Ação</th>
                     <th className="px-4 py-2.5 font-medium">Quando</th>

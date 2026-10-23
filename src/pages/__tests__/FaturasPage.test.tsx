@@ -195,7 +195,7 @@ describe("FaturasPage — rodada 11", () => {
       return Promise.reject(new Error(`Sem mock para ${path}`));
     });
     renderWithProviders(<FaturasPage />);
-    expect(await screen.findByText(/em 1 fatura\(s\)/)).toBeInTheDocument();
+    expect(await screen.findByText(/em 1 fatura\b/)).toBeInTheDocument();
     expect(screen.getByText(/negado/)).toBeInTheDocument();
   });
 

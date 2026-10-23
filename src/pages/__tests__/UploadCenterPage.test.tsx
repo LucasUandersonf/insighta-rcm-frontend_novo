@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { UploadCenterPage } from "@/pages/UploadCenterPage";
 import { apiClient, ApiError } from "@/lib/api-client";
@@ -81,20 +81,28 @@ function csvFile(name = "faturamento.csv"): File {
   return new File(["cpf,nome\n123,Maria"], name, { type: "text/csv" });
 }
 
+/** A tela confere o cabeçalho (preview-headers) antes do envio — o envio
+ * de verdade é a chamada para /ingestion/upload. */
+function uploadCall(): FormData {
+  const call = vi.mocked(apiClient.upload).mock.calls.find((c) => c[0] === "/api/v1/ingestion/upload");
+  if (!call) throw new Error("envio não foi chamado");
+  return call[1] as FormData;
+}
+
 function fileInput(): HTMLInputElement {
   const input = document.querySelector('input[type="file"]');
   if (!input) throw new Error("input[type=file] não encontrado — Dropzone mudou de estrutura?");
   return input as HTMLInputElement;
 }
 
-describe("UploadCenterPage — aba Lotes Operacionais", () => {
+describe("UploadCenterPage — aba Planilhas", () => {
   it("mostra o histórico vazio quando não há nenhum arquivo enviado ainda", async () => {
     vi.mocked(apiClient.get).mockResolvedValue(emptyHistory() as never);
 
     renderWithProviders(<UploadCenterPage />);
 
     expect(
-      await screen.findByText("Nenhum arquivo enviado ainda — o primeiro upload aparece aqui assim que for processado.")
+      await screen.findByText("Nenhum arquivo enviado ainda — o primeiro aparece aqui assim que for processado.")
     ).toBeInTheDocument();
   });
 
@@ -109,7 +117,7 @@ describe("UploadCenterPage — aba Lotes Operacionais", () => {
     fireEvent.click(screen.getByRole("button", { name: /tentar novamente/i }));
 
     expect(
-      await screen.findByText("Nenhum arquivo enviado ainda — o primeiro upload aparece aqui assim que for processado.")
+      await screen.findByText("Nenhum arquivo enviado ainda — o primeiro aparece aqui assim que for processado.")
     ).toBeInTheDocument();
   });
 
@@ -138,13 +146,12 @@ describe("UploadCenterPage — aba Lotes Operacionais", () => {
     fireEvent.click(screen.getByRole("button", { name: "Enviar arquivo" }));
 
     await waitFor(() => expect(apiClient.upload).toHaveBeenCalledWith("/api/v1/ingestion/upload", expect.any(FormData)));
-    const formData = vi.mocked(apiClient.upload).mock.calls[0][1] as FormData;
+    const formData = uploadCall();
     expect(formData.get("data_type")).toBe("faturamento");
     expect((formData.get("file") as File).name).toBe("faturamento.csv");
 
-    expect(
-      await screen.findByText("Arquivo processado: 98 linha(s) lida(s), 2 rejeitada(s). Veja o motivo de cada uma no relatório.")
-    ).toBeInTheDocument();
+    // UX-03: o aviso diz o que entrou e o que ficou de fora, em português comum.
+    expect(await screen.findByText("96 linhas entraram; 2 ficaram de fora. Veja o motivo e como resolver no relatório.")).toBeInTheDocument();
   });
 
   it("arquivo grande pela API entra na fila (202) e a tela libera na hora", async () => {
@@ -169,8 +176,8 @@ describe("UploadCenterPage — aba Lotes Operacionais", () => {
     await user.upload(fileInput(), csvFile());
     fireEvent.click(screen.getByRole("button", { name: "Enviar arquivo" }));
 
-    expect(await screen.findByText(/O processamento continua em segundo plano/)).toBeInTheDocument();
-    expect(screen.queryByText(/Arquivo processado/)).not.toBeInTheDocument();
+    expect(await screen.findByText(/Arquivo recebido. Acompanhe o andamento logo abaixo/)).toBeInTheDocument();
+    expect(screen.queryByText(/linhas entraram/)).not.toBeInTheDocument();
   });
 
   it("mostra erro da API sem travar a tela quando o upload falha", async () => {
@@ -189,6 +196,55 @@ describe("UploadCenterPage — aba Lotes Operacionais", () => {
     expect(screen.getByRole("button", { name: "Enviar arquivo" })).toBeInTheDocument();
   });
 
+  it("coluna faltando: a faixa de erro oferece mapear colunas e baixar o modelo", async () => {
+    vi.mocked(apiClient.get).mockResolvedValue(emptyHistory() as never);
+    vi.mocked(apiClient.upload).mockImplementation(((url: string) =>
+      url === "/api/v1/ingestion/upload"
+        ? Promise.reject(
+            new ApiError(422, {
+              error_code: "colunas_faltando",
+              message: "Faltam colunas obrigatórias de Faturamento: Convênio. Nada foi importado.",
+              request_id: "req-2",
+              extra: { missing_columns: ["Convênio"], data_type: "faturamento" },
+            }),
+          )
+        : Promise.reject(new Error("sem prévia"))) as never);
+
+    renderWithProviders(<UploadCenterPage />);
+    await screen.findByText(/Nenhum arquivo enviado ainda/);
+    const user = userEvent.setup();
+    await user.upload(fileInput(), csvFile());
+    fireEvent.click(screen.getByRole("button", { name: "Enviar arquivo" }));
+
+    expect(await screen.findByText(/Faltam colunas obrigatórias de Faturamento: Convênio/)).toBeInTheDocument();
+    const alert = screen.getByRole("alert");
+    expect(within(alert).getByRole("button", { name: "Mapear colunas" })).toBeInTheDocument();
+    expect(within(alert).getByRole("button", { name: /Baixar modelo/ })).toBeInTheDocument();
+    expect(within(alert).queryByRole("button", { name: "Tentar de novo" })).not.toBeInTheDocument();
+  });
+
+  it("conferir antes de importar mostra quantas linhas entram, sem gravar", async () => {
+    vi.mocked(apiClient.get).mockResolvedValue(emptyHistory() as never);
+    vi.mocked(apiClient.upload).mockImplementation(((url: string) =>
+      url === "/api/v1/ingestion/check"
+        ? Promise.resolve({
+            ok: true, error_code: null, message: null, total_rows: 10, valid_rows: 8, invalid_rows: 2, truncated: false,
+            problems: [{ problem: "Data em formato inválido: “…”. Use dd/mm/aaaa (ex.: 20/08/2026).", count: 2, examples: [{ row_number: 4, detail: "x" }, { row_number: 9, detail: "y" }] }],
+            ignored_columns: [], missing_columns: [], detected_data_type: null,
+          })
+        : Promise.reject(new Error("sem prévia"))) as never);
+
+    renderWithProviders(<UploadCenterPage />);
+    await screen.findByText(/Nenhum arquivo enviado ainda/);
+    const user = userEvent.setup();
+    await user.upload(fileInput(), csvFile());
+    fireEvent.click(screen.getByRole("button", { name: "Conferir antes de importar" }));
+
+    expect(await screen.findByText(/8 de 10 linhas podem entrar; 2 ficariam para corrigir/)).toBeInTheDocument();
+    expect(screen.getByText(/Exemplos: linha 4, linha 9/)).toBeInTheDocument();
+    expect(apiClient.upload).not.toHaveBeenCalledWith("/api/v1/ingestion/upload", expect.anything());
+  });
+
   it("lista o histórico com status, linhas importadas/rejeitadas e template", async () => {
     const history: PaginatedResponse<IngestionFileEntry> = {
       items: [
@@ -203,11 +259,12 @@ describe("UploadCenterPage — aba Lotes Operacionais", () => {
 
     renderWithProviders(<UploadCenterPage />);
 
-    expect(await screen.findByText("agenda-agosto.xml")).toBeInTheDocument();
-    expect(screen.getByText("glosa-julho.json")).toBeInTheDocument();
-    expect(screen.getByText("Processado")).toBeInTheDocument();
-    expect(screen.getByText("Falhou")).toBeInTheDocument();
-    expect(screen.getByText("15")).toBeInTheDocument();
+    // Tabela (tela larga) e cartões (celular, UX-27) ficam os dois no DOM.
+    expect((await screen.findAllByText("agenda-agosto.xml")).length).toBeGreaterThan(0);
+    expect(screen.getAllByText("glosa-julho.json").length).toBeGreaterThan(0);
+    // UX-03: o selo diz o que entrou, não só que o processamento terminou.
+    expect(screen.getAllByText("Importado").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Falhou").length).toBeGreaterThan(0);
   });
 
   it("arquivo acima de 3 MB sem upload direto disponível: avisa sem mandar para a API", async () => {
@@ -221,7 +278,7 @@ describe("UploadCenterPage — aba Lotes Operacionais", () => {
     fireEvent.click(screen.getByRole("button", { name: "Enviar arquivo" }));
 
     expect(await screen.findByText(/Arquivos acima de 3 MB são processados em segundo plano/)).toBeInTheDocument();
-    expect(apiClient.upload).not.toHaveBeenCalled();
+    expect(apiClient.upload).not.toHaveBeenCalledWith("/api/v1/ingestion/upload", expect.anything());
   });
 
   it("upload direto: libera a tela na hora e mostra o progresso do processamento em segundo plano", async () => {
@@ -253,11 +310,11 @@ describe("UploadCenterPage — aba Lotes Operacionais", () => {
     await user.upload(fileInput(), csvFile());
     fireEvent.click(screen.getByRole("button", { name: "Enviar arquivo" }));
 
-    expect(await screen.findByText(/Arquivo recebido. O processamento continua em segundo plano/)).toBeInTheDocument();
-    expect(await screen.findByText("Em processamento")).toBeInTheDocument();
+    expect(await screen.findByText(/Arquivo recebido. Acompanhe o andamento logo abaixo/)).toBeInTheDocument();
+    expect(await screen.findByText("Em andamento")).toBeInTheDocument();
     expect(screen.getByText("15.000 de 60.000 linhas (25%)")).toBeInTheDocument();
     expect(screen.getByRole("progressbar", { name: "Progresso de faturamento.csv" })).toHaveAttribute("aria-valuenow", "25");
-    expect(apiClient.upload).not.toHaveBeenCalled();
+    expect(apiClient.upload).not.toHaveBeenCalledWith("/api/v1/ingestion/upload", expect.anything());
     // O botão volta a ficar livre: dá para enviar o próximo arquivo.
     expect(screen.getByRole("button", { name: "Enviar arquivo" })).toBeInTheDocument();
   });
@@ -294,9 +351,9 @@ describe("UploadCenterPage — aba Lotes Operacionais", () => {
       )) as never);
     renderWithProviders(<UploadCenterPage />);
 
-    expect(await screen.findByText("300.000 linha(s) lida(s), 12 rejeitada(s).")).toBeInTheDocument();
+    expect(await screen.findByText("299.988 linhas entraram; 12 ficaram de fora.")).toBeInTheDocument();
     expect(screen.getByText(/Faltam colunas obrigatórias/)).toBeInTheDocument();
-    expect(screen.getByText("Concluído")).toBeInTheDocument();
+    expect(screen.getByText("Importado em parte")).toBeInTheDocument();
     expect(screen.getByText("Falhou")).toBeInTheDocument();
   });
 
@@ -317,11 +374,11 @@ describe("UploadCenterPage — aba Lotes Operacionais", () => {
     } as never);
 
     renderWithProviders(<UploadCenterPage />);
-    fireEvent.click(await screen.findByRole("button", { name: "Desfazer importação de faturamento-setembro.csv" }));
+    fireEvent.click((await screen.findAllByRole("button", { name: "Desfazer importação de faturamento-setembro.csv" }))[0]);
 
     expect(await screen.findByText("cobranças")).toBeInTheDocument();
     expect(screen.queryByText("pacientes")).not.toBeInTheDocument();
-    expect(screen.getByRole("alert")).toHaveTextContent("2 recurso(s) de glosa");
+    expect(screen.getByRole("alert")).toHaveTextContent("2 recursos de glosa abertos");
     fireEvent.click(screen.getByRole("button", { name: "Desfazer importação" }));
 
     await waitFor(() => expect(apiClient.post).toHaveBeenCalledWith("/api/v1/ingestion/files/file-1/undo", undefined, { timeoutMs: 300_000 }));
@@ -338,7 +395,7 @@ describe("UploadCenterPage — aba Lotes Operacionais", () => {
       )) as never);
 
     renderWithProviders(<UploadCenterPage />);
-    fireEvent.click(await screen.findByRole("button", { name: "Desfazer importação de faturamento-setembro.csv" }));
+    fireEvent.click((await screen.findAllByRole("button", { name: "Desfazer importação de faturamento-setembro.csv" }))[0]);
 
     expect(await screen.findByText(/Não é possível desfazer agora/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Desfazer importação" })).toBeDisabled();
@@ -354,7 +411,7 @@ describe("UploadCenterPage — aba Lotes Operacionais", () => {
       )) as never);
 
     renderWithProviders(<UploadCenterPage />);
-    fireEvent.click(await screen.findByRole("button", { name: "Desfazer importação de faturamento-setembro.csv" }));
+    fireEvent.click((await screen.findAllByRole("button", { name: "Desfazer importação de faturamento-setembro.csv" }))[0]);
 
     const confirm = await screen.findByRole("checkbox");
     const undo = screen.getByRole("button", { name: "Desfazer importação" });
@@ -372,7 +429,7 @@ describe("UploadCenterPage — aba Lotes Operacionais", () => {
     };
     vi.mocked(apiClient.get).mockResolvedValue(history as never);
     renderWithProviders(<UploadCenterPage />);
-    expect(await screen.findByText("Desfeita")).toBeInTheDocument();
+    expect((await screen.findAllByText("Desfeita")).length).toBeGreaterThan(0);
     expect(screen.queryByRole("button", { name: /Desfazer importação de/ })).not.toBeInTheDocument();
   });
 
@@ -406,11 +463,11 @@ describe("UploadCenterPage — aba Lotes Operacionais", () => {
     const history: PaginatedResponse<IngestionFileEntry> = { items: [makeFileEntry()], total: 1, limit: 15, offset: 0 };
     vi.mocked(apiClient.get).mockResolvedValue(history as never);
     renderWithProviders(<UploadCenterPage />);
-    await screen.findByText("faturamento-setembro.csv");
+    await screen.findAllByText("faturamento-setembro.csv");
     expect(screen.getByRole("heading", { name: "Importações" })).toBeInTheDocument();
-    expect(screen.queryByText("Upload de lotes operacionais")).not.toBeInTheDocument();
-    expect(screen.queryByRole("tab", { name: "Contratos de Convênio" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Relatório" })).toBeInTheDocument();
+    expect(screen.queryByText("Enviar planilha")).not.toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "Contratos de convênio (PDF)" })).not.toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Relatório" }).length).toBeGreaterThan(0);
     expect(screen.queryByRole("button", { name: /Desfazer importação de/ })).not.toBeInTheDocument();
   });
 
@@ -419,7 +476,7 @@ describe("UploadCenterPage — aba Lotes Operacionais", () => {
     const history: PaginatedResponse<IngestionFileEntry> = { items: [makeFileEntry()], total: 1, limit: 15, offset: 0 };
     vi.mocked(apiClient.get).mockResolvedValue(history as never);
     renderWithProviders(<UploadCenterPage />);
-    await screen.findByText("faturamento-setembro.csv");
+    await screen.findAllByText("faturamento-setembro.csv");
     expect(screen.queryByRole("button", { name: /Desfazer importação de/ })).not.toBeInTheDocument();
   });
 
@@ -437,15 +494,15 @@ describe("UploadCenterPage — aba Lotes Operacionais", () => {
 
     const { container } = renderWithProviders(<UploadCenterPage />);
 
-    await screen.findByText("agenda-agosto.xml");
+    await screen.findAllByText("agenda-agosto.xml");
     await expectNoA11yViolations(container);
   });
 });
 
-describe("UploadCenterPage — aba Contratos de Convênio", () => {
+describe("UploadCenterPage — aba Contratos de convênio (PDF)", () => {
   async function goToContractsTab() {
-    fireEvent.click(screen.getByRole("tab", { name: "Contratos de Convênio" }));
-    await screen.findByText("Upload de contratos de convênio");
+    fireEvent.click(screen.getByRole("tab", { name: "Contratos de convênio (PDF)" }));
+    await screen.findByText("Enviar contrato de convênio");
   }
 
   it("valida campos obrigatórios no cliente antes de chamar a API (plano, vigência e arquivo)", async () => {
@@ -473,7 +530,7 @@ describe("UploadCenterPage — aba Contratos de Convênio", () => {
     const form = screen.getByRole("button", { name: "Enviar contrato" }).closest("form")!;
     fireEvent.submit(form);
 
-    expect(await screen.findByText("Selecione um plano.")).toBeInTheDocument();
+    expect(await screen.findByText("Selecione o convênio.")).toBeInTheDocument();
     expect(screen.getByText("Informe a vigência inicial.")).toBeInTheDocument();
     expect(screen.getByText("Selecione o PDF do contrato.")).toBeInTheDocument();
     expect(apiClient.upload).not.toHaveBeenCalled();
@@ -499,7 +556,7 @@ describe("UploadCenterPage — aba Contratos de Convênio", () => {
     renderWithProviders(<UploadCenterPage />);
     await goToContractsTab();
 
-    const planSelect = await screen.findByLabelText(/Plano/);
+    const planSelect = await screen.findByLabelText(/Convênio/);
     await screen.findByRole("option", { name: "Unimed Regional" });
     fireEvent.change(planSelect, { target: { value: "plan-1" } });
     fireEvent.change(screen.getByLabelText(/Vigência a partir de/), { target: { value: "2026-10-01" } });
@@ -516,8 +573,9 @@ describe("UploadCenterPage — aba Contratos de Convênio", () => {
     expect(formData.get("valid_from")).toBe("2026-10-01");
     expect((formData.get("file") as File).name).toBe("contrato.pdf");
 
+    // UX2-13: enviar já começa a leitura e leva para a conferência.
     expect(
-      await screen.findByText("PDF enviado. Vá até Convênios & Contratos para extrair a tabela de preços com IA e homologar.")
+      await screen.findByText("Contrato enviado. Lendo a tabela de preços para você conferir.")
     ).toBeInTheDocument();
   });
 });
@@ -538,9 +596,9 @@ describe("UploadCenterPage — mapeamentos salvos", () => {
 
     renderWithProviders(<UploadCenterPage />);
 
-    await user.click(await screen.findByText(/Mapeamentos salvos deste modelo \(1\)/));
+    await user.click(await screen.findByText(/Colunas que você já mapeou para este tipo \(1\)/));
     expect(screen.getByText("Vlr Pago")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Esquecer" }));
+    await user.click(screen.getByRole("button", { name: "Remover" }));
 
     await waitFor(() => expect(apiClient.delete).toHaveBeenCalledWith("/api/v1/ingestion/column-aliases/al-1"));
   });

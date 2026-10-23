@@ -1,10 +1,12 @@
 import { lazy, Suspense } from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { createBrowserRouter, RouterProvider, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/context/AuthContext";
 import { ToastProvider } from "@/context/ToastContext";
 import { ModalStackProvider } from "@/context/ModalStackContext";
 import { ProtectedRoute } from "@/routes/ProtectedRoute";
 import { BillingGate } from "@/components/billing/BillingGate";
+import { PlanGatePage } from "@/components/billing/PlanGate";
+import { FEATURES } from "@/lib/plan";
 import { AppShell } from "@/components/layout/AppShell";
 import { RoleProtectedRoute } from "@/routes/ProtectedRoute";
 import { PlatformProtectedRoute } from "@/routes/PlatformProtectedRoute";
@@ -21,6 +23,7 @@ import { HomeRouter, LegacyRedirect, ManagerProfileRoute } from "@/routes/TeamRo
 // agora é seu próprio chunk, baixado só quando a rota é de fato visitada
 // — ver também `build.rollupOptions.output.manualChunks` em
 // vite.config.ts, que separa as bibliotecas de terceiros do mesmo jeito.
+const NotFoundPage = lazy(() => import("@/pages/NotFoundPage").then((m) => ({ default: m.NotFoundPage })));
 const LoginPage = lazy(() => import("@/pages/LoginPage").then((m) => ({ default: m.LoginPage })));
 const SignUpPage = lazy(() => import("@/pages/SignUpPage").then((m) => ({ default: m.SignUpPage })));
 const TermsOfServicePage = lazy(() => import("@/pages/TermsOfServicePage").then((m) => ({ default: m.TermsOfServicePage })));
@@ -41,8 +44,15 @@ const TeamPage = lazy(() => import("@/pages/TeamPage").then((m) => ({ default: m
 const SatisfactionRatingPage = lazy(() =>
   import("@/pages/SatisfactionRatingPage").then((m) => ({ default: m.SatisfactionRatingPage }))
 );
+const GuardianAlertPage = lazy(() =>
+  import("@/pages/GuardianAlertPage").then((m) => ({ default: m.GuardianAlertPage }))
+);
 const BillingRiskQueuePage = lazy(() => import("@/pages/BillingRiskQueuePage").then((m) => ({ default: m.BillingRiskQueuePage })));
 const AgendaRiscoPage = lazy(() => import("@/pages/AgendaRiscoPage").then((m) => ({ default: m.AgendaRiscoPage })));
+const ResultStatementPage = lazy(() => import("@/pages/ResultStatementPage").then((m) => ({ default: m.ResultStatementPage })));
+const PreSubmissionCheckPage = lazy(() => import("@/pages/PreSubmissionCheckPage").then((m) => ({ default: m.PreSubmissionCheckPage })));
+const CashForecastPage = lazy(() => import("@/pages/CashForecastPage").then((m) => ({ default: m.CashForecastPage })));
+const RecoveryCenterPage = lazy(() => import("@/pages/RecoveryCenterPage").then((m) => ({ default: m.RecoveryCenterPage })));
 const PatientFichaPage = lazy(() => import("@/pages/PatientFichaPage").then((m) => ({ default: m.PatientFichaPage })));
 const ExecutiveOverviewPage = lazy(() => import("@/pages/ExecutiveOverviewPage").then((m) => ({ default: m.ExecutiveOverviewPage })));
 const OrganizationSummaryPage = lazy(() => import("@/pages/OrganizationSummaryPage").then((m) => ({ default: m.OrganizationSummaryPage })));
@@ -69,9 +79,6 @@ const PlatformLoginPage = lazy(() => import("@/pages/platform/PlatformLoginPage"
 const PlatformDashboardPage = lazy(() => import("@/pages/platform/PlatformDashboardPage").then((m) => ({ default: m.PlatformDashboardPage })));
 const SubscriptionPage = lazy(() => import("@/pages/SubscriptionPage").then((m) => ({ default: m.SubscriptionPage })));
 const MockCheckoutPage = lazy(() => import("@/pages/MockCheckoutPage").then((m) => ({ default: m.MockCheckoutPage })));
-const StripeCheckoutReturnPage = lazy(() =>
-  import("@/pages/StripeCheckoutReturnPage").then((m) => ({ default: m.StripeCheckoutReturnPage }))
-);
 
 /**
  * Tela de erro REAL, visível, em vez de deixar a aplicação simplesmente
@@ -97,6 +104,198 @@ function ConfigurationErrorScreen() {
   );
 }
 
+/*
+ * S5 — roteador de dados (createBrowserRouter) em vez do BrowserRouter.
+ * A árvore de <Routes> continua igual, só passou a morar dentro de uma rota
+ * "*" do roteador de dados. O ganho é o `useBlocker`, que só existe nesse
+ * modo: o aviso de "Sair sem salvar?" (UnsavedChangesGuard) agora pega
+ * também o botão Voltar/Avançar do navegador e qualquer navigate() do
+ * código, não só clique em link.
+ */
+function AppRoutes() {
+  return (
+    <Suspense fallback={<RouteLoadingFallback fullScreen />}>
+    <Routes>
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/signup" element={<SignUpPage />} />
+      {/* LGPD ("vamos chegar a 9.5") — texto jurídico real, público,
+          sem autenticação: linkado no cadastro (checkbox de aceite,
+          ver SignUpPage.tsx) e acessível a qualquer momento. */}
+      <Route path="/termos" element={<TermsOfServicePage />} />
+      <Route path="/privacidade" element={<PrivacyPolicyPage />} />
+      <Route path="/contrato-de-dados" element={<DataProcessingAgreementPage />} />
+      <Route path="/status" element={<StatusPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
+      <Route path="/confirmar-email" element={<ConfirmEmailPage />} />
+      <Route path="/confirmar-destinatario" element={<ConfirmRecipientPage />} />
+      {/* "Mapa de Dados Insighta" — Domínio Pós-atendimento (Onda 2):
+          link público de avaliação de satisfação, sem autenticação
+          (o paciente abre no próprio celular) — ver DECISÃO em
+          052_appointment_satisfaction.sql (backend). */}
+      <Route path="/satisfacao/:token" element={<SatisfactionRatingPage />} />
+      <Route path="/alerta/:token" element={<GuardianAlertPage />} />
+      {/* Painel interno de Customer Success — NUNCA linkado de
+          dentro do produto, fora do AuthContext/RBAC de clínica
+          de propósito (ver DECISÃO em src/routes/PlatformProtectedRoute.tsx
+          e app/api/platform_admin_auth.py no backend). */}
+      <Route path="/plataforma/login" element={<PlatformLoginPage />} />
+      <Route element={<PlatformProtectedRoute />}>
+        <Route path="/plataforma" element={<PlatformDashboardPage />} />
+      </Route>
+    <Route element={<ProtectedRoute />}>
+      {/* Assinatura (autoatendimento): fora do AppShell e da porta de
+          cobrança, para a clínica bloqueada conseguir pagar. */}
+      <Route path="/assinatura" element={<SubscriptionPage />} />
+      {/* Senha temporária: troca obrigatória antes de qualquer tela. */}
+      <Route path="/trocar-senha" element={<ChangeTemporaryPasswordPage />} />
+      <Route element={<BillingGate />}>
+      <Route element={<AppShell />}>
+        {/* Home: briefing do gestor ou "Minhas demandas" do
+            coordenador (ver HomeRouter). Sem RoleProtectedRoute de
+            propósito: todo papel autenticado tem uma Home. */}
+        <Route path="/" element={<HomeRouter />} />
+        {/* O antigo Painel saiu (Redesign 2026) — o que ele tinha de
+            trabalho virou a Fila de correção. Links antigos seguem valendo. */}
+        <Route path="/painel" element={<LegacyRedirect to="/fila-correcao" />} />
+        {/* UX3-23: endereço que não existe mostra "Não encontramos esta tela". */}
+        <Route path="*" element={<NotFoundPage />} />
+        {/* UX-32: endereços em português; os antigos (em inglês) continuam
+            valendo — links de e-mail, favoritos e insights já salvos. */}
+        <Route path="/upload" element={<LegacyRedirect to="/importar" />} />
+        <Route path="/setup" element={<LegacyRedirect to="/importar/corrigir" />} />
+        <Route path="/contracts" element={<LegacyRedirect to="/convenios" />} />
+        <Route path="/denial-appeals" element={<LegacyRedirect to="/recursos-de-glosa" />} />
+        <Route path="/waitlist" element={<LegacyRedirect to="/lista-de-espera" />} />
+        <Route path="/professionals" element={<LegacyRedirect to="/profissionais" />} />
+        <Route path="/marketing-spend" element={<LegacyRedirect to="/marketing" />} />
+        <Route path="/appointments" element={<LegacyRedirect to="/consultas" />} />
+        <Route path="/admin/users" element={<LegacyRedirect to="/admin/usuarios" />} />
+        <Route path="/admin/integrations" element={<LegacyRedirect to="/admin/integracoes" />} />
+        <Route path="/admin/tenant" element={<LegacyRedirect to="/admin/clinica" />} />
+        <Route path="/admin/report-recipients" element={<LegacyRedirect to="/admin/destinatarios" />} />
+        <Route path="/admin/audit-log" element={<LegacyRedirect to="/admin/auditoria" />} />
+        <Route path="/consultas" element={<AppointmentsPage />} />
+        {/* Ficha do Paciente (Roadmap "Rumo à Nota 9", Fase 4) — mesmo
+            RBAC de GET /patients/search e /patients/{id}/ficha
+            (atendimento/admin/owner/financeiro/auditor = todo papel),
+            por isso sem RoleProtectedRoute. */}
+        <Route path="/pacientes" element={<PatientFichaPage />} />
+        <Route path="/lista-de-espera" element={<PlanGatePage feature={FEATURES.noShowRisk}><WaitlistPage /></PlanGatePage>} />
+        {/* Épico F1.3 do Plano Diretor: "Meus pendentes" é aberto a
+            QUALQUER papel autenticado (mesmo RBAC de
+            GET /insight-outcomes/mine — quem executa não é sempre
+            quem gerencia) — sem RoleProtectedRoute de propósito. */}
+        <Route path="/meus-insights" element={<MyInsightsPage />} />
+        {/* O CRUD operacional de Pacientes foi removido por decisão de produto
+            — o SaaS opera exclusivamente sobre dados consolidados do ERP
+            externo (ver auditoria Go-Live). /professionals é diferente:
+            voltou (achado F-02) porque o profissional já entra sozinho pela
+            própria ingestão de faturamento, mas SEMPRE sem grade semanal — um
+            CSV não carrega horário de atendimento. Sem esta tela, Agenda &
+            Capacidade fica estruturalmente inviável para quem opera só via
+            ingestão. Não é reintrodução do CRUD antigo, é configuração de um
+            parâmetro de cálculo que não tem outra fonte de dado possível (ver
+            ProfessionalsPage.tsx). O catch-all "*" abaixo cobre qualquer link
+            antigo para /patients.
+            RBAC: mesmo critério de escrita restrita de /upload e /contracts —
+            editar grade é ação administrativa, fora do alcance de atendimento. */}
+        <Route element={<RoleProtectedRoute allowedRoles={["owner", "admin"]} />}>
+          <Route path="/profissionais" element={<ProfessionalsPage />} />
+        </Route>
+        {/* Equipe (Redesign 2026): o gestor acompanha as demandas
+            atribuídas aos coordenadores (mesmo RBAC de /team/overview). */}
+        <Route element={<RoleProtectedRoute allowedRoles={["owner", "admin", "auditor"]} />}>
+          <Route path="/equipe" element={<TeamPage />} />
+        </Route>
+        <Route element={<RoleProtectedRoute allowedRoles={["owner", "admin", "financeiro", "auditor"]} />}>
+          <Route element={<ManagerProfileRoute />}>
+            <Route path="/decisao" element={<ExecutiveOverviewPage />} />
+            <Route path="/consolidado" element={<OrganizationSummaryPage />} />
+          </Route>
+          {/* Roadmap "Rumo à Nota 9" (Fase 2) — mesmo RBAC de /decisao
+              (o endpoint que alimenta esta tela usa o mesmo _CAN_VIEW). */}
+          <Route path="/agenda-risco" element={<PlanGatePage feature={FEATURES.noShowRisk}><AgendaRiscoPage /></PlanGatePage>} />
+          {/* Extrato de Resultado: mesmo RBAC de result_statement.py (_CAN_VIEW). */}
+          <Route path="/resultado" element={<ResultStatementPage />} />
+          {/* Caminho do dinheiro: mesmo RBAC de money_path.py (_CAN_VIEW). */}
+          <Route path="/conferencia-envio" element={<PreSubmissionCheckPage />} />
+          <Route path="/caixa" element={<CashForecastPage />} />
+          <Route path="/recuperacao" element={<RecoveryCenterPage />} />
+          <Route path="/convenios" element={<ContractsPage />} />
+          <Route path="/recursos-de-glosa" element={<DenialAppealsPage />} />
+          {/* Mesmo RBAC do backend em lotes.py/_CAN_READ (owner/admin/
+              financeiro/auditor) — as ações de escrita (criar, fechar,
+              atribuir/remover guia) usam _CAN_WRITE (sem auditor) e o
+              backend barra sozinho, mesmo critério já usado em
+              /denial-appeals acima. */}
+          <Route path="/lotes" element={<LotesPage />} />
+          {/* Rodada 10 (A1): mesmo RBAC de faturas.py (_CAN_READ). */}
+          <Route path="/faturas" element={<FaturasPage />} />
+          {/* Épico F3.1 do Plano Diretor — mesmo RBAC de /lotes
+              acima (lotes.py/_CAN_READ: owner/admin/financeiro/
+              auditor; escrita via cost_entries.py/_CAN_WRITE,
+              sem auditor, barrado pelo próprio backend). */}
+          <Route path="/custos" element={<PlanGatePage feature={FEATURES.marginInventory}><CostEntriesPage /></PlanGatePage>} />
+          {/* Achado do Dossiê Insighta RCM — Onda 2 do Plano de
+              Ação: mesmo RBAC de /custos acima (leitura via
+              marketing_spend.py/_CAN_READ, escrita via
+              _CAN_WRITE, sem auditor, barrado pelo backend). */}
+          <Route path="/marketing" element={<PlanGatePage feature={FEATURES.patientsAdvanced}><MarketingSpendPage /></PlanGatePage>} />
+        </Route>
+        {/* Upload é ação de escrita — mesmo RBAC do backend em
+            ingestion.py/_CAN_MANAGE e contracts.py/_CAN_WRITE
+            (owner/admin/financeiro); sem auditor, que é só leitura. */}
+        {/* Rodada 8 (B2): o auditor consulta importações e faturamento em
+            modo leitura (as próprias páginas escondem a escrita, que a API
+            já recusa para esse papel). */}
+        <Route element={<RoleProtectedRoute allowedRoles={["owner", "admin", "financeiro", "auditor"]} />}>
+          <Route path="/importar" element={<UploadCenterPage />} />
+          <Route path="/faturamento" element={<BillingOperationsPage />} />
+        </Route>
+        <Route element={<RoleProtectedRoute allowedRoles={["owner", "admin", "financeiro"]} />}>
+          {/* Registrar pagamento recebido (POST /billing/{id}/settle) e
+              cadastro avulso de Guia TISS (POST /guias) — mesmo RBAC de
+              /upload: ação de escrita financeira, fora do alcance de
+              "atendimento" e de "auditor" (leitura só). */}
+          <Route path="/fila-correcao" element={<BillingRiskQueuePage />} />
+          {/* Destino que o próprio toast de sucesso da Central de Upload já
+              promete ("veja a tela de Setup") — mesmo RBAC de /upload
+              (ingestion.py/_CAN_MANAGE: owner/admin/financeiro). */}
+          <Route path="/importar/corrigir" element={<SetupPage />} />
+        </Route>
+        <Route path="/conta/seguranca" element={<AccountSecurityPage />} />
+        <Route element={<RoleProtectedRoute allowedRoles={["owner", "admin"]} />}>
+          <Route path="/admin/usuarios" element={<UsersPage />} />
+          <Route path="/admin/integracoes" element={<IntegrationsPage />} />
+          <Route path="/admin/clinica" element={<TenantPage />} />
+          <Route path="/admin/saude-da-conta" element={<AccountHealthPage />} />
+          <Route path="/admin/destinatarios" element={<ReportRecipientsPage />} />
+        </Route>
+        {/* auditor também acessa a trilha de auditoria (RBAC igual ao backend em audit_log.py) */}
+        <Route element={<RoleProtectedRoute allowedRoles={["owner", "admin", "auditor"]} />}>
+          <Route path="/admin/auditoria" element={<AuditLogPage />} />
+        </Route>
+      </Route>
+      </Route>
+      {/* Achado CRÍTICO da Auditoria de Prontidão v1 ("produto não
+          se cobra sozinho") — checkout de upgrade self-service.
+          Fora do AppShell de propósito (sem sidebar/topbar): mesma
+          experiência de "tela cheia de pagamento" de qualquer
+          checkout real, dentro do ProtectedRoute porque só um
+          owner autenticado pode chegar aqui (ver RBAC no backend,
+          subscription.py). */}
+      {/* Só em desenvolvimento e homologação: em produção o backend recusa o
+          checkout simulado (homologação v1.0.0). */}
+      <Route path="/checkout/mock/:checkoutId" element={<MockCheckoutPage />} />
+    </Route>
+    </Routes>
+    </Suspense>
+  );
+}
+
+const router = createBrowserRouter([{ path: "*", element: <AppRoutes /> }]);
+
 export default function App() {
   if (!isApiConfigured) return <ConfigurationErrorScreen />;
 
@@ -114,167 +313,7 @@ export default function App() {
               v7 esses dois comportamentos viram o único modo de operar (a
               prop `future` do BrowserRouter nem aceita mais essas duas
               chaves), então não há mais nada para configurar aqui. */}
-          <BrowserRouter>
-            <Suspense fallback={<RouteLoadingFallback fullScreen />}>
-            <Routes>
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/signup" element={<SignUpPage />} />
-              {/* LGPD ("vamos chegar a 9.5") — texto jurídico real, público,
-                  sem autenticação: linkado no cadastro (checkbox de aceite,
-                  ver SignUpPage.tsx) e acessível a qualquer momento. */}
-              <Route path="/termos" element={<TermsOfServicePage />} />
-              <Route path="/privacidade" element={<PrivacyPolicyPage />} />
-              <Route path="/contrato-de-dados" element={<DataProcessingAgreementPage />} />
-              <Route path="/status" element={<StatusPage />} />
-              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-              <Route path="/reset-password" element={<ResetPasswordPage />} />
-              <Route path="/confirmar-email" element={<ConfirmEmailPage />} />
-              <Route path="/confirmar-destinatario" element={<ConfirmRecipientPage />} />
-              {/* "Mapa de Dados Insighta" — Domínio Pós-atendimento (Onda 2):
-                  link público de avaliação de satisfação, sem autenticação
-                  (o paciente abre no próprio celular) — ver DECISÃO em
-                  052_appointment_satisfaction.sql (backend). */}
-              <Route path="/satisfacao/:token" element={<SatisfactionRatingPage />} />
-              {/* Painel interno de Customer Success — NUNCA linkado de
-                  dentro do produto, fora do AuthContext/RBAC de clínica
-                  de propósito (ver DECISÃO em src/routes/PlatformProtectedRoute.tsx
-                  e app/api/platform_admin_auth.py no backend). */}
-              <Route path="/plataforma/login" element={<PlatformLoginPage />} />
-              <Route element={<PlatformProtectedRoute />}>
-                <Route path="/plataforma" element={<PlatformDashboardPage />} />
-              </Route>
-            <Route element={<ProtectedRoute />}>
-              {/* Assinatura (autoatendimento): fora do AppShell e da porta de
-                  cobrança, para a clínica bloqueada conseguir pagar. */}
-              <Route path="/assinatura" element={<SubscriptionPage />} />
-              {/* Senha temporária: troca obrigatória antes de qualquer tela. */}
-              <Route path="/trocar-senha" element={<ChangeTemporaryPasswordPage />} />
-              <Route element={<BillingGate />}>
-              <Route element={<AppShell />}>
-                {/* Home: briefing do gestor ou "Minhas demandas" do
-                    coordenador (ver HomeRouter). Sem RoleProtectedRoute de
-                    propósito: todo papel autenticado tem uma Home. */}
-                <Route path="/" element={<HomeRouter />} />
-                {/* O antigo Painel saiu (Redesign 2026) — o que ele tinha de
-                    trabalho virou a Fila de correção. Links antigos seguem valendo. */}
-                <Route path="/painel" element={<LegacyRedirect to="/fila-correcao" />} />
-                <Route path="/appointments" element={<AppointmentsPage />} />
-                {/* Ficha do Paciente (Roadmap "Rumo à Nota 9", Fase 4) — mesmo
-                    RBAC de GET /patients/search e /patients/{id}/ficha
-                    (atendimento/admin/owner/financeiro/auditor = todo papel),
-                    por isso sem RoleProtectedRoute. */}
-                <Route path="/pacientes" element={<PatientFichaPage />} />
-                <Route path="/waitlist" element={<WaitlistPage />} />
-                {/* Épico F1.3 do Plano Diretor: "Meus pendentes" é aberto a
-                    QUALQUER papel autenticado (mesmo RBAC de
-                    GET /insight-outcomes/mine — quem executa não é sempre
-                    quem gerencia) — sem RoleProtectedRoute de propósito. */}
-                <Route path="/meus-insights" element={<MyInsightsPage />} />
-                {/* O CRUD operacional de Pacientes foi removido por decisão de produto
-                    — o SaaS opera exclusivamente sobre dados consolidados do ERP
-                    externo (ver auditoria Go-Live). /professionals é diferente:
-                    voltou (achado F-02) porque o profissional já entra sozinho pela
-                    própria ingestão de faturamento, mas SEMPRE sem grade semanal — um
-                    CSV não carrega horário de atendimento. Sem esta tela, Agenda &
-                    Capacidade fica estruturalmente inviável para quem opera só via
-                    ingestão. Não é reintrodução do CRUD antigo, é configuração de um
-                    parâmetro de cálculo que não tem outra fonte de dado possível (ver
-                    ProfessionalsPage.tsx). O catch-all "*" abaixo cobre qualquer link
-                    antigo para /patients.
-                    RBAC: mesmo critério de escrita restrita de /upload e /contracts —
-                    editar grade é ação administrativa, fora do alcance de atendimento. */}
-                <Route element={<RoleProtectedRoute allowedRoles={["owner", "admin"]} />}>
-                  <Route path="/professionals" element={<ProfessionalsPage />} />
-                </Route>
-                {/* Equipe (Redesign 2026): o gestor acompanha as demandas
-                    atribuídas aos coordenadores (mesmo RBAC de /team/overview). */}
-                <Route element={<RoleProtectedRoute allowedRoles={["owner", "admin", "auditor"]} />}>
-                  <Route path="/equipe" element={<TeamPage />} />
-                </Route>
-                <Route element={<RoleProtectedRoute allowedRoles={["owner", "admin", "financeiro", "auditor"]} />}>
-                  <Route element={<ManagerProfileRoute />}>
-                    <Route path="/decisao" element={<ExecutiveOverviewPage />} />
-                    <Route path="/consolidado" element={<OrganizationSummaryPage />} />
-                  </Route>
-                  {/* Roadmap "Rumo à Nota 9" (Fase 2) — mesmo RBAC de /decisao
-                      (o endpoint que alimenta esta tela usa o mesmo _CAN_VIEW). */}
-                  <Route path="/agenda-risco" element={<AgendaRiscoPage />} />
-                  <Route path="/contracts" element={<ContractsPage />} />
-                  <Route path="/denial-appeals" element={<DenialAppealsPage />} />
-                  {/* Mesmo RBAC do backend em lotes.py/_CAN_READ (owner/admin/
-                      financeiro/auditor) — as ações de escrita (criar, fechar,
-                      atribuir/remover guia) usam _CAN_WRITE (sem auditor) e o
-                      backend barra sozinho, mesmo critério já usado em
-                      /denial-appeals acima. */}
-                  <Route path="/lotes" element={<LotesPage />} />
-                  {/* Rodada 10 (A1): mesmo RBAC de faturas.py (_CAN_READ). */}
-                  <Route path="/faturas" element={<FaturasPage />} />
-                  {/* Épico F3.1 do Plano Diretor — mesmo RBAC de /lotes
-                      acima (lotes.py/_CAN_READ: owner/admin/financeiro/
-                      auditor; escrita via cost_entries.py/_CAN_WRITE,
-                      sem auditor, barrado pelo próprio backend). */}
-                  <Route path="/custos" element={<CostEntriesPage />} />
-                  {/* Achado do Dossiê Insighta RCM — Onda 2 do Plano de
-                      Ação: mesmo RBAC de /custos acima (leitura via
-                      marketing_spend.py/_CAN_READ, escrita via
-                      _CAN_WRITE, sem auditor, barrado pelo backend). */}
-                  <Route path="/marketing-spend" element={<MarketingSpendPage />} />
-                </Route>
-                {/* Upload é ação de escrita — mesmo RBAC do backend em
-                    ingestion.py/_CAN_MANAGE e contracts.py/_CAN_WRITE
-                    (owner/admin/financeiro); sem auditor, que é só leitura. */}
-                {/* Rodada 8 (B2): o auditor consulta importações e faturamento em
-                    modo leitura (as próprias páginas escondem a escrita, que a API
-                    já recusa para esse papel). */}
-                <Route element={<RoleProtectedRoute allowedRoles={["owner", "admin", "financeiro", "auditor"]} />}>
-                  <Route path="/upload" element={<UploadCenterPage />} />
-                  <Route path="/faturamento" element={<BillingOperationsPage />} />
-                </Route>
-                <Route element={<RoleProtectedRoute allowedRoles={["owner", "admin", "financeiro"]} />}>
-                  {/* Registrar pagamento recebido (POST /billing/{id}/settle) e
-                      cadastro avulso de Guia TISS (POST /guias) — mesmo RBAC de
-                      /upload: ação de escrita financeira, fora do alcance de
-                      "atendimento" e de "auditor" (leitura só). */}
-                  <Route path="/fila-correcao" element={<BillingRiskQueuePage />} />
-                  {/* Destino que o próprio toast de sucesso da Central de Upload já
-                      promete ("veja a tela de Setup") — mesmo RBAC de /upload
-                      (ingestion.py/_CAN_MANAGE: owner/admin/financeiro). */}
-                  <Route path="/setup" element={<SetupPage />} />
-                </Route>
-                <Route path="/conta/seguranca" element={<AccountSecurityPage />} />
-                <Route element={<RoleProtectedRoute allowedRoles={["owner", "admin"]} />}>
-                  <Route path="/admin/users" element={<UsersPage />} />
-                  <Route path="/admin/integrations" element={<IntegrationsPage />} />
-                  <Route path="/admin/tenant" element={<TenantPage />} />
-                  <Route path="/admin/saude-da-conta" element={<AccountHealthPage />} />
-                  <Route path="/admin/report-recipients" element={<ReportRecipientsPage />} />
-                </Route>
-                {/* auditor também acessa a trilha de auditoria (RBAC igual ao backend em audit_log.py) */}
-                <Route element={<RoleProtectedRoute allowedRoles={["owner", "admin", "auditor"]} />}>
-                  <Route path="/admin/audit-log" element={<AuditLogPage />} />
-                </Route>
-              </Route>
-              </Route>
-              {/* Achado CRÍTICO da Auditoria de Prontidão v1 ("produto não
-                  se cobra sozinho") — checkout de upgrade self-service.
-                  Fora do AppShell de propósito (sem sidebar/topbar): mesma
-                  experiência de "tela cheia de pagamento" de qualquer
-                  checkout real, dentro do ProtectedRoute porque só um
-                  owner autenticado pode chegar aqui (ver RBAC no backend,
-                  subscription.py). */}
-              <Route path="/checkout/mock/:checkoutId" element={<MockCheckoutPage />} />
-              {/* Irmã da rota acima — ativa quando o backend usa
-                  StripePaymentProvider em vez do mock (ver DECISÃO em
-                  app/services/stripe_payment_provider.py). O Stripe
-                  redireciona pra cá depois de cobrar de verdade na
-                  própria tela dele; esta página só confirma e mostra
-                  o resultado, nunca coleta cartão. */}
-              <Route path="/checkout/stripe/:checkoutId" element={<StripeCheckoutReturnPage />} />
-            </Route>
-            <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-            </Suspense>
-          </BrowserRouter>
+          <RouterProvider router={router} />
           </ModalStackProvider>
         </ToastProvider>
       </AuthProvider>

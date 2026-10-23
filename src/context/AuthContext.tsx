@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
+import { rememberLoginPassword } from "@/lib/loginMemory";
+import { createContext, useContext, useState, useCallback, useEffect, useRef, type ReactNode } from "react";
 import {
   login as loginRequest,
   register as registerRequest,
@@ -44,6 +45,10 @@ interface AuthContextValue {
   loginWithGoogle: (credential: string) => Promise<GoogleAuthResult>;
   isLoggingInWithGoogle: boolean;
   logout: () => void;
+  /** UX-24: a sessão caiu com a tela aberta — pede a senha por cima. */
+  reauthRequired: boolean;
+  reauthenticate: (email: string, password: string) => Promise<"ok" | "mfa">;
+  abandonSession: () => void;
   /** Erro amigável da última tentativa de login (null quando não há erro). */
   loginError: string | null;
   isLoggingIn: boolean;
@@ -112,6 +117,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [pendingCredentials, setPendingCredentials] = useState<{ email: string; password: string } | null>(null);
   const [pendingGoogleCredential, setPendingGoogleCredential] = useState<string | null>(null);
   const [sessionExpired, setSessionExpired] = useState(false);
+  const [reauthRequired, setReauthRequired] = useState(false);
   const [mfaToken, setMfaToken] = useState<string | null>(null);
 
   /** true quando a resposta pediu o código do MFA (login para aqui). */
@@ -137,6 +143,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
       if (needsMfa(response)) return;
+      rememberLoginPassword(password);
       storeTokens(response.access_token!, response.refresh_token);
       setUser(decodeJwtPayload(response.access_token!));
     } catch (err) {
@@ -295,6 +302,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const dismissSessionExpired = useCallback(() => setSessionExpired(false), []);
 
+  /** UX-24: entra de novo sem sair da tela (mesma clínica). */
+  const reauthenticate = useCallback(
+    async (email: string, password: string): Promise<"ok" | "mfa"> => {
+      const response = await loginRequest(email, password, user?.tenant_id);
+      if (response.mfa_required || !response.access_token) return "mfa";
+      storeTokens(response.access_token, response.refresh_token);
+      setUser(decodeJwtPayload(response.access_token));
+      setReauthRequired(false);
+      return "ok";
+    },
+    [user?.tenant_id]
+  );
+
+  /** Desiste de continuar: sai e volta ao login (que devolve à mesma tela). */
+  const abandonSession = useCallback(() => {
+    setReauthRequired(false);
+    setSessionExpired(true);
+    logout();
+  }, [logout]);
+
   // Escuta o evento disparado por api-client.ts em qualquer 401 vindo do
   // backend (token expirado/inválido) — desloga e deixa o ProtectedRoute
   // cuidar do redirecionamento, em vez de cada tela tratar isso na mão.
@@ -303,8 +330,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // um logout manual, isto sempre significa "havia uma sessão e ela
   // caiu", daí marcar sessionExpired sem precisar checar se `user`
   // ainda estava preenchido.
+  // UX-24: com alguém logado, a sessão que cai no meio de um formulário não
+  // desmonta mais a tela (perdia o que estava digitado e voltava para outra
+  // página): abre o pedido de senha por cima (SessionExpiredDialog) e a pessoa
+  // continua de onde parou. Sem ninguém logado, segue o fluxo antigo.
+  const userRef = useRef(user);
+  userRef.current = user;
   useEffect(() => {
     const handleUnauthorized = () => {
+      if (userRef.current) {
+        setReauthRequired(true);
+        return;
+      }
       setSessionExpired(true);
       logout();
     };
@@ -331,6 +368,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         cancelTenantSelection,
         sessionExpired,
         dismissSessionExpired,
+        reauthRequired,
+        reauthenticate,
+        abandonSession,
         mfaChallenge: mfaToken !== null,
         verifyMfa,
         cancelMfa,

@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { AlertTriangle, Circle, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { BentoCard, type BentoCardProps } from "@/components/ui/BentoGrid";
+import { InfoTip } from "@/components/ui/InfoTip";
 
 // Épico F4.3 do Plano Diretor ("Frescor de dado / SLA de atualização")
 // — selo "atualizado há X min" no header de qualquer Panel que passe
@@ -53,6 +54,7 @@ function FreshnessBadge({ updatedAt }: { updatedAt: number }) {
 export function Panel({
   title,
   subtitle,
+  help,
   action,
   actions,
   updatedAt,
@@ -64,6 +66,8 @@ export function Panel({
 }: {
   title?: string;
   subtitle?: string;
+  /** Como o painel é calculado (o "i" ao lado do título). */
+  help?: string;
   action?: ReactNode;
   /** Slot adicional no header, ao lado de `action` (ex: barra de filtros, ações em lote). */
   actions?: ReactNode;
@@ -85,7 +89,12 @@ export function Panel({
       {(title || subtitle || action || actions || updatedAt) && (
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-hairline px-6 py-5">
           <div>
-            {title && <h2 className="text-base font-semibold text-ink">{title}</h2>}
+            {title && (
+              <h2 className="flex items-center gap-1.5 text-base font-semibold text-ink">
+                {title}
+                {help && <InfoTip label={title} text={help} />}
+              </h2>
+            )}
             {subtitle && <p className="mt-1 text-[13px] text-ink-muted">{subtitle}</p>}
           </div>
           {(action || actions || updatedAt) && (
@@ -137,7 +146,7 @@ export function EmptyState({ message, icon, action }: EmptyStateProps) {
 function SkeletonBar({ className }: { className?: string }) {
   return (
     <div className={cn("relative overflow-hidden rounded-sm bg-canvas-raised", className)}>
-      <div className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-canvas-surface/60 to-transparent" />
+      <div className="absolute inset-0 -translate-x-full animate-shimmer bg-linear-to-r from-transparent via-canvas-surface/60 to-transparent" />
     </div>
   );
 }

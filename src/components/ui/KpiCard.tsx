@@ -3,6 +3,8 @@ import { NarrativeInsight } from "@/components/ui/NarrativeInsight";
 import { BentoCard } from "@/components/ui/BentoGrid";
 import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
 import { cn } from "@/lib/cn";
+import { InfoTip } from "@/components/ui/InfoTip";
+import { METRIC_HELP } from "@/lib/metricHelp";
 
 interface KpiCardProps {
   label: string;
@@ -36,13 +38,16 @@ interface KpiCardProps {
    * Valor em texto com GRADIENTE em vez de cor sólida (ver canvas de
    * design, Main.dc.html: .grad-text-tone + .grad-{tone}) — reservado
    * para a métrica PRINCIPAL de cada dashboard (ex: "Faturamento bruto"
-   * no Painel, "Buraco financeiro"/"Caixa protegido" na Sala de
+   * no Painel, "Cobrado abaixo do contrato"/"Caixa protegido" na Sala de
    * Comando), nunca para todo KPI de um tom só porque tem cor — o
    * canvas usa isso com parcimônia de propósito, é um destaque, não um
    * padrão. Sem efeito em tone="neutral" (gradiente precisa de uma
    * dupla de cores do próprio tom).
    */
   gradient?: boolean;
+  /** Como o número é calculado (o "i" ao lado do rótulo). Sem isto, usa
+   * METRIC_HELP pelo rótulo, quando houver. */
+  help?: string;
 }
 
 const toneClasses: Record<NonNullable<KpiCardProps["tone"]>, string> = {
@@ -78,7 +83,9 @@ export function KpiCard({
   numericValue,
   format,
   gradient = false,
+  help,
 }: KpiCardProps) {
+  const helpText = help ?? METRIC_HELP[label];
   const compact = size === "compact";
   const gradientClasses = gradient ? toneGradientClasses[tone] : null;
 
@@ -89,7 +96,10 @@ export function KpiCard({
       className={cn(compact ? "p-4" : "px-6 py-5")}
     >
       <div className={cn("flex items-center justify-between", compact ? "mb-1.5" : "mb-2.5")}>
-        <span className="text-[13px] text-ink-muted">{label}</span>
+        <span className="inline-flex items-center gap-1 text-[13px] text-ink-muted">
+          {label}
+          {helpText && <InfoTip label={label} text={helpText} />}
+        </span>
         {isPlaceholder && (
           <span
             title="Aguardando endpoint de agregação no backend — valor de exemplo"
@@ -136,6 +146,8 @@ export function KpiCard({
           <NarrativeInsight text={narrative} />
         </div>
       )}
+      {/* Compacto: só a frase curta de estado vazio (ex.: "ainda não medido"). */}
+      {compact && narrative && <p className="mt-1.5 text-2xs leading-snug text-ink-faint">{narrative}</p>}
     </BentoCard>
   );
 }

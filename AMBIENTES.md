@@ -15,3 +15,5 @@ Resumo do que é específico do frontend:
 `VITE_APP_ENV=homologacao` mostra uma faixa amarela "HOMOLOGAÇÃO — dados fictícios" no topo de todas as telas, inclusive no login, e põe `[HML]` no título da aba (`src/components/layout/EnvironmentBanner.tsx`). As variáveis `VITE_*` entram no **build**, então, depois de mudar uma delas na Railway, faça um novo deploy.
 
 Fluxo: `feature/*` → PR para `develop` (homologação) → PR `develop` → `main` (produção). O CI (`.github/workflows/ci.yml`: lint, testes, tipos, build e audit) roda nas duas branches.
+
+Sem GitHub Actions (cobrança da conta, cota de minutos): rode `scripts/ci_local.sh` (os mesmos passos do `ci.yml`) e cole o resumo no PR. A jornada no navegador roda pelo `scripts/ci_local.sh --e2e` do backend. Detalhes na seção 9 do `AMBIENTES.md` do backend.

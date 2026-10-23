@@ -5,6 +5,8 @@ import { LoadingState, ErrorState, EmptyState } from "@/components/ui/Panel";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import type { MarketingChannelItem, MarketingChannels } from "@/lib/types";
+import { withPlanGate } from "@/components/billing/PlanGate";
+import { FEATURES } from "@/lib/plan";
 
 /**
  * Raio-X da Receita, frente "Gestão eficiente" — ROI de marketing
@@ -43,7 +45,7 @@ function ChannelRow({ item, rank }: { item: MarketingChannelItem; rank: number }
   );
 }
 
-export function MarketingChannelsPanel({ dateFrom, dateTo }: { dateFrom: string; dateTo: string }) {
+function MarketingChannelsPanelInner({ dateFrom, dateTo }: { dateFrom: string; dateTo: string }) {
   const { data, isLoading, error } = useQuery({
     queryKey: ["analytics", "marketing-channels", dateFrom, dateTo],
     queryFn: () =>
@@ -70,7 +72,7 @@ export function MarketingChannelsPanel({ dateFrom, dateTo }: { dateFrom: string;
       <div className="px-4 pt-4">
         <p className="text-sm font-medium text-ink">Aquisição por canal</p>
         <p className="mt-1 max-w-2xl text-xs text-ink-muted">
-          CAC (custo por paciente novo) usa o gasto e os pacientes adquiridos NESTE período; receita média por
+          Custo por paciente novo usa o gasto e os pacientes adquiridos NESTE período; receita média por
           paciente usa o histórico completo de cada um — quanto cada paciente trazido por essa campanha já valeu
           até hoje, não só o que gerou nesta janela.
         </p>
@@ -83,7 +85,7 @@ export function MarketingChannelsPanel({ dateFrom, dateTo }: { dateFrom: string;
               <th className="py-3 pr-3">Campanha</th>
               <th className="py-3 pr-3 text-right">Gasto</th>
               <th className="py-3 pr-3 text-right">Adquiridos</th>
-              <th className="py-3 pr-3 text-right">CAC</th>
+              <th className="py-3 pr-3 text-right">Custo por paciente novo</th>
               <th className="py-3 pl-3 pr-4 text-right">Receita média/paciente</th>
             </tr>
           </thead>
@@ -97,3 +99,6 @@ export function MarketingChannelsPanel({ dateFrom, dateTo }: { dateFrom: string;
     </BentoCard>
   );
 }
+
+// Plano Pro (src/lib/plan.ts): no Basic, vira a prévia com o convite.
+export const MarketingChannelsPanel = withPlanGate(MarketingChannelsPanelInner, FEATURES.patientsAdvanced);

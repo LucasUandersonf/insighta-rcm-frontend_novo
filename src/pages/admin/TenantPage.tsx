@@ -5,6 +5,10 @@ import { Building2, Copy, Download, Link2, Sparkles } from "lucide-react";
 import { Panel, LoadingState, ErrorState } from "@/components/ui/Panel";
 import { Button } from "@/components/ui/Button";
 import { TextField } from "@/components/ui/FormField";
+import { MoneyField } from "@/components/ui/MoneyField";
+import { clinicIsoDate } from "@/lib/dates";
+import { useUnsavedChanges } from "@/lib/unsavedChanges";
+import { formatMoneyInput, parseMoneyBR } from "@/lib/money";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Badge } from "@/components/ui/Badge";
 import { apiClient, ApiError } from "@/lib/api-client";
@@ -14,6 +18,7 @@ import { useAuth } from "@/context/AuthContext";
 import type {
   AnnualGoalSuggestion,
   CheckoutSession,
+  SubscriptionOffer,
   SubscriptionStatus,
   DenialRiskThresholdSuggestion,
   HealthScoreCeilingSuggestion,
@@ -26,6 +31,7 @@ import type {
   TenantExport,
   TenantExportDownload,
 } from "@/lib/types";
+import { plural } from "@/lib/plural";
 
 function formatDateTime(value: string): string {
   return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(value));
@@ -52,6 +58,21 @@ function formatCurrency(value: number): string {
  * Só owner inicia checkout (mesmo RBAC do backend, _CAN_CHECKOUT em
  * app/api/v1/endpoints/subscription.py).
  */
+// UX-13: o plano exibido é o contratado (Founders), não o tier interno.
+function ContractedPlanBadge({ tenant }: { tenant: Tenant }) {
+  const { data: subscription } = useQuery({
+    queryKey: ["subscription", "status"],
+    queryFn: () => apiClient.get<SubscriptionStatus>("/api/v1/subscription"),
+  });
+  const { data: offer } = useQuery({
+    queryKey: ["subscription", "offer"],
+    queryFn: () => apiClient.get<SubscriptionOffer>("/api/v1/subscription/offer"),
+    retry: false,
+  });
+  const founders = !!subscription?.founders_member || (!!offer?.available && !!offer.founders);
+  return <Badge tone="accent">{founders ? "Founders" : (PLAN_LABELS[tenant.plan_tier] ?? tenant.plan_tier)}</Badge>;
+}
+
 function SubscriptionPlanPanel({ tenant, isOwner }: { tenant: Tenant; isOwner: boolean }) {
   const navigate = useNavigate();
   const { showError } = useToast();
@@ -72,7 +93,17 @@ function SubscriptionPlanPanel({ tenant, isOwner }: { tenant: Tenant; isOwner: b
     queryKey: ["subscription", "status"],
     queryFn: () => apiClient.get<SubscriptionStatus>("/api/v1/subscription"),
   });
-  if (subscription?.provider === "asaas") {
+  // UX-13: a oferta vendida no cadastro (Founders) é o plano da clínica —
+  // o catálogo antigo (Starter/Professional/Enterprise) não aparece
+  // enquanto essa oferta for a única vendida.
+  const { data: offer } = useQuery({
+    queryKey: ["subscription", "offer"],
+    queryFn: () => apiClient.get<SubscriptionOffer>("/api/v1/subscription/offer"),
+    retry: false,
+  });
+  if (subscription && (subscription.provider === "asaas" || offer?.available)) {
+    const priceCents = subscription.current_price_cents ?? offer?.price_cents ?? null;
+    const isFounders = subscription.founders_member || !!offer?.founders;
     const label: Record<string, string> = {
       active: "Ativa",
       past_due: "Cobrança em aberto",
@@ -84,16 +115,16 @@ function SubscriptionPlanPanel({ tenant, isOwner }: { tenant: Tenant; isOwner: b
         <div className="flex flex-wrap items-center justify-between gap-3 p-4">
           <div className="flex flex-col gap-1">
             <span className="text-sm font-medium text-ink">
-              {subscription.founders_member ? "Plano Founders" : "Assinatura mensal"} · {label[subscription.billing_status] ?? subscription.billing_status}
+              {isFounders ? "Plano Founders" : "Assinatura mensal"} · {label[subscription.billing_status] ?? subscription.billing_status}
             </span>
-            {subscription.current_price_cents !== null && (
-              <span className="text-sm text-ink-muted">{formatCurrency(subscription.current_price_cents / 100)}/mês</span>
-            )}
-            {subscription.founders_member && subscription.price_locked_until && (
+            {priceCents !== null && <span className="text-sm text-ink-muted">{formatCurrency(priceCents / 100)}/mês</span>}
+            {isFounders && subscription.price_locked_until ? (
               <span className="text-2xs text-ink-faint">
                 Preço garantido até {new Intl.DateTimeFormat("pt-BR", { dateStyle: "long", timeZone: "UTC" }).format(new Date(subscription.price_locked_until))}
               </span>
-            )}
+            ) : isFounders && offer?.founders_lock_months ? (
+              <span className="text-2xs text-ink-faint">Preço garantido por {offer.founders_lock_months} meses a partir da assinatura</span>
+            ) : null}
           </div>
           <Button variant="secondary" onClick={() => navigate("/assinatura")}>
             Ver assinatura
@@ -141,7 +172,7 @@ function SubscriptionPlanPanel({ tenant, isOwner }: { tenant: Tenant; isOwner: b
             })}
           </div>
         )}
-        {!isOwner && <p className="mt-3 text-2xs text-ink-faint">Só o papel "owner" pode mudar de plano.</p>}
+        {!isOwner && <p className="mt-3 text-2xs text-ink-faint">Só quem é proprietário(a) da clínica pode mudar de plano.</p>}
       </div>
     </Panel>
   );
@@ -152,7 +183,7 @@ function SubscriptionPlanPanel({ tenant, isOwner }: { tenant: Tenant; isOwner: b
  * Auditoria Go-Live: campo MANUAL, nunca calculado automaticamente pelo
  * sistema (é uma decisão de negócio da clínica, não uma inferência a
  * partir do histórico). Alimenta o insight de desempenho anual na Sala
- * de Comando (ver smart_insights_engine.py — comparação com o
+ * de Comando (ver app/services/insights (backend) — comparação com o
  * faturamento acumulado no ano e recomendação de CRM/recuperação de
  * pacientes inativos quando abaixo da meta).
  */
@@ -162,8 +193,9 @@ function AnnualGoalPanel({ tenant, isOwner }: { tenant: Tenant; isOwner: boolean
   const [goalInput, setGoalInput] = useState("");
 
   useEffect(() => {
-    setGoalInput(tenant.annual_revenue_goal !== null ? String(tenant.annual_revenue_goal) : "");
+    setGoalInput(formatMoneyInput(tenant.annual_revenue_goal));
   }, [tenant.annual_revenue_goal]);
+  useUnsavedChanges(isOwner && goalInput !== formatMoneyInput(tenant.annual_revenue_goal), "a meta de faturamento");
 
   // Épico F3.3 do Plano Diretor ("Metas e cenários orientados a dados")
   // — "meta anual sugerida (crescimento histórico + percentil de
@@ -176,7 +208,8 @@ function AnnualGoalPanel({ tenant, isOwner }: { tenant: Tenant; isOwner: boolean
   });
 
   const mutation = useMutation({
-    mutationFn: (annual_revenue_goal: number) => apiClient.patch<Tenant>("/api/v1/tenant", { annual_revenue_goal }),
+    // Texto normalizado ("2400000.00"), nunca float: ver src/lib/money.ts.
+    mutationFn: (annual_revenue_goal: string) => apiClient.patch<Tenant>("/api/v1/tenant", { annual_revenue_goal }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tenant"] });
       showSuccess("Meta de faturamento anual atualizada.");
@@ -186,12 +219,16 @@ function AnnualGoalPanel({ tenant, isOwner }: { tenant: Tenant; isOwner: boolean
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    const parsed = Number(goalInput.replace(",", "."));
-    if (!Number.isFinite(parsed) || parsed <= 0) {
+    const parsed = parseMoneyBR(goalInput);
+    if (!parsed.ok) {
+      showError(parsed.error);
+      return;
+    }
+    if (parsed.value <= 0) {
       showError("Informe um valor de meta maior que zero.");
       return;
     }
-    mutation.mutate(parsed);
+    mutation.mutate(parsed.normalized);
   }
 
   return (
@@ -206,20 +243,18 @@ function AnnualGoalPanel({ tenant, isOwner }: { tenant: Tenant; isOwner: boolean
             Nenhuma meta configurada ainda — sem ela, a Sala de Comando não mostra o insight de desempenho anual.
           </p>
         )}
-        <div className="flex max-w-md items-end gap-3">
-          <TextField
-            label="Meta de faturamento anual (R$)"
-            type="number"
-            min={0.01}
-            step="0.01"
-            value={goalInput}
-            onChange={(e) => setGoalInput(e.target.value)}
-            disabled={!isOwner}
-            placeholder="Ex: 1200000.00"
-            className="mb-0 flex-1"
-          />
+        <div className="flex max-w-md items-start gap-3">
+          <div className="flex-1">
+            <MoneyField
+              label="Meta de faturamento anual (R$)"
+              value={goalInput}
+              onValueChange={setGoalInput}
+              disabled={!isOwner}
+              placeholder="Ex.: 1.200.000,00"
+            />
+          </div>
           {isOwner && (
-            <Button type="submit" disabled={mutation.isPending || !goalInput}>
+            <Button type="submit" className="mt-6" disabled={mutation.isPending || !goalInput}>
               {mutation.isPending ? "Salvando..." : "Salvar meta"}
             </Button>
           )}
@@ -266,7 +301,7 @@ function AnnualGoalPanel({ tenant, isOwner }: { tenant: Tenant; isOwner: boolean
                         type="button"
                         variant="ghost"
                         size="xs"
-                        onClick={() => setGoalInput(String(suggestionQuery.data!.own_trend_suggested_goal))}
+                        onClick={() => setGoalInput(formatMoneyInput(suggestionQuery.data!.own_trend_suggested_goal))}
                       >
                         Usar
                       </Button>
@@ -291,7 +326,7 @@ function AnnualGoalPanel({ tenant, isOwner }: { tenant: Tenant; isOwner: boolean
                         type="button"
                         variant="ghost"
                         size="xs"
-                        onClick={() => setGoalInput(String(suggestionQuery.data!.network_pace_suggested_goal))}
+                        onClick={() => setGoalInput(formatMoneyInput(suggestionQuery.data!.network_pace_suggested_goal))}
                       >
                         Usar
                       </Button>
@@ -327,6 +362,12 @@ function NoShowThresholdsPanel({ tenant, isOwner }: { tenant: Tenant; isOwner: b
     setLowInput(tenant.no_show_low_threshold !== null ? String(tenant.no_show_low_threshold * 100) : "");
     setMediumInput(tenant.no_show_medium_threshold !== null ? String(tenant.no_show_medium_threshold * 100) : "");
   }, [tenant.no_show_low_threshold, tenant.no_show_medium_threshold]);
+  useUnsavedChanges(
+    isOwner &&
+      (lowInput !== (tenant.no_show_low_threshold !== null ? String(tenant.no_show_low_threshold * 100) : "") ||
+        mediumInput !== (tenant.no_show_medium_threshold !== null ? String(tenant.no_show_medium_threshold * 100) : "")),
+    "os limites de risco de falta"
+  );
 
   // Sugestão calculada do HISTÓRICO REAL desta clínica (mediana/P85 da
   // taxa de falta por paciente) — buscada só quando o usuário pede
@@ -432,7 +473,7 @@ function NoShowThresholdsPanel({ tenant, isOwner }: { tenant: Tenant; isOwner: b
             </div>
             {suggestionQuery.data && suggestionQuery.data.low_threshold === null && (
               <p className="mt-2 text-2xs text-pending">
-                Ainda não há histórico suficiente ({suggestionQuery.data.sample_size} paciente(s) qualificado(s) — são
+                Ainda não há histórico suficiente ({plural(suggestionQuery.data.sample_size, "paciente qualificado", "pacientes qualificados")} — são
                 necessários pelo menos 10) para uma sugestão confiável.
               </p>
             )}
@@ -467,7 +508,7 @@ function NoShowThresholdsPanel({ tenant, isOwner }: { tenant: Tenant; isOwner: b
 /**
  * Épico F2.1 do Plano Diretor ("Calibração por especialidade/porte") —
  * mesmo padrão de NoShowThresholdsPanel acima, aplicado ao limiar de
- * risco de glosa (denial_risk_pct, ver smart_insights_engine.py). Campos
+ * risco de glosa (denial_risk_pct, ver app/services/insights (backend)). Campos
  * PERCENTUAIS (0-100), não frações.
  */
 function DenialRiskThresholdsPanel({ tenant, isOwner }: { tenant: Tenant; isOwner: boolean }) {
@@ -480,6 +521,12 @@ function DenialRiskThresholdsPanel({ tenant, isOwner }: { tenant: Tenant; isOwne
     setWarningInput(tenant.denial_risk_warning_threshold !== null ? String(tenant.denial_risk_warning_threshold) : "");
     setCriticalInput(tenant.denial_risk_critical_threshold !== null ? String(tenant.denial_risk_critical_threshold) : "");
   }, [tenant.denial_risk_warning_threshold, tenant.denial_risk_critical_threshold]);
+  useUnsavedChanges(
+    isOwner &&
+      (warningInput !== (tenant.denial_risk_warning_threshold !== null ? String(tenant.denial_risk_warning_threshold) : "") ||
+        criticalInput !== (tenant.denial_risk_critical_threshold !== null ? String(tenant.denial_risk_critical_threshold) : "")),
+    "os limites de risco de glosa"
+  );
 
   const suggestionQuery = useQuery({
     queryKey: ["tenant", "denial-risk-thresholds", "suggested"],
@@ -581,7 +628,7 @@ function DenialRiskThresholdsPanel({ tenant, isOwner }: { tenant: Tenant; isOwne
             </div>
             {suggestionQuery.data && suggestionQuery.data.warning_threshold === null && (
               <p className="mt-2 text-2xs text-pending">
-                Ainda não há histórico suficiente ({suggestionQuery.data.sample_size} mês(es) fechado(s) — são
+                Ainda não há histórico suficiente ({plural(suggestionQuery.data.sample_size, "mês fechado", "meses fechados")} — são
                 necessários pelo menos 6) para uma sugestão confiável.
               </p>
             )}
@@ -628,6 +675,12 @@ function HealthScoreCeilingsPanel({ tenant, isOwner }: { tenant: Tenant; isOwner
     setDenialInput(tenant.health_score_denial_ceiling !== null ? String(tenant.health_score_denial_ceiling * 100) : "");
     setNoShowInput(tenant.health_score_no_show_ceiling !== null ? String(tenant.health_score_no_show_ceiling * 100) : "");
   }, [tenant.health_score_denial_ceiling, tenant.health_score_no_show_ceiling]);
+  useUnsavedChanges(
+    isOwner &&
+      (denialInput !== (tenant.health_score_denial_ceiling !== null ? String(tenant.health_score_denial_ceiling * 100) : "") ||
+        noShowInput !== (tenant.health_score_no_show_ceiling !== null ? String(tenant.health_score_no_show_ceiling * 100) : "")),
+    "os tetos da nota de saúde"
+  );
 
   const suggestionQuery = useQuery({
     queryKey: ["tenant", "health-score-ceilings", "suggested"],
@@ -987,7 +1040,7 @@ export function DataExportPanel({ isOwner }: { isOwner: boolean }) {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `insighta-dados-${new Date().toISOString().slice(0, 10)}.zip`;
+    link.download = `insighta-dados-${clinicIsoDate()}.zip`;
     link.click();
     setTimeout(() => URL.revokeObjectURL(url), 10_000);
     showSuccess("Exportação pronta. O arquivo foi baixado.");
@@ -1098,6 +1151,10 @@ export function TenantPage() {
       setSpecialty(tenant.specialty ?? "");
     }
   }, [tenant]);
+  useUnsavedChanges(
+    !!tenant && isOwner && (legalName !== tenant.legal_name || tradeName !== tenant.trade_name || specialty !== (tenant.specialty ?? "")),
+    "os dados da clínica"
+  );
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -1135,7 +1192,7 @@ export function TenantPage() {
                 <TextField label="CNPJ" value={tenant.cnpj} disabled className="mb-0" />
                 <div>
                   <label className="mb-1.5 block text-xs font-medium text-ink-muted">Plano</label>
-                  <Badge tone="accent">{PLAN_LABELS[tenant.plan_tier] ?? tenant.plan_tier}</Badge>
+                  <ContractedPlanBadge tenant={tenant} />
                 </div>
                 <TextField
                   label="Especialidade predominante"
@@ -1147,9 +1204,7 @@ export function TenantPage() {
                 />
               </div>
               <p className="mt-1.5 text-2xs text-ink-faint">
-                Contexto descritivo — hoje não seleciona nenhum benchmark automático de mercado (a Insighta ainda não
-                tem esse dado real e validado por especialidade). Os limiares abaixo continuam calibrados pelo
-                histórico da sua própria clínica.
+                Usada para descrever a clínica. Os alertas continuam calibrados pelo histórico da própria clínica.
               </p>
               <p className="mt-4 text-2xs text-ink-faint">CNPJ não pode ser alterado por aqui — fale com o suporte.</p>
               {isOwner && (

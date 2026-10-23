@@ -5,6 +5,8 @@ import { RegisterOutreachButton } from "@/components/dashboard/RegisterOutreachB
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import type { RfmResponse, RfmSegment } from "@/lib/types";
+import { withPlanGate } from "@/components/billing/PlanGate";
+import { FEATURES } from "@/lib/plan";
 
 /**
  * RFM completo (Gaps Dossiê Insighta RCM, item 4) — Recência,
@@ -37,7 +39,7 @@ function formatCurrencyCompact(value: number): string {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(value);
 }
 
-export function PatientRfmPanel() {
+function PatientRfmPanelInner() {
   const { data, isLoading, error, dataUpdatedAt } = useQuery({
     queryKey: ["analytics", "patient-rfm"],
     queryFn: () => apiClient.get<RfmResponse>("/api/v1/analytics/patient-rfm"),
@@ -106,3 +108,6 @@ export function PatientRfmPanel() {
     </Panel>
   );
 }
+
+// Plano Pro (src/lib/plan.ts): no Basic, vira a prévia com o convite.
+export const PatientRfmPanel = withPlanGate(PatientRfmPanelInner, FEATURES.patientsAdvanced);

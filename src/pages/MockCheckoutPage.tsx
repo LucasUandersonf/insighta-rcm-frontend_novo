@@ -79,7 +79,7 @@ export function MockCheckoutPage() {
           <p className="mt-2 text-sm leading-relaxed text-ink-muted">
             Este link de checkout não existe mais, ou já foi usado. Volte para Minha Clínica e inicie o upgrade de novo.
           </p>
-          <Button className="mt-4 w-full" onClick={() => navigate("/admin/tenant")}>
+          <Button className="mt-4 w-full" onClick={() => navigate("/admin/clinica")}>
             Voltar para Minha Clínica
           </Button>
         </div>
@@ -98,7 +98,7 @@ export function MockCheckoutPage() {
           <p className="mt-2 text-sm leading-relaxed text-ink-muted">
             Sua assinatura foi confirmada com sucesso. O novo plano já está valendo para a sua clínica.
           </p>
-          <Button className="mt-4 w-full" onClick={() => navigate("/admin/tenant")}>
+          <Button className="mt-4 w-full" onClick={() => navigate("/admin/clinica")}>
             Voltar para Minha Clínica
           </Button>
         </div>

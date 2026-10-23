@@ -106,7 +106,7 @@ export function AssignDemandModal({
       <div className="flex flex-col gap-5">
         <p className="-mt-2 text-[13px] text-ink-muted">Você repassa a demanda e acompanha. Quem resolve é o coordenador do setor.</p>
 
-        <div className="flex items-start gap-3.5 rounded-[14px] border border-border-hairline bg-white/[0.03] p-4">
+        <div className="flex items-start gap-3.5 rounded-[14px] border border-border-hairline bg-white/3 p-4">
           <SeverityPill severity={item.severity} />
           <div className="flex min-w-0 flex-col gap-1">
             <span className="text-sm font-semibold text-ink">{item.title}</span>
@@ -131,7 +131,7 @@ export function AssignDemandModal({
                 onClick={() => setSector(s.sector)}
                 className={cn(
                   "flex w-full items-center gap-3.5 rounded-xl border px-3.5 py-3 text-left transition-colors",
-                  on ? "border-accent/50 bg-brand/[0.14]" : "border-border-hairline bg-white/[0.02] hover:bg-white/[0.04]",
+                  on ? "border-accent/50 bg-brand/[0.14]" : "border-border-hairline bg-white/2 hover:bg-white/4",
                   !enabled && "cursor-not-allowed opacity-55"
                 )}
               >
@@ -142,11 +142,11 @@ export function AssignDemandModal({
                 <span className="flex flex-col gap-0.5">
                   <span className="text-sm font-medium text-ink">{s.label}</span>
                   <span className={cn("text-xs", enabled ? "text-ink-muted" : "text-pending")}>
-                    {s.coordinator ? `Coordenação: ${s.coordinator.full_name}` : "Sem coordenador — Cadastre em Usuários e permissões"}
+                    {s.coordinator ? `Coordenação: ${s.coordinator.full_name}` : "Sem coordenador — cadastre em Usuários"}
                   </span>
                 </span>
                 {s.sector === suggested && (
-                  <span className="ml-auto rounded-md bg-accent/[0.16] px-2 py-[3px] text-2xs font-semibold text-accent">Sugerido</span>
+                  <span className="ml-auto rounded-md bg-accent/16 px-2 py-[3px] text-2xs font-semibold text-accent">Sugerido</span>
                 )}
               </button>
             );
@@ -154,8 +154,8 @@ export function AssignDemandModal({
           {options.length > 0 && options.every((s) => !s.coordinator) && (
             <p className="text-xs text-pending">
               Nenhum setor tem coordenador ainda.{" "}
-              <Link to="/admin/users" className="underline" onClick={handleClose}>
-                Cadastrar em Usuários e permissões
+              <Link to="/admin/usuarios" className="underline" onClick={handleClose}>
+                Cadastrar em Usuários
               </Link>
             </p>
           )}
@@ -172,7 +172,7 @@ export function AssignDemandModal({
                 onClick={() => setDeadline(i)}
                 className={cn(
                   "h-[34px] rounded-full border px-3.5 text-[13px] transition-colors",
-                  deadline === i ? "border-accent/45 bg-brand/20 text-ink" : "border-white/[0.12] text-ink-muted hover:text-ink"
+                  deadline === i ? "border-accent/45 bg-brand/20 text-ink" : "border-white/12 text-ink-muted hover:text-ink"
                 )}
               >
                 {d.label}
@@ -185,7 +185,7 @@ export function AssignDemandModal({
               aria-label="Data do prazo"
               value={customDate}
               onChange={(e) => setCustomDate(e.target.value)}
-              className="h-10 w-48 rounded-xl border border-white/10 bg-white/[0.04] px-3 text-[13px] text-ink"
+              className="h-10 w-48 rounded-xl border border-white/10 bg-white/4 px-3 text-[13px] text-ink"
             />
           )}
         </div>
@@ -199,12 +199,12 @@ export function AssignDemandModal({
             value={note}
             onChange={(e) => setNote(e.target.value)}
             placeholder="Ex.: priorize os pacientes de alto valor e use a lista de espera."
-            className="w-full resize-none rounded-xl border border-white/10 bg-white/[0.04] px-3.5 py-3 text-[13px] text-ink placeholder:text-ink-faint"
+            className="w-full resize-none rounded-xl border border-white/10 bg-white/4 px-3.5 py-3 text-[13px] text-ink placeholder:text-ink-faint"
           />
         </label>
 
         {who && (
-          <div className="flex gap-2.5 rounded-xl border border-accent/[0.22] bg-brand/10 px-3.5 py-3">
+          <div className="flex gap-2.5 rounded-xl border border-accent/22 bg-brand/10 px-3.5 py-3">
             <Info aria-hidden size={15} className="mt-0.5 shrink-0 text-accent" />
             <span className="text-xs leading-relaxed text-ink-soft">
               {who} recebe a demanda na Home. Você acompanha o status em Equipe e recebe um aviso na sua Home quando for resolvido — e de novo
@@ -214,7 +214,7 @@ export function AssignDemandModal({
         )}
 
         <div className="flex justify-end gap-2.5">
-          <button type="button" onClick={handleClose} className="h-10 rounded-[11px] border border-white/[0.12] px-4 text-[13px] text-ink">
+          <button type="button" onClick={handleClose} className="h-10 rounded-[11px] border border-white/12 px-4 text-[13px] text-ink">
             Cancelar
           </button>
           <button

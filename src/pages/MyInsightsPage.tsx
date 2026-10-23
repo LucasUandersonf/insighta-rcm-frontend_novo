@@ -16,6 +16,8 @@ import type {
   InsightOutcomeUpdateRequest,
   PaginatedResponse,
 } from "@/lib/types";
+import { plural } from "@/lib/plural";
+import { formatDateBR } from "@/lib/dates";
 
 const STATUS_LABELS: Record<InsightOutcomeStatus, string> = {
   pendente: "Pendente",
@@ -36,7 +38,7 @@ function formatCurrency(value: number): string {
 }
 
 function formatDate(iso: string): string {
-  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(iso));
+  return formatDateBR(iso, { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
 /**
@@ -151,7 +153,7 @@ function RealizedValueSection() {
         <>
           <div className="flex items-baseline gap-2 px-5 pt-4">
             <span className="font-mono text-xl font-semibold text-revenue">{formatCurrency(data.total_delta_realized)}</span>
-            <span className="text-xs text-ink-faint">recuperados em {data.total_resolved_and_reevaluated} insight(s)</span>
+            <span className="text-xs text-ink-faint">recuperados em {plural(data.total_resolved_and_reevaluated, "insight", "insights")}</span>
           </div>
           <div className="mt-3 divide-y divide-border-hairline">
             {data.items.map((outcome) => (

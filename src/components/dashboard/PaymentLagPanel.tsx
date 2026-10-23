@@ -7,7 +7,7 @@ import type { PaymentLagByPlan } from "@/lib/types";
 
 const MAX_ROWS = 5;
 
-// Mesmos limiares de _payment_lag_insight (smart_insights_engine.py,
+// Mesmos limiares de _payment_lag_insight (app/services/insights (backend),
 // backend) — a cor da barra precisa bater com o que o card de insight
 // já classificou como "preocupante", nunca uma leitura visual diferente
 // do mesmo número.

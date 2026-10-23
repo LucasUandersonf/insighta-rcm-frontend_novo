@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { CheckCircle2, Filter, ShieldAlert, X } from "lucide-react";
 import { KpiCard } from "@/components/ui/KpiCard";
 import { RiskBadge } from "@/components/ui/RiskBadge";
@@ -13,8 +13,9 @@ import { DataQualityPanel } from "@/components/dashboard/DataQualityPanel";
 import { useDateWindow } from "@/lib/useDateWindow";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
-import type { BillingResponse, PaginatedResponse } from "@/lib/types";
+import type { BillingResponse, DataReadiness, PaginatedResponse } from "@/lib/types";
 import { denialReasonsText } from "@/lib/denialReasons";
+import { formatDateBR } from "@/lib/dates";
 
 /**
  * Fila de correção (Redesign 2026 — o antigo "Painel" saiu da barra).
@@ -65,6 +66,27 @@ export function BillingRiskQueuePage() {
       ),
   });
 
+  // UX-28: "fila limpa" só quando o motor tem como conferir — sem tabela de
+  // preço dos convênios, ele não confere o valor cobrado.
+  const { data: readiness } = useQuery({
+    queryKey: ["analytics", "data-readiness"],
+    queryFn: () => apiClient.get<DataReadiness>("/api/v1/analytics/data-readiness"),
+    retry: false,
+  });
+  const coverage = readiness?.price_table_coverage_pct ?? null;
+  const missingTables = readiness?.plans_without_price_table ?? [];
+  const lowCoverage = coverage !== null && coverage < 50;
+  const noCoverageText =
+    missingTables.length > 0
+      ? `Sem tabela de preço ${missingTables.length === 1 ? "do convênio" : `dos ${missingTables.length} convênios`} (${missingTables.slice(0, 3).join(", ")}${missingTables.length > 3 ? "…" : ""}), ainda não conferimos os valores cobrados.`
+      : "Sem tabela de preço dos convênios, ainda não conferimos os valores cobrados.";
+  const noBilling = Array.isArray(readiness?.sources) && !readiness.sources.includes("faturamento");
+  const emptyText = noBilling
+    ? "Nenhuma cobrança importada ainda. Assim que você importar o faturamento, as de maior risco aparecem aqui."
+    : lowCoverage
+      ? noCoverageText
+      : "Nenhum faturamento de alto risco em aberto — a fila de correção está limpa.";
+
   function clearPlanFilter() {
     setSearchParams((params) => {
       params.delete("insurance_plan_id");
@@ -95,12 +117,12 @@ export function BillingRiskQueuePage() {
             value={isLoading ? "..." : String(highRiskPage?.total ?? 0)}
             numericValue={isLoading ? undefined : (highRiskPage?.total ?? 0)}
             format={(n) => String(Math.round(n))}
-            tone={(highRiskPage?.total ?? 0) > 0 ? "pending" : "revenue"}
+            tone={(highRiskPage?.total ?? 0) > 0 ? "pending" : lowCoverage ? "neutral" : "revenue"}
             narrative={
               !isLoading && highRiskPage
                 ? highRiskPage.total > 0
                   ? `Juntos, somam ${formatCurrency(totalAtRisk)} em risco de glosa nesta página — corrija antes do envio para não perder essa receita.`
-                  : "Nenhum faturamento de alto risco em aberto — a fila de correção está limpa."
+                  : emptyText
                 : undefined
             }
           />
@@ -122,7 +144,7 @@ export function BillingRiskQueuePage() {
         <Panel
           title="Faturamentos de alto risco"
           subtitle="Do maior valor para o menor — corrija antes de enviar ao convênio."
-          glow={(highRiskPage?.total ?? 0) > 0 ? "pending" : "revenue"}
+          glow={(highRiskPage?.total ?? 0) > 0 ? "pending" : lowCoverage ? "none" : "revenue"}
         >
           {isFiltered && (
             <div className="mb-3 flex items-center justify-between gap-2 rounded-md border border-tier1/25 bg-tier1-bg px-3 py-2 text-xs text-ink">
@@ -144,18 +166,29 @@ export function BillingRiskQueuePage() {
           {error && <ErrorState message={getApiErrorMessage(error)} onRetry={() => refetch()} />}
           {!isLoading && !error && highRiskBillings.length === 0 && (
             <EmptyState
-              icon={<CheckCircle2 size={17} strokeWidth={1.5} />}
+              icon={lowCoverage ? <ShieldAlert size={17} strokeWidth={1.5} /> : <CheckCircle2 size={17} strokeWidth={1.5} />}
               message={
                 isFiltered
                   ? "Nenhum faturamento de alto risco neste filtro no momento."
-                  : "Nenhum faturamento de alto risco no momento — a fila está limpa."
+                  : lowCoverage
+                    ? noCoverageText
+                    : noBilling
+                      ? "Nenhuma cobrança importada ainda."
+                      : "Nenhum faturamento de alto risco no momento — a fila está limpa."
               }
             />
+          )}
+          {!isLoading && !error && highRiskBillings.length === 0 && lowCoverage && !isFiltered && (
+            <div className="flex justify-center pb-4">
+              <Link to="/convenios?tab=contratos" className="text-sm font-medium text-accent hover:underline">
+                Cadastrar tabelas de preço →
+              </Link>
+            </div>
           )}
           {!isLoading && highRiskBillings.length > 0 && (
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="border-b border-border-hairline text-2xs uppercase tracking-wide text-ink-faint">
+                <tr className="border-b border-border-hairline text-xs font-medium text-ink-muted">
                   <th className="px-4 py-2.5 font-medium">Criado em</th>
                   <th className="px-4 py-2.5 font-medium">Valor cobrado</th>
                   <th className="px-4 py-2.5 font-medium">Item</th>
@@ -204,7 +237,5 @@ export function BillingRiskQueuePage() {
 }
 
 function formatDate(iso: string): string {
-  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).format(
-    new Date(iso)
-  );
+  return formatDateBR(iso, { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 }

@@ -65,10 +65,10 @@ describe("ContractsPage — plan_type (Onda 3 do Plano de Ação)", () => {
       "/api/v1/contracts": EMPTY_CONTRACTS,
     });
 
-    renderWithProviders(<ContractsPage />, { route: "/contracts?tab=contratos" });
+    renderWithProviders(<ContractsPage />, { route: "/convenios?tab=contratos" });
 
-    await waitFor(() => expect(screen.getByText("Convênio Particular")).toBeInTheDocument());
-    expect(screen.getByText("Particular")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getAllByText("Convênio Particular").length).toBeGreaterThan(0));
+    expect(screen.getAllByText("Particular").length).toBeGreaterThan(0);
   });
 
   it("esconde o seletor de operadora ao escolher tipo Particular e envia sem insurance_company_id", async () => {
@@ -81,7 +81,7 @@ describe("ContractsPage — plan_type (Onda 3 do Plano de Ação)", () => {
     });
     vi.mocked(apiClient.post).mockResolvedValue(makePlan({ plan_type: "particular" }));
 
-    renderWithProviders(<ContractsPage />, { route: "/contracts?tab=contratos" });
+    renderWithProviders(<ContractsPage />, { route: "/convenios?tab=contratos" });
     await waitFor(() => expect(screen.getByText("Nenhum plano cadastrado.")).toBeInTheDocument());
 
     fireEvent.click(screen.getByRole("button", { name: /novo plano/i }));
@@ -93,7 +93,7 @@ describe("ContractsPage — plan_type (Onda 3 do Plano de Ação)", () => {
     expect(within(dialog).queryByLabelText(/Operadora/)).not.toBeInTheDocument();
 
     fireEvent.change(within(dialog).getByLabelText(/Nome do plano/), { target: { value: "Particular" } });
-    fireEvent.click(within(dialog).getByRole("button", { name: "Salvar plano" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Cadastrar plano" }));
 
     await waitFor(() =>
       expect(apiClient.post).toHaveBeenCalledWith(
@@ -101,6 +101,38 @@ describe("ContractsPage — plan_type (Onda 3 do Plano de Ação)", () => {
         expect.objectContaining({ plan_type: "particular", insurance_company_id: null })
       )
     );
+  });
+
+  it("Novo convênio: um formulário só, sem registro ANS para particular (UX-07)", async () => {
+    mockGetByPath({
+      "/api/v1/insurance-companies?include_inactive=true": [],
+      "/api/v1/insurance-companies/plans?include_inactive=true": [],
+      "/api/v1/insurance-companies": [],
+      "/api/v1/insurance-companies/plans": [],
+      "/api/v1/contracts": EMPTY_CONTRACTS,
+    });
+    vi.mocked(apiClient.post).mockResolvedValue({ plan: makePlan({ display_name: "Unimed Nacional" }), resolved_rows: 12 });
+
+    renderWithProviders(<ContractsPage />, { route: "/convenios?tab=contratos" });
+    fireEvent.click(await screen.findByRole("button", { name: /novo convênio/i }));
+    const modalTitle = await screen.findByRole("heading", { name: "Novo convênio" });
+    const dialog = (modalTitle.closest('[role="dialog"]') ?? modalTitle.parentElement!) as HTMLElement;
+
+    expect(within(dialog).getByLabelText(/Registro ANS/)).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByLabelText(/particular/i));
+    expect(within(dialog).queryByLabelText(/Registro ANS/)).not.toBeInTheDocument();
+    fireEvent.click(within(dialog).getByLabelText(/particular/i));
+
+    fireEvent.change(within(dialog).getByLabelText(/Nome do convênio/), { target: { value: "Unimed Nacional" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Cadastrar convênio" }));
+
+    await waitFor(() =>
+      expect(apiClient.post).toHaveBeenCalledWith(
+        "/api/v1/insurance-companies/convenios",
+        expect.objectContaining({ name: "Unimed Nacional", plan_type: "convenio" })
+      )
+    );
+    expect(await screen.findByText(/12 linhas importadas que esperavam por ele entraram/)).toBeInTheDocument();
   });
 
   it("não tem violações de acessibilidade", async () => {
@@ -114,8 +146,8 @@ describe("ContractsPage — plan_type (Onda 3 do Plano de Ação)", () => {
       "/api/v1/contracts": EMPTY_CONTRACTS,
     });
 
-    const { container } = renderWithProviders(<ContractsPage />, { route: "/contracts?tab=contratos" });
-    await waitFor(() => expect(screen.getByText("Convênio Particular")).toBeInTheDocument());
+    const { container } = renderWithProviders(<ContractsPage />, { route: "/convenios?tab=contratos" });
+    await waitFor(() => expect(screen.getAllByText("Convênio Particular").length).toBeGreaterThan(0));
 
     await expectNoA11yViolations(container);
   });

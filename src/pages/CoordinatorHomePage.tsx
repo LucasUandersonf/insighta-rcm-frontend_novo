@@ -1,3 +1,4 @@
+import { useAuth } from "@/context/AuthContext";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
@@ -97,8 +98,8 @@ function OpenDemandCard({ demand }: { demand: Demand }) {
         urgent
           ? "border-[rgba(242,107,107,0.28)] bg-[linear-gradient(160deg,rgba(242,107,107,0.10),rgba(242,107,107,0.02)_60%)]"
           : demand.status === "em_andamento"
-            ? "border-[rgba(240,180,76,0.25)] bg-white/[0.03]"
-            : "border-border-hairline bg-white/[0.03]"
+            ? "border-[rgba(240,180,76,0.25)] bg-white/3"
+            : "border-border-hairline bg-white/3"
       )}
     >
       <div className="flex flex-wrap items-center gap-2.5">
@@ -116,7 +117,7 @@ function OpenDemandCard({ demand }: { demand: Demand }) {
       <h3 className="font-serif text-[24px] font-medium leading-[1.3] text-ink">{demand.title}</h3>
       <p className="text-sm leading-relaxed text-ink-soft">{demand.message}</p>
       {demand.manager_note && (
-        <div className="rounded-xl border border-white/[0.06] bg-[rgba(11,12,18,0.5)] px-3.5 py-3 text-[13px] leading-relaxed text-ink-soft">
+        <div className="rounded-xl border border-white/6 bg-[rgba(11,12,18,0.5)] px-3.5 py-3 text-[13px] leading-relaxed text-ink-soft">
           <span className="font-semibold text-ink">Observação da gestão:</span> “{demand.manager_note}”
         </div>
       )}
@@ -148,12 +149,12 @@ function OpenDemandCard({ demand }: { demand: Demand }) {
               >
                 Marcar como resolvida
               </button>
-              <button type="button" onClick={() => setMode("updating")} className="h-10 rounded-[11px] border border-white/[0.12] px-4 text-[13px] text-ink">
+              <button type="button" onClick={() => setMode("updating")} className="h-10 rounded-[11px] border border-white/12 px-4 text-[13px] text-ink">
                 Registrar andamento
               </button>
             </>
           )}
-          <button type="button" onClick={() => setMode("returning")} className="h-10 rounded-[11px] border border-white/[0.12] px-4 text-[13px] text-ink">
+          <button type="button" onClick={() => setMode("returning")} className="h-10 rounded-[11px] border border-white/12 px-4 text-[13px] text-ink">
             Devolver
           </button>
           {demand.financial_impact ? <span className="ml-auto text-xs text-ink-faint">Impacto estimado {brlWhole(demand.financial_impact)}</span> : null}
@@ -162,7 +163,7 @@ function OpenDemandCard({ demand }: { demand: Demand }) {
         <div
           className={cn(
             "flex flex-col gap-2.5 rounded-[14px] border p-4",
-            mode === "resolving" ? "border-[rgba(61,214,140,0.25)] bg-[rgba(61,214,140,0.06)]" : "border-border-hairline bg-white/[0.03]"
+            mode === "resolving" ? "border-[rgba(61,214,140,0.25)] bg-[rgba(61,214,140,0.06)]" : "border-border-hairline bg-white/3"
           )}
         >
           <label htmlFor={`note-${demand.id}`} className="text-[13px] font-semibold text-ink">
@@ -191,7 +192,7 @@ function OpenDemandCard({ demand }: { demand: Demand }) {
             >
               {mode === "resolving" ? "Confirmar resolução" : "Enviar atualização"}
             </button>
-            <button type="button" onClick={() => setMode("idle")} className="h-[38px] rounded-[11px] border border-white/[0.12] px-3.5 text-[13px] text-ink">
+            <button type="button" onClick={() => setMode("idle")} className="h-[38px] rounded-[11px] border border-white/12 px-3.5 text-[13px] text-ink">
               Cancelar
             </button>
           </div>
@@ -208,7 +209,7 @@ function OpenDemandCard({ demand }: { demand: Demand }) {
                 onClick={() => setReason(r.id)}
                 className={cn(
                   "h-8 rounded-full border px-3 text-xs",
-                  reason === r.id ? "border-accent/50 bg-brand/[0.22] text-ink" : "border-white/[0.12] text-ink-muted"
+                  reason === r.id ? "border-accent/50 bg-brand/22 text-ink" : "border-white/12 text-ink-muted"
                 )}
               >
                 {r.label}
@@ -235,7 +236,7 @@ function OpenDemandCard({ demand }: { demand: Demand }) {
             >
               Devolver para {manager}
             </button>
-            <button type="button" onClick={() => setMode("idle")} className="h-[38px] rounded-[11px] border border-white/[0.12] px-3.5 text-[13px] text-ink">
+            <button type="button" onClick={() => setMode("idle")} className="h-[38px] rounded-[11px] border border-white/12 px-3.5 text-[13px] text-ink">
               Cancelar
             </button>
           </div>
@@ -253,7 +254,7 @@ function ResolvedDemandCard({ demand }: { demand: Demand }) {
         ? "O problema voltou a aparecer nos dados"
         : "Aguardando confirmação dos dados";
   return (
-    <article className="flex flex-col gap-2.5 rounded-[20px] border border-[rgba(61,214,140,0.2)] bg-white/[0.02] px-6 py-5">
+    <article className="flex flex-col gap-2.5 rounded-[20px] border border-[rgba(61,214,140,0.2)] bg-white/2 px-6 py-5">
       <div className="flex flex-wrap items-center gap-2.5">
         <Pill tone={demand.confirmation === "voltou" ? "amber" : "green"}>Resolvida</Pill>
         <span className="text-xs text-ink-muted">{status}</span>
@@ -272,6 +273,7 @@ function ResolvedDemandCard({ demand }: { demand: Demand }) {
  * setor).
  */
 export function CoordinatorHomePage() {
+  const { user } = useAuth();
   const { data: me } = useCurrentUserProfile();
   const summary = useCoordinatorSummary();
   const demandsQuery = useDemands();
@@ -296,9 +298,12 @@ export function CoordinatorHomePage() {
   const dueToday = s?.due_today_count ?? 0;
   const score = s?.score;
 
+  const isFrontDesk = user?.role === "atendimento";
   const subtitle =
     s?.profile === "sem_setor"
-      ? "Você ainda não coordena nenhum setor. Quando a gestão te cadastrar, suas demandas aparecem aqui."
+      ? isFrontDesk
+        ? "Sua agenda, os pacientes e a lista de espera ficam no menu acima (Consultas, Pacientes, Lista de espera). Quando a gestão te passar uma demanda, ela aparece aqui."
+        : "Você ainda não é coordenador(a) de nenhum setor. Quando a gestão te passar uma demanda, ela aparece aqui."
       : open.length === 0
         ? "Nenhuma demanda aberta agora. Tudo aqui é do seu setor."
         : `Você tem ${plural(open.length, "demanda aberta", "demandas abertas")}${dueToday ? ` — ${dueToday} ${dueToday === 1 ? "vence" : "vencem"} hoje` : ""}. Tudo aqui é do seu setor.`;
@@ -346,7 +351,7 @@ export function CoordinatorHomePage() {
             Suas demandas
           </h2>
           {open.length === 0 && recent.length === 0 && (
-            <p className="rounded-[20px] border border-border-hairline bg-white/[0.02] p-6 text-sm text-ink-muted">
+            <p className="rounded-[20px] border border-border-hairline bg-white/2 p-6 text-sm text-ink-muted">
               Nada com você agora. Quando a gestão atribuir algo ao seu setor, aparece aqui — com o prazo e o que ela espera.
             </p>
           )}
@@ -359,7 +364,7 @@ export function CoordinatorHomePage() {
         </section>
 
         <aside className="flex flex-col gap-6">
-          <section aria-labelledby="placar-c" className="flex flex-col gap-4 rounded-[20px] border border-border-hairline bg-white/[0.03] p-6">
+          <section aria-labelledby="placar-c" className="flex flex-col gap-4 rounded-[20px] border border-border-hairline bg-white/3 p-6">
             <h2 id="placar-c" className="text-base font-semibold text-ink">
               Seu placar do mês
             </h2>
@@ -384,7 +389,7 @@ export function CoordinatorHomePage() {
             <p className="text-[13px] leading-relaxed text-ink-soft">A gestão vê este mesmo placar.</p>
           </section>
 
-          <section aria-labelledby="radar" className="flex flex-col gap-3.5 rounded-[20px] border border-border-hairline bg-white/[0.03] p-6">
+          <section aria-labelledby="radar" className="flex flex-col gap-3.5 rounded-[20px] border border-border-hairline bg-white/3 p-6">
             <div className="flex flex-col gap-1">
               <h2 id="radar" className="text-base font-semibold text-ink">
                 Radar do setor
@@ -413,7 +418,7 @@ export function CoordinatorHomePage() {
           </section>
 
           {coordinatesAgenda && agenda && (
-            <section aria-labelledby="agenda-c" className="flex flex-col gap-3 rounded-[20px] border border-border-hairline bg-white/[0.03] p-6">
+            <section aria-labelledby="agenda-c" className="flex flex-col gap-3 rounded-[20px] border border-border-hairline bg-white/3 p-6">
               <h2 id="agenda-c" className="text-[11px] font-bold uppercase tracking-[0.12em] text-ink-faint">
                 A agenda de hoje
               </h2>

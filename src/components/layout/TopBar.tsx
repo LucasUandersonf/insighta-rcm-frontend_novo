@@ -1,3 +1,5 @@
+import { ROLE_LABELS } from "@/lib/roles";
+import { useOnline } from "@/lib/useOnline";
 import { useEffect, useId, useMemo, useRef, useState, type RefObject } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -11,12 +13,13 @@ import { UserAvatar } from "@/components/ui/UserAvatar";
 import { useCurrentUserProfile } from "@/lib/useCurrentUserProfile";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
-import { askQuotaNote, useAiUsage, useAskInsighta } from "@/lib/useAskInsighta";
+import { askExample, askQuotaNote, useAiUsage, useAskInsighta } from "@/lib/useAskInsighta";
 import { cn } from "@/lib/cn";
 import { isManagerProfile, useCoordinatorSummary, useTeamOverview, useTeamProfile } from "@/lib/team";
 import {
   ACCOUNT_TOUR_ID,
   ADMIN_NAV_ITEMS,
+  ASK_TOUR_ID,
   MODULES_TOUR_ID,
   MODULE_GROUPS,
   NAV_ITEMS,
@@ -24,9 +27,10 @@ import {
   visibleItems,
   type NavItem,
 } from "@/lib/navigation";
-import type { ModuleAlert, NavigationSummary, OrganizationSummary, Tenant } from "@/lib/types";
+import type { ModuleAlert, NavigationSummary, OrganizationSummary, PaginatedResponse, Tenant } from "@/lib/types";
 import { NotificationBell } from "./NotificationBell";
 import { HelpCenterModal } from "./HelpCenterModal";
+import { usePlan } from "@/lib/plan";
 
 /**
  * DECISÃO — Redesign 2026 ("sem sidebar"), ver canvas de design
@@ -41,20 +45,22 @@ import { HelpCenterModal } from "./HelpCenterModal";
  * menu do avatar — nunca soltos na barra.
  */
 
-type SystemStatus = "checking" | "operational" | "degraded";
+// UX-31: "⌘K" só no Mac; no Windows/Linux o atalho é Ctrl+K.
+const SHORTCUT_LABEL =
+  typeof navigator !== "undefined" && /Mac|iPhone|iPad/i.test(navigator.platform || navigator.userAgent) ? "⌘K" : "Ctrl K";
 
-const ROLE_LABELS: Record<string, string> = {
-  owner: "Proprietário(a)",
-  admin: "Administrador(a)",
-  financeiro: "Financeiro",
-  atendimento: "Atendimento",
-  auditor: "Auditor(a)",
-};
+type SystemStatus = "checking" | "operational" | "degraded" | "storage_down" | "offline";
+
 
 const STATUS_CONFIG: Record<SystemStatus, { label: string; dot: string }> = {
   checking: { label: "Verificando conexão…", dot: "bg-ink-faint" },
-  operational: { label: "Sistema operacional · dados sincronizados", dot: "bg-revenue" },
+  // UX-03: verde só quando há dado importado de fato (ver o texto abaixo);
+  // sem nenhum dado, o ponto fica neutro.
+  operational: { label: "Funcionando · nenhum dado importado ainda", dot: "bg-ink-faint" },
   degraded: { label: "Sistema com instabilidade", dot: "bg-denied" },
+  // UX2-10: o resto funciona, mas o envio de arquivos não.
+  storage_down: { label: "Envio de arquivos indisponível agora · o resto funciona", dot: "bg-pending" },
+  offline: { label: "Sem conexão com a internet", dot: "bg-pending" },
 };
 
 /** Fecha um popover ao clicar fora dele ou apertar Esc. */
@@ -88,16 +94,35 @@ function normalize(text: string): string {
  * que só narra números já calculados) e, enquanto se digita, sugere os
  * módulos com aquele nome para ir direto. ⌘K / Ctrl+K foca de qualquer lugar.
  */
+const ASK_DRAFT_KEY = "insighta_ask_draft";
+
 function AskInsightaField({ items, canAsk }: { items: NavItem[]; canAsk: boolean }) {
   const navigate = useNavigate();
   const listId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
-  const [query, setQuery] = useState("");
+  // UX2-31: o texto digitado sobrevive a um F5 (rascunho por aba).
+  const [query, setQueryState] = useState(() => {
+    try {
+      return sessionStorage.getItem(ASK_DRAFT_KEY) ?? "";
+    } catch {
+      return "";
+    }
+  });
+  const setQuery = (value: string) => {
+    setQueryState(value);
+    try {
+      if (value) sessionStorage.setItem(ASK_DRAFT_KEY, value);
+      else sessionStorage.removeItem(ASK_DRAFT_KEY);
+    } catch {
+      /* armazenamento bloqueado: sem rascunho */
+    }
+  };
   const [isOpen, setIsOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const ask = useAskInsighta();
   const { data: aiUsage } = useAiUsage(Boolean(ask.data));
+  const { data: aiUsageForExample } = useAiUsage(canAsk);
   const quotaNote = askQuotaNote(aiUsage);
 
   const matches = useMemo(() => {
@@ -107,10 +132,14 @@ function AskInsightaField({ items, canAsk }: { items: NavItem[]; canAsk: boolean
   }, [items, query]);
 
   const trimmed = query.trim();
-  const options: ({ kind: "ask" } | { kind: "module"; item: NavItem })[] = [
-    ...(canAsk && trimmed.length >= 3 ? [{ kind: "ask" as const }] : []),
-    ...matches.map((item) => ({ kind: "module" as const, item })),
-  ];
+  // UX2-27: "faturas" + Enter ia para a pergunta ("quanto você faturou").
+  // Quando o texto é o nome de uma tela, "Ir para…" vem primeiro.
+  const exactModule = matches.some((item) => normalize(item.label) === normalize(trimmed) || normalize(item.label).startsWith(normalize(trimmed)) && trimmed.split(/\s+/).length <= 2);
+  const askOption = canAsk && trimmed.length >= 3 ? [{ kind: "ask" as const }] : [];
+  const moduleOptions = matches.map((item) => ({ kind: "module" as const, item }));
+  const options: ({ kind: "ask" } | { kind: "module"; item: NavItem })[] = exactModule
+    ? [...moduleOptions, ...askOption]
+    : [...askOption, ...moduleOptions];
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -141,7 +170,7 @@ function AskInsightaField({ items, canAsk }: { items: NavItem[]; canAsk: boolean
   const showPanel = isOpen && (trimmed.length > 0 || ask.isPending || !!ask.data || !!ask.error);
 
   return (
-    <div ref={wrapperRef} className="relative ml-3 hidden max-w-[520px] flex-1 md:block">
+    <div ref={wrapperRef} data-tour-id={ASK_TOUR_ID} className="relative ml-3 hidden max-w-[520px] flex-1 md:block">
       <label className="flex h-[38px] items-center gap-2.5 rounded-[11px] border border-border-hairline bg-canvas-raised/40 px-3 focus-within:border-accent/50">
         <Sparkles aria-hidden size={15} className="shrink-0 text-accent-muted" />
         <input
@@ -152,7 +181,7 @@ function AskInsightaField({ items, canAsk }: { items: NavItem[]; canAsk: boolean
           aria-expanded={showPanel}
           aria-controls={listId}
           aria-autocomplete="list"
-          placeholder={canAsk ? "Pergunte ao Insighta: “por que a glosa subiu este mês?”" : "Ir para um módulo (ex.: lista de espera, consultas)"}
+          placeholder={canAsk ? `Pergunte ao Insighta: “${askExample(aiUsageForExample?.ai_enabled)}”` : "Ir para um módulo (ex.: lista de espera, consultas)"}
           value={query}
           onChange={(e) => {
             setQuery(e.target.value);
@@ -173,9 +202,9 @@ function AskInsightaField({ items, canAsk }: { items: NavItem[]; canAsk: boolean
               choose(options[activeIndex]);
             }
           }}
-          className="min-w-0 flex-1 bg-transparent text-[13px] text-ink outline-none placeholder:text-ink-faint"
+          className="min-w-0 flex-1 bg-transparent text-[13px] text-ink outline-hidden placeholder:text-ink-faint"
         />
-        <kbd className="shrink-0 rounded-md border border-border-hairline px-1.5 py-0.5 font-sans text-[11px] text-ink-faint">⌘K</kbd>
+        <kbd className="shrink-0 rounded-md border border-border-hairline px-1.5 py-0.5 font-sans text-[11px] text-ink-faint">{SHORTCUT_LABEL}</kbd>
       </label>
       {showPanel && (
         <div className="absolute inset-x-0 top-full z-40 mt-2 overflow-hidden rounded-2xl border border-border-hairline bg-canvas-overlay p-1.5 shadow-elevated-lg">
@@ -190,7 +219,21 @@ function AskInsightaField({ items, canAsk }: { items: NavItem[]; canAsk: boolean
                   <>
                     {ask.data.understood && <p className="text-2xs text-ink-faint">{ask.data.understood}</p>}
                     <p className="text-sm leading-relaxed text-ink">{ask.data.answer}</p>
-                    <p className="text-xs text-ink-faint">{ask.data.sources}</p>
+                    {ask.data.action_href && ask.data.action_label && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigate(ask.data!.action_href!);
+                          setQuery("");
+                          setIsOpen(false);
+                          ask.reset();
+                        }}
+                        className="self-start text-sm font-medium text-accent hover:underline"
+                      >
+                        {ask.data.action_label} →
+                      </button>
+                    )}
+                    {ask.data.sources && <p className="text-xs text-ink-faint">{ask.data.sources}</p>}
                     {quotaNote && <p className="text-2xs text-ink-faint">{quotaNote}</p>}
                   </>
                 )}
@@ -275,7 +318,7 @@ function AccountMenu({ onOpenHelp }: { onOpenHelp: () => void }) {
         <UserAvatar fullName={fullName} />
         <span className="hidden flex-col items-start leading-tight sm:flex">
           <span className="text-[13px] font-medium text-ink">{profile?.full_name ?? "…"}</span>
-          <span className="text-[11px] text-ink-faint">{ROLE_LABELS[user?.role ?? ""] ?? user?.role}</span>
+          <span className="text-[11px] text-ink-faint">{(user?.role ? ROLE_LABELS[user.role] : "") ?? user?.role}</span>
         </span>
         <ChevronDown aria-hidden size={14} className={cn("text-ink-muted transition-transform", isOpen && "rotate-180")} />
       </button>
@@ -295,7 +338,7 @@ function AccountMenu({ onOpenHelp }: { onOpenHelp: () => void }) {
               <UserAvatar fullName={fullName} />
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium text-ink">{profile?.full_name ?? "…"}</p>
-                <p className="truncate text-xs text-ink-faint">{profile?.email ?? ROLE_LABELS[user?.role ?? ""]}</p>
+                <p className="truncate text-xs text-ink-faint">{profile?.email ?? (user?.role ? ROLE_LABELS[user.role] : "")}</p>
               </div>
             </div>
 
@@ -440,6 +483,7 @@ function ModulesPanel({
   alerts: ModuleAlert[];
   panelRef: RefObject<HTMLDivElement>;
 }) {
+  const { has } = usePlan();
   const alertByRoute = new Map(alerts.map((alert) => [alert.route, alert]));
   // Um módulo que junta rotas (ex.: Importar dados = /upload + /setup)
   // mostra o alerta de qualquer uma delas.
@@ -469,7 +513,12 @@ function ModulesPanel({
                 cn("flex flex-col gap-0.5 rounded-[10px] p-2.5 transition-colors hover:bg-canvas-raised/70", isActive && "bg-brand/15")
               }
             >
-              <span className="text-[13px] font-medium text-ink">{item.label}</span>
+              <span className="flex items-center gap-1.5 text-[13px] font-medium text-ink">
+                {item.label}
+                {item.feature && !has(item.feature) && (
+                  <span className="rounded-full bg-accent px-1.5 py-px text-[10px] font-semibold uppercase text-white">Pro</span>
+                )}
+              </span>
               {alertFor(item) ? (
                 <span className={cn("text-xs leading-snug", ALERT_TONE[alertFor(item)!.tone])}>{alertFor(item)!.text}</span>
               ) : (
@@ -478,7 +527,7 @@ function ModulesPanel({
             </NavLink>
           ))}
           {index === groups.length - 1 && (
-            <div className="mt-auto flex flex-col gap-1.5 rounded-xl border border-accent/25 bg-brand/[0.12] p-3.5">
+            <div className="mt-auto flex flex-col gap-1.5 rounded-xl border border-accent/25 bg-brand/12 p-3.5">
               <span className="text-xs font-semibold text-accent-muted">Dica</span>
               <span className="text-xs leading-snug text-ink-soft">
                 Cada módulo mostra aqui o alerta mais urgente dele — você sabe onde entrar antes de abrir.
@@ -497,8 +546,11 @@ export function TopBar() {
   const location = useLocation();
   const modulesId = useId();
   const [status, setStatus] = useState<SystemStatus>("checking");
+  const online = useOnline();
+  const shownStatus: SystemStatus = online ? status : "offline";
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isModulesOpen, setIsModulesOpen] = useState(false);
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const modulesButtonRef = useRef<HTMLButtonElement>(null);
   const modulesPanelRef = useRef<HTMLDivElement>(null);
   const modulesRefs = useMemo(
@@ -531,15 +583,33 @@ export function TopBar() {
   useEffect(() => {
     const apiBase = import.meta.env.VITE_API_BASE_URL as string;
     fetch(`${apiBase}/health`)
-      .then((r) => setStatus(r.ok ? "operational" : "degraded"))
+      .then(async (r) => {
+        if (!r.ok) return setStatus("degraded");
+        const body = (typeof r.json === "function" ? await r.json().catch(() => ({})) : {}) as { storage?: string };
+        setStatus(body.storage === "unreachable" ? "storage_down" : "operational");
+      })
       .catch(() => setStatus("degraded"));
   }, []);
 
   useEffect(() => {
     setIsModulesOpen(false);
+    setIsMobileNavOpen(false);
   }, [location.pathname]);
 
-  const primaryItems = isCoordinatorView
+  // Homologação v1.0.0: Fila de correção vazia não ocupa o menu — volta
+  // sozinha quando o motor marcar a primeira guia com risco.
+  const canFixBilling = !!user && ["owner", "admin", "financeiro"].includes(user.role);
+  const { data: riskQueue } = useQuery({
+    queryKey: ["billing", "high-risk", "count"],
+    queryFn: () => apiClient.get<PaginatedResponse<unknown>>("/api/v1/billing/high-risk?limit=1&offset=0"),
+    enabled: canFixBilling,
+    staleTime: 5 * 60_000,
+  });
+  const hideEmptyQueue = (item: NavItem) =>
+    item.to !== "/fila-correcao" || riskQueue?.total !== 0 || isInside(item.to);
+  const isInside = (path: string) => location.pathname === path || location.pathname.startsWith(`${path}/`);
+
+  const primaryItems = (isCoordinatorView
     ? coordinatorNavItems(
         sectors.map((s) => s.sector),
         user?.role
@@ -547,7 +617,8 @@ export function TopBar() {
     : visibleItems(
         NAV_ITEMS.filter((item) => item.placement === "primary"),
         user?.role
-      );
+      )
+  ).filter(hideEmptyQueue);
   // "Consolidado da rede" só para grupo com mais de uma unidade.
   const { data: organization } = useQuery({
     queryKey: ["analytics", "organization-summary"],
@@ -561,7 +632,7 @@ export function TopBar() {
     : visibleItems(
         NAV_ITEMS.filter((item) => item.placement === "modules" && (!item.requiresNetwork || hasNetwork)),
         user?.role
-      );
+      ).filter(hideEmptyQueue);
   const jumpItems = isCoordinatorView
     ? primaryItems
     : [...visibleItems(NAV_ITEMS, user?.role), ...visibleItems(ADMIN_NAV_ITEMS, user?.role)];
@@ -570,14 +641,24 @@ export function TopBar() {
     if (to === "/" && isCoordinatorView) return coordinatorSummary?.open_count ?? 0;
     return 0;
   };
-  const isInside = (path: string) => location.pathname === path || location.pathname.startsWith(`${path}/`);
   const currentModule = moduleItems.find((item) => isInside(item.to) || (item.matches ?? []).some(isInside));
 
   return (
-    <header className="sticky top-0 z-30 border-b border-border-hairline bg-canvas/75 backdrop-blur-[18px]">
+    <header className="sticky top-0 z-30 border-b border-border-hairline bg-canvas backdrop-blur-[18px]">
       {/* Linha 1 — marca, clínica, busca rápida, notificações e conta */}
       <div className="flex h-16 items-center gap-3 px-4 sm:gap-5 sm:px-8">
-        <NavLink to="/" className="flex shrink-0 items-center" aria-label="Insighta — Início">
+        {/* UX-27: no celular a barra de navegação cortava itens sem aviso;
+            o menu completo abre por este botão. */}
+        <button
+          type="button"
+          className="-ml-1 flex h-9 w-9 max-sm:h-11 max-sm:w-11 shrink-0 items-center justify-center rounded-[10px] text-ink-muted hover:bg-canvas-raised/60 md:hidden"
+          aria-label="Abrir menu"
+          aria-expanded={isMobileNavOpen}
+          onClick={() => setIsMobileNavOpen((open) => !open)}
+        >
+          <Menu aria-hidden size={18} />
+        </button>
+        <NavLink to="/" className="flex shrink-0 items-center max-sm:min-h-[44px]" aria-label="Insighta — Início">
           <BrandMark size="sm" />
         </NavLink>
         {tenant?.trade_name && (
@@ -595,8 +676,46 @@ export function TopBar() {
         </div>
       </div>
 
+      {isMobileNavOpen && (
+        <nav aria-label="Menu" className="max-h-[70vh] overflow-y-auto border-t border-border-hairline px-4 py-3 md:hidden">
+          <ul className="flex flex-col gap-0.5">
+            {primaryItems.map((item) => (
+              <li key={item.to}>
+                <NavLink
+                  to={item.to}
+                  end={item.to === "/"}
+                  className={({ isActive }) =>
+                    cn("block rounded-[10px] px-3 py-2.5 text-sm font-medium", isActive ? "bg-brand/18 text-ink" : "text-ink-muted hover:bg-canvas-raised/60")
+                  }
+                >
+                  {item.label}
+                </NavLink>
+              </li>
+            ))}
+          </ul>
+          {MODULE_GROUPS.map((group) => {
+            const items = moduleItems.filter((item) => item.group === group.id);
+            if (items.length === 0) return null;
+            return (
+              <div key={group.id} className="mt-3">
+                <p className="px-3 pb-1 text-2xs font-semibold uppercase tracking-[0.08em] text-ink-faint">{group.label}</p>
+                <ul className="flex flex-col gap-0.5">
+                  {items.map((item) => (
+                    <li key={item.to}>
+                      <NavLink to={item.to} className="block rounded-[10px] px-3 py-2 text-sm text-ink-muted hover:bg-canvas-raised/60">
+                        {item.label}
+                      </NavLink>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })}
+        </nav>
+      )}
+
       {/* Linha 2 — navegação principal + Módulos */}
-      <div className="relative border-t border-border-hairline">
+      <div className="relative hidden border-t border-border-hairline md:block">
         <nav aria-label="Navegação principal" className="relative flex h-14 items-center gap-1 overflow-x-auto px-3 sm:px-7">
           {primaryItems.map((item) => {
             const Icon = item.icon!;
@@ -610,7 +729,7 @@ export function TopBar() {
                   cn(
                     "flex h-9 shrink-0 items-center gap-2 rounded-[10px] border px-3 text-[13px] font-medium transition-colors",
                     isActive
-                      ? "border-accent/35 bg-brand/[0.18] text-ink"
+                      ? "border-accent/35 bg-brand/18 text-ink"
                       : "border-transparent text-ink-muted hover:bg-canvas-raised/60 hover:text-ink"
                   )
                 }
@@ -644,7 +763,7 @@ export function TopBar() {
                 className={cn(
                   "flex h-9 shrink-0 items-center gap-2 rounded-[10px] border px-3 text-[13px] font-medium transition-colors",
                   currentModule
-                    ? "border-accent/35 bg-brand/[0.18] text-ink"
+                    ? "border-accent/35 bg-brand/18 text-ink"
                     : isModulesOpen
                       ? "border-border-default bg-canvas-raised/70 text-ink"
                       : "border-transparent text-ink-muted hover:bg-canvas-raised/60 hover:text-ink"
@@ -664,9 +783,15 @@ export function TopBar() {
           )}
 
           <span className="ml-auto hidden shrink-0 items-center gap-2 pl-4 text-xs text-ink-faint lg:flex">
-            <span aria-hidden className={cn("h-[7px] w-[7px] rounded-full", STATUS_CONFIG[status].dot)} />
-            {status === "degraded" || !navSummary?.last_import_at
-              ? STATUS_CONFIG[status].label
+            <span
+              aria-hidden
+              className={cn(
+                "h-[7px] w-[7px] rounded-full",
+                shownStatus === "operational" && navSummary?.last_import_at ? "bg-revenue" : STATUS_CONFIG[shownStatus].dot
+              )}
+            />
+            {shownStatus !== "operational" || !navSummary?.last_import_at
+              ? STATUS_CONFIG[shownStatus].label
               : `Dados atualizados ${relativeTime(navSummary.last_import_at)}${
                   navSummary.last_import_source ? ` · última importação de ${navSummary.last_import_source}` : ""
                 }`}

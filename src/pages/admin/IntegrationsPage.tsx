@@ -25,6 +25,10 @@ import type {
   WebhookSubscription,
   WebhookSubscriptionCreated,
 } from "@/lib/types";
+import { useDirtyOnEdit } from "@/lib/unsavedChanges";
+import { NightlyIntegrationPanel } from "@/components/integrations/NightlyIntegrationPanel";
+import { PlanGate } from "@/components/billing/PlanGate";
+import { FEATURES } from "@/lib/plan";
 
 const DELIVERY_STATUS_LABEL: Record<WebhookDeliveryStatus, string> = {
   pending: "Aguardando retentativa",
@@ -70,7 +74,7 @@ function CreatedKeyModal({
         {created?.api_key}
       </div>
       <div className="mt-5 flex justify-end">
-        <Button onClick={onClose}>Entendi, já copiei</Button>
+        <Button onClick={onClose}>Fechar</Button>
       </div>
     </Modal>
   );
@@ -85,6 +89,7 @@ function CreateKeyModal({
   onClose: () => void;
   onCreated: (key: ApiKeyCreated) => void;
 }) {
+  const unsaved = useDirtyOnEdit("a nova chave de API", isOpen);
   const queryClient = useQueryClient();
   const { showError } = useToast();
   const [name, setName] = useState("");
@@ -108,7 +113,7 @@ function CreateKeyModal({
 
   return (
     <Modal title="Nova chave de API" isOpen={isOpen} onClose={onClose}>
-      <form onSubmit={handleSubmit}>
+      <form onChange={unsaved.onChange} onSubmitCapture={unsaved.onSubmit} onSubmit={handleSubmit}>
         <TextField
           label="Nome da chave"
           placeholder="Ex: ERP TotalCare — produção"
@@ -162,7 +167,7 @@ function CreatedWebhookModal({
         {created?.secret}
       </div>
       <div className="mt-5 flex justify-end">
-        <Button onClick={onClose}>Entendi, já copiei</Button>
+        <Button onClick={onClose}>Fechar</Button>
       </div>
     </Modal>
   );
@@ -177,6 +182,7 @@ function CreateWebhookModal({
   onClose: () => void;
   onCreated: (webhook: WebhookSubscriptionCreated) => void;
 }) {
+  const unsaved = useDirtyOnEdit("o novo webhook", isOpen);
   const queryClient = useQueryClient();
   const { showError } = useToast();
   const [name, setName] = useState("");
@@ -223,7 +229,7 @@ function CreateWebhookModal({
 
   return (
     <Modal title="Novo webhook" isOpen={isOpen} onClose={onClose}>
-      <form onSubmit={handleSubmit}>
+      <form onChange={unsaved.onChange} onSubmitCapture={unsaved.onSubmit} onSubmit={handleSubmit}>
         <TextField
           label="Nome"
           placeholder="Ex: Slack — financeiro"
@@ -341,7 +347,7 @@ function WebhooksSection() {
       {!isLoading && (webhooks ?? []).length > 0 && (
         <table className="w-full text-left text-sm">
           <thead>
-            <tr className="border-b border-border-hairline text-2xs uppercase tracking-wide text-ink-faint">
+            <tr className="border-b border-border-hairline text-xs font-medium text-ink-muted">
               <th className="px-4 py-2.5 font-medium">Nome</th>
               <th className="px-4 py-2.5 font-medium">URL</th>
               <th className="px-4 py-2.5 font-medium">Eventos</th>
@@ -464,7 +470,7 @@ function WebhookDeliveriesSection() {
         <div className="overflow-x-auto" tabIndex={0}>
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-border-hairline text-2xs uppercase tracking-wide text-ink-faint">
+              <tr className="border-b border-border-hairline text-xs font-medium text-ink-muted">
                 <th className="px-4 py-2.5 font-medium">Evento</th>
                 <th className="px-4 py-2.5 font-medium">Tentativas</th>
                 <th className="px-4 py-2.5 font-medium">Status</th>
@@ -529,6 +535,7 @@ export function IntegrationsPage() {
       apiClient.delete<ApiKey>(`/api/v1/integrations/api-keys/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["api-keys"] });
+      queryClient.invalidateQueries({ queryKey: ["integration-status"] });
       showSuccess("Chave revogada.");
       setKeyToRevoke(null);
     },
@@ -539,13 +546,15 @@ export function IntegrationsPage() {
     <div className="space-y-6">
       <PageHeader
         icon={Plug}
-        title="Integrações e webhooks"
-        subtitle="Conecte o ecossistema do cliente: chave de API para ele ENVIAR dado ao Insighta, webhooks para o Insighta AVISAR o sistema dele."
+        title="Integrações"
+        subtitle="Ligue o Insighta ao ERP da clínica: os dados chegam sozinhos toda madrugada. No plano Pro, o Insighta também avisa outros sistemas (webhooks)."
       />
+
+      <NightlyIntegrationPanel />
 
       <Panel
         title="Chaves de API"
-        subtitle="Configure no ERP/CRM do cliente — a chave em texto puro só aparece uma vez, na criação."
+        subtitle="A chave que o Conector Insighta (ou o ERP) usa para enviar os dados. Ela aparece por inteiro só uma vez, na criação: copie e guarde."
         action={
           <Button
             onClick={() => setIsModalOpen(true)}
@@ -567,7 +576,7 @@ export function IntegrationsPage() {
         {!isLoading && (keys ?? []).length > 0 && (
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-border-hairline text-2xs uppercase tracking-wide text-ink-faint">
+              <tr className="border-b border-border-hairline text-xs font-medium text-ink-muted">
                 <th className="px-4 py-2.5 font-medium">Nome</th>
                 <th className="px-4 py-2.5 font-medium">Prefixo</th>
                 <th className="px-4 py-2.5 font-medium">Criada em</th>
@@ -640,8 +649,10 @@ export function IntegrationsPage() {
         isConfirming={revokeMutation.isPending}
       />
 
-      <WebhooksSection />
-      <WebhookDeliveriesSection />
+      <PlanGate feature={FEATURES.apiAccess} compact>
+        <WebhooksSection />
+        <WebhookDeliveriesSection />
+      </PlanGate>
     </div>
   );
 }

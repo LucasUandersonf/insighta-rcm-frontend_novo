@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { SignUpPage } from "@/pages/SignUpPage";
 import { useAuth } from "@/context/AuthContext";
@@ -9,8 +9,9 @@ import { expectNoA11yViolations } from "@/test/a11y";
 /**
  * LGPD ("vamos chegar a 9.5") — cobre só o checkbox de aceite de Termos/
  * Privacidade (RegisterRequest.terms_accepted no backend, sem default —
- * ver DECISÃO lá): botão de criar conta começa desabilitado, só habilita
- * com o checkbox marcado, e `register` recebe terms_accepted=true.
+ * ver DECISÃO lá): sem o aceite, "Criar conta" explica o que falta e não
+ * cadastra (UX2-19); com o checkbox marcado, `register` recebe
+ * terms_accepted=true.
  * Não duplica cobertura de step 1 (validação de CNPJ/senha) — fora do
  * escopo desta mudança.
  */
@@ -52,18 +53,34 @@ async function fillStep1AndAdvance(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe("SignUpPage — aceite de Termos/Privacidade", () => {
-  it("botão 'Criar conta' começa desabilitado até o checkbox ser marcado", async () => {
-    mockAuth();
+  // UX2-19: em vez de um botão desabilitado sem explicação, clicar sem o
+  // aceite diz o que falta e leva o foco ao checkbox — sem chamar register().
+  it("'Criar conta' sem o aceite explica o que falta e não cadastra", async () => {
+    const register = vi.fn().mockResolvedValue(undefined);
+    mockAuth({ register });
     const user = userEvent.setup();
     renderWithProviders(<SignUpPage />);
 
     await fillStep1AndAdvance(user);
 
     const submitButton = screen.getByRole("button", { name: "Criar conta" });
-    expect(submitButton).toBeDisabled();
+    expect(submitButton).toHaveAttribute("aria-disabled", "true");
+    await user.click(submitButton);
+    expect(await screen.findByText("Para criar a conta, aceite os termos acima.")).toBeInTheDocument();
+    expect(screen.getByRole("checkbox")).toHaveFocus();
+    expect(register).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole("checkbox"));
-    expect(submitButton).toBeEnabled();
+    expect(submitButton).not.toHaveAttribute("aria-disabled");
+    expect(screen.queryByText("Para criar a conta, aceite os termos acima.")).not.toBeInTheDocument();
+  });
+
+  it("com erro no passo 1, o foco vai para o primeiro campo errado", async () => {
+    mockAuth();
+    const user = userEvent.setup();
+    renderWithProviders(<SignUpPage />);
+    await user.click(screen.getByRole("button", { name: "Continuar" }));
+    await waitFor(() => expect(document.getElementById("trade_name")).toHaveFocus());
   });
 
   it("envia terms_accepted=true para register() só depois do checkbox marcado", async () => {

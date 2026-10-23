@@ -4,6 +4,7 @@ import { LoadingState, ErrorState } from "@/components/ui/Panel";
 import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import type { PepConformidade } from "@/lib/types";
+import { plural } from "@/lib/plural";
 
 /**
  * Aba Clínico dedicada (Sala de Comando 3.0, achado do Comitê de
@@ -34,7 +35,7 @@ export function PepConformidadePanel({ dateFrom, dateTo }: { dateFrom: string; d
         tone={data.missing_documentation_pct !== null && data.missing_documentation_pct >= 15 ? "pending" : "neutral"}
         narrative={
           data.completed_encounters_count > 0
-            ? `${data.missing_documentation_count} de ${data.completed_encounters_count} atendimento(s) concluído(s) no período sem nenhuma evolução registrada no prontuário.`
+            ? `${data.missing_documentation_count} de ${plural(data.completed_encounters_count, "atendimento concluído", "atendimentos concluídos")} no período sem nenhuma evolução registrada no prontuário.`
             : "Nenhum atendimento concluído neste período."
         }
       />
@@ -46,7 +47,7 @@ export function PepConformidadePanel({ dateFrom, dateTo }: { dateFrom: string; d
         tone={data.missing_cid_pct !== null && data.missing_cid_pct >= 40 ? "pending" : "neutral"}
         narrative={
           data.evolutions_count > 0
-            ? `${data.missing_cid_count} de ${data.evolutions_count} evolução(ões) clínica(s) registrada(s) no período sem o código da doença preenchido.`
+            ? `${data.missing_cid_count} de ${plural(data.evolutions_count, "evolução clínica registrada", "evoluções clínicas registradas")} no período sem o código da doença preenchido.`
             : "Nenhuma evolução clínica registrada neste período."
         }
       />

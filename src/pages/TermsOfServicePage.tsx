@@ -43,29 +43,73 @@ export function TermsOfServicePage() {
 
       <h2>3. Conta e usuários</h2>
       <ul>
-        <li>Quem cadastra a Clínica recebe o perfil Diretoria (owner) e pode convidar a equipe com perfis mais restritos.</li>
+        <li>Quem cadastra a Clínica recebe o perfil Proprietário(a) e pode convidar a equipe com perfis mais restritos.</li>
         <li>
           A Clínica guarda o sigilo das senhas e responde pelo que for feito com os acessos que ela mesma criou. Recomendamos
           ligar a verificação em duas etapas em Segurança da conta.
         </li>
       </ul>
 
-      <h2>4. Assinatura, preço e pagamento</h2>
+      <h2>4. Planos, teste, preço e pagamento</h2>
       <ul>
         <li>
-          A assinatura é mensal e recorrente. O pagamento é feito por Pix, boleto ou cartão na fatura do Asaas, empresa de
-          pagamentos contratada pela Insighta. A Plataforma é liberada quando o pagamento é confirmado.
-        </li>
-        <li>A Insighta emite nota fiscal de serviço a cada pagamento, enviada ao e-mail cadastrado.</li>
-        <li>
-          <strong>Oferta Founders:</strong> as 20 primeiras clínicas a concluir o primeiro pagamento pagam{" "}
-          <strong>R$ 800,00 por mês</strong>, sem reajuste por <strong>24 meses</strong> contados do primeiro pagamento.
-          A vaga é reservada por 48 horas depois de gerada a primeira fatura. Terminados os 24 meses, passa a valer o preço
-          da tabela vigente, com aviso por e-mail pelo menos 30 dias antes.
+          <strong>Planos:</strong> Basic (R$ 490,00 por mês) e Pro (R$ 1.290,00 por mês), contratados na própria Plataforma,
+          e Redes (várias unidades), sob consulta. O que cada plano inclui e seus limites (atendimentos por mês, usuários,
+          convênios com contrato, setores com coordenador e meses de histórico analisados) estão na tela Plano e assinatura.
         </li>
         <li>
-          Fora da oferta Founders, vale o preço informado na contratação, reajustado uma vez por ano pelo IPCA, com aviso
-          de 30 dias.
+          <strong>Ciclo:</strong> mensal ou anual. O anual cobra 10 mensalidades de uma vez (2 meses grátis).
+        </li>
+        <li>
+          <strong>Teste:</strong> toda clínica nova usa o Pro por 14 dias sem cobrança. Terminado o teste sem plano
+          contratado, a Plataforma fica em modo leitura: os dados continuam visíveis e exportáveis, e importar ou editar
+          volta com a contratação.
+        </li>
+        <li>
+          <strong>Limite de atendimentos:</strong> a partir de 80% do limite do plano, a Plataforma avisa; acima de 120%,
+          novas importações ficam pausadas até a troca de plano. Os dados já importados nunca são apagados por causa do
+          limite.
+        </li>
+        <li>
+          <strong>Troca de plano:</strong> subir para o Pro gera uma cobrança avulsa da diferença proporcional aos dias que
+          faltam do período pago, e o Pro é liberado quando esse pagamento é confirmado (se a diferença não for paga, o Pro
+          passa a valer no próximo pagamento da assinatura, já no valor do Pro; abaixo de R$ 5,00, a diferença não é cobrada
+          e o Pro vale na hora). Até o pagamento, a Clínica pode desistir da troca na tela de assinatura. Descer para o Basic
+          vale a partir do próximo pagamento.
+        </li>
+        <li>
+          O pagamento é feito por Pix, boleto ou cartão na fatura do Asaas, empresa de pagamentos contratada pela Insighta.
+          A Plataforma é liberada quando o pagamento é confirmado. A Insighta emite nota fiscal de serviço a cada
+          pagamento, enviada ao e-mail cadastrado.
+        </li>
+        <li>
+          <strong>Founders Club:</strong> as <strong>7 primeiras clínicas</strong> a concluir o primeiro pagamento do Pro
+          Founders (só mensal) pagam <strong>R$ 800,00 por mês</strong> pelo Pro completo, com o preço{" "}
+          <strong>travado enquanto forem clientes</strong>, reajustado apenas uma vez por ano pelo IPCA, com aviso de 30
+          dias. A vaga é reservada por 48 horas depois de gerada a primeira fatura. Funcionalidades novas do Pro entram no
+          plano sem custo adicional. Encerrada a assinatura (cancelamento pela Clínica, pelo meio de pagamento ou pela
+          Insighta), a vaga Founders e o preço travado deixam de valer; se a Clínica voltar a assinar, paga o preço do plano
+          escolhido naquele momento.
+        </li>
+        <li>
+          <strong>Sem contrapartida:</strong> a vaga Founders não obriga a Clínica a reuniões, estudo de caso, depoimento ou
+          qualquer serviço para a Insighta. Basta usar a Plataforma normalmente. A comunicação é por e-mail: suporte pelo
+          e-mail de atendimento e novidades e pedidos de opinião enviados ao e-mail cadastrado, que a Clínica responde se
+          quiser.
+        </li>
+        <li>
+          <strong>Garantia Founders de 90 dias:</strong> se o Extrato de Resultado acumulado em 90 dias não somar pelo menos
+          R$ 2.400,00 em valor medido, a Clínica pode cancelar e recebe de volta a última mensalidade paga, mediante pedido
+          pelo suporte até o 100º dia.
+        </li>
+        <li>
+          Fora do Founders Club, vale o preço do plano na contratação, reajustado uma vez por ano pelo IPCA, com aviso de 30
+          dias.
+        </li>
+        <li>
+          <strong>Reajuste anual:</strong> depois de 12 meses no mesmo preço, o valor é corrigido pelo IPCA acumulado em 12
+          meses. A Clínica recebe o aviso por e-mail com pelo menos 30 dias de antecedência, com o valor atual, o valor novo e
+          a data da primeira cobrança reajustada.
         </li>
       </ul>
 
@@ -73,20 +117,23 @@ export function TermsOfServicePage() {
       <ul>
         <li>
           Vencida a fatura, a Clínica continua usando a Plataforma por <strong>7 dias</strong>, com aviso na tela. Depois
-          disso, o acesso fica suspenso até o pagamento. Durante a suspensão continuam abertas a tela de assinatura, os
-          dados da conta, a exportação dos dados da Clínica e o suporte.
+          disso, a Plataforma fica em modo leitura até o pagamento: os dados continuam visíveis, e a tela de assinatura, os
+          dados da conta, a exportação dos dados da Clínica e o suporte continuam abertos.
         </li>
         <li>A fatura em atraso pode ter multa de até 2% e juros de até 1% ao mês, informados na própria fatura.</li>
-        <li>Depois de 60 dias de suspensão, a Insighta pode cancelar a assinatura, aplicando a seção 12.</li>
+        <li>Depois de 60 dias em atraso, a Insighta pode cancelar a assinatura, aplicando a seção 12.</li>
       </ul>
 
       <h2>6. Cancelamento</h2>
       <ul>
         <li>
-          A Clínica pode cancelar quando quiser, sem multa, pelo suporte. O cancelamento vale ao fim do mês já pago; não há
-          devolução proporcional do mês em curso.
+          A Clínica pode cancelar quando quiser, sem multa, na própria Plataforma ou pelo suporte. O cancelamento vale ao
+          fim do período já pago; não há devolução proporcional do período em curso, salvo a garantia Founders.
         </li>
-        <li>A clínica Founders que cancela perde o preço Founders. Uma nova assinatura segue o preço da tabela vigente.</li>
+        <li>
+          A clínica Founders que cancela, ou que passa para o Basic, perde o preço Founders. Uma nova assinatura segue o
+          preço da tabela vigente.
+        </li>
       </ul>
 
       <h2>7. Dados que a Clínica envia</h2>

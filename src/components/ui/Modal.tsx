@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useId, useRef, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
@@ -26,6 +26,9 @@ const FOCUSABLE_SELECTOR = '[href],button,input,select,textarea,[tabindex]:not([
 
 export function Modal({ title, isOpen, onClose, children, size = "lg" }: ModalProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  // O diálogo é anunciado pelo título (leitor de tela diz "Novo usuário,
+  // diálogo" em vez de só "diálogo").
+  const titleId = useId();
   const previouslyFocusedRef = useRef<HTMLElement | null>(null);
 
   // Registra este modal na contagem global (ver ModalStackContext) para
@@ -115,9 +118,10 @@ export function Modal({ title, isOpen, onClose, children, size = "lg" }: ModalPr
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.15 }}
-          className="fixed inset-0 z-40 flex items-center justify-center bg-canvas-deep/70 px-4 backdrop-blur-sm"
+          className="fixed inset-0 z-40 flex items-center justify-center bg-canvas-deep/70 px-4 backdrop-blur-xs"
           role="dialog"
           aria-modal="true"
+          aria-labelledby={titleId}
           onMouseDown={(e) => {
             if (e.target === e.currentTarget) onClose();
           }}
@@ -132,7 +136,7 @@ export function Modal({ title, isOpen, onClose, children, size = "lg" }: ModalPr
             className={cn("w-full rounded-lg border border-border-hairline bg-glass shadow-elevated-lg backdrop-blur-xl", sizeClasses[size])}
           >
             <div className="flex items-center justify-between border-b border-border-hairline px-5 py-3.5">
-              <h2 className="text-sm font-semibold text-ink">{title}</h2>
+              <h2 id={titleId} className="text-sm font-semibold text-ink">{title}</h2>
               <button
                 onClick={onClose}
                 aria-label="Fechar"

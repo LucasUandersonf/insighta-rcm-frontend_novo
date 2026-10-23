@@ -27,6 +27,11 @@ const ACTION_LABELS: Record<string, string> = {
   filed: "Protocolado",
   resolved: "Resolvido",
   password_reset: "Reset de senha",
+  viewed_clinical_record: "Abriu prontuário",
+  viewed_patient_record: "Abriu ficha do paciente",
+  downloaded_rejected_rows: "Baixou linhas para corrigir",
+  downloaded_ingestion_report: "Baixou relatório da importação",
+  "tenant.data_exported": "Exportou os dados da clínica",
 };
 
 const ACTION_TONE: Record<string, BadgeTone> = {
@@ -36,6 +41,11 @@ const ACTION_TONE: Record<string, BadgeTone> = {
   filed: "pending",
   resolved: "revenue",
   password_reset: "neutral",
+  viewed_clinical_record: "pending",
+  viewed_patient_record: "neutral",
+  downloaded_rejected_rows: "neutral",
+  downloaded_ingestion_report: "neutral",
+  "tenant.data_exported": "pending",
 };
 
 // Mesma correção: lista os tipos de entidade REALMENTE auditados hoje.
@@ -128,7 +138,7 @@ export function AuditLogPage() {
         {!isLoading && (data?.items ?? []).length > 0 && (
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-border-hairline text-2xs uppercase tracking-wide text-ink-faint">
+              <tr className="border-b border-border-hairline text-xs font-medium text-ink-muted">
                 <th className="px-4 py-2.5 font-medium">Data/hora</th>
                 <th className="px-4 py-2.5 font-medium">Usuário</th>
                 <th className="px-4 py-2.5 font-medium">Ação</th>

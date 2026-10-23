@@ -26,6 +26,7 @@ function mockUser(role: CurrentUser["role"]) {
 }
 
 beforeEach(() => {
+  sessionStorage.clear();
   vi.stubGlobal("fetch", vi.fn(() => Promise.resolve({ ok: true } as Response)));
   vi.mocked(apiClient.get).mockImplementation((url: string) => {
     if (url.includes("/tenant")) return Promise.resolve({ trade_name: "Clínica Vila Mariana" } as never);
@@ -84,7 +85,7 @@ describe("TopBar", () => {
     const nav = screen.getByRole("navigation", { name: "Navegação principal" });
     expect(within(nav).getByRole("link", { name: /Sala de Comando/ })).toBeInTheDocument();
     // Configurações nunca soltas na barra — só depois de abrir o avatar.
-    expect(screen.queryByRole("link", { name: /Integrações e webhooks/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /^Integrações$/ })).not.toBeInTheDocument();
 
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: /Módulos/ }));
@@ -94,8 +95,8 @@ describe("TopBar", () => {
 
     await openAccountMenu();
     expect(screen.getByText("Administração")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Usuários e permissões/ })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Integrações e webhooks/ })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /^Usuários$/ })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /^Integrações$/ })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Minha clínica/ })).toBeInTheDocument();
   });
 
@@ -137,7 +138,7 @@ describe("TopBar", () => {
 
   it("dentro de um módulo, o botão Módulos mostra onde o usuário está", async () => {
     mockUser("owner");
-    renderWithProviders(<TopBar />, { route: "/contracts" });
+    renderWithProviders(<TopBar />, { route: "/convenios" });
 
     expect(screen.getByRole("button", { name: /Módulos.*Convênios e contratos/ })).toBeInTheDocument();
   });
@@ -170,7 +171,7 @@ describe("TopBar", () => {
     vi.mocked(apiClient.get).mockImplementation((url: string) => {
       if (url.includes("navigation-summary"))
         return Promise.resolve({
-          module_alerts: [{ route: "/denial-appeals", text: "4 prazos vencem nos próximos 7 dias", tone: "critical" }],
+          module_alerts: [{ route: "/recursos-de-glosa", text: "4 prazos vencem nos próximos 7 dias", tone: "critical" }],
           my_open_insights: 3,
           last_import_at: new Date(Date.now() - 12 * 60000).toISOString(),
           last_import_source: "agenda_setembro.xlsx",

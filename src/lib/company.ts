@@ -22,5 +22,5 @@ export const COMPANY = {
 };
 
 /** Versão vigente dos três documentos; igual a TERMS_VERSION no backend. */
-export const LEGAL_VERSION = "2026-09-27";
-export const LEGAL_UPDATED_AT = "27/09/2026";
+export const LEGAL_VERSION = "2026-10-14";
+export const LEGAL_UPDATED_AT = "13/10/2026";

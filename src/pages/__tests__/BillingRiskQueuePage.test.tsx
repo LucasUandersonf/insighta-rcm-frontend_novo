@@ -39,4 +39,22 @@ describe("BillingRiskQueuePage (Fila de correção — o que sobrou do Painel)",
     expect(screen.getByText(/Filtrando por 1 convênio/)).toBeInTheDocument();
     expect(apiClient.get).toHaveBeenCalledWith(expect.stringContaining("insurance_plan_id=plan-1"));
   });
+
+  it("sem tabela de preço, não diz que a fila está limpa (UX-28)", async () => {
+    vi.mocked(apiClient.get).mockImplementation((url: string) => {
+      if (url.includes("data-readiness"))
+        return Promise.resolve({
+          sources: ["faturamento"],
+          missing: ["agenda"],
+          price_table_coverage_pct: 0,
+          plans_without_price_table: ["Unimed", "Amil"],
+        } as never);
+      return Promise.resolve({ items: [], total: 0, limit: 20, offset: 0 } as never);
+    });
+    renderWithProviders(<BillingRiskQueuePage />, { route: "/fila-correcao" });
+
+    expect((await screen.findAllByText(/Sem tabela de preço dos 2 convênios \(Unimed, Amil\)/)).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/está limpa/)).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Cadastrar tabelas de preço/ })).toBeInTheDocument();
+  });
 });

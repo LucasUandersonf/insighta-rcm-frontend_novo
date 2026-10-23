@@ -189,10 +189,43 @@ describe("TenantPage — Épico F2.1 do Plano Diretor (Calibração por especial
 
     const useButtons = within(panel).getAllByRole("button", { name: "Usar" });
     fireEvent.click(useButtons[0]);
-    expect(within(panel).getByLabelText("Meta de faturamento anual (R$)")).toHaveValue(120000);
+    expect(within(panel).getByLabelText("Meta de faturamento anual (R$)")).toHaveValue("120.000,00");
 
     fireEvent.click(useButtons[1]);
-    expect(within(panel).getByLabelText("Meta de faturamento anual (R$)")).toHaveValue(110000);
+    expect(within(panel).getByLabelText("Meta de faturamento anual (R$)")).toHaveValue("110.000,00");
+  });
+
+  it("meta em formato brasileiro vai para a API como valor exato, e valor malformado não é enviado", async () => {
+    // Auditoria de UX: "2.400.000,00" gravava R$ 2,40 com mensagem de sucesso.
+    vi.mocked(useAuth).mockReturnValue({ user: { tenant_id: "t1", sub: "u1", role: "owner" } } as unknown as ReturnType<
+      typeof useAuth
+    >);
+    mockGetByPath({
+      "/api/v1/tenant/plans/available": [],
+      "/api/v1/subscription/plans": [],
+      "/api/v1/subscription": { plan_tier: "starter", pending_checkout_id: null },
+      "/api/v1/tenant": makeTenant(),
+    });
+    vi.mocked(apiClient.patch).mockReset().mockResolvedValue(makeTenant({ annual_revenue_goal: 2_400_000 }));
+    const user = userEvent.setup();
+
+    renderWithProviders(<TenantPage />);
+    await waitFor(() => expect(screen.getByText("Meta de faturamento anual")).toBeInTheDocument());
+    const panel = panelFor("Meta de faturamento anual");
+    const field = within(panel).getByLabelText("Meta de faturamento anual (R$)");
+
+    await user.type(field, "2.40000000");
+    await user.click(within(panel).getByRole("button", { name: "Salvar meta" }));
+    expect(await screen.findAllByText(/não é um valor válido/)).not.toHaveLength(0);
+    expect(apiClient.patch).not.toHaveBeenCalled();
+
+    await user.clear(field);
+    await user.type(field, "2.400.000,00");
+    expect(within(panel).getByText("R$ 2.400.000,00")).toBeInTheDocument(); // "Vai ser salvo"
+    await user.click(within(panel).getByRole("button", { name: "Salvar meta" }));
+    await waitFor(() =>
+      expect(apiClient.patch).toHaveBeenCalledWith("/api/v1/tenant", { annual_revenue_goal: "2400000.00" })
+    );
   });
 
   it("mostra mensagem honesta quando a sugestão de meta anual não tem base suficiente", async () => {
@@ -456,6 +489,42 @@ describe("TenantPage — exportação dos dados (LGPD, portabilidade)", () => {
     await screen.findByText("Exportar dados da clínica");
     expect(screen.queryByRole("button", { name: /Baixar todos os dados/ })).not.toBeInTheDocument();
     expect(screen.getByText(/pode exportar os dados da clínica/)).toBeInTheDocument();
+  });
+
+  it("mostra o plano Founders contratado, sem o catálogo antigo (UX-13)", async () => {
+    vi.mocked(useAuth).mockReturnValue({ user: { tenant_id: "t1", sub: "u1", role: "owner" } } as unknown as ReturnType<
+      typeof useAuth
+    >);
+    mockGetByPath({
+      "/api/v1/tenant/plans/available": [],
+      "/api/v1/subscription/plans": [{ tier: "professional", label: "Professional", monthly_price_cents: 69700, self_service: true }],
+      "/api/v1/subscription/offer": {
+        available: true,
+        plan_tier: "professional",
+        price_cents: 80000,
+        founders: true,
+        founders_slots_total: 20,
+        founders_slots_remaining: 12,
+        founders_lock_months: 24,
+      },
+      "/api/v1/subscription": {
+        plan_tier: "professional",
+        pending_checkout_id: null,
+        billing_status: "pending_payment",
+        founders_member: false,
+        price_locked_until: null,
+        current_price_cents: null,
+        provider: "mock",
+      },
+      "/api/v1/tenant": makeTenant({ plan_tier: "professional" }),
+    });
+
+    renderWithProviders(<TenantPage />);
+
+    expect(await screen.findByText(/Plano Founders/)).toBeInTheDocument();
+    expect(screen.getByText(/R\$\s*800,00\/mês/)).toBeInTheDocument();
+    expect(screen.getByText(/garantido por 24 meses/)).toBeInTheDocument();
+    expect(screen.queryByText("Professional")).not.toBeInTheDocument();
   });
 });
 

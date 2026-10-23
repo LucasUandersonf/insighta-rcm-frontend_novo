@@ -18,7 +18,7 @@ interface FilterBarProps {
 export function FilterBar({ children, search, hasActiveFilters, onClear }: FilterBarProps) {
   return (
     <div className="flex flex-wrap items-end gap-3 border-b border-border-hairline bg-canvas-raised/40 px-5 py-3.5">
-      {search && <div className="min-w-[12rem] flex-1">{search}</div>}
+      {search && <div className="min-w-48 flex-1">{search}</div>}
       <div className="flex flex-wrap items-end gap-3">{children}</div>
       {hasActiveFilters && onClear && (
         <button

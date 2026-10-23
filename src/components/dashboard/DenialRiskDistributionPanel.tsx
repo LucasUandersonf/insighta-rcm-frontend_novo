@@ -6,6 +6,7 @@ import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { cn } from "@/lib/cn";
 import type { DenialRiskDistribution } from "@/lib/types";
+import { Link } from "react-router-dom";
 
 const LEVEL_CONFIG: Record<DenialRiskDistribution["items"][number]["level"], { label: string; tone: DonutSegment["tone"] }> = {
   high: { label: "Alto risco", tone: "denied" },
@@ -33,7 +34,7 @@ function ViewToggle({ mode, onChange }: { mode: ViewMode; onChange: (m: ViewMode
           onClick={() => onChange(option)}
           className={cn(
             "rounded px-2 py-1 font-medium transition-colors",
-            mode === option ? "bg-canvas text-ink shadow-sm" : "text-ink-faint hover:text-ink-muted"
+            mode === option ? "bg-canvas text-ink shadow-xs" : "text-ink-faint hover:text-ink-muted"
           )}
         >
           {option === "atendimentos" ? "Atendimentos" : "R$"}
@@ -73,13 +74,20 @@ export function DenialRiskDistributionPanel({ dateFrom, dateTo }: { dateFrom: st
     <Panel
       title="Distribuição de risco de glosa"
       subtitle="Faturamentos revisados no período"
+      help="Cada guia do período é classificada pelas regras de glosa antes do envio (CID ausente, procedimento não informado, convênio sem tabela aprovada, valor acima do contratado). Quanto mais grave a regra que bateu, maior o risco; sem nenhuma, a guia fica em baixo risco. Quando há histórico suficiente, o modelo de glosa da clínica também entra na conta."
       action={data && data.total_reviewed > 0 ? <ViewToggle mode={mode} onChange={setMode} /> : undefined}
       updatedAt={dataUpdatedAt || null}
     >
       {isLoading && <div className="h-[120px] animate-pulse rounded-full bg-canvas-raised" style={{ width: 120, margin: "20px" }} />}
       {error && <p className="p-5 text-xs text-denied">{getApiErrorMessage(error)}</p>}
       {!isLoading && !error && data && data.total_reviewed === 0 && (
-        <p className="p-5 text-xs text-ink-faint">Nenhum faturamento revisado nesta janela.</p>
+        <p className="p-5 text-xs text-ink-faint">
+          Nenhuma guia revisada nesta janela. A revisão acontece quando o faturamento é importado:{" "}
+          <Link to="/importar" className="font-medium text-accent underline-offset-2 hover:underline">
+            enviar a planilha de faturamento
+          </Link>
+          .
+        </p>
       )}
       {!isLoading && data && data.total_reviewed > 0 && (
         <div className="p-5">

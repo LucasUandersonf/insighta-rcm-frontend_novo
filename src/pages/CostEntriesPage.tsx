@@ -12,6 +12,7 @@ import { apiClient } from "@/lib/api-client";
 import { getApiErrorMessage } from "@/lib/query-client";
 import { useToast } from "@/context/ToastContext";
 import type { CostEntry, CostEntryCategory, CostEntryCreateRequest, PaginatedResponse, Professional } from "@/lib/types";
+import { useDirtyOnEdit } from "@/lib/unsavedChanges";
 
 const COST_ENTRIES_PAGE_SIZE = 20;
 
@@ -32,6 +33,7 @@ function formatMonth(iso: string): string {
 }
 
 function CreateCostEntryModal({ isOpen, onClose, professionals }: { isOpen: boolean; onClose: () => void; professionals: Professional[] }) {
+  const unsaved = useDirtyOnEdit("o lançamento de custo", isOpen);
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
   const [category, setCategory] = useState<CostEntryCategory>("folha_fixa");
@@ -79,7 +81,7 @@ function CreateCostEntryModal({ isOpen, onClose, professionals }: { isOpen: bool
 
   return (
     <Modal title="Lançar custo" isOpen={isOpen} onClose={resetAndClose}>
-      <form onSubmit={handleSubmit}>
+      <form onChange={unsaved.onChange} onSubmitCapture={unsaved.onSubmit} onSubmit={handleSubmit}>
         <p className="mb-4 text-xs text-ink-faint">
           Valor real pago no mês, não uma fórmula automática. Sem profissional selecionado, o custo é GERAL —
           rateado proporcionalmente à receita de cada profissional no cálculo de margem.
@@ -202,7 +204,7 @@ export function CostEntriesPage() {
         {!isLoading && entries.length > 0 && (
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-border-hairline text-2xs uppercase tracking-wide text-ink-faint">
+              <tr className="border-b border-border-hairline text-xs font-medium text-ink-muted">
                 <th className="px-4 py-2.5 font-medium">Mês</th>
                 <th className="px-4 py-2.5 font-medium">Categoria</th>
                 <th className="px-4 py-2.5 font-medium">Descrição</th>

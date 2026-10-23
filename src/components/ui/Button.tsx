@@ -8,7 +8,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
    * para ações dentro de um card/linha de tabela (ex: "Nova operadora"
    * no header de um Panel — ver canvas de design, `.btn-sm`/`.btn-xs`
    * em Contratos.dc.html). Existir como prop evita cada página repetir
-   * `className="!px-2.5 !py-1 text-xs"` com `!important` brigando com
+   * `className="px-2.5! py-1! text-xs"` com `!important` brigando com
    * as classes do próprio componente — o que já estava acontecendo em
    * várias páginas antes desta prop existir.
    */
@@ -36,10 +36,12 @@ const variantClasses: Record<NonNullable<ButtonProps["variant"]>, string> = {
 };
 
 // Paddings/tamanhos de fonte exatos do canvas de design (.btn/.btn-sm/.btn-xs).
+// UX2-24: no celular (até 640 px) todo botão tem pelo menos 44 px de altura,
+// o mínimo confortável para o dedo; no computador o tamanho é o do canvas.
 const sizeClasses: Record<NonNullable<ButtonProps["size"]>, string> = {
-  md: "rounded-[11px] px-4 py-2.5 text-[13px]",
-  sm: "rounded-[10px] px-3 py-1.5 text-xs",
-  xs: "rounded-lg px-2.5 py-1 text-2xs",
+  md: "rounded-[11px] px-4 py-2.5 text-[13px] max-sm:min-h-[44px]",
+  sm: "rounded-[10px] px-3 py-1.5 text-xs max-sm:min-h-[44px]",
+  xs: "rounded-lg px-2.5 py-1 text-2xs max-sm:min-h-[44px]",
 };
 
 export function Button({ variant = "primary", size = "md", className, disabled, ...props }: ButtonProps) {
